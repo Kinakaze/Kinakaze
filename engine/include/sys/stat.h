@@ -1,0 +1,1 @@
+#include <kinakaze/stat.h>

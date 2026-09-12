@@ -1,0 +1,31 @@
+[package]
+name = "kinakaze-v2-libx11"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "kinakaze_libX11"
+path = "src/lib.rs"
+crate-type = ["dylib"]
+test = true
+doctest = false
+
+[dependencies]
+kinakaze-alloc.workspace = true
+kinakaze-runtime.workspace = true
+libc = { path = "../libc", package = "kinakaze-v2-libc" }
+kinakaze_libdisplay = { package = "kinakaze-v2-libdisplay", path = "../libdisplay" }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_Graphics_GdiPlus",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Threading",
+    "Win32_System_Kernel",
+] }

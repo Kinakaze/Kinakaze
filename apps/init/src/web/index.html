@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kinakaze · 运行状态</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main>
+    <header><div><p class="eyebrow">KINAKAZE V2</p><h1>运行状态</h1><p id="summary">正在连接 init…</p></div><button id="refresh" type="button">刷新</button></header>
+    <p id="connection" role="status">等待首次采样</p>
+    <section class="cards" aria-label="会话概览">
+      <article><span>Linux 进程</span><strong id="processes">—</strong></article>
+      <article><span>管理连接</span><strong id="clients">—</strong></article>
+      <article><span>状态对象</span><strong id="objects">—</strong></article>
+      <article><span>进程事务</span><strong id="transactions">—</strong></article>
+    </section>
+    <section><h2>进程</h2><p>当前会话的 Linux 进程与 Windows worker。内存为宿主工作集和私有提交量；CPU 为累计时间。</p>
+      <div class="table-wrap"><table><thead><tr><th>PID / 父 PID</th><th>执行代次</th><th>宿主 PID</th><th>状态</th><th>工作集</th><th>私有内存</th><th>CPU</th></tr></thead><tbody id="rows"></tbody></table></div>
+      <p id="empty">暂无进程</p>
+    </section>
+    <footer>只读监控 · 每 2 秒按需采样 · 页面隐藏时暂停 · — 表示本次采样不可用</footer>
+  </main>
+</body>
+</html>

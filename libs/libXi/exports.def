@@ -1,0 +1,80 @@
+LIBRARY "libXi.so.6"
+EXPORTS
+  kinakaze_engine_libXi_XCloseDevice
+  "XCloseDevice"=kinakaze_engine_libXi_XCloseDevice PRIVATE
+  kinakaze_engine_libXi_XFreeDeviceList
+  "XFreeDeviceList"=kinakaze_engine_libXi_XFreeDeviceList PRIVATE
+  kinakaze_engine_libXi_XFreeDeviceMotionEvents
+  "XFreeDeviceMotionEvents"=kinakaze_engine_libXi_XFreeDeviceMotionEvents PRIVATE
+  kinakaze_engine_libXi_XFreeDeviceState
+  "XFreeDeviceState"=kinakaze_engine_libXi_XFreeDeviceState PRIVATE
+  kinakaze_engine_libXi_XGetDeviceMotionEvents
+  "XGetDeviceMotionEvents"=kinakaze_engine_libXi_XGetDeviceMotionEvents PRIVATE
+  kinakaze_engine_libXi_XGetDeviceProperty
+  "XGetDeviceProperty"=kinakaze_engine_libXi_XGetDeviceProperty PRIVATE
+  kinakaze_engine_libXi_XGrabDevice
+  "XGrabDevice"=kinakaze_engine_libXi_XGrabDevice PRIVATE
+  kinakaze_engine_libXi_XIAllowEvents
+  "XIAllowEvents"=kinakaze_engine_libXi_XIAllowEvents PRIVATE
+  kinakaze_engine_libXi_XIAllowTouchEvents
+  "XIAllowTouchEvents"=kinakaze_engine_libXi_XIAllowTouchEvents PRIVATE
+  kinakaze_engine_libXi_XIBarrierReleasePointer
+  "XIBarrierReleasePointer"=kinakaze_engine_libXi_XIBarrierReleasePointer PRIVATE
+  kinakaze_engine_libXi_XIBarrierReleasePointers
+  "XIBarrierReleasePointers"=kinakaze_engine_libXi_XIBarrierReleasePointers PRIVATE
+  kinakaze_engine_libXi_XIChangeProperty
+  "XIChangeProperty"=kinakaze_engine_libXi_XIChangeProperty PRIVATE
+  kinakaze_engine_libXi_XIDefineCursor
+  "XIDefineCursor"=kinakaze_engine_libXi_XIDefineCursor PRIVATE
+  kinakaze_engine_libXi_XIFreeDeviceInfo
+  "XIFreeDeviceInfo"=kinakaze_engine_libXi_XIFreeDeviceInfo PRIVATE
+  kinakaze_engine_libXi_XIGetClientPointer
+  "XIGetClientPointer"=kinakaze_engine_libXi_XIGetClientPointer PRIVATE
+  kinakaze_engine_libXi_XIGetProperty
+  "XIGetProperty"=kinakaze_engine_libXi_XIGetProperty PRIVATE
+  kinakaze_engine_libXi_XIGetSelectedEvents
+  "XIGetSelectedEvents"=kinakaze_engine_libXi_XIGetSelectedEvents PRIVATE
+  kinakaze_engine_libXi_XIGrabButton
+  "XIGrabButton"=kinakaze_engine_libXi_XIGrabButton PRIVATE
+  kinakaze_engine_libXi_XIGrabDevice
+  "XIGrabDevice"=kinakaze_engine_libXi_XIGrabDevice PRIVATE
+  kinakaze_engine_libXi_XIGrabKeycode
+  "XIGrabKeycode"=kinakaze_engine_libXi_XIGrabKeycode PRIVATE
+  kinakaze_engine_libXi_XIGrabTouchBegin
+  "XIGrabTouchBegin"=kinakaze_engine_libXi_XIGrabTouchBegin PRIVATE
+  kinakaze_engine_libXi_XIQueryDevice
+  "XIQueryDevice"=kinakaze_engine_libXi_XIQueryDevice PRIVATE
+  kinakaze_engine_libXi_XIQueryPointer
+  "XIQueryPointer"=kinakaze_engine_libXi_XIQueryPointer PRIVATE
+  kinakaze_engine_libXi_XIQueryVersion
+  "XIQueryVersion"=kinakaze_engine_libXi_XIQueryVersion PRIVATE
+  kinakaze_engine_libXi_XISelectEvents
+  "XISelectEvents"=kinakaze_engine_libXi_XISelectEvents PRIVATE
+  kinakaze_engine_libXi_XISetClientPointer
+  "XISetClientPointer"=kinakaze_engine_libXi_XISetClientPointer PRIVATE
+  kinakaze_engine_libXi_XIUndefineCursor
+  "XIUndefineCursor"=kinakaze_engine_libXi_XIUndefineCursor PRIVATE
+  kinakaze_engine_libXi_XIUngrabButton
+  "XIUngrabButton"=kinakaze_engine_libXi_XIUngrabButton PRIVATE
+  kinakaze_engine_libXi_XIUngrabDevice
+  "XIUngrabDevice"=kinakaze_engine_libXi_XIUngrabDevice PRIVATE
+  kinakaze_engine_libXi_XIUngrabKeycode
+  "XIUngrabKeycode"=kinakaze_engine_libXi_XIUngrabKeycode PRIVATE
+  kinakaze_engine_libXi_XIUngrabTouchBegin
+  "XIUngrabTouchBegin"=kinakaze_engine_libXi_XIUngrabTouchBegin PRIVATE
+  kinakaze_engine_libXi_XIWarpPointer
+  "XIWarpPointer"=kinakaze_engine_libXi_XIWarpPointer PRIVATE
+  kinakaze_engine_libXi_XListInputDevices
+  "XListInputDevices"=kinakaze_engine_libXi_XListInputDevices PRIVATE
+  kinakaze_engine_libXi_XOpenDevice
+  "XOpenDevice"=kinakaze_engine_libXi_XOpenDevice PRIVATE
+  kinakaze_engine_libXi_XQueryDeviceState
+  "XQueryDeviceState"=kinakaze_engine_libXi_XQueryDeviceState PRIVATE
+  kinakaze_engine_libXi_XSelectExtensionEvent
+  "XSelectExtensionEvent"=kinakaze_engine_libXi_XSelectExtensionEvent PRIVATE
+  kinakaze_engine_libXi_XSetDeviceButtonMapping
+  "XSetDeviceButtonMapping"=kinakaze_engine_libXi_XSetDeviceButtonMapping PRIVATE
+  kinakaze_engine_libXi_XSetDeviceMode
+  "XSetDeviceMode"=kinakaze_engine_libXi_XSetDeviceMode PRIVATE
+  kinakaze_engine_libXi_XUngrabDevice
+  "XUngrabDevice"=kinakaze_engine_libXi_XUngrabDevice PRIVATE

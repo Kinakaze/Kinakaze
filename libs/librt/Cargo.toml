@@ -1,0 +1,30 @@
+[package]
+name = "kinakaze-v2-librt"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "kinakaze_librt"
+path = "src/lib.rs"
+crate-type = ["dylib"]
+test = true
+doctest = false
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Performance",
+    "Win32_System_SystemInformation",
+    "Win32_System_Threading",
+] }
+
+
+[dependencies]
+kinakaze-runtime.workspace = true
+libc = { package = "kinakaze-v2-libc", path = "../libc" }
+libpthread = { package = "kinakaze-v2-libpthread", path = "../libpthread" }
+kinakaze-vfs.workspace = true
+

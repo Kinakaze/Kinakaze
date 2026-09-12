@@ -1,0 +1,2 @@
+#include <kinakaze/stdlib.h>
+

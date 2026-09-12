@@ -1,0 +1,970 @@
+LIBRARY "libGL.so.1"
+EXPORTS
+  kinakaze_engine_libGL_glActiveTexture
+  "glActiveTexture"=kinakaze_engine_libGL_glActiveTexture PRIVATE
+  kinakaze_engine_libGL_glAttachShader
+  "glAttachShader"=kinakaze_engine_libGL_glAttachShader PRIVATE
+  kinakaze_engine_libGL_glBegin
+  "glBegin"=kinakaze_engine_libGL_glBegin PRIVATE
+  kinakaze_engine_libGL_glBeginConditionalRender
+  "glBeginConditionalRender"=kinakaze_engine_libGL_glBeginConditionalRender PRIVATE
+  kinakaze_engine_libGL_glBeginQuery
+  "glBeginQuery"=kinakaze_engine_libGL_glBeginQuery PRIVATE
+  kinakaze_engine_libGL_glBeginTransformFeedback
+  "glBeginTransformFeedback"=kinakaze_engine_libGL_glBeginTransformFeedback PRIVATE
+  kinakaze_engine_libGL_glBindAttribLocation
+  "glBindAttribLocation"=kinakaze_engine_libGL_glBindAttribLocation PRIVATE
+  kinakaze_engine_libGL_glBindBuffer
+  "glBindBuffer"=kinakaze_engine_libGL_glBindBuffer PRIVATE
+  kinakaze_engine_libGL_glBindBufferBase
+  "glBindBufferBase"=kinakaze_engine_libGL_glBindBufferBase PRIVATE
+  kinakaze_engine_libGL_glBindBufferRange
+  "glBindBufferRange"=kinakaze_engine_libGL_glBindBufferRange PRIVATE
+  kinakaze_engine_libGL_glBindFragDataLocation
+  "glBindFragDataLocation"=kinakaze_engine_libGL_glBindFragDataLocation PRIVATE
+  kinakaze_engine_libGL_glBindFragDataLocationIndexed
+  "glBindFragDataLocationIndexed"=kinakaze_engine_libGL_glBindFragDataLocationIndexed PRIVATE
+  kinakaze_engine_libGL_glBindFramebuffer
+  "glBindFramebuffer"=kinakaze_engine_libGL_glBindFramebuffer PRIVATE
+  kinakaze_engine_libGL_glBindRenderbuffer
+  "glBindRenderbuffer"=kinakaze_engine_libGL_glBindRenderbuffer PRIVATE
+  kinakaze_engine_libGL_glBindSampler
+  "glBindSampler"=kinakaze_engine_libGL_glBindSampler PRIVATE
+  kinakaze_engine_libGL_glBindTexture
+  "glBindTexture"=kinakaze_engine_libGL_glBindTexture PRIVATE
+  kinakaze_engine_libGL_glBindTransformFeedback
+  "glBindTransformFeedback"=kinakaze_engine_libGL_glBindTransformFeedback PRIVATE
+  kinakaze_engine_libGL_glBindVertexArray
+  "glBindVertexArray"=kinakaze_engine_libGL_glBindVertexArray PRIVATE
+  kinakaze_engine_libGL_glBlendColor
+  "glBlendColor"=kinakaze_engine_libGL_glBlendColor PRIVATE
+  kinakaze_engine_libGL_glBlendEquation
+  "glBlendEquation"=kinakaze_engine_libGL_glBlendEquation PRIVATE
+  kinakaze_engine_libGL_glBlendEquationSeparate
+  "glBlendEquationSeparate"=kinakaze_engine_libGL_glBlendEquationSeparate PRIVATE
+  kinakaze_engine_libGL_glBlendEquationSeparatei
+  "glBlendEquationSeparatei"=kinakaze_engine_libGL_glBlendEquationSeparatei PRIVATE
+  kinakaze_engine_libGL_glBlendFunc
+  "glBlendFunc"=kinakaze_engine_libGL_glBlendFunc PRIVATE
+  kinakaze_engine_libGL_glBlendFuncSeparate
+  "glBlendFuncSeparate"=kinakaze_engine_libGL_glBlendFuncSeparate PRIVATE
+  kinakaze_engine_libGL_glBlendFuncSeparatei
+  "glBlendFuncSeparatei"=kinakaze_engine_libGL_glBlendFuncSeparatei PRIVATE
+  kinakaze_engine_libGL_glBlitFramebuffer
+  "glBlitFramebuffer"=kinakaze_engine_libGL_glBlitFramebuffer PRIVATE
+  kinakaze_engine_libGL_glBufferData
+  "glBufferData"=kinakaze_engine_libGL_glBufferData PRIVATE
+  kinakaze_engine_libGL_glBufferStorage
+  "glBufferStorage"=kinakaze_engine_libGL_glBufferStorage PRIVATE
+  kinakaze_engine_libGL_glBufferSubData
+  "glBufferSubData"=kinakaze_engine_libGL_glBufferSubData PRIVATE
+  kinakaze_engine_libGL_glCallList
+  "glCallList"=kinakaze_engine_libGL_glCallList PRIVATE
+  kinakaze_engine_libGL_glCheckFramebufferStatus
+  "glCheckFramebufferStatus"=kinakaze_engine_libGL_glCheckFramebufferStatus PRIVATE
+  kinakaze_engine_libGL_glClampColor
+  "glClampColor"=kinakaze_engine_libGL_glClampColor PRIVATE
+  kinakaze_engine_libGL_glClear
+  "glClear"=kinakaze_engine_libGL_glClear PRIVATE
+  kinakaze_engine_libGL_glClearBufferfi
+  "glClearBufferfi"=kinakaze_engine_libGL_glClearBufferfi PRIVATE
+  kinakaze_engine_libGL_glClearBufferfv
+  "glClearBufferfv"=kinakaze_engine_libGL_glClearBufferfv PRIVATE
+  kinakaze_engine_libGL_glClearBufferiv
+  "glClearBufferiv"=kinakaze_engine_libGL_glClearBufferiv PRIVATE
+  kinakaze_engine_libGL_glClearBufferuiv
+  "glClearBufferuiv"=kinakaze_engine_libGL_glClearBufferuiv PRIVATE
+  kinakaze_engine_libGL_glClearColor
+  "glClearColor"=kinakaze_engine_libGL_glClearColor PRIVATE
+  kinakaze_engine_libGL_glClearDepth
+  "glClearDepth"=kinakaze_engine_libGL_glClearDepth PRIVATE
+  kinakaze_engine_libGL_glClearStencil
+  "glClearStencil"=kinakaze_engine_libGL_glClearStencil PRIVATE
+  kinakaze_engine_libGL_glClientActiveTexture
+  "glClientActiveTexture"=kinakaze_engine_libGL_glClientActiveTexture PRIVATE
+  kinakaze_engine_libGL_glClientWaitSync
+  "glClientWaitSync"=kinakaze_engine_libGL_glClientWaitSync PRIVATE
+  kinakaze_engine_libGL_glColor3d
+  "glColor3d"=kinakaze_engine_libGL_glColor3d PRIVATE
+  kinakaze_engine_libGL_glColor3f
+  "glColor3f"=kinakaze_engine_libGL_glColor3f PRIVATE
+  kinakaze_engine_libGL_glColor3fv
+  "glColor3fv"=kinakaze_engine_libGL_glColor3fv PRIVATE
+  kinakaze_engine_libGL_glColor3ub
+  "glColor3ub"=kinakaze_engine_libGL_glColor3ub PRIVATE
+  kinakaze_engine_libGL_glColor4d
+  "glColor4d"=kinakaze_engine_libGL_glColor4d PRIVATE
+  kinakaze_engine_libGL_glColor4f
+  "glColor4f"=kinakaze_engine_libGL_glColor4f PRIVATE
+  kinakaze_engine_libGL_glColor4fv
+  "glColor4fv"=kinakaze_engine_libGL_glColor4fv PRIVATE
+  kinakaze_engine_libGL_glColor4ub
+  "glColor4ub"=kinakaze_engine_libGL_glColor4ub PRIVATE
+  kinakaze_engine_libGL_glColorMask
+  "glColorMask"=kinakaze_engine_libGL_glColorMask PRIVATE
+  kinakaze_engine_libGL_glColorMaski
+  "glColorMaski"=kinakaze_engine_libGL_glColorMaski PRIVATE
+  kinakaze_engine_libGL_glColorPointer
+  "glColorPointer"=kinakaze_engine_libGL_glColorPointer PRIVATE
+  kinakaze_engine_libGL_glCompileShader
+  "glCompileShader"=kinakaze_engine_libGL_glCompileShader PRIVATE
+  kinakaze_engine_libGL_glCompressedTexImage1D
+  "glCompressedTexImage1D"=kinakaze_engine_libGL_glCompressedTexImage1D PRIVATE
+  kinakaze_engine_libGL_glCompressedTexImage2D
+  "glCompressedTexImage2D"=kinakaze_engine_libGL_glCompressedTexImage2D PRIVATE
+  kinakaze_engine_libGL_glCompressedTexImage3D
+  "glCompressedTexImage3D"=kinakaze_engine_libGL_glCompressedTexImage3D PRIVATE
+  kinakaze_engine_libGL_glCompressedTexSubImage1D
+  "glCompressedTexSubImage1D"=kinakaze_engine_libGL_glCompressedTexSubImage1D PRIVATE
+  kinakaze_engine_libGL_glCompressedTexSubImage2D
+  "glCompressedTexSubImage2D"=kinakaze_engine_libGL_glCompressedTexSubImage2D PRIVATE
+  kinakaze_engine_libGL_glCompressedTexSubImage3D
+  "glCompressedTexSubImage3D"=kinakaze_engine_libGL_glCompressedTexSubImage3D PRIVATE
+  kinakaze_engine_libGL_glCopyBufferSubData
+  "glCopyBufferSubData"=kinakaze_engine_libGL_glCopyBufferSubData PRIVATE
+  kinakaze_engine_libGL_glCopyTexImage1D
+  "glCopyTexImage1D"=kinakaze_engine_libGL_glCopyTexImage1D PRIVATE
+  kinakaze_engine_libGL_glCopyTexImage2D
+  "glCopyTexImage2D"=kinakaze_engine_libGL_glCopyTexImage2D PRIVATE
+  kinakaze_engine_libGL_glCopyTexSubImage1D
+  "glCopyTexSubImage1D"=kinakaze_engine_libGL_glCopyTexSubImage1D PRIVATE
+  kinakaze_engine_libGL_glCopyTexSubImage2D
+  "glCopyTexSubImage2D"=kinakaze_engine_libGL_glCopyTexSubImage2D PRIVATE
+  kinakaze_engine_libGL_glCopyTexSubImage3D
+  "glCopyTexSubImage3D"=kinakaze_engine_libGL_glCopyTexSubImage3D PRIVATE
+  kinakaze_engine_libGL_glCreateProgram
+  "glCreateProgram"=kinakaze_engine_libGL_glCreateProgram PRIVATE
+  kinakaze_engine_libGL_glCreateShader
+  "glCreateShader"=kinakaze_engine_libGL_glCreateShader PRIVATE
+  kinakaze_engine_libGL_glCullFace
+  "glCullFace"=kinakaze_engine_libGL_glCullFace PRIVATE
+  kinakaze_engine_libGL_glDebugMessageCallback
+  "glDebugMessageCallback"=kinakaze_engine_libGL_glDebugMessageCallback PRIVATE
+  kinakaze_engine_libGL_glDebugMessageCallbackARB
+  "glDebugMessageCallbackARB"=kinakaze_engine_libGL_glDebugMessageCallbackARB PRIVATE
+  kinakaze_engine_libGL_glDebugMessageControl
+  "glDebugMessageControl"=kinakaze_engine_libGL_glDebugMessageControl PRIVATE
+  kinakaze_engine_libGL_glDebugMessageInsert
+  "glDebugMessageInsert"=kinakaze_engine_libGL_glDebugMessageInsert PRIVATE
+  kinakaze_engine_libGL_glDeleteBuffers
+  "glDeleteBuffers"=kinakaze_engine_libGL_glDeleteBuffers PRIVATE
+  kinakaze_engine_libGL_glDeleteFramebuffers
+  "glDeleteFramebuffers"=kinakaze_engine_libGL_glDeleteFramebuffers PRIVATE
+  kinakaze_engine_libGL_glDeleteLists
+  "glDeleteLists"=kinakaze_engine_libGL_glDeleteLists PRIVATE
+  kinakaze_engine_libGL_glDeleteProgram
+  "glDeleteProgram"=kinakaze_engine_libGL_glDeleteProgram PRIVATE
+  kinakaze_engine_libGL_glDeleteQueries
+  "glDeleteQueries"=kinakaze_engine_libGL_glDeleteQueries PRIVATE
+  kinakaze_engine_libGL_glDeleteRenderbuffers
+  "glDeleteRenderbuffers"=kinakaze_engine_libGL_glDeleteRenderbuffers PRIVATE
+  kinakaze_engine_libGL_glDeleteSamplers
+  "glDeleteSamplers"=kinakaze_engine_libGL_glDeleteSamplers PRIVATE
+  kinakaze_engine_libGL_glDeleteShader
+  "glDeleteShader"=kinakaze_engine_libGL_glDeleteShader PRIVATE
+  kinakaze_engine_libGL_glDeleteSync
+  "glDeleteSync"=kinakaze_engine_libGL_glDeleteSync PRIVATE
+  kinakaze_engine_libGL_glDeleteTextures
+  "glDeleteTextures"=kinakaze_engine_libGL_glDeleteTextures PRIVATE
+  kinakaze_engine_libGL_glDeleteTransformFeedbacks
+  "glDeleteTransformFeedbacks"=kinakaze_engine_libGL_glDeleteTransformFeedbacks PRIVATE
+  kinakaze_engine_libGL_glDeleteVertexArrays
+  "glDeleteVertexArrays"=kinakaze_engine_libGL_glDeleteVertexArrays PRIVATE
+  kinakaze_engine_libGL_glDepthFunc
+  "glDepthFunc"=kinakaze_engine_libGL_glDepthFunc PRIVATE
+  kinakaze_engine_libGL_glDepthMask
+  "glDepthMask"=kinakaze_engine_libGL_glDepthMask PRIVATE
+  kinakaze_engine_libGL_glDepthRange
+  "glDepthRange"=kinakaze_engine_libGL_glDepthRange PRIVATE
+  kinakaze_engine_libGL_glDetachShader
+  "glDetachShader"=kinakaze_engine_libGL_glDetachShader PRIVATE
+  kinakaze_engine_libGL_glDisable
+  "glDisable"=kinakaze_engine_libGL_glDisable PRIVATE
+  kinakaze_engine_libGL_glDisableClientState
+  "glDisableClientState"=kinakaze_engine_libGL_glDisableClientState PRIVATE
+  kinakaze_engine_libGL_glDisableVertexAttribArray
+  "glDisableVertexAttribArray"=kinakaze_engine_libGL_glDisableVertexAttribArray PRIVATE
+  kinakaze_engine_libGL_glDisablei
+  "glDisablei"=kinakaze_engine_libGL_glDisablei PRIVATE
+  kinakaze_engine_libGL_glDrawArrays
+  "glDrawArrays"=kinakaze_engine_libGL_glDrawArrays PRIVATE
+  kinakaze_engine_libGL_glDrawArraysInstanced
+  "glDrawArraysInstanced"=kinakaze_engine_libGL_glDrawArraysInstanced PRIVATE
+  kinakaze_engine_libGL_glDrawBuffer
+  "glDrawBuffer"=kinakaze_engine_libGL_glDrawBuffer PRIVATE
+  kinakaze_engine_libGL_glDrawBuffers
+  "glDrawBuffers"=kinakaze_engine_libGL_glDrawBuffers PRIVATE
+  kinakaze_engine_libGL_glDrawElements
+  "glDrawElements"=kinakaze_engine_libGL_glDrawElements PRIVATE
+  kinakaze_engine_libGL_glDrawElementsBaseVertex
+  "glDrawElementsBaseVertex"=kinakaze_engine_libGL_glDrawElementsBaseVertex PRIVATE
+  kinakaze_engine_libGL_glDrawElementsInstanced
+  "glDrawElementsInstanced"=kinakaze_engine_libGL_glDrawElementsInstanced PRIVATE
+  kinakaze_engine_libGL_glDrawElementsInstancedBaseVertex
+  "glDrawElementsInstancedBaseVertex"=kinakaze_engine_libGL_glDrawElementsInstancedBaseVertex PRIVATE
+  kinakaze_engine_libGL_glDrawRangeElements
+  "glDrawRangeElements"=kinakaze_engine_libGL_glDrawRangeElements PRIVATE
+  kinakaze_engine_libGL_glDrawRangeElementsBaseVertex
+  "glDrawRangeElementsBaseVertex"=kinakaze_engine_libGL_glDrawRangeElementsBaseVertex PRIVATE
+  kinakaze_engine_libGL_glEnable
+  "glEnable"=kinakaze_engine_libGL_glEnable PRIVATE
+  kinakaze_engine_libGL_glEnableClientState
+  "glEnableClientState"=kinakaze_engine_libGL_glEnableClientState PRIVATE
+  kinakaze_engine_libGL_glEnableVertexAttribArray
+  "glEnableVertexAttribArray"=kinakaze_engine_libGL_glEnableVertexAttribArray PRIVATE
+  kinakaze_engine_libGL_glEnablei
+  "glEnablei"=kinakaze_engine_libGL_glEnablei PRIVATE
+  kinakaze_engine_libGL_glEnd
+  "glEnd"=kinakaze_engine_libGL_glEnd PRIVATE
+  kinakaze_engine_libGL_glEndConditionalRender
+  "glEndConditionalRender"=kinakaze_engine_libGL_glEndConditionalRender PRIVATE
+  kinakaze_engine_libGL_glEndList
+  "glEndList"=kinakaze_engine_libGL_glEndList PRIVATE
+  kinakaze_engine_libGL_glEndQuery
+  "glEndQuery"=kinakaze_engine_libGL_glEndQuery PRIVATE
+  kinakaze_engine_libGL_glEndTransformFeedback
+  "glEndTransformFeedback"=kinakaze_engine_libGL_glEndTransformFeedback PRIVATE
+  kinakaze_engine_libGL_glFenceSync
+  "glFenceSync"=kinakaze_engine_libGL_glFenceSync PRIVATE
+  kinakaze_engine_libGL_glFinish
+  "glFinish"=kinakaze_engine_libGL_glFinish PRIVATE
+  kinakaze_engine_libGL_glFlush
+  "glFlush"=kinakaze_engine_libGL_glFlush PRIVATE
+  kinakaze_engine_libGL_glFlushMappedBufferRange
+  "glFlushMappedBufferRange"=kinakaze_engine_libGL_glFlushMappedBufferRange PRIVATE
+  kinakaze_engine_libGL_glFramebufferRenderbuffer
+  "glFramebufferRenderbuffer"=kinakaze_engine_libGL_glFramebufferRenderbuffer PRIVATE
+  kinakaze_engine_libGL_glFramebufferTexture
+  "glFramebufferTexture"=kinakaze_engine_libGL_glFramebufferTexture PRIVATE
+  kinakaze_engine_libGL_glFramebufferTexture1D
+  "glFramebufferTexture1D"=kinakaze_engine_libGL_glFramebufferTexture1D PRIVATE
+  kinakaze_engine_libGL_glFramebufferTexture2D
+  "glFramebufferTexture2D"=kinakaze_engine_libGL_glFramebufferTexture2D PRIVATE
+  kinakaze_engine_libGL_glFramebufferTexture3D
+  "glFramebufferTexture3D"=kinakaze_engine_libGL_glFramebufferTexture3D PRIVATE
+  kinakaze_engine_libGL_glFramebufferTextureLayer
+  "glFramebufferTextureLayer"=kinakaze_engine_libGL_glFramebufferTextureLayer PRIVATE
+  kinakaze_engine_libGL_glFrontFace
+  "glFrontFace"=kinakaze_engine_libGL_glFrontFace PRIVATE
+  kinakaze_engine_libGL_glFrustum
+  "glFrustum"=kinakaze_engine_libGL_glFrustum PRIVATE
+  kinakaze_engine_libGL_glGenBuffers
+  "glGenBuffers"=kinakaze_engine_libGL_glGenBuffers PRIVATE
+  kinakaze_engine_libGL_glGenFramebuffers
+  "glGenFramebuffers"=kinakaze_engine_libGL_glGenFramebuffers PRIVATE
+  kinakaze_engine_libGL_glGenLists
+  "glGenLists"=kinakaze_engine_libGL_glGenLists PRIVATE
+  kinakaze_engine_libGL_glGenQueries
+  "glGenQueries"=kinakaze_engine_libGL_glGenQueries PRIVATE
+  kinakaze_engine_libGL_glGenRenderbuffers
+  "glGenRenderbuffers"=kinakaze_engine_libGL_glGenRenderbuffers PRIVATE
+  kinakaze_engine_libGL_glGenSamplers
+  "glGenSamplers"=kinakaze_engine_libGL_glGenSamplers PRIVATE
+  kinakaze_engine_libGL_glGenTextures
+  "glGenTextures"=kinakaze_engine_libGL_glGenTextures PRIVATE
+  kinakaze_engine_libGL_glGenTransformFeedbacks
+  "glGenTransformFeedbacks"=kinakaze_engine_libGL_glGenTransformFeedbacks PRIVATE
+  kinakaze_engine_libGL_glGenVertexArrays
+  "glGenVertexArrays"=kinakaze_engine_libGL_glGenVertexArrays PRIVATE
+  kinakaze_engine_libGL_glGenerateMipmap
+  "glGenerateMipmap"=kinakaze_engine_libGL_glGenerateMipmap PRIVATE
+  kinakaze_engine_libGL_glGetActiveAttrib
+  "glGetActiveAttrib"=kinakaze_engine_libGL_glGetActiveAttrib PRIVATE
+  kinakaze_engine_libGL_glGetActiveUniform
+  "glGetActiveUniform"=kinakaze_engine_libGL_glGetActiveUniform PRIVATE
+  kinakaze_engine_libGL_glGetActiveUniformBlockName
+  "glGetActiveUniformBlockName"=kinakaze_engine_libGL_glGetActiveUniformBlockName PRIVATE
+  kinakaze_engine_libGL_glGetActiveUniformBlockiv
+  "glGetActiveUniformBlockiv"=kinakaze_engine_libGL_glGetActiveUniformBlockiv PRIVATE
+  kinakaze_engine_libGL_glGetActiveUniformName
+  "glGetActiveUniformName"=kinakaze_engine_libGL_glGetActiveUniformName PRIVATE
+  kinakaze_engine_libGL_glGetActiveUniformsiv
+  "glGetActiveUniformsiv"=kinakaze_engine_libGL_glGetActiveUniformsiv PRIVATE
+  kinakaze_engine_libGL_glGetAttachedShaders
+  "glGetAttachedShaders"=kinakaze_engine_libGL_glGetAttachedShaders PRIVATE
+  kinakaze_engine_libGL_glGetAttribLocation
+  "glGetAttribLocation"=kinakaze_engine_libGL_glGetAttribLocation PRIVATE
+  kinakaze_engine_libGL_glGetBooleani_v
+  "glGetBooleani_v"=kinakaze_engine_libGL_glGetBooleani_v PRIVATE
+  kinakaze_engine_libGL_glGetBooleanv
+  "glGetBooleanv"=kinakaze_engine_libGL_glGetBooleanv PRIVATE
+  kinakaze_engine_libGL_glGetBufferParameteri64v
+  "glGetBufferParameteri64v"=kinakaze_engine_libGL_glGetBufferParameteri64v PRIVATE
+  kinakaze_engine_libGL_glGetBufferParameteriv
+  "glGetBufferParameteriv"=kinakaze_engine_libGL_glGetBufferParameteriv PRIVATE
+  kinakaze_engine_libGL_glGetBufferPointerv
+  "glGetBufferPointerv"=kinakaze_engine_libGL_glGetBufferPointerv PRIVATE
+  kinakaze_engine_libGL_glGetBufferSubData
+  "glGetBufferSubData"=kinakaze_engine_libGL_glGetBufferSubData PRIVATE
+  kinakaze_engine_libGL_glGetCompressedTexImage
+  "glGetCompressedTexImage"=kinakaze_engine_libGL_glGetCompressedTexImage PRIVATE
+  kinakaze_engine_libGL_glGetDoublev
+  "glGetDoublev"=kinakaze_engine_libGL_glGetDoublev PRIVATE
+  kinakaze_engine_libGL_glGetError
+  "glGetError"=kinakaze_engine_libGL_glGetError PRIVATE
+  kinakaze_engine_libGL_glGetFloatv
+  "glGetFloatv"=kinakaze_engine_libGL_glGetFloatv PRIVATE
+  kinakaze_engine_libGL_glGetFragDataIndex
+  "glGetFragDataIndex"=kinakaze_engine_libGL_glGetFragDataIndex PRIVATE
+  kinakaze_engine_libGL_glGetFragDataLocation
+  "glGetFragDataLocation"=kinakaze_engine_libGL_glGetFragDataLocation PRIVATE
+  kinakaze_engine_libGL_glGetFramebufferAttachmentParameteriv
+  "glGetFramebufferAttachmentParameteriv"=kinakaze_engine_libGL_glGetFramebufferAttachmentParameteriv PRIVATE
+  kinakaze_engine_libGL_glGetInteger64i_v
+  "glGetInteger64i_v"=kinakaze_engine_libGL_glGetInteger64i_v PRIVATE
+  kinakaze_engine_libGL_glGetInteger64v
+  "glGetInteger64v"=kinakaze_engine_libGL_glGetInteger64v PRIVATE
+  kinakaze_engine_libGL_glGetIntegeri_v
+  "glGetIntegeri_v"=kinakaze_engine_libGL_glGetIntegeri_v PRIVATE
+  kinakaze_engine_libGL_glGetIntegerv
+  "glGetIntegerv"=kinakaze_engine_libGL_glGetIntegerv PRIVATE
+  kinakaze_engine_libGL_glGetInternalformativ
+  "glGetInternalformativ"=kinakaze_engine_libGL_glGetInternalformativ PRIVATE
+  kinakaze_engine_libGL_glGetMultisamplefv
+  "glGetMultisamplefv"=kinakaze_engine_libGL_glGetMultisamplefv PRIVATE
+  kinakaze_engine_libGL_glGetObjectLabel
+  "glGetObjectLabel"=kinakaze_engine_libGL_glGetObjectLabel PRIVATE
+  kinakaze_engine_libGL_glGetPointerv
+  "glGetPointerv"=kinakaze_engine_libGL_glGetPointerv PRIVATE
+  kinakaze_engine_libGL_glGetProgramInfoLog
+  "glGetProgramInfoLog"=kinakaze_engine_libGL_glGetProgramInfoLog PRIVATE
+  kinakaze_engine_libGL_glGetProgramiv
+  "glGetProgramiv"=kinakaze_engine_libGL_glGetProgramiv PRIVATE
+  kinakaze_engine_libGL_glGetQueryObjecti64v
+  "glGetQueryObjecti64v"=kinakaze_engine_libGL_glGetQueryObjecti64v PRIVATE
+  kinakaze_engine_libGL_glGetQueryObjectiv
+  "glGetQueryObjectiv"=kinakaze_engine_libGL_glGetQueryObjectiv PRIVATE
+  kinakaze_engine_libGL_glGetQueryObjectui64v
+  "glGetQueryObjectui64v"=kinakaze_engine_libGL_glGetQueryObjectui64v PRIVATE
+  kinakaze_engine_libGL_glGetQueryObjectuiv
+  "glGetQueryObjectuiv"=kinakaze_engine_libGL_glGetQueryObjectuiv PRIVATE
+  kinakaze_engine_libGL_glGetQueryiv
+  "glGetQueryiv"=kinakaze_engine_libGL_glGetQueryiv PRIVATE
+  kinakaze_engine_libGL_glGetRenderbufferParameteriv
+  "glGetRenderbufferParameteriv"=kinakaze_engine_libGL_glGetRenderbufferParameteriv PRIVATE
+  kinakaze_engine_libGL_glGetSamplerParameterIiv
+  "glGetSamplerParameterIiv"=kinakaze_engine_libGL_glGetSamplerParameterIiv PRIVATE
+  kinakaze_engine_libGL_glGetSamplerParameterIuiv
+  "glGetSamplerParameterIuiv"=kinakaze_engine_libGL_glGetSamplerParameterIuiv PRIVATE
+  kinakaze_engine_libGL_glGetSamplerParameterfv
+  "glGetSamplerParameterfv"=kinakaze_engine_libGL_glGetSamplerParameterfv PRIVATE
+  kinakaze_engine_libGL_glGetSamplerParameteriv
+  "glGetSamplerParameteriv"=kinakaze_engine_libGL_glGetSamplerParameteriv PRIVATE
+  kinakaze_engine_libGL_glGetShaderInfoLog
+  "glGetShaderInfoLog"=kinakaze_engine_libGL_glGetShaderInfoLog PRIVATE
+  kinakaze_engine_libGL_glGetShaderSource
+  "glGetShaderSource"=kinakaze_engine_libGL_glGetShaderSource PRIVATE
+  kinakaze_engine_libGL_glGetShaderiv
+  "glGetShaderiv"=kinakaze_engine_libGL_glGetShaderiv PRIVATE
+  kinakaze_engine_libGL_glGetString
+  "glGetString"=kinakaze_engine_libGL_glGetString PRIVATE
+  kinakaze_engine_libGL_glGetStringi
+  "glGetStringi"=kinakaze_engine_libGL_glGetStringi PRIVATE
+  kinakaze_engine_libGL_glGetSynciv
+  "glGetSynciv"=kinakaze_engine_libGL_glGetSynciv PRIVATE
+  kinakaze_engine_libGL_glGetTexGendv
+  "glGetTexGendv"=kinakaze_engine_libGL_glGetTexGendv PRIVATE
+  kinakaze_engine_libGL_glGetTexGenfv
+  "glGetTexGenfv"=kinakaze_engine_libGL_glGetTexGenfv PRIVATE
+  kinakaze_engine_libGL_glGetTexGeniv
+  "glGetTexGeniv"=kinakaze_engine_libGL_glGetTexGeniv PRIVATE
+  kinakaze_engine_libGL_glGetTexImage
+  "glGetTexImage"=kinakaze_engine_libGL_glGetTexImage PRIVATE
+  kinakaze_engine_libGL_glGetTexLevelParameterfv
+  "glGetTexLevelParameterfv"=kinakaze_engine_libGL_glGetTexLevelParameterfv PRIVATE
+  kinakaze_engine_libGL_glGetTexLevelParameteriv
+  "glGetTexLevelParameteriv"=kinakaze_engine_libGL_glGetTexLevelParameteriv PRIVATE
+  kinakaze_engine_libGL_glGetTexParameterIiv
+  "glGetTexParameterIiv"=kinakaze_engine_libGL_glGetTexParameterIiv PRIVATE
+  kinakaze_engine_libGL_glGetTexParameterIuiv
+  "glGetTexParameterIuiv"=kinakaze_engine_libGL_glGetTexParameterIuiv PRIVATE
+  kinakaze_engine_libGL_glGetTexParameterfv
+  "glGetTexParameterfv"=kinakaze_engine_libGL_glGetTexParameterfv PRIVATE
+  kinakaze_engine_libGL_glGetTexParameteriv
+  "glGetTexParameteriv"=kinakaze_engine_libGL_glGetTexParameteriv PRIVATE
+  kinakaze_engine_libGL_glGetTransformFeedbackVarying
+  "glGetTransformFeedbackVarying"=kinakaze_engine_libGL_glGetTransformFeedbackVarying PRIVATE
+  kinakaze_engine_libGL_glGetUniformBlockIndex
+  "glGetUniformBlockIndex"=kinakaze_engine_libGL_glGetUniformBlockIndex PRIVATE
+  kinakaze_engine_libGL_glGetUniformIndices
+  "glGetUniformIndices"=kinakaze_engine_libGL_glGetUniformIndices PRIVATE
+  kinakaze_engine_libGL_glGetUniformLocation
+  "glGetUniformLocation"=kinakaze_engine_libGL_glGetUniformLocation PRIVATE
+  kinakaze_engine_libGL_glGetUniformfv
+  "glGetUniformfv"=kinakaze_engine_libGL_glGetUniformfv PRIVATE
+  kinakaze_engine_libGL_glGetUniformiv
+  "glGetUniformiv"=kinakaze_engine_libGL_glGetUniformiv PRIVATE
+  kinakaze_engine_libGL_glGetUniformuiv
+  "glGetUniformuiv"=kinakaze_engine_libGL_glGetUniformuiv PRIVATE
+  kinakaze_engine_libGL_glGetVertexAttribIiv
+  "glGetVertexAttribIiv"=kinakaze_engine_libGL_glGetVertexAttribIiv PRIVATE
+  kinakaze_engine_libGL_glGetVertexAttribIuiv
+  "glGetVertexAttribIuiv"=kinakaze_engine_libGL_glGetVertexAttribIuiv PRIVATE
+  kinakaze_engine_libGL_glGetVertexAttribPointerv
+  "glGetVertexAttribPointerv"=kinakaze_engine_libGL_glGetVertexAttribPointerv PRIVATE
+  kinakaze_engine_libGL_glGetVertexAttribdv
+  "glGetVertexAttribdv"=kinakaze_engine_libGL_glGetVertexAttribdv PRIVATE
+  kinakaze_engine_libGL_glGetVertexAttribfv
+  "glGetVertexAttribfv"=kinakaze_engine_libGL_glGetVertexAttribfv PRIVATE
+  kinakaze_engine_libGL_glGetVertexAttribiv
+  "glGetVertexAttribiv"=kinakaze_engine_libGL_glGetVertexAttribiv PRIVATE
+  kinakaze_engine_libGL_glHint
+  "glHint"=kinakaze_engine_libGL_glHint PRIVATE
+  kinakaze_engine_libGL_glInvalidateFramebuffer
+  "glInvalidateFramebuffer"=kinakaze_engine_libGL_glInvalidateFramebuffer PRIVATE
+  kinakaze_engine_libGL_glInvalidateSubFramebuffer
+  "glInvalidateSubFramebuffer"=kinakaze_engine_libGL_glInvalidateSubFramebuffer PRIVATE
+  kinakaze_engine_libGL_glIsBuffer
+  "glIsBuffer"=kinakaze_engine_libGL_glIsBuffer PRIVATE
+  kinakaze_engine_libGL_glIsEnabled
+  "glIsEnabled"=kinakaze_engine_libGL_glIsEnabled PRIVATE
+  kinakaze_engine_libGL_glIsEnabledi
+  "glIsEnabledi"=kinakaze_engine_libGL_glIsEnabledi PRIVATE
+  kinakaze_engine_libGL_glIsFramebuffer
+  "glIsFramebuffer"=kinakaze_engine_libGL_glIsFramebuffer PRIVATE
+  kinakaze_engine_libGL_glIsProgram
+  "glIsProgram"=kinakaze_engine_libGL_glIsProgram PRIVATE
+  kinakaze_engine_libGL_glIsQuery
+  "glIsQuery"=kinakaze_engine_libGL_glIsQuery PRIVATE
+  kinakaze_engine_libGL_glIsRenderbuffer
+  "glIsRenderbuffer"=kinakaze_engine_libGL_glIsRenderbuffer PRIVATE
+  kinakaze_engine_libGL_glIsSampler
+  "glIsSampler"=kinakaze_engine_libGL_glIsSampler PRIVATE
+  kinakaze_engine_libGL_glIsShader
+  "glIsShader"=kinakaze_engine_libGL_glIsShader PRIVATE
+  kinakaze_engine_libGL_glIsSync
+  "glIsSync"=kinakaze_engine_libGL_glIsSync PRIVATE
+  kinakaze_engine_libGL_glIsTexture
+  "glIsTexture"=kinakaze_engine_libGL_glIsTexture PRIVATE
+  kinakaze_engine_libGL_glIsTransformFeedback
+  "glIsTransformFeedback"=kinakaze_engine_libGL_glIsTransformFeedback PRIVATE
+  kinakaze_engine_libGL_glIsVertexArray
+  "glIsVertexArray"=kinakaze_engine_libGL_glIsVertexArray PRIVATE
+  kinakaze_engine_libGL_glLightModelfv
+  "glLightModelfv"=kinakaze_engine_libGL_glLightModelfv PRIVATE
+  kinakaze_engine_libGL_glLightModeli
+  "glLightModeli"=kinakaze_engine_libGL_glLightModeli PRIVATE
+  kinakaze_engine_libGL_glLightf
+  "glLightf"=kinakaze_engine_libGL_glLightf PRIVATE
+  kinakaze_engine_libGL_glLightfv
+  "glLightfv"=kinakaze_engine_libGL_glLightfv PRIVATE
+  kinakaze_engine_libGL_glLineWidth
+  "glLineWidth"=kinakaze_engine_libGL_glLineWidth PRIVATE
+  kinakaze_engine_libGL_glLinkProgram
+  "glLinkProgram"=kinakaze_engine_libGL_glLinkProgram PRIVATE
+  kinakaze_engine_libGL_glLoadIdentity
+  "glLoadIdentity"=kinakaze_engine_libGL_glLoadIdentity PRIVATE
+  kinakaze_engine_libGL_glLoadMatrixd
+  "glLoadMatrixd"=kinakaze_engine_libGL_glLoadMatrixd PRIVATE
+  kinakaze_engine_libGL_glLoadMatrixf
+  "glLoadMatrixf"=kinakaze_engine_libGL_glLoadMatrixf PRIVATE
+  kinakaze_engine_libGL_glLogicOp
+  "glLogicOp"=kinakaze_engine_libGL_glLogicOp PRIVATE
+  kinakaze_engine_libGL_glMapBuffer
+  "glMapBuffer"=kinakaze_engine_libGL_glMapBuffer PRIVATE
+  kinakaze_engine_libGL_glMapBufferRange
+  "glMapBufferRange"=kinakaze_engine_libGL_glMapBufferRange PRIVATE
+  kinakaze_engine_libGL_glMaterialf
+  "glMaterialf"=kinakaze_engine_libGL_glMaterialf PRIVATE
+  kinakaze_engine_libGL_glMaterialfv
+  "glMaterialfv"=kinakaze_engine_libGL_glMaterialfv PRIVATE
+  kinakaze_engine_libGL_glMatrixMode
+  "glMatrixMode"=kinakaze_engine_libGL_glMatrixMode PRIVATE
+  kinakaze_engine_libGL_glMemoryBarrier
+  "glMemoryBarrier"=kinakaze_engine_libGL_glMemoryBarrier PRIVATE
+  kinakaze_engine_libGL_glMultMatrixd
+  "glMultMatrixd"=kinakaze_engine_libGL_glMultMatrixd PRIVATE
+  kinakaze_engine_libGL_glMultMatrixf
+  "glMultMatrixf"=kinakaze_engine_libGL_glMultMatrixf PRIVATE
+  kinakaze_engine_libGL_glMultiDrawArrays
+  "glMultiDrawArrays"=kinakaze_engine_libGL_glMultiDrawArrays PRIVATE
+  kinakaze_engine_libGL_glMultiDrawElements
+  "glMultiDrawElements"=kinakaze_engine_libGL_glMultiDrawElements PRIVATE
+  kinakaze_engine_libGL_glMultiDrawElementsBaseVertex
+  "glMultiDrawElementsBaseVertex"=kinakaze_engine_libGL_glMultiDrawElementsBaseVertex PRIVATE
+  kinakaze_engine_libGL_glNamedBufferStorage
+  "glNamedBufferStorage"=kinakaze_engine_libGL_glNamedBufferStorage PRIVATE
+  kinakaze_engine_libGL_glNewList
+  "glNewList"=kinakaze_engine_libGL_glNewList PRIVATE
+  kinakaze_engine_libGL_glNormal3f
+  "glNormal3f"=kinakaze_engine_libGL_glNormal3f PRIVATE
+  kinakaze_engine_libGL_glNormal3fv
+  "glNormal3fv"=kinakaze_engine_libGL_glNormal3fv PRIVATE
+  kinakaze_engine_libGL_glNormalPointer
+  "glNormalPointer"=kinakaze_engine_libGL_glNormalPointer PRIVATE
+  kinakaze_engine_libGL_glObjectLabel
+  "glObjectLabel"=kinakaze_engine_libGL_glObjectLabel PRIVATE
+  kinakaze_engine_libGL_glOrtho
+  "glOrtho"=kinakaze_engine_libGL_glOrtho PRIVATE
+  kinakaze_engine_libGL_glPauseTransformFeedback
+  "glPauseTransformFeedback"=kinakaze_engine_libGL_glPauseTransformFeedback PRIVATE
+  kinakaze_engine_libGL_glPixelStoref
+  "glPixelStoref"=kinakaze_engine_libGL_glPixelStoref PRIVATE
+  kinakaze_engine_libGL_glPixelStorei
+  "glPixelStorei"=kinakaze_engine_libGL_glPixelStorei PRIVATE
+  kinakaze_engine_libGL_glPointParameterf
+  "glPointParameterf"=kinakaze_engine_libGL_glPointParameterf PRIVATE
+  kinakaze_engine_libGL_glPointParameterfv
+  "glPointParameterfv"=kinakaze_engine_libGL_glPointParameterfv PRIVATE
+  kinakaze_engine_libGL_glPointParameteri
+  "glPointParameteri"=kinakaze_engine_libGL_glPointParameteri PRIVATE
+  kinakaze_engine_libGL_glPointParameteriv
+  "glPointParameteriv"=kinakaze_engine_libGL_glPointParameteriv PRIVATE
+  kinakaze_engine_libGL_glPointSize
+  "glPointSize"=kinakaze_engine_libGL_glPointSize PRIVATE
+  kinakaze_engine_libGL_glPolygonMode
+  "glPolygonMode"=kinakaze_engine_libGL_glPolygonMode PRIVATE
+  kinakaze_engine_libGL_glPolygonOffset
+  "glPolygonOffset"=kinakaze_engine_libGL_glPolygonOffset PRIVATE
+  kinakaze_engine_libGL_glPopAttrib
+  "glPopAttrib"=kinakaze_engine_libGL_glPopAttrib PRIVATE
+  kinakaze_engine_libGL_glPopClientAttrib
+  "glPopClientAttrib"=kinakaze_engine_libGL_glPopClientAttrib PRIVATE
+  kinakaze_engine_libGL_glPopDebugGroup
+  "glPopDebugGroup"=kinakaze_engine_libGL_glPopDebugGroup PRIVATE
+  kinakaze_engine_libGL_glPopMatrix
+  "glPopMatrix"=kinakaze_engine_libGL_glPopMatrix PRIVATE
+  kinakaze_engine_libGL_glPrimitiveRestartIndex
+  "glPrimitiveRestartIndex"=kinakaze_engine_libGL_glPrimitiveRestartIndex PRIVATE
+  kinakaze_engine_libGL_glProvokingVertex
+  "glProvokingVertex"=kinakaze_engine_libGL_glProvokingVertex PRIVATE
+  kinakaze_engine_libGL_glPushAttrib
+  "glPushAttrib"=kinakaze_engine_libGL_glPushAttrib PRIVATE
+  kinakaze_engine_libGL_glPushClientAttrib
+  "glPushClientAttrib"=kinakaze_engine_libGL_glPushClientAttrib PRIVATE
+  kinakaze_engine_libGL_glPushDebugGroup
+  "glPushDebugGroup"=kinakaze_engine_libGL_glPushDebugGroup PRIVATE
+  kinakaze_engine_libGL_glPushMatrix
+  "glPushMatrix"=kinakaze_engine_libGL_glPushMatrix PRIVATE
+  kinakaze_engine_libGL_glQueryCounter
+  "glQueryCounter"=kinakaze_engine_libGL_glQueryCounter PRIVATE
+  kinakaze_engine_libGL_glReadBuffer
+  "glReadBuffer"=kinakaze_engine_libGL_glReadBuffer PRIVATE
+  kinakaze_engine_libGL_glReadPixels
+  "glReadPixels"=kinakaze_engine_libGL_glReadPixels PRIVATE
+  kinakaze_engine_libGL_glRectd
+  "glRectd"=kinakaze_engine_libGL_glRectd PRIVATE
+  kinakaze_engine_libGL_glRectf
+  "glRectf"=kinakaze_engine_libGL_glRectf PRIVATE
+  kinakaze_engine_libGL_glRecti
+  "glRecti"=kinakaze_engine_libGL_glRecti PRIVATE
+  kinakaze_engine_libGL_glRenderbufferStorage
+  "glRenderbufferStorage"=kinakaze_engine_libGL_glRenderbufferStorage PRIVATE
+  kinakaze_engine_libGL_glRenderbufferStorageMultisample
+  "glRenderbufferStorageMultisample"=kinakaze_engine_libGL_glRenderbufferStorageMultisample PRIVATE
+  kinakaze_engine_libGL_glResumeTransformFeedback
+  "glResumeTransformFeedback"=kinakaze_engine_libGL_glResumeTransformFeedback PRIVATE
+  kinakaze_engine_libGL_glRotated
+  "glRotated"=kinakaze_engine_libGL_glRotated PRIVATE
+  kinakaze_engine_libGL_glRotatef
+  "glRotatef"=kinakaze_engine_libGL_glRotatef PRIVATE
+  kinakaze_engine_libGL_glSampleCoverage
+  "glSampleCoverage"=kinakaze_engine_libGL_glSampleCoverage PRIVATE
+  kinakaze_engine_libGL_glSampleMaski
+  "glSampleMaski"=kinakaze_engine_libGL_glSampleMaski PRIVATE
+  kinakaze_engine_libGL_glSamplerParameterIiv
+  "glSamplerParameterIiv"=kinakaze_engine_libGL_glSamplerParameterIiv PRIVATE
+  kinakaze_engine_libGL_glSamplerParameterIuiv
+  "glSamplerParameterIuiv"=kinakaze_engine_libGL_glSamplerParameterIuiv PRIVATE
+  kinakaze_engine_libGL_glSamplerParameterf
+  "glSamplerParameterf"=kinakaze_engine_libGL_glSamplerParameterf PRIVATE
+  kinakaze_engine_libGL_glSamplerParameterfv
+  "glSamplerParameterfv"=kinakaze_engine_libGL_glSamplerParameterfv PRIVATE
+  kinakaze_engine_libGL_glSamplerParameteri
+  "glSamplerParameteri"=kinakaze_engine_libGL_glSamplerParameteri PRIVATE
+  kinakaze_engine_libGL_glSamplerParameteriv
+  "glSamplerParameteriv"=kinakaze_engine_libGL_glSamplerParameteriv PRIVATE
+  kinakaze_engine_libGL_glScaled
+  "glScaled"=kinakaze_engine_libGL_glScaled PRIVATE
+  kinakaze_engine_libGL_glScalef
+  "glScalef"=kinakaze_engine_libGL_glScalef PRIVATE
+  kinakaze_engine_libGL_glScissor
+  "glScissor"=kinakaze_engine_libGL_glScissor PRIVATE
+  kinakaze_engine_libGL_glShadeModel
+  "glShadeModel"=kinakaze_engine_libGL_glShadeModel PRIVATE
+  kinakaze_engine_libGL_glShaderSource
+  "glShaderSource"=kinakaze_engine_libGL_glShaderSource PRIVATE
+  kinakaze_engine_libGL_glStencilFunc
+  "glStencilFunc"=kinakaze_engine_libGL_glStencilFunc PRIVATE
+  kinakaze_engine_libGL_glStencilFuncSeparate
+  "glStencilFuncSeparate"=kinakaze_engine_libGL_glStencilFuncSeparate PRIVATE
+  kinakaze_engine_libGL_glStencilMask
+  "glStencilMask"=kinakaze_engine_libGL_glStencilMask PRIVATE
+  kinakaze_engine_libGL_glStencilMaskSeparate
+  "glStencilMaskSeparate"=kinakaze_engine_libGL_glStencilMaskSeparate PRIVATE
+  kinakaze_engine_libGL_glStencilOp
+  "glStencilOp"=kinakaze_engine_libGL_glStencilOp PRIVATE
+  kinakaze_engine_libGL_glStencilOpSeparate
+  "glStencilOpSeparate"=kinakaze_engine_libGL_glStencilOpSeparate PRIVATE
+  kinakaze_engine_libGL_glTexBuffer
+  "glTexBuffer"=kinakaze_engine_libGL_glTexBuffer PRIVATE
+  kinakaze_engine_libGL_glTexCoord2f
+  "glTexCoord2f"=kinakaze_engine_libGL_glTexCoord2f PRIVATE
+  kinakaze_engine_libGL_glTexCoordPointer
+  "glTexCoordPointer"=kinakaze_engine_libGL_glTexCoordPointer PRIVATE
+  kinakaze_engine_libGL_glTexGend
+  "glTexGend"=kinakaze_engine_libGL_glTexGend PRIVATE
+  kinakaze_engine_libGL_glTexGendv
+  "glTexGendv"=kinakaze_engine_libGL_glTexGendv PRIVATE
+  kinakaze_engine_libGL_glTexGenf
+  "glTexGenf"=kinakaze_engine_libGL_glTexGenf PRIVATE
+  kinakaze_engine_libGL_glTexGenfv
+  "glTexGenfv"=kinakaze_engine_libGL_glTexGenfv PRIVATE
+  kinakaze_engine_libGL_glTexGeni
+  "glTexGeni"=kinakaze_engine_libGL_glTexGeni PRIVATE
+  kinakaze_engine_libGL_glTexGeniv
+  "glTexGeniv"=kinakaze_engine_libGL_glTexGeniv PRIVATE
+  kinakaze_engine_libGL_glTexImage1D
+  "glTexImage1D"=kinakaze_engine_libGL_glTexImage1D PRIVATE
+  kinakaze_engine_libGL_glTexImage2D
+  "glTexImage2D"=kinakaze_engine_libGL_glTexImage2D PRIVATE
+  kinakaze_engine_libGL_glTexImage2DMultisample
+  "glTexImage2DMultisample"=kinakaze_engine_libGL_glTexImage2DMultisample PRIVATE
+  kinakaze_engine_libGL_glTexImage3D
+  "glTexImage3D"=kinakaze_engine_libGL_glTexImage3D PRIVATE
+  kinakaze_engine_libGL_glTexImage3DMultisample
+  "glTexImage3DMultisample"=kinakaze_engine_libGL_glTexImage3DMultisample PRIVATE
+  kinakaze_engine_libGL_glTexParameterIiv
+  "glTexParameterIiv"=kinakaze_engine_libGL_glTexParameterIiv PRIVATE
+  kinakaze_engine_libGL_glTexParameterIuiv
+  "glTexParameterIuiv"=kinakaze_engine_libGL_glTexParameterIuiv PRIVATE
+  kinakaze_engine_libGL_glTexParameterf
+  "glTexParameterf"=kinakaze_engine_libGL_glTexParameterf PRIVATE
+  kinakaze_engine_libGL_glTexParameterfv
+  "glTexParameterfv"=kinakaze_engine_libGL_glTexParameterfv PRIVATE
+  kinakaze_engine_libGL_glTexParameteri
+  "glTexParameteri"=kinakaze_engine_libGL_glTexParameteri PRIVATE
+  kinakaze_engine_libGL_glTexParameteriv
+  "glTexParameteriv"=kinakaze_engine_libGL_glTexParameteriv PRIVATE
+  kinakaze_engine_libGL_glTexStorage2D
+  "glTexStorage2D"=kinakaze_engine_libGL_glTexStorage2D PRIVATE
+  kinakaze_engine_libGL_glTexStorage3D
+  "glTexStorage3D"=kinakaze_engine_libGL_glTexStorage3D PRIVATE
+  kinakaze_engine_libGL_glTexSubImage1D
+  "glTexSubImage1D"=kinakaze_engine_libGL_glTexSubImage1D PRIVATE
+  kinakaze_engine_libGL_glTexSubImage2D
+  "glTexSubImage2D"=kinakaze_engine_libGL_glTexSubImage2D PRIVATE
+  kinakaze_engine_libGL_glTexSubImage3D
+  "glTexSubImage3D"=kinakaze_engine_libGL_glTexSubImage3D PRIVATE
+  kinakaze_engine_libGL_glTransformFeedbackVaryings
+  "glTransformFeedbackVaryings"=kinakaze_engine_libGL_glTransformFeedbackVaryings PRIVATE
+  kinakaze_engine_libGL_glTranslated
+  "glTranslated"=kinakaze_engine_libGL_glTranslated PRIVATE
+  kinakaze_engine_libGL_glTranslatef
+  "glTranslatef"=kinakaze_engine_libGL_glTranslatef PRIVATE
+  kinakaze_engine_libGL_glUniform1f
+  "glUniform1f"=kinakaze_engine_libGL_glUniform1f PRIVATE
+  kinakaze_engine_libGL_glUniform1fv
+  "glUniform1fv"=kinakaze_engine_libGL_glUniform1fv PRIVATE
+  kinakaze_engine_libGL_glUniform1i
+  "glUniform1i"=kinakaze_engine_libGL_glUniform1i PRIVATE
+  kinakaze_engine_libGL_glUniform1iv
+  "glUniform1iv"=kinakaze_engine_libGL_glUniform1iv PRIVATE
+  kinakaze_engine_libGL_glUniform1ui
+  "glUniform1ui"=kinakaze_engine_libGL_glUniform1ui PRIVATE
+  kinakaze_engine_libGL_glUniform1uiv
+  "glUniform1uiv"=kinakaze_engine_libGL_glUniform1uiv PRIVATE
+  kinakaze_engine_libGL_glUniform2f
+  "glUniform2f"=kinakaze_engine_libGL_glUniform2f PRIVATE
+  kinakaze_engine_libGL_glUniform2fv
+  "glUniform2fv"=kinakaze_engine_libGL_glUniform2fv PRIVATE
+  kinakaze_engine_libGL_glUniform2i
+  "glUniform2i"=kinakaze_engine_libGL_glUniform2i PRIVATE
+  kinakaze_engine_libGL_glUniform2iv
+  "glUniform2iv"=kinakaze_engine_libGL_glUniform2iv PRIVATE
+  kinakaze_engine_libGL_glUniform2ui
+  "glUniform2ui"=kinakaze_engine_libGL_glUniform2ui PRIVATE
+  kinakaze_engine_libGL_glUniform2uiv
+  "glUniform2uiv"=kinakaze_engine_libGL_glUniform2uiv PRIVATE
+  kinakaze_engine_libGL_glUniform3f
+  "glUniform3f"=kinakaze_engine_libGL_glUniform3f PRIVATE
+  kinakaze_engine_libGL_glUniform3fv
+  "glUniform3fv"=kinakaze_engine_libGL_glUniform3fv PRIVATE
+  kinakaze_engine_libGL_glUniform3i
+  "glUniform3i"=kinakaze_engine_libGL_glUniform3i PRIVATE
+  kinakaze_engine_libGL_glUniform3iv
+  "glUniform3iv"=kinakaze_engine_libGL_glUniform3iv PRIVATE
+  kinakaze_engine_libGL_glUniform3ui
+  "glUniform3ui"=kinakaze_engine_libGL_glUniform3ui PRIVATE
+  kinakaze_engine_libGL_glUniform3uiv
+  "glUniform3uiv"=kinakaze_engine_libGL_glUniform3uiv PRIVATE
+  kinakaze_engine_libGL_glUniform4f
+  "glUniform4f"=kinakaze_engine_libGL_glUniform4f PRIVATE
+  kinakaze_engine_libGL_glUniform4fv
+  "glUniform4fv"=kinakaze_engine_libGL_glUniform4fv PRIVATE
+  kinakaze_engine_libGL_glUniform4i
+  "glUniform4i"=kinakaze_engine_libGL_glUniform4i PRIVATE
+  kinakaze_engine_libGL_glUniform4iv
+  "glUniform4iv"=kinakaze_engine_libGL_glUniform4iv PRIVATE
+  kinakaze_engine_libGL_glUniform4ui
+  "glUniform4ui"=kinakaze_engine_libGL_glUniform4ui PRIVATE
+  kinakaze_engine_libGL_glUniform4uiv
+  "glUniform4uiv"=kinakaze_engine_libGL_glUniform4uiv PRIVATE
+  kinakaze_engine_libGL_glUniformBlockBinding
+  "glUniformBlockBinding"=kinakaze_engine_libGL_glUniformBlockBinding PRIVATE
+  kinakaze_engine_libGL_glUniformMatrix2fv
+  "glUniformMatrix2fv"=kinakaze_engine_libGL_glUniformMatrix2fv PRIVATE
+  kinakaze_engine_libGL_glUniformMatrix2x3fv
+  "glUniformMatrix2x3fv"=kinakaze_engine_libGL_glUniformMatrix2x3fv PRIVATE
+  kinakaze_engine_libGL_glUniformMatrix2x4fv
+  "glUniformMatrix2x4fv"=kinakaze_engine_libGL_glUniformMatrix2x4fv PRIVATE
+  kinakaze_engine_libGL_glUniformMatrix3fv
+  "glUniformMatrix3fv"=kinakaze_engine_libGL_glUniformMatrix3fv PRIVATE
+  kinakaze_engine_libGL_glUniformMatrix3x2fv
+  "glUniformMatrix3x2fv"=kinakaze_engine_libGL_glUniformMatrix3x2fv PRIVATE
+  kinakaze_engine_libGL_glUniformMatrix3x4fv
+  "glUniformMatrix3x4fv"=kinakaze_engine_libGL_glUniformMatrix3x4fv PRIVATE
+  kinakaze_engine_libGL_glUniformMatrix4fv
+  "glUniformMatrix4fv"=kinakaze_engine_libGL_glUniformMatrix4fv PRIVATE
+  kinakaze_engine_libGL_glUniformMatrix4x2fv
+  "glUniformMatrix4x2fv"=kinakaze_engine_libGL_glUniformMatrix4x2fv PRIVATE
+  kinakaze_engine_libGL_glUniformMatrix4x3fv
+  "glUniformMatrix4x3fv"=kinakaze_engine_libGL_glUniformMatrix4x3fv PRIVATE
+  kinakaze_engine_libGL_glUnmapBuffer
+  "glUnmapBuffer"=kinakaze_engine_libGL_glUnmapBuffer PRIVATE
+  kinakaze_engine_libGL_glUseProgram
+  "glUseProgram"=kinakaze_engine_libGL_glUseProgram PRIVATE
+  kinakaze_engine_libGL_glValidateProgram
+  "glValidateProgram"=kinakaze_engine_libGL_glValidateProgram PRIVATE
+  kinakaze_engine_libGL_glVertex2d
+  "glVertex2d"=kinakaze_engine_libGL_glVertex2d PRIVATE
+  kinakaze_engine_libGL_glVertex2f
+  "glVertex2f"=kinakaze_engine_libGL_glVertex2f PRIVATE
+  kinakaze_engine_libGL_glVertex2i
+  "glVertex2i"=kinakaze_engine_libGL_glVertex2i PRIVATE
+  kinakaze_engine_libGL_glVertex3d
+  "glVertex3d"=kinakaze_engine_libGL_glVertex3d PRIVATE
+  kinakaze_engine_libGL_glVertex3f
+  "glVertex3f"=kinakaze_engine_libGL_glVertex3f PRIVATE
+  kinakaze_engine_libGL_glVertex3fv
+  "glVertex3fv"=kinakaze_engine_libGL_glVertex3fv PRIVATE
+  kinakaze_engine_libGL_glVertex3i
+  "glVertex3i"=kinakaze_engine_libGL_glVertex3i PRIVATE
+  kinakaze_engine_libGL_glVertex4f
+  "glVertex4f"=kinakaze_engine_libGL_glVertex4f PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib1d
+  "glVertexAttrib1d"=kinakaze_engine_libGL_glVertexAttrib1d PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib1dv
+  "glVertexAttrib1dv"=kinakaze_engine_libGL_glVertexAttrib1dv PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib1f
+  "glVertexAttrib1f"=kinakaze_engine_libGL_glVertexAttrib1f PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib1fv
+  "glVertexAttrib1fv"=kinakaze_engine_libGL_glVertexAttrib1fv PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib1s
+  "glVertexAttrib1s"=kinakaze_engine_libGL_glVertexAttrib1s PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib1sv
+  "glVertexAttrib1sv"=kinakaze_engine_libGL_glVertexAttrib1sv PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib2d
+  "glVertexAttrib2d"=kinakaze_engine_libGL_glVertexAttrib2d PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib2dv
+  "glVertexAttrib2dv"=kinakaze_engine_libGL_glVertexAttrib2dv PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib2f
+  "glVertexAttrib2f"=kinakaze_engine_libGL_glVertexAttrib2f PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib2fv
+  "glVertexAttrib2fv"=kinakaze_engine_libGL_glVertexAttrib2fv PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib2s
+  "glVertexAttrib2s"=kinakaze_engine_libGL_glVertexAttrib2s PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib2sv
+  "glVertexAttrib2sv"=kinakaze_engine_libGL_glVertexAttrib2sv PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib3d
+  "glVertexAttrib3d"=kinakaze_engine_libGL_glVertexAttrib3d PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib3dv
+  "glVertexAttrib3dv"=kinakaze_engine_libGL_glVertexAttrib3dv PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib3f
+  "glVertexAttrib3f"=kinakaze_engine_libGL_glVertexAttrib3f PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib3fv
+  "glVertexAttrib3fv"=kinakaze_engine_libGL_glVertexAttrib3fv PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib3s
+  "glVertexAttrib3s"=kinakaze_engine_libGL_glVertexAttrib3s PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib3sv
+  "glVertexAttrib3sv"=kinakaze_engine_libGL_glVertexAttrib3sv PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib4Nbv
+  "glVertexAttrib4Nbv"=kinakaze_engine_libGL_glVertexAttrib4Nbv PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib4Niv
+  "glVertexAttrib4Niv"=kinakaze_engine_libGL_glVertexAttrib4Niv PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib4Nsv
+  "glVertexAttrib4Nsv"=kinakaze_engine_libGL_glVertexAttrib4Nsv PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib4Nub
+  "glVertexAttrib4Nub"=kinakaze_engine_libGL_glVertexAttrib4Nub PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib4Nubv
+  "glVertexAttrib4Nubv"=kinakaze_engine_libGL_glVertexAttrib4Nubv PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib4Nuiv
+  "glVertexAttrib4Nuiv"=kinakaze_engine_libGL_glVertexAttrib4Nuiv PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib4Nusv
+  "glVertexAttrib4Nusv"=kinakaze_engine_libGL_glVertexAttrib4Nusv PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib4bv
+  "glVertexAttrib4bv"=kinakaze_engine_libGL_glVertexAttrib4bv PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib4d
+  "glVertexAttrib4d"=kinakaze_engine_libGL_glVertexAttrib4d PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib4dv
+  "glVertexAttrib4dv"=kinakaze_engine_libGL_glVertexAttrib4dv PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib4f
+  "glVertexAttrib4f"=kinakaze_engine_libGL_glVertexAttrib4f PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib4fv
+  "glVertexAttrib4fv"=kinakaze_engine_libGL_glVertexAttrib4fv PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib4iv
+  "glVertexAttrib4iv"=kinakaze_engine_libGL_glVertexAttrib4iv PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib4s
+  "glVertexAttrib4s"=kinakaze_engine_libGL_glVertexAttrib4s PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib4sv
+  "glVertexAttrib4sv"=kinakaze_engine_libGL_glVertexAttrib4sv PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib4ubv
+  "glVertexAttrib4ubv"=kinakaze_engine_libGL_glVertexAttrib4ubv PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib4uiv
+  "glVertexAttrib4uiv"=kinakaze_engine_libGL_glVertexAttrib4uiv PRIVATE
+  kinakaze_engine_libGL_glVertexAttrib4usv
+  "glVertexAttrib4usv"=kinakaze_engine_libGL_glVertexAttrib4usv PRIVATE
+  kinakaze_engine_libGL_glVertexAttribDivisor
+  "glVertexAttribDivisor"=kinakaze_engine_libGL_glVertexAttribDivisor PRIVATE
+  kinakaze_engine_libGL_glVertexAttribDivisorARB
+  "glVertexAttribDivisorARB"=kinakaze_engine_libGL_glVertexAttribDivisorARB PRIVATE
+  kinakaze_engine_libGL_glVertexAttribI1i
+  "glVertexAttribI1i"=kinakaze_engine_libGL_glVertexAttribI1i PRIVATE
+  kinakaze_engine_libGL_glVertexAttribI1iv
+  "glVertexAttribI1iv"=kinakaze_engine_libGL_glVertexAttribI1iv PRIVATE
+  kinakaze_engine_libGL_glVertexAttribI1ui
+  "glVertexAttribI1ui"=kinakaze_engine_libGL_glVertexAttribI1ui PRIVATE
+  kinakaze_engine_libGL_glVertexAttribI1uiv
+  "glVertexAttribI1uiv"=kinakaze_engine_libGL_glVertexAttribI1uiv PRIVATE
+  kinakaze_engine_libGL_glVertexAttribI2i
+  "glVertexAttribI2i"=kinakaze_engine_libGL_glVertexAttribI2i PRIVATE
+  kinakaze_engine_libGL_glVertexAttribI2iv
+  "glVertexAttribI2iv"=kinakaze_engine_libGL_glVertexAttribI2iv PRIVATE
+  kinakaze_engine_libGL_glVertexAttribI2ui
+  "glVertexAttribI2ui"=kinakaze_engine_libGL_glVertexAttribI2ui PRIVATE
+  kinakaze_engine_libGL_glVertexAttribI2uiv
+  "glVertexAttribI2uiv"=kinakaze_engine_libGL_glVertexAttribI2uiv PRIVATE
+  kinakaze_engine_libGL_glVertexAttribI3i
+  "glVertexAttribI3i"=kinakaze_engine_libGL_glVertexAttribI3i PRIVATE
+  kinakaze_engine_libGL_glVertexAttribI3iv
+  "glVertexAttribI3iv"=kinakaze_engine_libGL_glVertexAttribI3iv PRIVATE
+  kinakaze_engine_libGL_glVertexAttribI3ui
+  "glVertexAttribI3ui"=kinakaze_engine_libGL_glVertexAttribI3ui PRIVATE
+  kinakaze_engine_libGL_glVertexAttribI3uiv
+  "glVertexAttribI3uiv"=kinakaze_engine_libGL_glVertexAttribI3uiv PRIVATE
+  kinakaze_engine_libGL_glVertexAttribI4bv
+  "glVertexAttribI4bv"=kinakaze_engine_libGL_glVertexAttribI4bv PRIVATE
+  kinakaze_engine_libGL_glVertexAttribI4i
+  "glVertexAttribI4i"=kinakaze_engine_libGL_glVertexAttribI4i PRIVATE
+  kinakaze_engine_libGL_glVertexAttribI4iv
+  "glVertexAttribI4iv"=kinakaze_engine_libGL_glVertexAttribI4iv PRIVATE
+  kinakaze_engine_libGL_glVertexAttribI4sv
+  "glVertexAttribI4sv"=kinakaze_engine_libGL_glVertexAttribI4sv PRIVATE
+  kinakaze_engine_libGL_glVertexAttribI4ubv
+  "glVertexAttribI4ubv"=kinakaze_engine_libGL_glVertexAttribI4ubv PRIVATE
+  kinakaze_engine_libGL_glVertexAttribI4ui
+  "glVertexAttribI4ui"=kinakaze_engine_libGL_glVertexAttribI4ui PRIVATE
+  kinakaze_engine_libGL_glVertexAttribI4uiv
+  "glVertexAttribI4uiv"=kinakaze_engine_libGL_glVertexAttribI4uiv PRIVATE
+  kinakaze_engine_libGL_glVertexAttribI4usv
+  "glVertexAttribI4usv"=kinakaze_engine_libGL_glVertexAttribI4usv PRIVATE
+  kinakaze_engine_libGL_glVertexAttribIPointer
+  "glVertexAttribIPointer"=kinakaze_engine_libGL_glVertexAttribIPointer PRIVATE
+  kinakaze_engine_libGL_glVertexAttribP1ui
+  "glVertexAttribP1ui"=kinakaze_engine_libGL_glVertexAttribP1ui PRIVATE
+  kinakaze_engine_libGL_glVertexAttribP1uiv
+  "glVertexAttribP1uiv"=kinakaze_engine_libGL_glVertexAttribP1uiv PRIVATE
+  kinakaze_engine_libGL_glVertexAttribP2ui
+  "glVertexAttribP2ui"=kinakaze_engine_libGL_glVertexAttribP2ui PRIVATE
+  kinakaze_engine_libGL_glVertexAttribP2uiv
+  "glVertexAttribP2uiv"=kinakaze_engine_libGL_glVertexAttribP2uiv PRIVATE
+  kinakaze_engine_libGL_glVertexAttribP3ui
+  "glVertexAttribP3ui"=kinakaze_engine_libGL_glVertexAttribP3ui PRIVATE
+  kinakaze_engine_libGL_glVertexAttribP3uiv
+  "glVertexAttribP3uiv"=kinakaze_engine_libGL_glVertexAttribP3uiv PRIVATE
+  kinakaze_engine_libGL_glVertexAttribP4ui
+  "glVertexAttribP4ui"=kinakaze_engine_libGL_glVertexAttribP4ui PRIVATE
+  kinakaze_engine_libGL_glVertexAttribP4uiv
+  "glVertexAttribP4uiv"=kinakaze_engine_libGL_glVertexAttribP4uiv PRIVATE
+  kinakaze_engine_libGL_glVertexAttribPointer
+  "glVertexAttribPointer"=kinakaze_engine_libGL_glVertexAttribPointer PRIVATE
+  kinakaze_engine_libGL_glVertexPointer
+  "glVertexPointer"=kinakaze_engine_libGL_glVertexPointer PRIVATE
+  kinakaze_engine_libGL_glViewport
+  "glViewport"=kinakaze_engine_libGL_glViewport PRIVATE
+  kinakaze_engine_libGL_glWaitSync
+  "glWaitSync"=kinakaze_engine_libGL_glWaitSync PRIVATE
+  kinakaze_engine_libGL_glXBindTexImageEXT
+  "glXBindTexImageEXT"=kinakaze_engine_libGL_glXBindTexImageEXT PRIVATE
+  kinakaze_engine_libGL_glXChooseFBConfig
+  "glXChooseFBConfig"=kinakaze_engine_libGL_glXChooseFBConfig PRIVATE
+  kinakaze_engine_libGL_glXChooseVisual
+  "glXChooseVisual"=kinakaze_engine_libGL_glXChooseVisual PRIVATE
+  kinakaze_engine_libGL_glXCreateContext
+  "glXCreateContext"=kinakaze_engine_libGL_glXCreateContext PRIVATE
+  kinakaze_engine_libGL_glXCreateContextAttribsARB
+  "glXCreateContextAttribsARB"=kinakaze_engine_libGL_glXCreateContextAttribsARB PRIVATE
+  kinakaze_engine_libGL_glXCreateGLXPixmap
+  "glXCreateGLXPixmap"=kinakaze_engine_libGL_glXCreateGLXPixmap PRIVATE
+  kinakaze_engine_libGL_glXCreateNewContext
+  "glXCreateNewContext"=kinakaze_engine_libGL_glXCreateNewContext PRIVATE
+  kinakaze_engine_libGL_glXCreatePixmap
+  "glXCreatePixmap"=kinakaze_engine_libGL_glXCreatePixmap PRIVATE
+  kinakaze_engine_libGL_glXCreateWindow
+  "glXCreateWindow"=kinakaze_engine_libGL_glXCreateWindow PRIVATE
+  kinakaze_engine_libGL_glXDestroyContext
+  "glXDestroyContext"=kinakaze_engine_libGL_glXDestroyContext PRIVATE
+  kinakaze_engine_libGL_glXDestroyGLXPixmap
+  "glXDestroyGLXPixmap"=kinakaze_engine_libGL_glXDestroyGLXPixmap PRIVATE
+  kinakaze_engine_libGL_glXDestroyPixmap
+  "glXDestroyPixmap"=kinakaze_engine_libGL_glXDestroyPixmap PRIVATE
+  kinakaze_engine_libGL_glXDestroyWindow
+  "glXDestroyWindow"=kinakaze_engine_libGL_glXDestroyWindow PRIVATE
+  kinakaze_engine_libGL_glXGetClientString
+  "glXGetClientString"=kinakaze_engine_libGL_glXGetClientString PRIVATE
+  kinakaze_engine_libGL_glXGetConfig
+  "glXGetConfig"=kinakaze_engine_libGL_glXGetConfig PRIVATE
+  kinakaze_engine_libGL_glXGetCurrentContext
+  "glXGetCurrentContext"=kinakaze_engine_libGL_glXGetCurrentContext PRIVATE
+  kinakaze_engine_libGL_glXGetCurrentDisplay
+  "glXGetCurrentDisplay"=kinakaze_engine_libGL_glXGetCurrentDisplay PRIVATE
+  kinakaze_engine_libGL_glXGetCurrentDrawable
+  "glXGetCurrentDrawable"=kinakaze_engine_libGL_glXGetCurrentDrawable PRIVATE
+  kinakaze_engine_libGL_glXGetCurrentReadDrawable
+  "glXGetCurrentReadDrawable"=kinakaze_engine_libGL_glXGetCurrentReadDrawable PRIVATE
+  kinakaze_engine_libGL_glXGetFBConfigAttrib
+  "glXGetFBConfigAttrib"=kinakaze_engine_libGL_glXGetFBConfigAttrib PRIVATE
+  kinakaze_engine_libGL_glXGetFBConfigs
+  "glXGetFBConfigs"=kinakaze_engine_libGL_glXGetFBConfigs PRIVATE
+  kinakaze_engine_libGL_glXGetProcAddress
+  "glXGetProcAddress"=kinakaze_engine_libGL_glXGetProcAddress PRIVATE
+  kinakaze_engine_libGL_glXGetProcAddressARB
+  "glXGetProcAddressARB"=kinakaze_engine_libGL_glXGetProcAddressARB PRIVATE
+  kinakaze_engine_libGL_glXGetSelectedEvent
+  "glXGetSelectedEvent"=kinakaze_engine_libGL_glXGetSelectedEvent PRIVATE
+  kinakaze_engine_libGL_glXGetVisualFromFBConfig
+  "glXGetVisualFromFBConfig"=kinakaze_engine_libGL_glXGetVisualFromFBConfig PRIVATE
+  kinakaze_engine_libGL_glXIsDirect
+  "glXIsDirect"=kinakaze_engine_libGL_glXIsDirect PRIVATE
+  kinakaze_engine_libGL_glXMakeContextCurrent
+  "glXMakeContextCurrent"=kinakaze_engine_libGL_glXMakeContextCurrent PRIVATE
+  kinakaze_engine_libGL_glXMakeCurrent
+  "glXMakeCurrent"=kinakaze_engine_libGL_glXMakeCurrent PRIVATE
+  kinakaze_engine_libGL_glXQueryContext
+  "glXQueryContext"=kinakaze_engine_libGL_glXQueryContext PRIVATE
+  kinakaze_engine_libGL_glXQueryDrawable
+  "glXQueryDrawable"=kinakaze_engine_libGL_glXQueryDrawable PRIVATE
+  kinakaze_engine_libGL_glXQueryExtension
+  "glXQueryExtension"=kinakaze_engine_libGL_glXQueryExtension PRIVATE
+  kinakaze_engine_libGL_glXQueryExtensionsString
+  "glXQueryExtensionsString"=kinakaze_engine_libGL_glXQueryExtensionsString PRIVATE
+  kinakaze_engine_libGL_glXQueryServerString
+  "glXQueryServerString"=kinakaze_engine_libGL_glXQueryServerString PRIVATE
+  kinakaze_engine_libGL_glXQueryVersion
+  "glXQueryVersion"=kinakaze_engine_libGL_glXQueryVersion PRIVATE
+  kinakaze_engine_libGL_glXReleaseTexImageEXT
+  "glXReleaseTexImageEXT"=kinakaze_engine_libGL_glXReleaseTexImageEXT PRIVATE
+  kinakaze_engine_libGL_glXSelectEvent
+  "glXSelectEvent"=kinakaze_engine_libGL_glXSelectEvent PRIVATE
+  kinakaze_engine_libGL_glXSwapBuffers
+  "glXSwapBuffers"=kinakaze_engine_libGL_glXSwapBuffers PRIVATE
+  kinakaze_engine_libGL_glXSwapIntervalEXT
+  "glXSwapIntervalEXT"=kinakaze_engine_libGL_glXSwapIntervalEXT PRIVATE
+  kinakaze_engine_libGL_glXSwapIntervalMESA
+  "glXSwapIntervalMESA"=kinakaze_engine_libGL_glXSwapIntervalMESA PRIVATE
+  kinakaze_engine_libGL_glXSwapIntervalSGI
+  "glXSwapIntervalSGI"=kinakaze_engine_libGL_glXSwapIntervalSGI PRIVATE
+  kinakaze_engine_libGL_glXWaitGL
+  "glXWaitGL"=kinakaze_engine_libGL_glXWaitGL PRIVATE
+  kinakaze_engine_libGL_glXWaitX
+  "glXWaitX"=kinakaze_engine_libGL_glXWaitX PRIVATE

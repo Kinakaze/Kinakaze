@@ -1,0 +1,3984 @@
+LIBRARY "libc.so.6"
+EXPORTS
+  kinakaze_abi__exit
+  "_Exit"=kinakaze_abi__exit PRIVATE
+  "_Exit@GLIBC_2.2.5"=kinakaze_abi__exit PRIVATE
+  kinakaze_abi__IO_getc
+  "_IO_getc"=kinakaze_abi__IO_getc PRIVATE
+  "_IO_getc@GLIBC_2.2.5"=kinakaze_abi__IO_getc PRIVATE
+  kinakaze_abi__IO_putc
+  "_IO_putc"=kinakaze_abi__IO_putc PRIVATE
+  kinakaze_abi___asprintf_chk
+  "__asprintf_chk"=kinakaze_abi___asprintf_chk PRIVATE
+  "__asprintf_chk@GLIBC_2.8"=kinakaze_abi___asprintf_chk PRIVATE
+  kinakaze_abi___assert_fail
+  "__assert_fail"=kinakaze_abi___assert_fail PRIVATE
+  "__assert_fail@GLIBC_2.2.5"=kinakaze_abi___assert_fail PRIVATE
+  kinakaze_abi___chk_fail
+  "__chk_fail"=kinakaze_abi___chk_fail PRIVATE
+  kinakaze_abi___cmsg_nxthdr
+  "__cmsg_nxthdr"=kinakaze_abi___cmsg_nxthdr PRIVATE
+  "__cmsg_nxthdr@GLIBC_2.2.5"=kinakaze_abi___cmsg_nxthdr PRIVATE
+  kinakaze_abi___ctype_b_loc
+  "__ctype_b_loc"=kinakaze_abi___ctype_b_loc PRIVATE
+  "__ctype_b_loc@GLIBC_2.3"=kinakaze_abi___ctype_b_loc PRIVATE
+  kinakaze_abi___ctype_get_mb_cur_max
+  "__ctype_get_mb_cur_max"=kinakaze_abi___ctype_get_mb_cur_max PRIVATE
+  "__ctype_get_mb_cur_max@GLIBC_2.2.5"=kinakaze_abi___ctype_get_mb_cur_max PRIVATE
+  kinakaze_abi___ctype_tolower_loc
+  "__ctype_tolower_loc"=kinakaze_abi___ctype_tolower_loc PRIVATE
+  "__ctype_tolower_loc@GLIBC_2.3"=kinakaze_abi___ctype_tolower_loc PRIVATE
+  kinakaze_abi___ctype_toupper_loc
+  "__ctype_toupper_loc"=kinakaze_abi___ctype_toupper_loc PRIVATE
+  "__ctype_toupper_loc@GLIBC_2.3"=kinakaze_abi___ctype_toupper_loc PRIVATE
+  kinakaze_abi___cxa_atexit
+  "__cxa_atexit"=kinakaze_abi___cxa_atexit PRIVATE
+  "__cxa_atexit@GLIBC_2.2.5"=kinakaze_abi___cxa_atexit PRIVATE
+  kinakaze_abi___cxa_demangle
+  "__cxa_demangle"=kinakaze_abi___cxa_demangle PRIVATE
+  kinakaze_abi___cxa_finalize
+  "__cxa_finalize"=kinakaze_abi___cxa_finalize PRIVATE
+  "__cxa_finalize@GLIBC_2.2.5"=kinakaze_abi___cxa_finalize PRIVATE
+  kinakaze_abi___cxa_guard_acquire
+  "__cxa_guard_acquire"=kinakaze_abi___cxa_guard_acquire PRIVATE
+  kinakaze_abi___cxa_guard_release
+  "__cxa_guard_release"=kinakaze_abi___cxa_guard_release PRIVATE
+  kinakaze_abi___cxa_pure_virtual
+  "__cxa_pure_virtual"=kinakaze_abi___cxa_pure_virtual PRIVATE
+  kinakaze_abi___cxa_thread_atexit
+  "__cxa_thread_atexit"=kinakaze_abi___cxa_thread_atexit PRIVATE
+  kinakaze_abi___cxa_thread_atexit_impl
+  "__cxa_thread_atexit_impl"=kinakaze_abi___cxa_thread_atexit_impl PRIVATE
+  "__cxa_thread_atexit_impl@GLIBC_2.18"=kinakaze_abi___cxa_thread_atexit_impl PRIVATE
+  kinakaze_abi_daylight DATA
+  "__daylight"=kinakaze_abi_daylight DATA PRIVATE
+  kinakaze_abi_dcgettext
+  "__dcgettext"=kinakaze_abi_dcgettext PRIVATE
+  "__dcgettext@GLIBC_2.2.5"=kinakaze_abi_dcgettext PRIVATE
+  kinakaze_abi___dprintf_chk
+  "__dprintf_chk"=kinakaze_abi___dprintf_chk PRIVATE
+  "__dprintf_chk@GLIBC_2.8"=kinakaze_abi___dprintf_chk PRIVATE
+  kinakaze_abi___duplocale
+  "__duplocale"=kinakaze_abi___duplocale PRIVATE
+  "__duplocale@GLIBC_2.2.5"=kinakaze_abi___duplocale PRIVATE
+  kinakaze_abi_environ DATA
+  "__environ"=kinakaze_abi_environ DATA PRIVATE
+  "__environ@GLIBC_2.2.5"=kinakaze_abi_environ DATA PRIVATE
+  kinakaze_abi___eqtf2
+  "__eqtf2"=kinakaze_abi___eqtf2 PRIVATE
+  kinakaze_abi___errno_location
+  "__errno_location"=kinakaze_abi___errno_location PRIVATE
+  "__errno_location@GLIBC_2.2.5"=kinakaze_abi___errno_location PRIVATE
+  kinakaze_abi___explicit_bzero_chk
+  "__explicit_bzero_chk"=kinakaze_abi___explicit_bzero_chk PRIVATE
+  "__explicit_bzero_chk@GLIBC_2.25"=kinakaze_abi___explicit_bzero_chk PRIVATE
+  kinakaze_abi___fdelt_chk
+  "__fdelt_chk"=kinakaze_abi___fdelt_chk PRIVATE
+  "__fdelt_chk@GLIBC_2.15"=kinakaze_abi___fdelt_chk PRIVATE
+  kinakaze_abi___fgets_chk
+  "__fgets_chk"=kinakaze_abi___fgets_chk PRIVATE
+  "__fgets_chk@GLIBC_2.4"=kinakaze_abi___fgets_chk PRIVATE
+  kinakaze_abi___fpclassify
+  "__fpclassify"=kinakaze_abi___fpclassify PRIVATE
+  kinakaze_abi___fpending
+  "__fpending"=kinakaze_abi___fpending PRIVATE
+  "__fpending@GLIBC_2.2.5"=kinakaze_abi___fpending PRIVATE
+  kinakaze_abi___fprintf_chk
+  "__fprintf_chk"=kinakaze_abi___fprintf_chk PRIVATE
+  "__fprintf_chk@GLIBC_2.3.4"=kinakaze_abi___fprintf_chk PRIVATE
+  kinakaze_abi___fpurge
+  "__fpurge"=kinakaze_abi___fpurge PRIVATE
+  "__fpurge@GLIBC_2.2.5"=kinakaze_abi___fpurge PRIVATE
+  kinakaze_abi___fread_chk
+  "__fread_chk"=kinakaze_abi___fread_chk PRIVATE
+  "__fread_chk@GLIBC_2.7"=kinakaze_abi___fread_chk PRIVATE
+  kinakaze_abi___fread_chk
+  "__fread_unlocked_chk"=kinakaze_abi___fread_chk PRIVATE
+  "__fread_unlocked_chk@GLIBC_2.7"=kinakaze_abi___fread_chk PRIVATE
+  kinakaze_abi___freading
+  "__freading"=kinakaze_abi___freading PRIVATE
+  "__freading@GLIBC_2.2.5"=kinakaze_abi___freading PRIVATE
+  kinakaze_abi___freelocale
+  "__freelocale"=kinakaze_abi___freelocale PRIVATE
+  "__freelocale@GLIBC_2.2.5"=kinakaze_abi___freelocale PRIVATE
+  kinakaze_abi___fsetlocking
+  "__fsetlocking"=kinakaze_abi___fsetlocking PRIVATE
+  "__fsetlocking@GLIBC_2.2.5"=kinakaze_abi___fsetlocking PRIVATE
+  kinakaze_abi___fwriting
+  "__fwriting"=kinakaze_abi___fwriting PRIVATE
+  "__fwriting@GLIBC_2.2.5"=kinakaze_abi___fwriting PRIVATE
+  kinakaze_abi___fxstat
+  "__fxstat"=kinakaze_abi___fxstat PRIVATE
+  "__fxstat@GLIBC_2.2.5"=kinakaze_abi___fxstat PRIVATE
+  kinakaze_abi___fxstat64
+  "__fxstat64"=kinakaze_abi___fxstat64 PRIVATE
+  "__fxstat64@GLIBC_2.2.5"=kinakaze_abi___fxstat64 PRIVATE
+  kinakaze_abi___fxstatat
+  "__fxstatat"=kinakaze_abi___fxstatat PRIVATE
+  "__fxstatat@GLIBC_2.4"=kinakaze_abi___fxstatat PRIVATE
+  kinakaze_abi___fxstatat64
+  "__fxstatat64"=kinakaze_abi___fxstatat64 PRIVATE
+  "__fxstatat64@GLIBC_2.4"=kinakaze_abi___fxstatat64 PRIVATE
+  kinakaze_abi___getdelim
+  "__getdelim"=kinakaze_abi___getdelim PRIVATE
+  "__getdelim@GLIBC_2.2.5"=kinakaze_abi___getdelim PRIVATE
+  kinakaze_abi___getf2
+  "__getf2"=kinakaze_abi___getf2 PRIVATE
+  kinakaze_abi___getpagesize
+  "__getpagesize"=kinakaze_abi___getpagesize PRIVATE
+  "__getpagesize@GLIBC_2.2.5"=kinakaze_abi___getpagesize PRIVATE
+  kinakaze_abi___gmon_start__
+  "__gmon_start__"=kinakaze_abi___gmon_start__ PRIVATE
+  kinakaze_abi___h_errno_location
+  "__h_errno_location"=kinakaze_abi___h_errno_location PRIVATE
+  "__h_errno_location@GLIBC_2.2.5"=kinakaze_abi___h_errno_location PRIVATE
+  "__isinf"=libm.so.6.kinakaze_engine_libm___isinf PRIVATE
+  "__isinf@GLIBC_2.2.5"=libm.so.6.kinakaze_engine_libm___isinf PRIVATE
+  "__isnan"=libm.so.6.kinakaze_engine_libm___isnan PRIVATE
+  "__isnan@GLIBC_2.2.5"=libm.so.6.kinakaze_engine_libm___isnan PRIVATE
+  "__isnanf"=libm.so.6.kinakaze_engine_libm___isnanf PRIVATE
+  "__isnanf@GLIBC_2.2.5"=libm.so.6.kinakaze_engine_libm___isnanf PRIVATE
+  kinakaze_abi___isoc23_fscanf
+  "__isoc23_fscanf"=kinakaze_abi___isoc23_fscanf PRIVATE
+  "__isoc23_fscanf@GLIBC_2.38"=kinakaze_abi___isoc23_fscanf PRIVATE
+  kinakaze_abi___isoc23_sscanf
+  "__isoc23_sscanf"=kinakaze_abi___isoc23_sscanf PRIVATE
+  "__isoc23_sscanf@GLIBC_2.38"=kinakaze_abi___isoc23_sscanf PRIVATE
+  kinakaze_abi___isoc23_strtol
+  "__isoc23_strtol"=kinakaze_abi___isoc23_strtol PRIVATE
+  "__isoc23_strtol@GLIBC_2.38"=kinakaze_abi___isoc23_strtol PRIVATE
+  kinakaze_abi___isoc23_strtoll
+  "__isoc23_strtoll"=kinakaze_abi___isoc23_strtoll PRIVATE
+  "__isoc23_strtoll@GLIBC_2.38"=kinakaze_abi___isoc23_strtoll PRIVATE
+  kinakaze_abi___isoc23_strtoul
+  "__isoc23_strtoul"=kinakaze_abi___isoc23_strtoul PRIVATE
+  "__isoc23_strtoul@GLIBC_2.38"=kinakaze_abi___isoc23_strtoul PRIVATE
+  kinakaze_abi___isoc23_strtoull
+  "__isoc23_strtoull"=kinakaze_abi___isoc23_strtoull PRIVATE
+  "__isoc23_strtoull@GLIBC_2.38"=kinakaze_abi___isoc23_strtoull PRIVATE
+  kinakaze_abi___isoc23_strtoumax
+  "__isoc23_strtoumax"=kinakaze_abi___isoc23_strtoumax PRIVATE
+  "__isoc23_strtoumax@GLIBC_2.38"=kinakaze_abi___isoc23_strtoumax PRIVATE
+  kinakaze_abi___isoc99_fscanf
+  "__isoc99_fscanf"=kinakaze_abi___isoc99_fscanf PRIVATE
+  "__isoc99_fscanf@GLIBC_2.7"=kinakaze_abi___isoc99_fscanf PRIVATE
+  kinakaze_abi_scanf
+  "__isoc99_scanf"=kinakaze_abi_scanf PRIVATE
+  "__isoc99_scanf@GLIBC_2.7"=kinakaze_abi_scanf PRIVATE
+  kinakaze_abi___isoc99_sscanf
+  "__isoc99_sscanf"=kinakaze_abi___isoc99_sscanf PRIVATE
+  "__isoc99_sscanf@GLIBC_2.7"=kinakaze_abi___isoc99_sscanf PRIVATE
+  kinakaze_abi_vfscanf
+  "__isoc99_vfscanf"=kinakaze_abi_vfscanf PRIVATE
+  "__isoc99_vfscanf@GLIBC_2.7"=kinakaze_abi_vfscanf PRIVATE
+  kinakaze_abi_vscanf
+  "__isoc99_vscanf"=kinakaze_abi_vscanf PRIVATE
+  kinakaze_abi_vsscanf
+  "__isoc99_vsscanf"=kinakaze_abi_vsscanf PRIVATE
+  "__isoc99_vsscanf@GLIBC_2.7"=kinakaze_abi_vsscanf PRIVATE
+  kinakaze_abi___iswctype_l
+  "__iswctype_l"=kinakaze_abi___iswctype_l PRIVATE
+  "__iswctype_l@GLIBC_2.2.5"=kinakaze_abi___iswctype_l PRIVATE
+  kinakaze_abi___letf2
+  "__letf2"=kinakaze_abi___letf2 PRIVATE
+  kinakaze_abi___libc_calloc
+  "__libc_calloc"=kinakaze_abi___libc_calloc PRIVATE
+  "__libc_calloc@GLIBC_2.2.5"=kinakaze_abi___libc_calloc PRIVATE
+  kinakaze_abi___libc_current_sigrtmax
+  "__libc_current_sigrtmax"=kinakaze_abi___libc_current_sigrtmax PRIVATE
+  "__libc_current_sigrtmax@GLIBC_2.2.5"=kinakaze_abi___libc_current_sigrtmax PRIVATE
+  kinakaze_abi___libc_current_sigrtmin
+  "__libc_current_sigrtmin"=kinakaze_abi___libc_current_sigrtmin PRIVATE
+  "__libc_current_sigrtmin@GLIBC_2.2.5"=kinakaze_abi___libc_current_sigrtmin PRIVATE
+  kinakaze_abi___libc_free
+  "__libc_free"=kinakaze_abi___libc_free PRIVATE
+  "__libc_free@GLIBC_2.2.5"=kinakaze_abi___libc_free PRIVATE
+  kinakaze_abi___libc_malloc
+  "__libc_malloc"=kinakaze_abi___libc_malloc PRIVATE
+  "__libc_malloc@GLIBC_2.2.5"=kinakaze_abi___libc_malloc PRIVATE
+  kinakaze_abi___libc_memalign
+  "__libc_memalign"=kinakaze_abi___libc_memalign PRIVATE
+  "__libc_memalign@GLIBC_2.2.5"=kinakaze_abi___libc_memalign PRIVATE
+  kinakaze_abi___libc_realloc
+  "__libc_realloc"=kinakaze_abi___libc_realloc PRIVATE
+  "__libc_realloc@GLIBC_2.2.5"=kinakaze_abi___libc_realloc PRIVATE
+  kinakaze_abi___libc_single_threaded DATA
+  "__libc_single_threaded"=kinakaze_abi___libc_single_threaded DATA PRIVATE
+  "__libc_single_threaded@GLIBC_2.32"=kinakaze_abi___libc_single_threaded DATA PRIVATE
+  kinakaze_abi___libc_stack_end DATA
+  "__libc_stack_end"=kinakaze_abi___libc_stack_end DATA PRIVATE
+  kinakaze_abi___libc_start_main
+  "__libc_start_main"=kinakaze_abi___libc_start_main PRIVATE
+  "__libc_start_main@GLIBC_2.2.5"=kinakaze_abi___libc_start_main PRIVATE
+  "__libc_start_main@GLIBC_2.34"=kinakaze_abi___libc_start_main PRIVATE
+  kinakaze_abi___longjmp_chk
+  "__longjmp_chk"=kinakaze_abi___longjmp_chk PRIVATE
+  "__longjmp_chk@GLIBC_2.11"=kinakaze_abi___longjmp_chk PRIVATE
+  kinakaze_abi___lxstat
+  "__lxstat"=kinakaze_abi___lxstat PRIVATE
+  "__lxstat@GLIBC_2.2.5"=kinakaze_abi___lxstat PRIVATE
+  kinakaze_abi___lxstat64
+  "__lxstat64"=kinakaze_abi___lxstat64 PRIVATE
+  "__lxstat64@GLIBC_2.2.5"=kinakaze_abi___lxstat64 PRIVATE
+  kinakaze_abi_mbrlen
+  "__mbrlen"=kinakaze_abi_mbrlen PRIVATE
+  "__mbrlen@GLIBC_2.2.5"=kinakaze_abi_mbrlen PRIVATE
+  kinakaze_abi___memcpy_chk
+  "__memcpy_chk"=kinakaze_abi___memcpy_chk PRIVATE
+  "__memcpy_chk@GLIBC_2.3.4"=kinakaze_abi___memcpy_chk PRIVATE
+  kinakaze_abi___memmove_chk
+  "__memmove_chk"=kinakaze_abi___memmove_chk PRIVATE
+  "__memmove_chk@GLIBC_2.3.4"=kinakaze_abi___memmove_chk PRIVATE
+  kinakaze_abi_mempcpy
+  "__mempcpy"=kinakaze_abi_mempcpy PRIVATE
+  "__mempcpy@GLIBC_2.2.5"=kinakaze_abi_mempcpy PRIVATE
+  kinakaze_abi___mempcpy_chk
+  "__mempcpy_chk"=kinakaze_abi___mempcpy_chk PRIVATE
+  "__mempcpy_chk@GLIBC_2.3.4"=kinakaze_abi___mempcpy_chk PRIVATE
+  kinakaze_abi___memset_chk
+  "__memset_chk"=kinakaze_abi___memset_chk PRIVATE
+  "__memset_chk@GLIBC_2.3.4"=kinakaze_abi___memset_chk PRIVATE
+  kinakaze_abi___memset_explicit_chk
+  "__memset_explicit_chk"=kinakaze_abi___memset_explicit_chk PRIVATE
+  "__memset_explicit_chk@GLIBC_2.43"=kinakaze_abi___memset_explicit_chk PRIVATE
+  kinakaze_abi___newlocale
+  "__newlocale"=kinakaze_abi___newlocale PRIVATE
+  "__newlocale@GLIBC_2.2.5"=kinakaze_abi___newlocale PRIVATE
+  kinakaze_abi___nl_langinfo_l
+  "__nl_langinfo_l"=kinakaze_abi___nl_langinfo_l PRIVATE
+  "__nl_langinfo_l@GLIBC_2.2.5"=kinakaze_abi___nl_langinfo_l PRIVATE
+  kinakaze_abi___open64_2
+  "__open64_2"=kinakaze_abi___open64_2 PRIVATE
+  "__open64_2@GLIBC_2.7"=kinakaze_abi___open64_2 PRIVATE
+  kinakaze_abi___open_2
+  "__open_2"=kinakaze_abi___open_2 PRIVATE
+  "__open_2@GLIBC_2.7"=kinakaze_abi___open_2 PRIVATE
+  kinakaze_abi___open_catalog
+  "__open_catalog"=kinakaze_abi___open_catalog PRIVATE
+  "__open_catalog@GLIBC_PRIVATE"=kinakaze_abi___open_catalog PRIVATE
+  kinakaze_abi___openat64_2
+  "__openat64_2"=kinakaze_abi___openat64_2 PRIVATE
+  "__openat64_2@GLIBC_2.7"=kinakaze_abi___openat64_2 PRIVATE
+  kinakaze_abi___openat_2
+  "__openat_2"=kinakaze_abi___openat_2 PRIVATE
+  "__openat_2@GLIBC_2.7"=kinakaze_abi___openat_2 PRIVATE
+  kinakaze_abi___overflow
+  "__overflow"=kinakaze_abi___overflow PRIVATE
+  "__overflow@GLIBC_2.2.5"=kinakaze_abi___overflow PRIVATE
+  kinakaze_abi___poll_chk
+  "__poll_chk"=kinakaze_abi___poll_chk PRIVATE
+  "__poll_chk@GLIBC_2.16"=kinakaze_abi___poll_chk PRIVATE
+  kinakaze_abi___popcountdi2
+  "__popcountdi2"=kinakaze_abi___popcountdi2 PRIVATE
+  kinakaze_abi___pread_chk
+  "__pread64_chk"=kinakaze_abi___pread_chk PRIVATE
+  "__pread64_chk@GLIBC_2.4"=kinakaze_abi___pread_chk PRIVATE
+  kinakaze_abi___pread_chk
+  "__pread_chk"=kinakaze_abi___pread_chk PRIVATE
+  "__pread_chk@GLIBC_2.4"=kinakaze_abi___pread_chk PRIVATE
+  kinakaze_abi___printf_chk
+  "__printf_chk"=kinakaze_abi___printf_chk PRIVATE
+  "__printf_chk@GLIBC_2.3.4"=kinakaze_abi___printf_chk PRIVATE
+  kinakaze_abi___progname DATA
+  "__progname"=kinakaze_abi___progname DATA PRIVATE
+  "__progname@GLIBC_2.2.5"=kinakaze_abi___progname DATA PRIVATE
+  kinakaze_abi___progname_full DATA
+  "__progname_full"=kinakaze_abi___progname_full DATA PRIVATE
+  "__progname_full@GLIBC_2.2.5"=kinakaze_abi___progname_full DATA PRIVATE
+  kinakaze_abi___pthread_key_create
+  "__pthread_key_create"=kinakaze_abi___pthread_key_create PRIVATE
+  "__pthread_key_create@GLIBC_2.34"=kinakaze_abi___pthread_key_create PRIVATE
+  "__pthread_register_cancel"=libpthread.so.0.__pthread_register_cancel PRIVATE
+  "__pthread_register_cancel@GLIBC_2.34"=libpthread.so.0.__pthread_register_cancel PRIVATE
+  "__pthread_register_cancel_defer"=libpthread.so.0.__pthread_register_cancel_defer PRIVATE
+  "__pthread_unregister_cancel"=libpthread.so.0.__pthread_unregister_cancel PRIVATE
+  "__pthread_unregister_cancel@GLIBC_2.34"=libpthread.so.0.__pthread_unregister_cancel PRIVATE
+  "__pthread_unregister_cancel_restore"=libpthread.so.0.__pthread_unregister_cancel_restore PRIVATE
+  "__pthread_unwind_next"=libpthread.so.0.__pthread_unwind_next PRIVATE
+  "__pthread_unwind_next@GLIBC_2.34"=libpthread.so.0.__pthread_unwind_next PRIVATE
+  kinakaze_abi___rawmemchr
+  "__rawmemchr"=kinakaze_abi___rawmemchr PRIVATE
+  "__rawmemchr@GLIBC_2.2.5"=kinakaze_abi___rawmemchr PRIVATE
+  kinakaze_abi___read_chk
+  "__read_chk"=kinakaze_abi___read_chk PRIVATE
+  "__read_chk@GLIBC_2.4"=kinakaze_abi___read_chk PRIVATE
+  kinakaze_abi___realpath_chk
+  "__realpath_chk"=kinakaze_abi___realpath_chk PRIVATE
+  "__realpath_chk@GLIBC_2.4"=kinakaze_abi___realpath_chk PRIVATE
+  kinakaze_abi___recv_chk
+  "__recv_chk"=kinakaze_abi___recv_chk PRIVATE
+  kinakaze_abi___recvfrom_chk
+  "__recvfrom_chk"=kinakaze_abi___recvfrom_chk PRIVATE
+  kinakaze_abi___register_atfork
+  "__register_atfork"=kinakaze_abi___register_atfork PRIVATE
+  "__register_atfork@GLIBC_2.3.2"=kinakaze_abi___register_atfork PRIVATE
+  kinakaze_abi___res_init
+  "__res_init"=kinakaze_abi___res_init PRIVATE
+  "__res_init@GLIBC_2.2.5"=kinakaze_abi___res_init PRIVATE
+  kinakaze_abi___res_mkquery
+  "__res_mkquery"=kinakaze_abi___res_mkquery PRIVATE
+  kinakaze_abi___res_nclose
+  "__res_nclose"=kinakaze_abi___res_nclose PRIVATE
+  "__res_nclose@GLIBC_2.2.5"=kinakaze_abi___res_nclose PRIVATE
+  kinakaze_abi___res_ninit
+  "__res_ninit"=kinakaze_abi___res_ninit PRIVATE
+  "__res_ninit@GLIBC_2.2.5"=kinakaze_abi___res_ninit PRIVATE
+  kinakaze_abi___res_nmkquery
+  "__res_nmkquery"=kinakaze_abi___res_nmkquery PRIVATE
+  kinakaze_abi___res_nquery
+  "__res_nquery"=kinakaze_abi___res_nquery PRIVATE
+  kinakaze_abi___res_nsearch
+  "__res_nsearch"=kinakaze_abi___res_nsearch PRIVATE
+  kinakaze_abi___res_nsend
+  "__res_nsend"=kinakaze_abi___res_nsend PRIVATE
+  kinakaze_abi___res_query
+  "__res_query"=kinakaze_abi___res_query PRIVATE
+  kinakaze_abi___res_search
+  "__res_search"=kinakaze_abi___res_search PRIVATE
+  kinakaze_abi___res_send
+  "__res_send"=kinakaze_abi___res_send PRIVATE
+  kinakaze_abi___res_state
+  "__res_state"=kinakaze_abi___res_state PRIVATE
+  "__res_state@GLIBC_2.2.5"=kinakaze_abi___res_state PRIVATE
+  kinakaze_abi___sched_cpualloc
+  "__sched_cpualloc"=kinakaze_abi___sched_cpualloc PRIVATE
+  "__sched_cpualloc@GLIBC_2.7"=kinakaze_abi___sched_cpualloc PRIVATE
+  kinakaze_abi___sched_cpucount
+  "__sched_cpucount"=kinakaze_abi___sched_cpucount PRIVATE
+  "__sched_cpucount@GLIBC_2.6"=kinakaze_abi___sched_cpucount PRIVATE
+  kinakaze_abi___sched_cpufree
+  "__sched_cpufree"=kinakaze_abi___sched_cpufree PRIVATE
+  "__sched_cpufree@GLIBC_2.7"=kinakaze_abi___sched_cpufree PRIVATE
+  kinakaze_abi___secure_getenv
+  "__secure_getenv"=kinakaze_abi___secure_getenv PRIVATE
+  kinakaze_abi___sigsetjmp
+  "__sigsetjmp"=kinakaze_abi___sigsetjmp PRIVATE
+  "__sigsetjmp@GLIBC_2.2.5"=kinakaze_abi___sigsetjmp PRIVATE
+  kinakaze_abi___snprintf_chk
+  "__snprintf_chk"=kinakaze_abi___snprintf_chk PRIVATE
+  "__snprintf_chk@GLIBC_2.3.4"=kinakaze_abi___snprintf_chk PRIVATE
+  kinakaze_abi___sprintf_chk
+  "__sprintf_chk"=kinakaze_abi___sprintf_chk PRIVATE
+  "__sprintf_chk@GLIBC_2.3.4"=kinakaze_abi___sprintf_chk PRIVATE
+  kinakaze_abi___stack_chk_fail
+  "__stack_chk_fail"=kinakaze_abi___stack_chk_fail PRIVATE
+  "__stack_chk_fail@GLIBC_2.4"=kinakaze_abi___stack_chk_fail PRIVATE
+  kinakaze_abi_stpcpy
+  "__stpcpy"=kinakaze_abi_stpcpy PRIVATE
+  "__stpcpy@GLIBC_2.2.5"=kinakaze_abi_stpcpy PRIVATE
+  kinakaze_abi___stpcpy_chk
+  "__stpcpy_chk"=kinakaze_abi___stpcpy_chk PRIVATE
+  "__stpcpy_chk@GLIBC_2.3.4"=kinakaze_abi___stpcpy_chk PRIVATE
+  kinakaze_abi___stpncpy_chk
+  "__stpncpy_chk"=kinakaze_abi___stpncpy_chk PRIVATE
+  kinakaze_abi___strcat_chk
+  "__strcat_chk"=kinakaze_abi___strcat_chk PRIVATE
+  "__strcat_chk@GLIBC_2.3.4"=kinakaze_abi___strcat_chk PRIVATE
+  kinakaze_abi___strcoll_l
+  "__strcoll_l"=kinakaze_abi___strcoll_l PRIVATE
+  "__strcoll_l@GLIBC_2.2.5"=kinakaze_abi___strcoll_l PRIVATE
+  kinakaze_abi___strcpy_chk
+  "__strcpy_chk"=kinakaze_abi___strcpy_chk PRIVATE
+  "__strcpy_chk@GLIBC_2.3.4"=kinakaze_abi___strcpy_chk PRIVATE
+  kinakaze_abi___strdup
+  "__strdup"=kinakaze_abi___strdup PRIVATE
+  "__strdup@GLIBC_2.2.5"=kinakaze_abi___strdup PRIVATE
+  kinakaze_abi___strftime_l
+  "__strftime_l"=kinakaze_abi___strftime_l PRIVATE
+  "__strftime_l@GLIBC_2.3"=kinakaze_abi___strftime_l PRIVATE
+  kinakaze_abi___strncat_chk
+  "__strncat_chk"=kinakaze_abi___strncat_chk PRIVATE
+  "__strncat_chk@GLIBC_2.3.4"=kinakaze_abi___strncat_chk PRIVATE
+  kinakaze_abi___strncpy_chk
+  "__strncpy_chk"=kinakaze_abi___strncpy_chk PRIVATE
+  "__strncpy_chk@GLIBC_2.3.4"=kinakaze_abi___strncpy_chk PRIVATE
+  kinakaze_abi_strndup
+  "__strndup"=kinakaze_abi_strndup PRIVATE
+  "__strndup@GLIBC_2.2.5"=kinakaze_abi_strndup PRIVATE
+  kinakaze_abi___strtod_l
+  "__strtod_l"=kinakaze_abi___strtod_l PRIVATE
+  "__strtod_l@GLIBC_2.2.5"=kinakaze_abi___strtod_l PRIVATE
+  kinakaze_abi___strtof_l
+  "__strtof_l"=kinakaze_abi___strtof_l PRIVATE
+  "__strtof_l@GLIBC_2.2.5"=kinakaze_abi___strtof_l PRIVATE
+  kinakaze_abi___strtok_r
+  "__strtok_r"=kinakaze_abi___strtok_r PRIVATE
+  "__strtok_r@GLIBC_2.2.5"=kinakaze_abi___strtok_r PRIVATE
+  kinakaze_abi___strxfrm_l
+  "__strxfrm_l"=kinakaze_abi___strxfrm_l PRIVATE
+  "__strxfrm_l@GLIBC_2.2.5"=kinakaze_abi___strxfrm_l PRIVATE
+  kinakaze_abi_sysconf
+  "__sysconf"=kinakaze_abi_sysconf PRIVATE
+  "__sysconf@GLIBC_2.2.5"=kinakaze_abi_sysconf PRIVATE
+  kinakaze_abi___syslog_chk
+  "__syslog_chk"=kinakaze_abi___syslog_chk PRIVATE
+  "__syslog_chk@GLIBC_2.4"=kinakaze_abi___syslog_chk PRIVATE
+  kinakaze_abi___sysv_signal
+  "__sysv_signal"=kinakaze_abi___sysv_signal PRIVATE
+  "__sysv_signal@GLIBC_2.2.5"=kinakaze_abi___sysv_signal PRIVATE
+  kinakaze_abi_timezone DATA
+  "__timezone"=kinakaze_abi_timezone DATA PRIVATE
+  "__timezone@GLIBC_2.2.5"=kinakaze_abi_timezone DATA PRIVATE
+  kinakaze_abi___tls_get_addr
+  "__tls_get_addr"=kinakaze_abi___tls_get_addr PRIVATE
+  kinakaze_abi___towlower_l
+  "__towlower_l"=kinakaze_abi___towlower_l PRIVATE
+  "__towlower_l@GLIBC_2.2.5"=kinakaze_abi___towlower_l PRIVATE
+  kinakaze_abi___towupper_l
+  "__towupper_l"=kinakaze_abi___towupper_l PRIVATE
+  "__towupper_l@GLIBC_2.2.5"=kinakaze_abi___towupper_l PRIVATE
+  kinakaze_abi_tzname DATA
+  "__tzname"=kinakaze_abi_tzname DATA PRIVATE
+  "__tzname@GLIBC_2.2.5"=kinakaze_abi_tzname DATA PRIVATE
+  kinakaze_abi___udivmodti4
+  "__udivmodti4"=kinakaze_abi___udivmodti4 PRIVATE
+  kinakaze_abi___udivti3
+  "__udivti3"=kinakaze_abi___udivti3 PRIVATE
+  kinakaze_abi___uflow
+  "__uflow"=kinakaze_abi___uflow PRIVATE
+  "__uflow@GLIBC_2.2.5"=kinakaze_abi___uflow PRIVATE
+  kinakaze_abi___unordtf2
+  "__unordtf2"=kinakaze_abi___unordtf2 PRIVATE
+  kinakaze_abi___uselocale
+  "__uselocale"=kinakaze_abi___uselocale PRIVATE
+  "__uselocale@GLIBC_2.3"=kinakaze_abi___uselocale PRIVATE
+  kinakaze_abi___vasprintf_chk
+  "__vasprintf_chk"=kinakaze_abi___vasprintf_chk PRIVATE
+  "__vasprintf_chk@GLIBC_2.8"=kinakaze_abi___vasprintf_chk PRIVATE
+  kinakaze_abi___vfprintf_chk
+  "__vfprintf_chk"=kinakaze_abi___vfprintf_chk PRIVATE
+  "__vfprintf_chk@GLIBC_2.3.4"=kinakaze_abi___vfprintf_chk PRIVATE
+  kinakaze_abi___vprintf_chk
+  "__vprintf_chk"=kinakaze_abi___vprintf_chk PRIVATE
+  "__vprintf_chk@GLIBC_2.3.4"=kinakaze_abi___vprintf_chk PRIVATE
+  kinakaze_abi___vsnprintf_chk
+  "__vsnprintf_chk"=kinakaze_abi___vsnprintf_chk PRIVATE
+  "__vsnprintf_chk@GLIBC_2.3.4"=kinakaze_abi___vsnprintf_chk PRIVATE
+  kinakaze_abi___vsprintf_chk
+  "__vsprintf_chk"=kinakaze_abi___vsprintf_chk PRIVATE
+  "__vsprintf_chk@GLIBC_2.3.4"=kinakaze_abi___vsprintf_chk PRIVATE
+  kinakaze_abi___vswprintf_chk
+  "__vswprintf_chk"=kinakaze_abi___vswprintf_chk PRIVATE
+  "__vswprintf_chk@GLIBC_2.4"=kinakaze_abi___vswprintf_chk PRIVATE
+  kinakaze_abi___vsyslog_chk
+  "__vsyslog_chk"=kinakaze_abi___vsyslog_chk PRIVATE
+  "__vsyslog_chk@GLIBC_2.4"=kinakaze_abi___vsyslog_chk PRIVATE
+  kinakaze_abi___wcscoll_l
+  "__wcscoll_l"=kinakaze_abi___wcscoll_l PRIVATE
+  "__wcscoll_l@GLIBC_2.2.5"=kinakaze_abi___wcscoll_l PRIVATE
+  kinakaze_abi___wcsftime_l
+  "__wcsftime_l"=kinakaze_abi___wcsftime_l PRIVATE
+  "__wcsftime_l@GLIBC_2.3"=kinakaze_abi___wcsftime_l PRIVATE
+  kinakaze_abi___wcsxfrm_l
+  "__wcsxfrm_l"=kinakaze_abi___wcsxfrm_l PRIVATE
+  "__wcsxfrm_l@GLIBC_2.2.5"=kinakaze_abi___wcsxfrm_l PRIVATE
+  kinakaze_abi___wctomb_chk
+  "__wctomb_chk"=kinakaze_abi___wctomb_chk PRIVATE
+  "__wctomb_chk@GLIBC_2.4"=kinakaze_abi___wctomb_chk PRIVATE
+  kinakaze_abi___wctype_l
+  "__wctype_l"=kinakaze_abi___wctype_l PRIVATE
+  "__wctype_l@GLIBC_2.2.5"=kinakaze_abi___wctype_l PRIVATE
+  kinakaze_abi___xmknod
+  "__xmknod"=kinakaze_abi___xmknod PRIVATE
+  "__xmknod@GLIBC_2.2.5"=kinakaze_abi___xmknod PRIVATE
+  kinakaze_abi___xmknodat
+  "__xmknodat"=kinakaze_abi___xmknodat PRIVATE
+  kinakaze_abi___xpg_basename
+  "__xpg_basename"=kinakaze_abi___xpg_basename PRIVATE
+  "__xpg_basename@GLIBC_2.2.5"=kinakaze_abi___xpg_basename PRIVATE
+  kinakaze_abi___xpg_strerror_r
+  "__xpg_strerror_r"=kinakaze_abi___xpg_strerror_r PRIVATE
+  "__xpg_strerror_r@GLIBC_2.3.4"=kinakaze_abi___xpg_strerror_r PRIVATE
+  kinakaze_abi___xstat
+  "__xstat"=kinakaze_abi___xstat PRIVATE
+  "__xstat@GLIBC_2.2.5"=kinakaze_abi___xstat PRIVATE
+  kinakaze_abi___xstat64
+  "__xstat64"=kinakaze_abi___xstat64 PRIVATE
+  "__xstat64@GLIBC_2.2.5"=kinakaze_abi___xstat64 PRIVATE
+  kinakaze_abi__dl_find_object
+  "_dl_find_object"=kinakaze_abi__dl_find_object PRIVATE
+  "_dl_find_object@GLIBC_2.35"=kinakaze_abi__dl_find_object PRIVATE
+  kinakaze_abi_environ DATA
+  "_environ"=kinakaze_abi_environ DATA PRIVATE
+  "_environ@GLIBC_2.2.5"=kinakaze_abi_environ DATA PRIVATE
+  kinakaze_abi__exit
+  "_exit"=kinakaze_abi__exit PRIVATE
+  "_exit@GLIBC_2.2.5"=kinakaze_abi__exit PRIVATE
+  kinakaze_abi__libc_intl_domainname DATA
+  "_libc_intl_domainname"=kinakaze_abi__libc_intl_domainname DATA PRIVATE
+  "_libc_intl_domainname@GLIBC_2.2.5"=kinakaze_abi__libc_intl_domainname DATA PRIVATE
+  kinakaze_abi__longjmp
+  "_longjmp"=kinakaze_abi__longjmp PRIVATE
+  "_longjmp@GLIBC_2.2.5"=kinakaze_abi__longjmp PRIVATE
+  kinakaze_abi__obstack_begin
+  "_obstack_begin"=kinakaze_abi__obstack_begin PRIVATE
+  "_obstack_begin@GLIBC_2.2.5"=kinakaze_abi__obstack_begin PRIVATE
+  kinakaze_abi__obstack_begin_1
+  "_obstack_begin_1"=kinakaze_abi__obstack_begin_1 PRIVATE
+  kinakaze_abi__obstack_memory_used
+  "_obstack_memory_used"=kinakaze_abi__obstack_memory_used PRIVATE
+  kinakaze_abi__obstack_newchunk
+  "_obstack_newchunk"=kinakaze_abi__obstack_newchunk PRIVATE
+  "_obstack_newchunk@GLIBC_2.2.5"=kinakaze_abi__obstack_newchunk PRIVATE
+  kinakaze_abi__setjmp
+  "_setjmp"=kinakaze_abi__setjmp PRIVATE
+  "_setjmp@GLIBC_2.2.5"=kinakaze_abi__setjmp PRIVATE
+  kinakaze_abi_abort
+  "abort"=kinakaze_abi_abort PRIVATE
+  "abort@GLIBC_2.2.5"=kinakaze_abi_abort PRIVATE
+  kinakaze_abi_abs
+  "abs"=kinakaze_abi_abs PRIVATE
+  kinakaze_abi_accept
+  "accept"=kinakaze_abi_accept PRIVATE
+  "accept@GLIBC_2.2.5"=kinakaze_abi_accept PRIVATE
+  kinakaze_abi_accept4
+  "accept4"=kinakaze_abi_accept4 PRIVATE
+  "accept4@GLIBC_2.10"=kinakaze_abi_accept4 PRIVATE
+  kinakaze_abi_access
+  "access"=kinakaze_abi_access PRIVATE
+  "access@GLIBC_2.2.5"=kinakaze_abi_access PRIVATE
+  kinakaze_abi_adjtimex
+  "adjtimex"=kinakaze_abi_adjtimex PRIVATE
+  "adjtimex@GLIBC_2.2.5"=kinakaze_abi_adjtimex PRIVATE
+  kinakaze_abi_alarm
+  "alarm"=kinakaze_abi_alarm PRIVATE
+  "alarm@GLIBC_2.2.5"=kinakaze_abi_alarm PRIVATE
+  kinakaze_abi_aligned_alloc
+  "aligned_alloc"=kinakaze_abi_aligned_alloc PRIVATE
+  "aligned_alloc@GLIBC_2.16"=kinakaze_abi_aligned_alloc PRIVATE
+  kinakaze_abi_alphasort
+  "alphasort"=kinakaze_abi_alphasort PRIVATE
+  "alphasort@GLIBC_2.2.5"=kinakaze_abi_alphasort PRIVATE
+  kinakaze_abi_alphasort64
+  "alphasort64"=kinakaze_abi_alphasort64 PRIVATE
+  "alphasort64@GLIBC_2.2.5"=kinakaze_abi_alphasort64 PRIVATE
+  kinakaze_abi_arc4random
+  "arc4random"=kinakaze_abi_arc4random PRIVATE
+  "arc4random@GLIBC_2.36"=kinakaze_abi_arc4random PRIVATE
+  kinakaze_abi_arc4random_buf
+  "arc4random_buf"=kinakaze_abi_arc4random_buf PRIVATE
+  "arc4random_buf@GLIBC_2.36"=kinakaze_abi_arc4random_buf PRIVATE
+  kinakaze_abi_arc4random_uniform
+  "arc4random_uniform"=kinakaze_abi_arc4random_uniform PRIVATE
+  "arc4random_uniform@GLIBC_2.36"=kinakaze_abi_arc4random_uniform PRIVATE
+  argp_err_exit_status DATA
+  "argp_err_exit_status"=argp_err_exit_status DATA
+  kinakaze_abi_argp_error
+  "argp_error"=kinakaze_abi_argp_error PRIVATE
+  "argp_error@GLIBC_2.2.5"=kinakaze_abi_argp_error PRIVATE
+  kinakaze_abi_argp_failure
+  "argp_failure"=kinakaze_abi_argp_failure PRIVATE
+  "argp_failure@GLIBC_2.2.5"=kinakaze_abi_argp_failure PRIVATE
+  kinakaze_abi_argp_help
+  "argp_help"=kinakaze_abi_argp_help PRIVATE
+  kinakaze_abi_argp_parse
+  "argp_parse"=kinakaze_abi_argp_parse PRIVATE
+  "argp_parse@GLIBC_2.2.5"=kinakaze_abi_argp_parse PRIVATE
+  argp_program_bug_address DATA
+  "argp_program_bug_address"=argp_program_bug_address DATA
+  argp_program_version DATA
+  "argp_program_version"=argp_program_version DATA
+  argp_program_version_hook DATA
+  "argp_program_version_hook"=argp_program_version_hook DATA
+  kinakaze_abi_argp_state_help
+  "argp_state_help"=kinakaze_abi_argp_state_help PRIVATE
+  kinakaze_abi_argp_usage
+  "argp_usage"=kinakaze_abi_argp_usage PRIVATE
+  kinakaze_abi_argz_append
+  "argz_append"=kinakaze_abi_argz_append PRIVATE
+  "argz_append@GLIBC_2.2.5"=kinakaze_abi_argz_append PRIVATE
+  kinakaze_abi_argz_create_sep
+  "argz_create_sep"=kinakaze_abi_argz_create_sep PRIVATE
+  "argz_create_sep@GLIBC_2.2.5"=kinakaze_abi_argz_create_sep PRIVATE
+  kinakaze_abi_argz_insert
+  "argz_insert"=kinakaze_abi_argz_insert PRIVATE
+  "argz_insert@GLIBC_2.2.5"=kinakaze_abi_argz_insert PRIVATE
+  kinakaze_abi_argz_stringify
+  "argz_stringify"=kinakaze_abi_argz_stringify PRIVATE
+  "argz_stringify@GLIBC_2.2.5"=kinakaze_abi_argz_stringify PRIVATE
+  kinakaze_abi_asctime
+  "asctime"=kinakaze_abi_asctime PRIVATE
+  "asctime@GLIBC_2.2.5"=kinakaze_abi_asctime PRIVATE
+  kinakaze_abi_asctime_r
+  "asctime_r"=kinakaze_abi_asctime_r PRIVATE
+  "asctime_r@GLIBC_2.2.5"=kinakaze_abi_asctime_r PRIVATE
+  kinakaze_abi_asprintf
+  "asprintf"=kinakaze_abi_asprintf PRIVATE
+  "asprintf@GLIBC_2.2.5"=kinakaze_abi_asprintf PRIVATE
+  kinakaze_abi_atexit
+  "atexit"=kinakaze_abi_atexit PRIVATE
+  kinakaze_abi_atof
+  "atof"=kinakaze_abi_atof PRIVATE
+  "atof@GLIBC_2.2.5"=kinakaze_abi_atof PRIVATE
+  kinakaze_abi_atoi
+  "atoi"=kinakaze_abi_atoi PRIVATE
+  "atoi@GLIBC_2.2.5"=kinakaze_abi_atoi PRIVATE
+  kinakaze_abi_atol
+  "atol"=kinakaze_abi_atol PRIVATE
+  "atol@GLIBC_2.2.5"=kinakaze_abi_atol PRIVATE
+  kinakaze_abi_atoll
+  "atoll"=kinakaze_abi_atoll PRIVATE
+  "atoll@GLIBC_2.2.5"=kinakaze_abi_atoll PRIVATE
+  kinakaze_abi_backtrace
+  "backtrace"=kinakaze_abi_backtrace PRIVATE
+  "backtrace@GLIBC_2.2.5"=kinakaze_abi_backtrace PRIVATE
+  kinakaze_abi_backtrace_symbols
+  "backtrace_symbols"=kinakaze_abi_backtrace_symbols PRIVATE
+  "backtrace_symbols@GLIBC_2.2.5"=kinakaze_abi_backtrace_symbols PRIVATE
+  kinakaze_abi_backtrace_symbols_fd
+  "backtrace_symbols_fd"=kinakaze_abi_backtrace_symbols_fd PRIVATE
+  "backtrace_symbols_fd@GLIBC_2.2.5"=kinakaze_abi_backtrace_symbols_fd PRIVATE
+  kinakaze_abi_basename
+  "basename"=kinakaze_abi_basename PRIVATE
+  "basename@GLIBC_2.2.5"=kinakaze_abi_basename PRIVATE
+  kinakaze_abi_bcmp
+  "bcmp"=kinakaze_abi_bcmp PRIVATE
+  "bcmp@GLIBC_2.2.5"=kinakaze_abi_bcmp PRIVATE
+  kinakaze_abi_bcopy
+  "bcopy"=kinakaze_abi_bcopy PRIVATE
+  "bcopy@GLIBC_2.2.5"=kinakaze_abi_bcopy PRIVATE
+  kinakaze_abi_bind
+  "bind"=kinakaze_abi_bind PRIVATE
+  "bind@GLIBC_2.2.5"=kinakaze_abi_bind PRIVATE
+  kinakaze_abi_bind_textdomain_codeset
+  "bind_textdomain_codeset"=kinakaze_abi_bind_textdomain_codeset PRIVATE
+  "bind_textdomain_codeset@GLIBC_2.2.5"=kinakaze_abi_bind_textdomain_codeset PRIVATE
+  kinakaze_abi_bindtextdomain
+  "bindtextdomain"=kinakaze_abi_bindtextdomain PRIVATE
+  "bindtextdomain@GLIBC_2.2.5"=kinakaze_abi_bindtextdomain PRIVATE
+  kinakaze_abi_brk
+  "brk"=kinakaze_abi_brk PRIVATE
+  kinakaze_abi_bsearch
+  "bsearch"=kinakaze_abi_bsearch PRIVATE
+  "bsearch@GLIBC_2.2.5"=kinakaze_abi_bsearch PRIVATE
+  kinakaze_abi_btowc
+  "btowc"=kinakaze_abi_btowc PRIVATE
+  "btowc@GLIBC_2.2.5"=kinakaze_abi_btowc PRIVATE
+  kinakaze_abi_bzero
+  "bzero"=kinakaze_abi_bzero PRIVATE
+  kinakaze_abi_c16rtomb
+  "c16rtomb"=kinakaze_abi_c16rtomb PRIVATE
+  kinakaze_abi_c32rtomb
+  "c32rtomb"=kinakaze_abi_c32rtomb PRIVATE
+  kinakaze_abi_calloc
+  "calloc"=kinakaze_abi_calloc PRIVATE
+  "calloc@GLIBC_2.2.5"=kinakaze_abi_calloc PRIVATE
+  kinakaze_abi_canonicalize_file_name
+  "canonicalize_file_name"=kinakaze_abi_canonicalize_file_name PRIVATE
+  "canonicalize_file_name@GLIBC_2.2.5"=kinakaze_abi_canonicalize_file_name PRIVATE
+  kinakaze_abi_capget
+  "capget"=kinakaze_abi_capget PRIVATE
+  "capget@GLIBC_2.2.5"=kinakaze_abi_capget PRIVATE
+  kinakaze_abi_capset
+  "capset"=kinakaze_abi_capset PRIVATE
+  "capset@GLIBC_2.2.5"=kinakaze_abi_capset PRIVATE
+  kinakaze_abi_catclose
+  "catclose"=kinakaze_abi_catclose PRIVATE
+  "catclose@GLIBC_2.2.5"=kinakaze_abi_catclose PRIVATE
+  kinakaze_abi_catgets
+  "catgets"=kinakaze_abi_catgets PRIVATE
+  "catgets@GLIBC_2.2.5"=kinakaze_abi_catgets PRIVATE
+  kinakaze_abi_catopen
+  "catopen"=kinakaze_abi_catopen PRIVATE
+  "catopen@GLIBC_2.2.5"=kinakaze_abi_catopen PRIVATE
+  kinakaze_abi_cfgetispeed
+  "cfgetispeed"=kinakaze_abi_cfgetispeed PRIVATE
+  "cfgetispeed@GLIBC_2.2.5"=kinakaze_abi_cfgetispeed PRIVATE
+  "cfgetispeed@GLIBC_2.42"=kinakaze_abi_cfgetispeed PRIVATE
+  kinakaze_abi_cfgetospeed
+  "cfgetospeed"=kinakaze_abi_cfgetospeed PRIVATE
+  "cfgetospeed@GLIBC_2.2.5"=kinakaze_abi_cfgetospeed PRIVATE
+  "cfgetospeed@GLIBC_2.42"=kinakaze_abi_cfgetospeed PRIVATE
+  kinakaze_abi_cfmakeraw
+  "cfmakeraw"=kinakaze_abi_cfmakeraw PRIVATE
+  "cfmakeraw@GLIBC_2.2.5"=kinakaze_abi_cfmakeraw PRIVATE
+  kinakaze_abi_cfsetispeed
+  "cfsetispeed"=kinakaze_abi_cfsetispeed PRIVATE
+  "cfsetispeed@GLIBC_2.2.5"=kinakaze_abi_cfsetispeed PRIVATE
+  "cfsetispeed@GLIBC_2.42"=kinakaze_abi_cfsetispeed PRIVATE
+  kinakaze_abi_cfsetospeed
+  "cfsetospeed"=kinakaze_abi_cfsetospeed PRIVATE
+  "cfsetospeed@GLIBC_2.2.5"=kinakaze_abi_cfsetospeed PRIVATE
+  "cfsetospeed@GLIBC_2.42"=kinakaze_abi_cfsetospeed PRIVATE
+  kinakaze_abi_cfsetspeed
+  "cfsetspeed"=kinakaze_abi_cfsetspeed PRIVATE
+  "cfsetspeed@GLIBC_2.2.5"=kinakaze_abi_cfsetspeed PRIVATE
+  kinakaze_abi_chdir
+  "chdir"=kinakaze_abi_chdir PRIVATE
+  "chdir@GLIBC_2.2.5"=kinakaze_abi_chdir PRIVATE
+  kinakaze_abi_chmod
+  "chmod"=kinakaze_abi_chmod PRIVATE
+  "chmod@GLIBC_2.2.5"=kinakaze_abi_chmod PRIVATE
+  kinakaze_abi_chown
+  "chown"=kinakaze_abi_chown PRIVATE
+  "chown@GLIBC_2.2.5"=kinakaze_abi_chown PRIVATE
+  kinakaze_abi_chroot
+  "chroot"=kinakaze_abi_chroot PRIVATE
+  "chroot@GLIBC_2.2.5"=kinakaze_abi_chroot PRIVATE
+  kinakaze_abi_clearenv
+  "clearenv"=kinakaze_abi_clearenv PRIVATE
+  "clearenv@GLIBC_2.2.5"=kinakaze_abi_clearenv PRIVATE
+  kinakaze_abi_clearerr
+  "clearerr"=kinakaze_abi_clearerr PRIVATE
+  "clearerr@GLIBC_2.2.5"=kinakaze_abi_clearerr PRIVATE
+  kinakaze_abi_clearerr
+  "clearerr_unlocked"=kinakaze_abi_clearerr PRIVATE
+  "clearerr_unlocked@GLIBC_2.2.5"=kinakaze_abi_clearerr PRIVATE
+  kinakaze_abi_clock
+  "clock"=kinakaze_abi_clock PRIVATE
+  "clock@GLIBC_2.2.5"=kinakaze_abi_clock PRIVATE
+  kinakaze_abi_clock_getres
+  "clock_getres"=kinakaze_abi_clock_getres PRIVATE
+  "clock_getres@GLIBC_2.17"=kinakaze_abi_clock_getres PRIVATE
+  kinakaze_abi_clock_gettime
+  "clock_gettime"=kinakaze_abi_clock_gettime PRIVATE
+  "clock_gettime@GLIBC_2.17"=kinakaze_abi_clock_gettime PRIVATE
+  kinakaze_abi_clock_nanosleep
+  "clock_nanosleep"=kinakaze_abi_clock_nanosleep PRIVATE
+  "clock_nanosleep@GLIBC_2.17"=kinakaze_abi_clock_nanosleep PRIVATE
+  kinakaze_abi_clock_settime
+  "clock_settime"=kinakaze_abi_clock_settime PRIVATE
+  "clock_settime@GLIBC_2.17"=kinakaze_abi_clock_settime PRIVATE
+  kinakaze_abi_clone
+  "clone"=kinakaze_abi_clone PRIVATE
+  "clone@GLIBC_2.2.5"=kinakaze_abi_clone PRIVATE
+  kinakaze_abi_close
+  "close"=kinakaze_abi_close PRIVATE
+  "close@GLIBC_2.2.5"=kinakaze_abi_close PRIVATE
+  kinakaze_abi_close_range
+  "close_range"=kinakaze_abi_close_range PRIVATE
+  "close_range@GLIBC_2.34"=kinakaze_abi_close_range PRIVATE
+  kinakaze_abi_closedir
+  "closedir"=kinakaze_abi_closedir PRIVATE
+  "closedir@GLIBC_2.2.5"=kinakaze_abi_closedir PRIVATE
+  kinakaze_abi_closelog
+  "closelog"=kinakaze_abi_closelog PRIVATE
+  "closelog@GLIBC_2.2.5"=kinakaze_abi_closelog PRIVATE
+  kinakaze_abi_confstr
+  "confstr"=kinakaze_abi_confstr PRIVATE
+  "confstr@GLIBC_2.2.5"=kinakaze_abi_confstr PRIVATE
+  kinakaze_abi_connect
+  "connect"=kinakaze_abi_connect PRIVATE
+  "connect@GLIBC_2.2.5"=kinakaze_abi_connect PRIVATE
+  kinakaze_abi_copy_file_range
+  "copy_file_range"=kinakaze_abi_copy_file_range PRIVATE
+  "copy_file_range@GLIBC_2.27"=kinakaze_abi_copy_file_range PRIVATE
+  kinakaze_abi_copysign
+  "copysign"=kinakaze_abi_copysign PRIVATE
+  "copysign@GLIBC_2.2.5"=kinakaze_abi_copysign PRIVATE
+  kinakaze_abi_creat
+  "creat"=kinakaze_abi_creat PRIVATE
+  "creat@GLIBC_2.2.5"=kinakaze_abi_creat PRIVATE
+  kinakaze_abi_creat64
+  "creat64"=kinakaze_abi_creat64 PRIVATE
+  "creat64@GLIBC_2.2.5"=kinakaze_abi_creat64 PRIVATE
+  kinakaze_abi_crypt
+  "crypt"=kinakaze_abi_crypt PRIVATE
+  kinakaze_abi_crypt_r
+  "crypt_r"=kinakaze_abi_crypt_r PRIVATE
+  kinakaze_abi_ctermid
+  "ctermid"=kinakaze_abi_ctermid PRIVATE
+  "ctermid@GLIBC_2.2.5"=kinakaze_abi_ctermid PRIVATE
+  kinakaze_abi_ctime
+  "ctime"=kinakaze_abi_ctime PRIVATE
+  "ctime@GLIBC_2.2.5"=kinakaze_abi_ctime PRIVATE
+  kinakaze_abi_ctime_r
+  "ctime_r"=kinakaze_abi_ctime_r PRIVATE
+  "ctime_r@GLIBC_2.2.5"=kinakaze_abi_ctime_r PRIVATE
+  kinakaze_abi_cuserid
+  "cuserid"=kinakaze_abi_cuserid PRIVATE
+  "cuserid@GLIBC_2.2.5"=kinakaze_abi_cuserid PRIVATE
+  kinakaze_abi_daemon
+  "daemon"=kinakaze_abi_daemon PRIVATE
+  "daemon@GLIBC_2.2.5"=kinakaze_abi_daemon PRIVATE
+  kinakaze_abi_daylight DATA
+  "daylight"=kinakaze_abi_daylight DATA PRIVATE
+  "daylight@GLIBC_2.2.5"=kinakaze_abi_daylight DATA PRIVATE
+  kinakaze_abi_dcgettext
+  "dcgettext"=kinakaze_abi_dcgettext PRIVATE
+  "dcgettext@GLIBC_2.2.5"=kinakaze_abi_dcgettext PRIVATE
+  kinakaze_abi_dcngettext
+  "dcngettext"=kinakaze_abi_dcngettext PRIVATE
+  "dcngettext@GLIBC_2.2.5"=kinakaze_abi_dcngettext PRIVATE
+  kinakaze_abi_delete_module
+  "delete_module"=kinakaze_abi_delete_module PRIVATE
+  kinakaze_abi_deliver_synchronous_signal
+  "deliver_synchronous_signal"=kinakaze_abi_deliver_synchronous_signal PRIVATE
+  kinakaze_abi_dgettext
+  "dgettext"=kinakaze_abi_dgettext PRIVATE
+  "dgettext@GLIBC_2.2.5"=kinakaze_abi_dgettext PRIVATE
+  kinakaze_abi_difftime
+  "difftime"=kinakaze_abi_difftime PRIVATE
+  "difftime@GLIBC_2.2.5"=kinakaze_abi_difftime PRIVATE
+  kinakaze_abi_dirfd
+  "dirfd"=kinakaze_abi_dirfd PRIVATE
+  "dirfd@GLIBC_2.2.5"=kinakaze_abi_dirfd PRIVATE
+  kinakaze_abi_dirname
+  "dirname"=kinakaze_abi_dirname PRIVATE
+  "dirname@GLIBC_2.2.5"=kinakaze_abi_dirname PRIVATE
+  kinakaze_abi_div
+  "div"=kinakaze_abi_div PRIVATE
+  "div@GLIBC_2.2.5"=kinakaze_abi_div PRIVATE
+  "dl_iterate_phdr"=ld-linux-x86-64.so.2.kinakaze_process_dl_iterate_phdr PRIVATE
+  "dl_iterate_phdr@GLIBC_2.2.5"=ld-linux-x86-64.so.2.kinakaze_process_dl_iterate_phdr PRIVATE
+  "dladdr"=ld-linux-x86-64.so.2.kinakaze_process_dladdr PRIVATE
+  "dladdr@GLIBC_2.34"=ld-linux-x86-64.so.2.kinakaze_process_dladdr PRIVATE
+  "dlclose"=ld-linux-x86-64.so.2.kinakaze_process_dlclose PRIVATE
+  "dlclose@GLIBC_2.34"=ld-linux-x86-64.so.2.kinakaze_process_dlclose PRIVATE
+  "dlerror"=ld-linux-x86-64.so.2.kinakaze_process_dlerror PRIVATE
+  "dlerror@GLIBC_2.34"=ld-linux-x86-64.so.2.kinakaze_process_dlerror PRIVATE
+  "dlinfo"=ld-linux-x86-64.so.2.kinakaze_process_dlinfo PRIVATE
+  "dlinfo@GLIBC_2.34"=ld-linux-x86-64.so.2.kinakaze_process_dlinfo PRIVATE
+  "dlopen"=ld-linux-x86-64.so.2.kinakaze_process_dlopen PRIVATE
+  "dlopen@GLIBC_2.34"=ld-linux-x86-64.so.2.kinakaze_process_dlopen PRIVATE
+  "dlsym"=ld-linux-x86-64.so.2.kinakaze_process_dlsym PRIVATE
+  "dlsym@GLIBC_2.34"=ld-linux-x86-64.so.2.kinakaze_process_dlsym PRIVATE
+  "dlvsym"=ld-linux-x86-64.so.2.kinakaze_process_dlvsym PRIVATE
+  "dlvsym@GLIBC_2.34"=ld-linux-x86-64.so.2.kinakaze_process_dlvsym PRIVATE
+  kinakaze_abi_dn_expand
+  "dn_expand"=kinakaze_abi_dn_expand PRIVATE
+  "dn_expand@GLIBC_2.34"=kinakaze_abi_dn_expand PRIVATE
+  kinakaze_abi_dn_skipname
+  "dn_skipname"=kinakaze_abi_dn_skipname PRIVATE
+  "dn_skipname@GLIBC_2.34"=kinakaze_abi_dn_skipname PRIVATE
+  kinakaze_abi_dngettext
+  "dngettext"=kinakaze_abi_dngettext PRIVATE
+  "dngettext@GLIBC_2.2.5"=kinakaze_abi_dngettext PRIVATE
+  kinakaze_abi_drand48
+  "drand48"=kinakaze_abi_drand48 PRIVATE
+  "drand48@GLIBC_2.2.5"=kinakaze_abi_drand48 PRIVATE
+  kinakaze_abi_drand48_r
+  "drand48_r"=kinakaze_abi_drand48_r PRIVATE
+  kinakaze_abi_dup
+  "dup"=kinakaze_abi_dup PRIVATE
+  "dup@GLIBC_2.2.5"=kinakaze_abi_dup PRIVATE
+  kinakaze_abi_dup2
+  "dup2"=kinakaze_abi_dup2 PRIVATE
+  "dup2@GLIBC_2.2.5"=kinakaze_abi_dup2 PRIVATE
+  kinakaze_abi_dup3
+  "dup3"=kinakaze_abi_dup3 PRIVATE
+  "dup3@GLIBC_2.9"=kinakaze_abi_dup3 PRIVATE
+  kinakaze_abi_duplocale
+  "duplocale"=kinakaze_abi_duplocale PRIVATE
+  kinakaze_abi_eaccess
+  "eaccess"=kinakaze_abi_eaccess PRIVATE
+  "eaccess@GLIBC_2.4"=kinakaze_abi_eaccess PRIVATE
+  kinakaze_abi_endgrent
+  "endgrent"=kinakaze_abi_endgrent PRIVATE
+  "endgrent@GLIBC_2.2.5"=kinakaze_abi_endgrent PRIVATE
+  kinakaze_abi_endhostent
+  "endhostent"=kinakaze_abi_endhostent PRIVATE
+  kinakaze_abi_endmntent
+  "endmntent"=kinakaze_abi_endmntent PRIVATE
+  "endmntent@GLIBC_2.2.5"=kinakaze_abi_endmntent PRIVATE
+  kinakaze_abi_endnetent
+  "endnetent"=kinakaze_abi_endnetent PRIVATE
+  "endnetent@GLIBC_2.2.5"=kinakaze_abi_endnetent PRIVATE
+  kinakaze_abi_endnetgrent
+  "endnetgrent"=kinakaze_abi_endnetgrent PRIVATE
+  "endnetgrent@GLIBC_2.2.5"=kinakaze_abi_endnetgrent PRIVATE
+  kinakaze_abi_endpwent
+  "endpwent"=kinakaze_abi_endpwent PRIVATE
+  "endpwent@GLIBC_2.2.5"=kinakaze_abi_endpwent PRIVATE
+  kinakaze_abi_endservent
+  "endservent"=kinakaze_abi_endservent PRIVATE
+  "endservent@GLIBC_2.2.5"=kinakaze_abi_endservent PRIVATE
+  kinakaze_abi_endspent
+  "endspent"=kinakaze_abi_endspent PRIVATE
+  "endspent@GLIBC_2.2.5"=kinakaze_abi_endspent PRIVATE
+  kinakaze_abi_endusershell
+  "endusershell"=kinakaze_abi_endusershell PRIVATE
+  "endusershell@GLIBC_2.2.5"=kinakaze_abi_endusershell PRIVATE
+  kinakaze_abi_endutent
+  "endutent"=kinakaze_abi_endutent PRIVATE
+  "endutent@GLIBC_2.2.5"=kinakaze_abi_endutent PRIVATE
+  kinakaze_abi_endutxent
+  "endutxent"=kinakaze_abi_endutxent PRIVATE
+  "endutxent@GLIBC_2.2.5"=kinakaze_abi_endutxent PRIVATE
+  kinakaze_abi_environ DATA
+  "environ"=kinakaze_abi_environ DATA PRIVATE
+  "environ@GLIBC_2.2.5"=kinakaze_abi_environ DATA PRIVATE
+  kinakaze_abi_epoll_create
+  "epoll_create"=kinakaze_abi_epoll_create PRIVATE
+  "epoll_create@GLIBC_2.3.2"=kinakaze_abi_epoll_create PRIVATE
+  kinakaze_abi_epoll_create1
+  "epoll_create1"=kinakaze_abi_epoll_create1 PRIVATE
+  "epoll_create1@GLIBC_2.9"=kinakaze_abi_epoll_create1 PRIVATE
+  kinakaze_abi_epoll_ctl
+  "epoll_ctl"=kinakaze_abi_epoll_ctl PRIVATE
+  "epoll_ctl@GLIBC_2.3.2"=kinakaze_abi_epoll_ctl PRIVATE
+  kinakaze_abi_epoll_pwait
+  "epoll_pwait"=kinakaze_abi_epoll_pwait PRIVATE
+  "epoll_pwait@GLIBC_2.6"=kinakaze_abi_epoll_pwait PRIVATE
+  kinakaze_abi_epoll_wait
+  "epoll_wait"=kinakaze_abi_epoll_wait PRIVATE
+  "epoll_wait@GLIBC_2.3.2"=kinakaze_abi_epoll_wait PRIVATE
+  kinakaze_abi_erand48
+  "erand48"=kinakaze_abi_erand48 PRIVATE
+  "erand48@GLIBC_2.2.5"=kinakaze_abi_erand48 PRIVATE
+  kinakaze_abi_erand48_r
+  "erand48_r"=kinakaze_abi_erand48_r PRIVATE
+  kinakaze_abi_err
+  "err"=kinakaze_abi_err PRIVATE
+  "err@GLIBC_2.2.5"=kinakaze_abi_err PRIVATE
+  kinakaze_abi_error
+  "error"=kinakaze_abi_error PRIVATE
+  "error@GLIBC_2.2.5"=kinakaze_abi_error PRIVATE
+  kinakaze_abi_error_at_line
+  "error_at_line"=kinakaze_abi_error_at_line PRIVATE
+  "error_at_line@GLIBC_2.2.5"=kinakaze_abi_error_at_line PRIVATE
+  kinakaze_abi_error_message_count DATA
+  "error_message_count"=kinakaze_abi_error_message_count DATA PRIVATE
+  "error_message_count@GLIBC_2.2.5"=kinakaze_abi_error_message_count DATA PRIVATE
+  kinakaze_abi_error_one_per_line DATA
+  "error_one_per_line"=kinakaze_abi_error_one_per_line DATA PRIVATE
+  kinakaze_abi_error_print_progname DATA
+  "error_print_progname"=kinakaze_abi_error_print_progname DATA PRIVATE
+  "error_print_progname@GLIBC_2.2.5"=kinakaze_abi_error_print_progname DATA PRIVATE
+  kinakaze_abi_errx
+  "errx"=kinakaze_abi_errx PRIVATE
+  "errx@GLIBC_2.2.5"=kinakaze_abi_errx PRIVATE
+  kinakaze_abi_ether_aton
+  "ether_aton"=kinakaze_abi_ether_aton PRIVATE
+  "ether_aton@GLIBC_2.2.5"=kinakaze_abi_ether_aton PRIVATE
+  kinakaze_abi_ether_aton_r
+  "ether_aton_r"=kinakaze_abi_ether_aton_r PRIVATE
+  "ether_aton_r@GLIBC_2.2.5"=kinakaze_abi_ether_aton_r PRIVATE
+  kinakaze_abi_ether_ntoa
+  "ether_ntoa"=kinakaze_abi_ether_ntoa PRIVATE
+  "ether_ntoa@GLIBC_2.2.5"=kinakaze_abi_ether_ntoa PRIVATE
+  kinakaze_abi_ether_ntoa_r
+  "ether_ntoa_r"=kinakaze_abi_ether_ntoa_r PRIVATE
+  kinakaze_abi_euidaccess
+  "euidaccess"=kinakaze_abi_euidaccess PRIVATE
+  "euidaccess@GLIBC_2.2.5"=kinakaze_abi_euidaccess PRIVATE
+  kinakaze_abi_eventfd
+  "eventfd"=kinakaze_abi_eventfd PRIVATE
+  "eventfd@GLIBC_2.7"=kinakaze_abi_eventfd PRIVATE
+  kinakaze_abi_eventfd2
+  "eventfd2"=kinakaze_abi_eventfd2 PRIVATE
+  kinakaze_abi_eventfd_read
+  "eventfd_read"=kinakaze_abi_eventfd_read PRIVATE
+  "eventfd_read@GLIBC_2.7"=kinakaze_abi_eventfd_read PRIVATE
+  kinakaze_abi_eventfd_write
+  "eventfd_write"=kinakaze_abi_eventfd_write PRIVATE
+  "eventfd_write@GLIBC_2.7"=kinakaze_abi_eventfd_write PRIVATE
+  kinakaze_abi_execl
+  "execl"=kinakaze_abi_execl PRIVATE
+  "execl@GLIBC_2.2.5"=kinakaze_abi_execl PRIVATE
+  kinakaze_abi_execle
+  "execle"=kinakaze_abi_execle PRIVATE
+  "execle@GLIBC_2.2.5"=kinakaze_abi_execle PRIVATE
+  kinakaze_abi_execlp
+  "execlp"=kinakaze_abi_execlp PRIVATE
+  "execlp@GLIBC_2.2.5"=kinakaze_abi_execlp PRIVATE
+  kinakaze_abi_execv
+  "execv"=kinakaze_abi_execv PRIVATE
+  "execv@GLIBC_2.2.5"=kinakaze_abi_execv PRIVATE
+  kinakaze_abi_execve
+  "execve"=kinakaze_abi_execve PRIVATE
+  "execve@GLIBC_2.2.5"=kinakaze_abi_execve PRIVATE
+  kinakaze_abi_execveat
+  "execveat"=kinakaze_abi_execveat PRIVATE
+  kinakaze_abi_execvp
+  "execvp"=kinakaze_abi_execvp PRIVATE
+  "execvp@GLIBC_2.2.5"=kinakaze_abi_execvp PRIVATE
+  kinakaze_abi_execvpe
+  "execvpe"=kinakaze_abi_execvpe PRIVATE
+  kinakaze_abi_exit
+  "exit"=kinakaze_abi_exit PRIVATE
+  "exit@GLIBC_2.2.5"=kinakaze_abi_exit PRIVATE
+  kinakaze_abi_faccessat
+  "faccessat"=kinakaze_abi_faccessat PRIVATE
+  "faccessat@GLIBC_2.4"=kinakaze_abi_faccessat PRIVATE
+  kinakaze_abi_faccessat2
+  "faccessat2"=kinakaze_abi_faccessat2 PRIVATE
+  kinakaze_abi_fallocate
+  "fallocate"=kinakaze_abi_fallocate PRIVATE
+  "fallocate@GLIBC_2.10"=kinakaze_abi_fallocate PRIVATE
+  kinakaze_abi_fallocate64
+  "fallocate64"=kinakaze_abi_fallocate64 PRIVATE
+  "fallocate64@GLIBC_2.10"=kinakaze_abi_fallocate64 PRIVATE
+  kinakaze_abi_fchdir
+  "fchdir"=kinakaze_abi_fchdir PRIVATE
+  "fchdir@GLIBC_2.2.5"=kinakaze_abi_fchdir PRIVATE
+  kinakaze_abi_fchmod
+  "fchmod"=kinakaze_abi_fchmod PRIVATE
+  "fchmod@GLIBC_2.2.5"=kinakaze_abi_fchmod PRIVATE
+  kinakaze_abi_fchmodat
+  "fchmodat"=kinakaze_abi_fchmodat PRIVATE
+  "fchmodat@GLIBC_2.4"=kinakaze_abi_fchmodat PRIVATE
+  kinakaze_abi_fchown
+  "fchown"=kinakaze_abi_fchown PRIVATE
+  "fchown@GLIBC_2.2.5"=kinakaze_abi_fchown PRIVATE
+  kinakaze_abi_fchownat
+  "fchownat"=kinakaze_abi_fchownat PRIVATE
+  "fchownat@GLIBC_2.4"=kinakaze_abi_fchownat PRIVATE
+  kinakaze_abi_fclose
+  "fclose"=kinakaze_abi_fclose PRIVATE
+  "fclose@GLIBC_2.2.5"=kinakaze_abi_fclose PRIVATE
+  kinakaze_abi_fcntl64
+  "fcntl"=kinakaze_abi_fcntl64 PRIVATE
+  "fcntl@GLIBC_2.2.5"=kinakaze_abi_fcntl64 PRIVATE
+  kinakaze_abi_fcntl64
+  "fcntl64"=kinakaze_abi_fcntl64 PRIVATE
+  "fcntl64@GLIBC_2.28"=kinakaze_abi_fcntl64 PRIVATE
+  kinakaze_abi_fcvt
+  "fcvt"=kinakaze_abi_fcvt PRIVATE
+  "fcvt@GLIBC_2.2.5"=kinakaze_abi_fcvt PRIVATE
+  kinakaze_abi_fdatasync
+  "fdatasync"=kinakaze_abi_fdatasync PRIVATE
+  "fdatasync@GLIBC_2.2.5"=kinakaze_abi_fdatasync PRIVATE
+  kinakaze_abi_fdopen
+  "fdopen"=kinakaze_abi_fdopen PRIVATE
+  "fdopen@GLIBC_2.2.5"=kinakaze_abi_fdopen PRIVATE
+  kinakaze_abi_fdopendir
+  "fdopendir"=kinakaze_abi_fdopendir PRIVATE
+  "fdopendir@GLIBC_2.4"=kinakaze_abi_fdopendir PRIVATE
+  kinakaze_abi_feof
+  "feof"=kinakaze_abi_feof PRIVATE
+  "feof@GLIBC_2.2.5"=kinakaze_abi_feof PRIVATE
+  kinakaze_abi_feof_unlocked
+  "feof_unlocked"=kinakaze_abi_feof_unlocked PRIVATE
+  "feof_unlocked@GLIBC_2.2.5"=kinakaze_abi_feof_unlocked PRIVATE
+  kinakaze_abi_ferror
+  "ferror"=kinakaze_abi_ferror PRIVATE
+  "ferror@GLIBC_2.2.5"=kinakaze_abi_ferror PRIVATE
+  kinakaze_abi_ferror_unlocked
+  "ferror_unlocked"=kinakaze_abi_ferror_unlocked PRIVATE
+  "ferror_unlocked@GLIBC_2.2.5"=kinakaze_abi_ferror_unlocked PRIVATE
+  kinakaze_abi_fexecve
+  "fexecve"=kinakaze_abi_fexecve PRIVATE
+  "fexecve@GLIBC_2.2.5"=kinakaze_abi_fexecve PRIVATE
+  kinakaze_abi_fflush
+  "fflush"=kinakaze_abi_fflush PRIVATE
+  "fflush@GLIBC_2.2.5"=kinakaze_abi_fflush PRIVATE
+  kinakaze_abi_fflush_unlocked
+  "fflush_unlocked"=kinakaze_abi_fflush_unlocked PRIVATE
+  "fflush_unlocked@GLIBC_2.2.5"=kinakaze_abi_fflush_unlocked PRIVATE
+  kinakaze_abi_ffs
+  "ffs"=kinakaze_abi_ffs PRIVATE
+  "ffs@GLIBC_2.2.5"=kinakaze_abi_ffs PRIVATE
+  kinakaze_abi_ffsl
+  "ffsl"=kinakaze_abi_ffsl PRIVATE
+  kinakaze_abi_ffsll
+  "ffsll"=kinakaze_abi_ffsll PRIVATE
+  kinakaze_abi_fgetc
+  "fgetc"=kinakaze_abi_fgetc PRIVATE
+  "fgetc@GLIBC_2.2.5"=kinakaze_abi_fgetc PRIVATE
+  kinakaze_abi_fgetgrent
+  "fgetgrent"=kinakaze_abi_fgetgrent PRIVATE
+  "fgetgrent@GLIBC_2.2.5"=kinakaze_abi_fgetgrent PRIVATE
+  kinakaze_abi_fgetgrent_r
+  "fgetgrent_r"=kinakaze_abi_fgetgrent_r PRIVATE
+  kinakaze_abi_fgetpos
+  "fgetpos"=kinakaze_abi_fgetpos PRIVATE
+  "fgetpos@GLIBC_2.2.5"=kinakaze_abi_fgetpos PRIVATE
+  kinakaze_abi_fgetpos
+  "fgetpos64"=kinakaze_abi_fgetpos PRIVATE
+  kinakaze_abi_fgetpwent
+  "fgetpwent"=kinakaze_abi_fgetpwent PRIVATE
+  "fgetpwent@GLIBC_2.2.5"=kinakaze_abi_fgetpwent PRIVATE
+  kinakaze_abi_fgetpwent_r
+  "fgetpwent_r"=kinakaze_abi_fgetpwent_r PRIVATE
+  kinakaze_abi_fgets
+  "fgets"=kinakaze_abi_fgets PRIVATE
+  "fgets@GLIBC_2.2.5"=kinakaze_abi_fgets PRIVATE
+  kinakaze_abi_fgets_unlocked
+  "fgets_unlocked"=kinakaze_abi_fgets_unlocked PRIVATE
+  "fgets_unlocked@GLIBC_2.2.5"=kinakaze_abi_fgets_unlocked PRIVATE
+  kinakaze_abi_fgetspent
+  "fgetspent"=kinakaze_abi_fgetspent PRIVATE
+  "fgetspent@GLIBC_2.2.5"=kinakaze_abi_fgetspent PRIVATE
+  kinakaze_abi_fgetspent_r
+  "fgetspent_r"=kinakaze_abi_fgetspent_r PRIVATE
+  "fgetspent_r@GLIBC_2.2.5"=kinakaze_abi_fgetspent_r PRIVATE
+  kinakaze_abi_fgetwc
+  "fgetwc"=kinakaze_abi_fgetwc PRIVATE
+  "fgetwc@GLIBC_2.2.5"=kinakaze_abi_fgetwc PRIVATE
+  kinakaze_abi_fgetws
+  "fgetws"=kinakaze_abi_fgetws PRIVATE
+  kinakaze_abi_fgetxattr
+  "fgetxattr"=kinakaze_abi_fgetxattr PRIVATE
+  "fgetxattr@GLIBC_2.3"=kinakaze_abi_fgetxattr PRIVATE
+  kinakaze_abi_fileno
+  "fileno"=kinakaze_abi_fileno PRIVATE
+  "fileno@GLIBC_2.2.5"=kinakaze_abi_fileno PRIVATE
+  kinakaze_abi_fileno_unlocked
+  "fileno_unlocked"=kinakaze_abi_fileno_unlocked PRIVATE
+  "fileno_unlocked@GLIBC_2.2.5"=kinakaze_abi_fileno_unlocked PRIVATE
+  kinakaze_abi_finit_module
+  "finit_module"=kinakaze_abi_finit_module PRIVATE
+  kinakaze_abi_flistxattr
+  "flistxattr"=kinakaze_abi_flistxattr PRIVATE
+  "flistxattr@GLIBC_2.3"=kinakaze_abi_flistxattr PRIVATE
+  kinakaze_abi_flock
+  "flock"=kinakaze_abi_flock PRIVATE
+  "flock@GLIBC_2.2.5"=kinakaze_abi_flock PRIVATE
+  kinakaze_abi_flockfile
+  "flockfile"=kinakaze_abi_flockfile PRIVATE
+  "flockfile@GLIBC_2.2.5"=kinakaze_abi_flockfile PRIVATE
+  kinakaze_abi_fmemopen
+  "fmemopen"=kinakaze_abi_fmemopen PRIVATE
+  "fmemopen@GLIBC_2.22"=kinakaze_abi_fmemopen PRIVATE
+  kinakaze_abi_fnmatch
+  "fnmatch"=kinakaze_abi_fnmatch PRIVATE
+  "fnmatch@GLIBC_2.2.5"=kinakaze_abi_fnmatch PRIVATE
+  kinakaze_abi_fopen
+  "fopen"=kinakaze_abi_fopen PRIVATE
+  "fopen@GLIBC_2.2.5"=kinakaze_abi_fopen PRIVATE
+  kinakaze_abi_fopen64
+  "fopen64"=kinakaze_abi_fopen64 PRIVATE
+  "fopen64@GLIBC_2.2.5"=kinakaze_abi_fopen64 PRIVATE
+  kinakaze_abi_fopencookie
+  "fopencookie"=kinakaze_abi_fopencookie PRIVATE
+  "fopencookie@GLIBC_2.2.5"=kinakaze_abi_fopencookie PRIVATE
+  kinakaze_abi_fork
+  "fork"=kinakaze_abi_fork PRIVATE
+  "fork@GLIBC_2.2.5"=kinakaze_abi_fork PRIVATE
+  kinakaze_abi_forkpty
+  "forkpty"=kinakaze_abi_forkpty PRIVATE
+  "forkpty@GLIBC_2.34"=kinakaze_abi_forkpty PRIVATE
+  kinakaze_abi_fpathconf
+  "fpathconf"=kinakaze_abi_fpathconf PRIVATE
+  "fpathconf@GLIBC_2.2.5"=kinakaze_abi_fpathconf PRIVATE
+  kinakaze_abi_fprintf
+  "fprintf"=kinakaze_abi_fprintf PRIVATE
+  "fprintf@GLIBC_2.2.5"=kinakaze_abi_fprintf PRIVATE
+  kinakaze_abi_fputc
+  "fputc"=kinakaze_abi_fputc PRIVATE
+  "fputc@GLIBC_2.2.5"=kinakaze_abi_fputc PRIVATE
+  kinakaze_abi_fputc_unlocked
+  "fputc_unlocked"=kinakaze_abi_fputc_unlocked PRIVATE
+  "fputc_unlocked@GLIBC_2.2.5"=kinakaze_abi_fputc_unlocked PRIVATE
+  kinakaze_abi_fputs
+  "fputs"=kinakaze_abi_fputs PRIVATE
+  "fputs@GLIBC_2.2.5"=kinakaze_abi_fputs PRIVATE
+  kinakaze_abi_fputs_unlocked
+  "fputs_unlocked"=kinakaze_abi_fputs_unlocked PRIVATE
+  "fputs_unlocked@GLIBC_2.2.5"=kinakaze_abi_fputs_unlocked PRIVATE
+  kinakaze_abi_fputwc
+  "fputwc"=kinakaze_abi_fputwc PRIVATE
+  "fputwc@GLIBC_2.2.5"=kinakaze_abi_fputwc PRIVATE
+  kinakaze_abi_fputws
+  "fputws"=kinakaze_abi_fputws PRIVATE
+  kinakaze_abi_fread
+  "fread"=kinakaze_abi_fread PRIVATE
+  "fread@GLIBC_2.2.5"=kinakaze_abi_fread PRIVATE
+  kinakaze_abi_fread_unlocked
+  "fread_unlocked"=kinakaze_abi_fread_unlocked PRIVATE
+  "fread_unlocked@GLIBC_2.2.5"=kinakaze_abi_fread_unlocked PRIVATE
+  kinakaze_abi_free
+  "free"=kinakaze_abi_free PRIVATE
+  "free@GLIBC_2.2.5"=kinakaze_abi_free PRIVATE
+  kinakaze_abi_freeaddrinfo
+  "freeaddrinfo"=kinakaze_abi_freeaddrinfo PRIVATE
+  "freeaddrinfo@GLIBC_2.2.5"=kinakaze_abi_freeaddrinfo PRIVATE
+  kinakaze_abi_freeifaddrs
+  "freeifaddrs"=kinakaze_abi_freeifaddrs PRIVATE
+  "freeifaddrs@GLIBC_2.3"=kinakaze_abi_freeifaddrs PRIVATE
+  kinakaze_abi_freelocale
+  "freelocale"=kinakaze_abi_freelocale PRIVATE
+  "freelocale@GLIBC_2.3"=kinakaze_abi_freelocale PRIVATE
+  kinakaze_abi_fremovexattr
+  "fremovexattr"=kinakaze_abi_fremovexattr PRIVATE
+  "fremovexattr@GLIBC_2.3"=kinakaze_abi_fremovexattr PRIVATE
+  kinakaze_abi_freopen64
+  "freopen"=kinakaze_abi_freopen64 PRIVATE
+  "freopen@GLIBC_2.2.5"=kinakaze_abi_freopen64 PRIVATE
+  kinakaze_abi_freopen64
+  "freopen64"=kinakaze_abi_freopen64 PRIVATE
+  "freopen64@GLIBC_2.2.5"=kinakaze_abi_freopen64 PRIVATE
+  kinakaze_abi_frexp
+  "frexp"=kinakaze_abi_frexp PRIVATE
+  "frexp@GLIBC_2.2.5"=kinakaze_abi_frexp PRIVATE
+  kinakaze_abi_frexpf
+  "frexpf"=kinakaze_abi_frexpf PRIVATE
+  kinakaze_abi_frexpl
+  "frexpl"=kinakaze_abi_frexpl PRIVATE
+  "frexpl@GLIBC_2.2.5"=kinakaze_abi_frexpl PRIVATE
+  kinakaze_abi_fscanf
+  "fscanf"=kinakaze_abi_fscanf PRIVATE
+  "fscanf@GLIBC_2.2.5"=kinakaze_abi_fscanf PRIVATE
+  kinakaze_abi_fsconfig
+  "fsconfig"=kinakaze_abi_fsconfig PRIVATE
+  kinakaze_abi_fseek
+  "fseek"=kinakaze_abi_fseek PRIVATE
+  "fseek@GLIBC_2.2.5"=kinakaze_abi_fseek PRIVATE
+  kinakaze_abi_fseeko
+  "fseeko"=kinakaze_abi_fseeko PRIVATE
+  "fseeko@GLIBC_2.2.5"=kinakaze_abi_fseeko PRIVATE
+  kinakaze_abi_fseeko64
+  "fseeko64"=kinakaze_abi_fseeko64 PRIVATE
+  "fseeko64@GLIBC_2.2.5"=kinakaze_abi_fseeko64 PRIVATE
+  kinakaze_abi_fsetpos
+  "fsetpos"=kinakaze_abi_fsetpos PRIVATE
+  "fsetpos@GLIBC_2.2.5"=kinakaze_abi_fsetpos PRIVATE
+  kinakaze_abi_fsetpos
+  "fsetpos64"=kinakaze_abi_fsetpos PRIVATE
+  kinakaze_abi_fsetxattr
+  "fsetxattr"=kinakaze_abi_fsetxattr PRIVATE
+  "fsetxattr@GLIBC_2.3"=kinakaze_abi_fsetxattr PRIVATE
+  kinakaze_abi_fsmount
+  "fsmount"=kinakaze_abi_fsmount PRIVATE
+  kinakaze_abi_fsopen
+  "fsopen"=kinakaze_abi_fsopen PRIVATE
+  kinakaze_abi_fspick
+  "fspick"=kinakaze_abi_fspick PRIVATE
+  kinakaze_abi_fstat
+  "fstat"=kinakaze_abi_fstat PRIVATE
+  "fstat@GLIBC_2.33"=kinakaze_abi_fstat PRIVATE
+  kinakaze_abi_fstat64
+  "fstat64"=kinakaze_abi_fstat64 PRIVATE
+  "fstat64@GLIBC_2.33"=kinakaze_abi_fstat64 PRIVATE
+  kinakaze_abi_fstatat
+  "fstatat"=kinakaze_abi_fstatat PRIVATE
+  "fstatat@GLIBC_2.33"=kinakaze_abi_fstatat PRIVATE
+  kinakaze_abi_fstatat64
+  "fstatat64"=kinakaze_abi_fstatat64 PRIVATE
+  "fstatat64@GLIBC_2.33"=kinakaze_abi_fstatat64 PRIVATE
+  kinakaze_abi_fstatfs
+  "fstatfs"=kinakaze_abi_fstatfs PRIVATE
+  "fstatfs@GLIBC_2.2.5"=kinakaze_abi_fstatfs PRIVATE
+  kinakaze_abi_fstatfs64
+  "fstatfs64"=kinakaze_abi_fstatfs64 PRIVATE
+  "fstatfs64@GLIBC_2.2.5"=kinakaze_abi_fstatfs64 PRIVATE
+  kinakaze_abi_fstatvfs
+  "fstatvfs"=kinakaze_abi_fstatvfs PRIVATE
+  "fstatvfs@GLIBC_2.2.5"=kinakaze_abi_fstatvfs PRIVATE
+  kinakaze_abi_fstatvfs64
+  "fstatvfs64"=kinakaze_abi_fstatvfs64 PRIVATE
+  "fstatvfs64@GLIBC_2.2.5"=kinakaze_abi_fstatvfs64 PRIVATE
+  kinakaze_abi_fsync
+  "fsync"=kinakaze_abi_fsync PRIVATE
+  "fsync@GLIBC_2.2.5"=kinakaze_abi_fsync PRIVATE
+  kinakaze_abi_ftell
+  "ftell"=kinakaze_abi_ftell PRIVATE
+  "ftell@GLIBC_2.2.5"=kinakaze_abi_ftell PRIVATE
+  kinakaze_abi_ftello
+  "ftello"=kinakaze_abi_ftello PRIVATE
+  "ftello@GLIBC_2.2.5"=kinakaze_abi_ftello PRIVATE
+  kinakaze_abi_ftello64
+  "ftello64"=kinakaze_abi_ftello64 PRIVATE
+  "ftello64@GLIBC_2.2.5"=kinakaze_abi_ftello64 PRIVATE
+  kinakaze_abi_ftime
+  "ftime"=kinakaze_abi_ftime PRIVATE
+  "ftime@GLIBC_2.2.5"=kinakaze_abi_ftime PRIVATE
+  kinakaze_abi_ftok
+  "ftok"=kinakaze_abi_ftok PRIVATE
+  "ftok@GLIBC_2.2.5"=kinakaze_abi_ftok PRIVATE
+  kinakaze_abi_ftruncate
+  "ftruncate"=kinakaze_abi_ftruncate PRIVATE
+  "ftruncate@GLIBC_2.2.5"=kinakaze_abi_ftruncate PRIVATE
+  kinakaze_abi_ftruncate64
+  "ftruncate64"=kinakaze_abi_ftruncate64 PRIVATE
+  "ftruncate64@GLIBC_2.2.5"=kinakaze_abi_ftruncate64 PRIVATE
+  kinakaze_abi_fts64_children
+  "fts64_children"=kinakaze_abi_fts64_children PRIVATE
+  kinakaze_abi_fts64_close
+  "fts64_close"=kinakaze_abi_fts64_close PRIVATE
+  "fts64_close@GLIBC_2.23"=kinakaze_abi_fts64_close PRIVATE
+  kinakaze_abi_fts64_open
+  "fts64_open"=kinakaze_abi_fts64_open PRIVATE
+  "fts64_open@GLIBC_2.23"=kinakaze_abi_fts64_open PRIVATE
+  kinakaze_abi_fts64_read
+  "fts64_read"=kinakaze_abi_fts64_read PRIVATE
+  "fts64_read@GLIBC_2.23"=kinakaze_abi_fts64_read PRIVATE
+  kinakaze_abi_fts64_set
+  "fts64_set"=kinakaze_abi_fts64_set PRIVATE
+  "fts64_set@GLIBC_2.23"=kinakaze_abi_fts64_set PRIVATE
+  kinakaze_abi_fts_children
+  "fts_children"=kinakaze_abi_fts_children PRIVATE
+  kinakaze_abi_fts_close
+  "fts_close"=kinakaze_abi_fts_close PRIVATE
+  "fts_close@GLIBC_2.2.5"=kinakaze_abi_fts_close PRIVATE
+  kinakaze_abi_fts_open
+  "fts_open"=kinakaze_abi_fts_open PRIVATE
+  "fts_open@GLIBC_2.2.5"=kinakaze_abi_fts_open PRIVATE
+  kinakaze_abi_fts_read
+  "fts_read"=kinakaze_abi_fts_read PRIVATE
+  "fts_read@GLIBC_2.2.5"=kinakaze_abi_fts_read PRIVATE
+  kinakaze_abi_fts_set
+  "fts_set"=kinakaze_abi_fts_set PRIVATE
+  "fts_set@GLIBC_2.2.5"=kinakaze_abi_fts_set PRIVATE
+  kinakaze_abi_ftw
+  "ftw"=kinakaze_abi_ftw PRIVATE
+  "ftw@GLIBC_2.2.5"=kinakaze_abi_ftw PRIVATE
+  kinakaze_abi_ftw
+  "ftw64"=kinakaze_abi_ftw PRIVATE
+  "ftw64@GLIBC_2.2.5"=kinakaze_abi_ftw PRIVATE
+  kinakaze_abi_funlockfile
+  "funlockfile"=kinakaze_abi_funlockfile PRIVATE
+  "funlockfile@GLIBC_2.2.5"=kinakaze_abi_funlockfile PRIVATE
+  kinakaze_abi_futimens
+  "futimens"=kinakaze_abi_futimens PRIVATE
+  "futimens@GLIBC_2.6"=kinakaze_abi_futimens PRIVATE
+  kinakaze_abi_futimes
+  "futimes"=kinakaze_abi_futimes PRIVATE
+  "futimes@GLIBC_2.3"=kinakaze_abi_futimes PRIVATE
+  kinakaze_abi_futimesat
+  "futimesat"=kinakaze_abi_futimesat PRIVATE
+  "futimesat@GLIBC_2.4"=kinakaze_abi_futimesat PRIVATE
+  kinakaze_abi_fwide
+  "fwide"=kinakaze_abi_fwide PRIVATE
+  kinakaze_abi_fwprintf
+  "fwprintf"=kinakaze_abi_fwprintf PRIVATE
+  kinakaze_abi_fwrite
+  "fwrite"=kinakaze_abi_fwrite PRIVATE
+  "fwrite@GLIBC_2.2.5"=kinakaze_abi_fwrite PRIVATE
+  kinakaze_abi_fwrite_unlocked
+  "fwrite_unlocked"=kinakaze_abi_fwrite_unlocked PRIVATE
+  "fwrite_unlocked@GLIBC_2.2.5"=kinakaze_abi_fwrite_unlocked PRIVATE
+  kinakaze_abi_gai_strerror
+  "gai_strerror"=kinakaze_abi_gai_strerror PRIVATE
+  "gai_strerror@GLIBC_2.2.5"=kinakaze_abi_gai_strerror PRIVATE
+  kinakaze_abi_get_current_dir_name
+  "get_current_dir_name"=kinakaze_abi_get_current_dir_name PRIVATE
+  "get_current_dir_name@GLIBC_2.2.5"=kinakaze_abi_get_current_dir_name PRIVATE
+  kinakaze_abi_get_nprocs
+  "get_nprocs"=kinakaze_abi_get_nprocs PRIVATE
+  "get_nprocs@GLIBC_2.2.5"=kinakaze_abi_get_nprocs PRIVATE
+  kinakaze_abi_getaddrinfo
+  "getaddrinfo"=kinakaze_abi_getaddrinfo PRIVATE
+  "getaddrinfo@GLIBC_2.2.5"=kinakaze_abi_getaddrinfo PRIVATE
+  kinakaze_abi_getauxval
+  "getauxval"=kinakaze_abi_getauxval PRIVATE
+  "getauxval@GLIBC_2.16"=kinakaze_abi_getauxval PRIVATE
+  kinakaze_abi_getc
+  "getc"=kinakaze_abi_getc PRIVATE
+  "getc@GLIBC_2.2.5"=kinakaze_abi_getc PRIVATE
+  kinakaze_abi_getc_unlocked
+  "getc_unlocked"=kinakaze_abi_getc_unlocked PRIVATE
+  "getc_unlocked@GLIBC_2.2.5"=kinakaze_abi_getc_unlocked PRIVATE
+  kinakaze_abi_getchar
+  "getchar"=kinakaze_abi_getchar PRIVATE
+  kinakaze_abi_getchar_unlocked
+  "getchar_unlocked"=kinakaze_abi_getchar_unlocked PRIVATE
+  "getchar_unlocked@GLIBC_2.2.5"=kinakaze_abi_getchar_unlocked PRIVATE
+  kinakaze_abi_getcontext
+  "getcontext"=kinakaze_abi_getcontext PRIVATE
+  "getcontext@GLIBC_2.2.5"=kinakaze_abi_getcontext PRIVATE
+  kinakaze_abi_getcwd
+  "getcwd"=kinakaze_abi_getcwd PRIVATE
+  "getcwd@GLIBC_2.2.5"=kinakaze_abi_getcwd PRIVATE
+  kinakaze_abi_getdelim
+  "getdelim"=kinakaze_abi_getdelim PRIVATE
+  "getdelim@GLIBC_2.2.5"=kinakaze_abi_getdelim PRIVATE
+  kinakaze_abi_getdents
+  "getdents"=kinakaze_abi_getdents PRIVATE
+  kinakaze_abi_getdents64
+  "getdents64"=kinakaze_abi_getdents64 PRIVATE
+  kinakaze_abi_getdomainname
+  "getdomainname"=kinakaze_abi_getdomainname PRIVATE
+  "getdomainname@GLIBC_2.2.5"=kinakaze_abi_getdomainname PRIVATE
+  kinakaze_abi_getdtablesize
+  "getdtablesize"=kinakaze_abi_getdtablesize PRIVATE
+  "getdtablesize@GLIBC_2.2.5"=kinakaze_abi_getdtablesize PRIVATE
+  kinakaze_abi_getegid
+  "getegid"=kinakaze_abi_getegid PRIVATE
+  "getegid@GLIBC_2.2.5"=kinakaze_abi_getegid PRIVATE
+  kinakaze_abi_getentropy
+  "getentropy"=kinakaze_abi_getentropy PRIVATE
+  "getentropy@GLIBC_2.25"=kinakaze_abi_getentropy PRIVATE
+  kinakaze_abi_getenv
+  "getenv"=kinakaze_abi_getenv PRIVATE
+  "getenv@GLIBC_2.2.5"=kinakaze_abi_getenv PRIVATE
+  kinakaze_abi_geteuid
+  "geteuid"=kinakaze_abi_geteuid PRIVATE
+  "geteuid@GLIBC_2.2.5"=kinakaze_abi_geteuid PRIVATE
+  kinakaze_abi_getgid
+  "getgid"=kinakaze_abi_getgid PRIVATE
+  "getgid@GLIBC_2.2.5"=kinakaze_abi_getgid PRIVATE
+  kinakaze_abi_getgrent
+  "getgrent"=kinakaze_abi_getgrent PRIVATE
+  "getgrent@GLIBC_2.2.5"=kinakaze_abi_getgrent PRIVATE
+  kinakaze_abi_getgrgid
+  "getgrgid"=kinakaze_abi_getgrgid PRIVATE
+  "getgrgid@GLIBC_2.2.5"=kinakaze_abi_getgrgid PRIVATE
+  kinakaze_abi_getgrgid_r
+  "getgrgid_r"=kinakaze_abi_getgrgid_r PRIVATE
+  "getgrgid_r@GLIBC_2.2.5"=kinakaze_abi_getgrgid_r PRIVATE
+  kinakaze_abi_getgrnam
+  "getgrnam"=kinakaze_abi_getgrnam PRIVATE
+  "getgrnam@GLIBC_2.2.5"=kinakaze_abi_getgrnam PRIVATE
+  kinakaze_abi_getgrnam_r
+  "getgrnam_r"=kinakaze_abi_getgrnam_r PRIVATE
+  "getgrnam_r@GLIBC_2.2.5"=kinakaze_abi_getgrnam_r PRIVATE
+  kinakaze_abi_getgrouplist
+  "getgrouplist"=kinakaze_abi_getgrouplist PRIVATE
+  "getgrouplist@GLIBC_2.2.5"=kinakaze_abi_getgrouplist PRIVATE
+  kinakaze_abi_getgroups
+  "getgroups"=kinakaze_abi_getgroups PRIVATE
+  "getgroups@GLIBC_2.2.5"=kinakaze_abi_getgroups PRIVATE
+  kinakaze_abi_gethostbyaddr
+  "gethostbyaddr"=kinakaze_abi_gethostbyaddr PRIVATE
+  "gethostbyaddr@GLIBC_2.2.5"=kinakaze_abi_gethostbyaddr PRIVATE
+  kinakaze_abi_gethostbyaddr_r
+  "gethostbyaddr_r"=kinakaze_abi_gethostbyaddr_r PRIVATE
+  "gethostbyaddr_r@GLIBC_2.2.5"=kinakaze_abi_gethostbyaddr_r PRIVATE
+  kinakaze_abi_gethostbyname
+  "gethostbyname"=kinakaze_abi_gethostbyname PRIVATE
+  "gethostbyname@GLIBC_2.2.5"=kinakaze_abi_gethostbyname PRIVATE
+  kinakaze_abi_gethostbyname2
+  "gethostbyname2"=kinakaze_abi_gethostbyname2 PRIVATE
+  kinakaze_abi_gethostbyname2_r
+  "gethostbyname2_r"=kinakaze_abi_gethostbyname2_r PRIVATE
+  "gethostbyname2_r@GLIBC_2.2.5"=kinakaze_abi_gethostbyname2_r PRIVATE
+  kinakaze_abi_gethostbyname_r
+  "gethostbyname_r"=kinakaze_abi_gethostbyname_r PRIVATE
+  "gethostbyname_r@GLIBC_2.2.5"=kinakaze_abi_gethostbyname_r PRIVATE
+  kinakaze_abi_gethostid
+  "gethostid"=kinakaze_abi_gethostid PRIVATE
+  "gethostid@GLIBC_2.2.5"=kinakaze_abi_gethostid PRIVATE
+  kinakaze_abi_gethostname
+  "gethostname"=kinakaze_abi_gethostname PRIVATE
+  "gethostname@GLIBC_2.2.5"=kinakaze_abi_gethostname PRIVATE
+  kinakaze_abi_getifaddrs
+  "getifaddrs"=kinakaze_abi_getifaddrs PRIVATE
+  "getifaddrs@GLIBC_2.3"=kinakaze_abi_getifaddrs PRIVATE
+  kinakaze_abi_getitimer
+  "getitimer"=kinakaze_abi_getitimer PRIVATE
+  "getitimer@GLIBC_2.2.5"=kinakaze_abi_getitimer PRIVATE
+  kinakaze_abi_getline
+  "getline"=kinakaze_abi_getline PRIVATE
+  "getline@GLIBC_2.2.5"=kinakaze_abi_getline PRIVATE
+  kinakaze_abi_getloadavg
+  "getloadavg"=kinakaze_abi_getloadavg PRIVATE
+  "getloadavg@GLIBC_2.2.5"=kinakaze_abi_getloadavg PRIVATE
+  kinakaze_abi_getlogin
+  "getlogin"=kinakaze_abi_getlogin PRIVATE
+  "getlogin@GLIBC_2.2.5"=kinakaze_abi_getlogin PRIVATE
+  kinakaze_abi_getlogin_r
+  "getlogin_r"=kinakaze_abi_getlogin_r PRIVATE
+  "getlogin_r@GLIBC_2.2.5"=kinakaze_abi_getlogin_r PRIVATE
+  kinakaze_abi_getmntent
+  "getmntent"=kinakaze_abi_getmntent PRIVATE
+  "getmntent@GLIBC_2.2.5"=kinakaze_abi_getmntent PRIVATE
+  kinakaze_abi_getmntent_r
+  "getmntent_r"=kinakaze_abi_getmntent_r PRIVATE
+  "getmntent_r@GLIBC_2.2.5"=kinakaze_abi_getmntent_r PRIVATE
+  kinakaze_abi_getnameinfo
+  "getnameinfo"=kinakaze_abi_getnameinfo PRIVATE
+  "getnameinfo@GLIBC_2.2.5"=kinakaze_abi_getnameinfo PRIVATE
+  kinakaze_abi_getnetbyaddr
+  "getnetbyaddr"=kinakaze_abi_getnetbyaddr PRIVATE
+  "getnetbyaddr@GLIBC_2.2.5"=kinakaze_abi_getnetbyaddr PRIVATE
+  kinakaze_abi_getnetbyname
+  "getnetbyname"=kinakaze_abi_getnetbyname PRIVATE
+  "getnetbyname@GLIBC_2.2.5"=kinakaze_abi_getnetbyname PRIVATE
+  kinakaze_abi_getnetent
+  "getnetent"=kinakaze_abi_getnetent PRIVATE
+  "getnetent@GLIBC_2.2.5"=kinakaze_abi_getnetent PRIVATE
+  kinakaze_abi_getnetgrent
+  "getnetgrent"=kinakaze_abi_getnetgrent PRIVATE
+  "getnetgrent@GLIBC_2.2.5"=kinakaze_abi_getnetgrent PRIVATE
+  kinakaze_abi_getnetgrent_r
+  "getnetgrent_r"=kinakaze_abi_getnetgrent_r PRIVATE
+  kinakaze_abi_getopt
+  "getopt"=kinakaze_abi_getopt PRIVATE
+  "getopt@GLIBC_2.2.5"=kinakaze_abi_getopt PRIVATE
+  kinakaze_abi_getopt_long
+  "getopt_long"=kinakaze_abi_getopt_long PRIVATE
+  "getopt_long@GLIBC_2.2.5"=kinakaze_abi_getopt_long PRIVATE
+  kinakaze_abi_getopt_long_only
+  "getopt_long_only"=kinakaze_abi_getopt_long_only PRIVATE
+  "getopt_long_only@GLIBC_2.2.5"=kinakaze_abi_getopt_long_only PRIVATE
+  kinakaze_abi_getpagesize
+  "getpagesize"=kinakaze_abi_getpagesize PRIVATE
+  "getpagesize@GLIBC_2.2.5"=kinakaze_abi_getpagesize PRIVATE
+  kinakaze_abi_getpass
+  "getpass"=kinakaze_abi_getpass PRIVATE
+  "getpass@GLIBC_2.2.5"=kinakaze_abi_getpass PRIVATE
+  kinakaze_abi_getpeername
+  "getpeername"=kinakaze_abi_getpeername PRIVATE
+  "getpeername@GLIBC_2.2.5"=kinakaze_abi_getpeername PRIVATE
+  kinakaze_abi_getpgid
+  "getpgid"=kinakaze_abi_getpgid PRIVATE
+  "getpgid@GLIBC_2.2.5"=kinakaze_abi_getpgid PRIVATE
+  kinakaze_abi_getpgrp
+  "getpgrp"=kinakaze_abi_getpgrp PRIVATE
+  "getpgrp@GLIBC_2.2.5"=kinakaze_abi_getpgrp PRIVATE
+  kinakaze_abi_getpid
+  "getpid"=kinakaze_abi_getpid PRIVATE
+  "getpid@GLIBC_2.2.5"=kinakaze_abi_getpid PRIVATE
+  kinakaze_abi_getppid
+  "getppid"=kinakaze_abi_getppid PRIVATE
+  "getppid@GLIBC_2.2.5"=kinakaze_abi_getppid PRIVATE
+  kinakaze_abi_getpriority
+  "getpriority"=kinakaze_abi_getpriority PRIVATE
+  "getpriority@GLIBC_2.2.5"=kinakaze_abi_getpriority PRIVATE
+  kinakaze_abi_getprotobyname
+  "getprotobyname"=kinakaze_abi_getprotobyname PRIVATE
+  "getprotobyname@GLIBC_2.2.5"=kinakaze_abi_getprotobyname PRIVATE
+  kinakaze_abi_getprotobyname_r
+  "getprotobyname_r"=kinakaze_abi_getprotobyname_r PRIVATE
+  "getprotobyname_r@GLIBC_2.2.5"=kinakaze_abi_getprotobyname_r PRIVATE
+  kinakaze_abi_getprotobynumber
+  "getprotobynumber"=kinakaze_abi_getprotobynumber PRIVATE
+  "getprotobynumber@GLIBC_2.2.5"=kinakaze_abi_getprotobynumber PRIVATE
+  kinakaze_abi_getprotobynumber_r
+  "getprotobynumber_r"=kinakaze_abi_getprotobynumber_r PRIVATE
+  "getprotobynumber_r@GLIBC_2.2.5"=kinakaze_abi_getprotobynumber_r PRIVATE
+  kinakaze_abi_getpwent
+  "getpwent"=kinakaze_abi_getpwent PRIVATE
+  "getpwent@GLIBC_2.2.5"=kinakaze_abi_getpwent PRIVATE
+  kinakaze_abi_getpwnam
+  "getpwnam"=kinakaze_abi_getpwnam PRIVATE
+  "getpwnam@GLIBC_2.2.5"=kinakaze_abi_getpwnam PRIVATE
+  kinakaze_abi_getpwnam_r
+  "getpwnam_r"=kinakaze_abi_getpwnam_r PRIVATE
+  "getpwnam_r@GLIBC_2.2.5"=kinakaze_abi_getpwnam_r PRIVATE
+  kinakaze_abi_getpwuid
+  "getpwuid"=kinakaze_abi_getpwuid PRIVATE
+  "getpwuid@GLIBC_2.2.5"=kinakaze_abi_getpwuid PRIVATE
+  kinakaze_abi_getpwuid_r
+  "getpwuid_r"=kinakaze_abi_getpwuid_r PRIVATE
+  "getpwuid_r@GLIBC_2.2.5"=kinakaze_abi_getpwuid_r PRIVATE
+  kinakaze_abi_getrandom
+  "getrandom"=kinakaze_abi_getrandom PRIVATE
+  "getrandom@GLIBC_2.25"=kinakaze_abi_getrandom PRIVATE
+  kinakaze_abi_getresgid
+  "getresgid"=kinakaze_abi_getresgid PRIVATE
+  "getresgid@GLIBC_2.2.5"=kinakaze_abi_getresgid PRIVATE
+  kinakaze_abi_getresuid
+  "getresuid"=kinakaze_abi_getresuid PRIVATE
+  "getresuid@GLIBC_2.2.5"=kinakaze_abi_getresuid PRIVATE
+  kinakaze_abi_getrlimit
+  "getrlimit"=kinakaze_abi_getrlimit PRIVATE
+  "getrlimit@GLIBC_2.2.5"=kinakaze_abi_getrlimit PRIVATE
+  kinakaze_abi_getrlimit64
+  "getrlimit64"=kinakaze_abi_getrlimit64 PRIVATE
+  "getrlimit64@GLIBC_2.2.5"=kinakaze_abi_getrlimit64 PRIVATE
+  kinakaze_abi_getrusage
+  "getrusage"=kinakaze_abi_getrusage PRIVATE
+  "getrusage@GLIBC_2.2.5"=kinakaze_abi_getrusage PRIVATE
+  kinakaze_abi_getservbyname
+  "getservbyname"=kinakaze_abi_getservbyname PRIVATE
+  "getservbyname@GLIBC_2.2.5"=kinakaze_abi_getservbyname PRIVATE
+  kinakaze_abi_getservbyname_r
+  "getservbyname_r"=kinakaze_abi_getservbyname_r PRIVATE
+  kinakaze_abi_getservbyport
+  "getservbyport"=kinakaze_abi_getservbyport PRIVATE
+  "getservbyport@GLIBC_2.2.5"=kinakaze_abi_getservbyport PRIVATE
+  kinakaze_abi_getservbyport_r
+  "getservbyport_r"=kinakaze_abi_getservbyport_r PRIVATE
+  "getservbyport_r@GLIBC_2.2.5"=kinakaze_abi_getservbyport_r PRIVATE
+  kinakaze_abi_getservent
+  "getservent"=kinakaze_abi_getservent PRIVATE
+  "getservent@GLIBC_2.2.5"=kinakaze_abi_getservent PRIVATE
+  kinakaze_abi_getsid
+  "getsid"=kinakaze_abi_getsid PRIVATE
+  "getsid@GLIBC_2.2.5"=kinakaze_abi_getsid PRIVATE
+  kinakaze_abi_getsockname
+  "getsockname"=kinakaze_abi_getsockname PRIVATE
+  "getsockname@GLIBC_2.2.5"=kinakaze_abi_getsockname PRIVATE
+  kinakaze_abi_getsockopt
+  "getsockopt"=kinakaze_abi_getsockopt PRIVATE
+  "getsockopt@GLIBC_2.2.5"=kinakaze_abi_getsockopt PRIVATE
+  kinakaze_abi_getspent
+  "getspent"=kinakaze_abi_getspent PRIVATE
+  "getspent@GLIBC_2.2.5"=kinakaze_abi_getspent PRIVATE
+  kinakaze_abi_getspnam
+  "getspnam"=kinakaze_abi_getspnam PRIVATE
+  "getspnam@GLIBC_2.2.5"=kinakaze_abi_getspnam PRIVATE
+  kinakaze_abi_getspnam_r
+  "getspnam_r"=kinakaze_abi_getspnam_r PRIVATE
+  "getspnam_r@GLIBC_2.2.5"=kinakaze_abi_getspnam_r PRIVATE
+  kinakaze_abi_gettext
+  "gettext"=kinakaze_abi_gettext PRIVATE
+  "gettext@GLIBC_2.2.5"=kinakaze_abi_gettext PRIVATE
+  kinakaze_abi_gettid
+  "gettid"=kinakaze_abi_gettid PRIVATE
+  "gettid@GLIBC_2.30"=kinakaze_abi_gettid PRIVATE
+  kinakaze_abi_gettimeofday
+  "gettimeofday"=kinakaze_abi_gettimeofday PRIVATE
+  "gettimeofday@GLIBC_2.2.5"=kinakaze_abi_gettimeofday PRIVATE
+  kinakaze_abi_getuid
+  "getuid"=kinakaze_abi_getuid PRIVATE
+  "getuid@GLIBC_2.2.5"=kinakaze_abi_getuid PRIVATE
+  kinakaze_abi_getusershell
+  "getusershell"=kinakaze_abi_getusershell PRIVATE
+  "getusershell@GLIBC_2.2.5"=kinakaze_abi_getusershell PRIVATE
+  kinakaze_abi_getutent
+  "getutent"=kinakaze_abi_getutent PRIVATE
+  "getutent@GLIBC_2.2.5"=kinakaze_abi_getutent PRIVATE
+  kinakaze_abi_getutid
+  "getutid"=kinakaze_abi_getutid PRIVATE
+  kinakaze_abi_getutline
+  "getutline"=kinakaze_abi_getutline PRIVATE
+  "getutline@GLIBC_2.2.5"=kinakaze_abi_getutline PRIVATE
+  kinakaze_abi_getutxent
+  "getutxent"=kinakaze_abi_getutxent PRIVATE
+  "getutxent@GLIBC_2.2.5"=kinakaze_abi_getutxent PRIVATE
+  kinakaze_abi_getutxid
+  "getutxid"=kinakaze_abi_getutxid PRIVATE
+  kinakaze_abi_getutxline
+  "getutxline"=kinakaze_abi_getutxline PRIVATE
+  kinakaze_abi_getwc
+  "getwc"=kinakaze_abi_getwc PRIVATE
+  "getwc@GLIBC_2.2.5"=kinakaze_abi_getwc PRIVATE
+  kinakaze_abi_getwchar
+  "getwchar"=kinakaze_abi_getwchar PRIVATE
+  kinakaze_abi_getxattr
+  "getxattr"=kinakaze_abi_getxattr PRIVATE
+  "getxattr@GLIBC_2.3"=kinakaze_abi_getxattr PRIVATE
+  kinakaze_abi_glob
+  "glob"=kinakaze_abi_glob PRIVATE
+  "glob@GLIBC_2.2.5"=kinakaze_abi_glob PRIVATE
+  "glob@GLIBC_2.27"=kinakaze_abi_glob PRIVATE
+  kinakaze_abi_glob64
+  "glob64"=kinakaze_abi_glob64 PRIVATE
+  "glob64@GLIBC_2.27"=kinakaze_abi_glob64 PRIVATE
+  kinakaze_abi_glob_pattern_p
+  "glob_pattern_p"=kinakaze_abi_glob_pattern_p PRIVATE
+  "glob_pattern_p@GLIBC_2.2.5"=kinakaze_abi_glob_pattern_p PRIVATE
+  kinakaze_abi_globfree
+  "globfree"=kinakaze_abi_globfree PRIVATE
+  "globfree@GLIBC_2.2.5"=kinakaze_abi_globfree PRIVATE
+  kinakaze_abi_globfree64
+  "globfree64"=kinakaze_abi_globfree64 PRIVATE
+  "globfree64@GLIBC_2.2.5"=kinakaze_abi_globfree64 PRIVATE
+  kinakaze_abi_gmtime
+  "gmtime"=kinakaze_abi_gmtime PRIVATE
+  "gmtime@GLIBC_2.2.5"=kinakaze_abi_gmtime PRIVATE
+  kinakaze_abi_gmtime_r
+  "gmtime_r"=kinakaze_abi_gmtime_r PRIVATE
+  "gmtime_r@GLIBC_2.2.5"=kinakaze_abi_gmtime_r PRIVATE
+  kinakaze_abi_gnu_dev_major
+  "gnu_dev_major"=kinakaze_abi_gnu_dev_major PRIVATE
+  "gnu_dev_major@GLIBC_2.3.3"=kinakaze_abi_gnu_dev_major PRIVATE
+  kinakaze_abi_gnu_dev_makedev
+  "gnu_dev_makedev"=kinakaze_abi_gnu_dev_makedev PRIVATE
+  "gnu_dev_makedev@GLIBC_2.3.3"=kinakaze_abi_gnu_dev_makedev PRIVATE
+  kinakaze_abi_gnu_dev_minor
+  "gnu_dev_minor"=kinakaze_abi_gnu_dev_minor PRIVATE
+  "gnu_dev_minor@GLIBC_2.3.3"=kinakaze_abi_gnu_dev_minor PRIVATE
+  kinakaze_abi_gnu_get_libc_version
+  "gnu_get_libc_version"=kinakaze_abi_gnu_get_libc_version PRIVATE
+  "gnu_get_libc_version@GLIBC_2.2.5"=kinakaze_abi_gnu_get_libc_version PRIVATE
+  kinakaze_abi_grantpt
+  "grantpt"=kinakaze_abi_grantpt PRIVATE
+  "grantpt@GLIBC_2.2.5"=kinakaze_abi_grantpt PRIVATE
+  kinakaze_abi_group_member
+  "group_member"=kinakaze_abi_group_member PRIVATE
+  "group_member@GLIBC_2.2.5"=kinakaze_abi_group_member PRIVATE
+  kinakaze_abi_hasmntopt
+  "hasmntopt"=kinakaze_abi_hasmntopt PRIVATE
+  "hasmntopt@GLIBC_2.2.5"=kinakaze_abi_hasmntopt PRIVATE
+  kinakaze_abi_hcreate_r
+  "hcreate_r"=kinakaze_abi_hcreate_r PRIVATE
+  "hcreate_r@GLIBC_2.2.5"=kinakaze_abi_hcreate_r PRIVATE
+  kinakaze_abi_hdestroy_r
+  "hdestroy_r"=kinakaze_abi_hdestroy_r PRIVATE
+  "hdestroy_r@GLIBC_2.2.5"=kinakaze_abi_hdestroy_r PRIVATE
+  kinakaze_abi_hsearch_r
+  "hsearch_r"=kinakaze_abi_hsearch_r PRIVATE
+  "hsearch_r@GLIBC_2.2.5"=kinakaze_abi_hsearch_r PRIVATE
+  kinakaze_abi_hstrerror
+  "hstrerror"=kinakaze_abi_hstrerror PRIVATE
+  "hstrerror@GLIBC_2.2.5"=kinakaze_abi_hstrerror PRIVATE
+  kinakaze_abi_htonl
+  "htonl"=kinakaze_abi_htonl PRIVATE
+  kinakaze_abi_htons
+  "htons"=kinakaze_abi_htons PRIVATE
+  "htons@GLIBC_2.2.5"=kinakaze_abi_htons PRIVATE
+  kinakaze_abi_iconv
+  "iconv"=kinakaze_abi_iconv PRIVATE
+  "iconv@GLIBC_2.2.5"=kinakaze_abi_iconv PRIVATE
+  kinakaze_abi_iconv_close
+  "iconv_close"=kinakaze_abi_iconv_close PRIVATE
+  "iconv_close@GLIBC_2.2.5"=kinakaze_abi_iconv_close PRIVATE
+  kinakaze_abi_iconv_open
+  "iconv_open"=kinakaze_abi_iconv_open PRIVATE
+  "iconv_open@GLIBC_2.2.5"=kinakaze_abi_iconv_open PRIVATE
+  kinakaze_abi_if_freenameindex
+  "if_freenameindex"=kinakaze_abi_if_freenameindex PRIVATE
+  "if_freenameindex@GLIBC_2.2.5"=kinakaze_abi_if_freenameindex PRIVATE
+  kinakaze_abi_if_indextoname
+  "if_indextoname"=kinakaze_abi_if_indextoname PRIVATE
+  "if_indextoname@GLIBC_2.2.5"=kinakaze_abi_if_indextoname PRIVATE
+  kinakaze_abi_if_nameindex
+  "if_nameindex"=kinakaze_abi_if_nameindex PRIVATE
+  "if_nameindex@GLIBC_2.2.5"=kinakaze_abi_if_nameindex PRIVATE
+  kinakaze_abi_if_nametoindex
+  "if_nametoindex"=kinakaze_abi_if_nametoindex PRIVATE
+  "if_nametoindex@GLIBC_2.2.5"=kinakaze_abi_if_nametoindex PRIVATE
+  kinakaze_abi_lldiv
+  "imaxdiv"=kinakaze_abi_lldiv PRIVATE
+  "imaxdiv@GLIBC_2.2.5"=kinakaze_abi_lldiv PRIVATE
+  kinakaze_abi_in6addr_any DATA
+  "in6addr_any"=kinakaze_abi_in6addr_any DATA PRIVATE
+  "in6addr_any@GLIBC_2.2.5"=kinakaze_abi_in6addr_any DATA PRIVATE
+  kinakaze_abi_in6addr_loopback DATA
+  "in6addr_loopback"=kinakaze_abi_in6addr_loopback DATA PRIVATE
+  "in6addr_loopback@GLIBC_2.2.5"=kinakaze_abi_in6addr_loopback DATA PRIVATE
+  kinakaze_abi_strchr
+  "index"=kinakaze_abi_strchr PRIVATE
+  "index@GLIBC_2.2.5"=kinakaze_abi_strchr PRIVATE
+  kinakaze_abi_inet_addr
+  "inet_addr"=kinakaze_abi_inet_addr PRIVATE
+  "inet_addr@GLIBC_2.2.5"=kinakaze_abi_inet_addr PRIVATE
+  kinakaze_abi_inet_aton
+  "inet_aton"=kinakaze_abi_inet_aton PRIVATE
+  "inet_aton@GLIBC_2.2.5"=kinakaze_abi_inet_aton PRIVATE
+  kinakaze_abi_inet_network
+  "inet_network"=kinakaze_abi_inet_network PRIVATE
+  kinakaze_abi_inet_ntoa
+  "inet_ntoa"=kinakaze_abi_inet_ntoa PRIVATE
+  "inet_ntoa@GLIBC_2.2.5"=kinakaze_abi_inet_ntoa PRIVATE
+  kinakaze_abi_inet_ntop
+  "inet_ntop"=kinakaze_abi_inet_ntop PRIVATE
+  "inet_ntop@GLIBC_2.2.5"=kinakaze_abi_inet_ntop PRIVATE
+  kinakaze_abi_inet_pton
+  "inet_pton"=kinakaze_abi_inet_pton PRIVATE
+  "inet_pton@GLIBC_2.2.5"=kinakaze_abi_inet_pton PRIVATE
+  kinakaze_abi_init_module
+  "init_module"=kinakaze_abi_init_module PRIVATE
+  kinakaze_abi_initgroups
+  "initgroups"=kinakaze_abi_initgroups PRIVATE
+  "initgroups@GLIBC_2.2.5"=kinakaze_abi_initgroups PRIVATE
+  kinakaze_abi_initstate_r
+  "initstate_r"=kinakaze_abi_initstate_r PRIVATE
+  "initstate_r@GLIBC_2.2.5"=kinakaze_abi_initstate_r PRIVATE
+  kinakaze_abi_innetgr
+  "innetgr"=kinakaze_abi_innetgr PRIVATE
+  "innetgr@GLIBC_2.2.5"=kinakaze_abi_innetgr PRIVATE
+  kinakaze_abi_inotify_add_watch
+  "inotify_add_watch"=kinakaze_abi_inotify_add_watch PRIVATE
+  "inotify_add_watch@GLIBC_2.4"=kinakaze_abi_inotify_add_watch PRIVATE
+  kinakaze_abi_inotify_init
+  "inotify_init"=kinakaze_abi_inotify_init PRIVATE
+  "inotify_init@GLIBC_2.4"=kinakaze_abi_inotify_init PRIVATE
+  kinakaze_abi_inotify_init1
+  "inotify_init1"=kinakaze_abi_inotify_init1 PRIVATE
+  "inotify_init1@GLIBC_2.9"=kinakaze_abi_inotify_init1 PRIVATE
+  kinakaze_abi_inotify_rm_watch
+  "inotify_rm_watch"=kinakaze_abi_inotify_rm_watch PRIVATE
+  "inotify_rm_watch@GLIBC_2.4"=kinakaze_abi_inotify_rm_watch PRIVATE
+  kinakaze_abi_io_uring_enter
+  "io_uring_enter"=kinakaze_abi_io_uring_enter PRIVATE
+  kinakaze_abi_io_uring_push
+  "io_uring_push"=kinakaze_abi_io_uring_push PRIVATE
+  kinakaze_abi_io_uring_reap
+  "io_uring_reap"=kinakaze_abi_io_uring_reap PRIVATE
+  kinakaze_abi_io_uring_setup
+  "io_uring_setup"=kinakaze_abi_io_uring_setup PRIVATE
+  kinakaze_abi_ioctl
+  "ioctl"=kinakaze_abi_ioctl PRIVATE
+  "ioctl@GLIBC_2.2.5"=kinakaze_abi_ioctl PRIVATE
+  kinakaze_abi_isalnum
+  "isalnum"=kinakaze_abi_isalnum PRIVATE
+  "isalnum@GLIBC_2.2.5"=kinakaze_abi_isalnum PRIVATE
+  kinakaze_abi_isalpha
+  "isalpha"=kinakaze_abi_isalpha PRIVATE
+  "isalpha@GLIBC_2.2.5"=kinakaze_abi_isalpha PRIVATE
+  kinakaze_abi_isascii
+  "isascii"=kinakaze_abi_isascii PRIVATE
+  "isascii@GLIBC_2.2.5"=kinakaze_abi_isascii PRIVATE
+  kinakaze_abi_isatty
+  "isatty"=kinakaze_abi_isatty PRIVATE
+  "isatty@GLIBC_2.2.5"=kinakaze_abi_isatty PRIVATE
+  kinakaze_abi_isblank
+  "isblank"=kinakaze_abi_isblank PRIVATE
+  "isblank@GLIBC_2.2.5"=kinakaze_abi_isblank PRIVATE
+  kinakaze_abi_iscntrl
+  "iscntrl"=kinakaze_abi_iscntrl PRIVATE
+  "iscntrl@GLIBC_2.2.5"=kinakaze_abi_iscntrl PRIVATE
+  kinakaze_abi_isdigit
+  "isdigit"=kinakaze_abi_isdigit PRIVATE
+  "isdigit@GLIBC_2.2.5"=kinakaze_abi_isdigit PRIVATE
+  kinakaze_abi_isgraph
+  "isgraph"=kinakaze_abi_isgraph PRIVATE
+  "isgraph@GLIBC_2.2.5"=kinakaze_abi_isgraph PRIVATE
+  "isinf"=libm.so.6.kinakaze_engine_libm_isinf PRIVATE
+  "isinf@GLIBC_2.2.5"=libm.so.6.kinakaze_engine_libm_isinf PRIVATE
+  "isinff"=libm.so.6.kinakaze_engine_libm_isinff PRIVATE
+  "isinff@GLIBC_2.2.5"=libm.so.6.kinakaze_engine_libm_isinff PRIVATE
+  kinakaze_abi_islower
+  "islower"=kinakaze_abi_islower PRIVATE
+  "islower@GLIBC_2.2.5"=kinakaze_abi_islower PRIVATE
+  "isnan"=libm.so.6.kinakaze_engine_libm_isnan PRIVATE
+  "isnan@GLIBC_2.2.5"=libm.so.6.kinakaze_engine_libm_isnan PRIVATE
+  "isnanf"=libm.so.6.kinakaze_engine_libm_isnanf PRIVATE
+  "isnanf@GLIBC_2.2.5"=libm.so.6.kinakaze_engine_libm_isnanf PRIVATE
+  kinakaze_abi_isprint
+  "isprint"=kinakaze_abi_isprint PRIVATE
+  "isprint@GLIBC_2.2.5"=kinakaze_abi_isprint PRIVATE
+  kinakaze_abi_ispunct
+  "ispunct"=kinakaze_abi_ispunct PRIVATE
+  "ispunct@GLIBC_2.2.5"=kinakaze_abi_ispunct PRIVATE
+  kinakaze_abi_isspace
+  "isspace"=kinakaze_abi_isspace PRIVATE
+  "isspace@GLIBC_2.2.5"=kinakaze_abi_isspace PRIVATE
+  kinakaze_abi_isupper
+  "isupper"=kinakaze_abi_isupper PRIVATE
+  "isupper@GLIBC_2.2.5"=kinakaze_abi_isupper PRIVATE
+  kinakaze_abi_iswalnum
+  "iswalnum"=kinakaze_abi_iswalnum PRIVATE
+  "iswalnum@GLIBC_2.2.5"=kinakaze_abi_iswalnum PRIVATE
+  kinakaze_abi_iswalnum_l
+  "iswalnum_l"=kinakaze_abi_iswalnum_l PRIVATE
+  "iswalnum_l@GLIBC_2.3"=kinakaze_abi_iswalnum_l PRIVATE
+  kinakaze_abi_iswalpha
+  "iswalpha"=kinakaze_abi_iswalpha PRIVATE
+  "iswalpha@GLIBC_2.2.5"=kinakaze_abi_iswalpha PRIVATE
+  kinakaze_abi_iswalpha_l
+  "iswalpha_l"=kinakaze_abi_iswalpha_l PRIVATE
+  "iswalpha_l@GLIBC_2.3"=kinakaze_abi_iswalpha_l PRIVATE
+  kinakaze_abi_iswblank
+  "iswblank"=kinakaze_abi_iswblank PRIVATE
+  "iswblank@GLIBC_2.2.5"=kinakaze_abi_iswblank PRIVATE
+  kinakaze_abi_iswblank_l
+  "iswblank_l"=kinakaze_abi_iswblank_l PRIVATE
+  kinakaze_abi_iswcntrl
+  "iswcntrl"=kinakaze_abi_iswcntrl PRIVATE
+  "iswcntrl@GLIBC_2.2.5"=kinakaze_abi_iswcntrl PRIVATE
+  kinakaze_abi_iswcntrl_l
+  "iswcntrl_l"=kinakaze_abi_iswcntrl_l PRIVATE
+  kinakaze_abi_iswctype
+  "iswctype"=kinakaze_abi_iswctype PRIVATE
+  "iswctype@GLIBC_2.2.5"=kinakaze_abi_iswctype PRIVATE
+  kinakaze_abi_iswctype_l
+  "iswctype_l"=kinakaze_abi_iswctype_l PRIVATE
+  kinakaze_abi_iswdigit
+  "iswdigit"=kinakaze_abi_iswdigit PRIVATE
+  "iswdigit@GLIBC_2.2.5"=kinakaze_abi_iswdigit PRIVATE
+  kinakaze_abi_iswdigit_l
+  "iswdigit_l"=kinakaze_abi_iswdigit_l PRIVATE
+  "iswdigit_l@GLIBC_2.3"=kinakaze_abi_iswdigit_l PRIVATE
+  kinakaze_abi_iswgraph
+  "iswgraph"=kinakaze_abi_iswgraph PRIVATE
+  "iswgraph@GLIBC_2.2.5"=kinakaze_abi_iswgraph PRIVATE
+  kinakaze_abi_iswgraph_l
+  "iswgraph_l"=kinakaze_abi_iswgraph_l PRIVATE
+  "iswgraph_l@GLIBC_2.3"=kinakaze_abi_iswgraph_l PRIVATE
+  kinakaze_abi_iswlower
+  "iswlower"=kinakaze_abi_iswlower PRIVATE
+  "iswlower@GLIBC_2.2.5"=kinakaze_abi_iswlower PRIVATE
+  kinakaze_abi_iswlower_l
+  "iswlower_l"=kinakaze_abi_iswlower_l PRIVATE
+  "iswlower_l@GLIBC_2.3"=kinakaze_abi_iswlower_l PRIVATE
+  kinakaze_abi_iswprint
+  "iswprint"=kinakaze_abi_iswprint PRIVATE
+  "iswprint@GLIBC_2.2.5"=kinakaze_abi_iswprint PRIVATE
+  kinakaze_abi_iswprint_l
+  "iswprint_l"=kinakaze_abi_iswprint_l PRIVATE
+  "iswprint_l@GLIBC_2.3"=kinakaze_abi_iswprint_l PRIVATE
+  kinakaze_abi_iswpunct
+  "iswpunct"=kinakaze_abi_iswpunct PRIVATE
+  "iswpunct@GLIBC_2.2.5"=kinakaze_abi_iswpunct PRIVATE
+  kinakaze_abi_iswpunct_l
+  "iswpunct_l"=kinakaze_abi_iswpunct_l PRIVATE
+  "iswpunct_l@GLIBC_2.3"=kinakaze_abi_iswpunct_l PRIVATE
+  kinakaze_abi_iswspace
+  "iswspace"=kinakaze_abi_iswspace PRIVATE
+  "iswspace@GLIBC_2.2.5"=kinakaze_abi_iswspace PRIVATE
+  kinakaze_abi_iswspace_l
+  "iswspace_l"=kinakaze_abi_iswspace_l PRIVATE
+  "iswspace_l@GLIBC_2.3"=kinakaze_abi_iswspace_l PRIVATE
+  kinakaze_abi_iswupper
+  "iswupper"=kinakaze_abi_iswupper PRIVATE
+  "iswupper@GLIBC_2.2.5"=kinakaze_abi_iswupper PRIVATE
+  kinakaze_abi_iswupper_l
+  "iswupper_l"=kinakaze_abi_iswupper_l PRIVATE
+  "iswupper_l@GLIBC_2.3"=kinakaze_abi_iswupper_l PRIVATE
+  kinakaze_abi_iswxdigit
+  "iswxdigit"=kinakaze_abi_iswxdigit PRIVATE
+  "iswxdigit@GLIBC_2.2.5"=kinakaze_abi_iswxdigit PRIVATE
+  kinakaze_abi_iswxdigit_l
+  "iswxdigit_l"=kinakaze_abi_iswxdigit_l PRIVATE
+  kinakaze_abi_isxdigit
+  "isxdigit"=kinakaze_abi_isxdigit PRIVATE
+  "isxdigit@GLIBC_2.2.5"=kinakaze_abi_isxdigit PRIVATE
+  kinakaze_abi_jrand48
+  "jrand48"=kinakaze_abi_jrand48 PRIVATE
+  "jrand48@GLIBC_2.2.5"=kinakaze_abi_jrand48 PRIVATE
+  kinakaze_abi_jrand48_r
+  "jrand48_r"=kinakaze_abi_jrand48_r PRIVATE
+  kinakaze_abi_kill
+  "kill"=kinakaze_abi_kill PRIVATE
+  "kill@GLIBC_2.2.5"=kinakaze_abi_kill PRIVATE
+  kinakaze_abi_killpg
+  "killpg"=kinakaze_abi_killpg PRIVATE
+  "killpg@GLIBC_2.2.5"=kinakaze_abi_killpg PRIVATE
+  kinakaze_abi_klogctl
+  "klogctl"=kinakaze_abi_klogctl PRIVATE
+  "klogctl@GLIBC_2.2.5"=kinakaze_abi_klogctl PRIVATE
+  kinakaze_abi_labs
+  "labs"=kinakaze_abi_labs PRIVATE
+  kinakaze_abi_lchmod
+  "lchmod"=kinakaze_abi_lchmod PRIVATE
+  "lchmod@GLIBC_2.3.2"=kinakaze_abi_lchmod PRIVATE
+  kinakaze_abi_lchown
+  "lchown"=kinakaze_abi_lchown PRIVATE
+  "lchown@GLIBC_2.2.5"=kinakaze_abi_lchown PRIVATE
+  kinakaze_abi_lckpwdf
+  "lckpwdf"=kinakaze_abi_lckpwdf PRIVATE
+  "lckpwdf@GLIBC_2.2.5"=kinakaze_abi_lckpwdf PRIVATE
+  kinakaze_abi_lcong48
+  "lcong48"=kinakaze_abi_lcong48 PRIVATE
+  kinakaze_abi_lcong48_r
+  "lcong48_r"=kinakaze_abi_lcong48_r PRIVATE
+  kinakaze_abi_ldexp
+  "ldexp"=kinakaze_abi_ldexp PRIVATE
+  "ldexp@GLIBC_2.2.5"=kinakaze_abi_ldexp PRIVATE
+  kinakaze_abi_ldexpf
+  "ldexpf"=kinakaze_abi_ldexpf PRIVATE
+  kinakaze_abi_ldexpl
+  "ldexpl"=kinakaze_abi_ldexpl PRIVATE
+  "ldexpl@GLIBC_2.2.5"=kinakaze_abi_ldexpl PRIVATE
+  kinakaze_abi_ldiv
+  "ldiv"=kinakaze_abi_ldiv PRIVATE
+  "ldiv@GLIBC_2.2.5"=kinakaze_abi_ldiv PRIVATE
+  kinakaze_abi_lfind
+  "lfind"=kinakaze_abi_lfind PRIVATE
+  "lfind@GLIBC_2.2.5"=kinakaze_abi_lfind PRIVATE
+  kinakaze_abi_lgetxattr
+  "lgetxattr"=kinakaze_abi_lgetxattr PRIVATE
+  "lgetxattr@GLIBC_2.3"=kinakaze_abi_lgetxattr PRIVATE
+  kinakaze_abi_link
+  "link"=kinakaze_abi_link PRIVATE
+  "link@GLIBC_2.2.5"=kinakaze_abi_link PRIVATE
+  kinakaze_abi_linkat
+  "linkat"=kinakaze_abi_linkat PRIVATE
+  "linkat@GLIBC_2.4"=kinakaze_abi_linkat PRIVATE
+  kinakaze_abi_listen
+  "listen"=kinakaze_abi_listen PRIVATE
+  "listen@GLIBC_2.2.5"=kinakaze_abi_listen PRIVATE
+  kinakaze_abi_listmount
+  "listmount"=kinakaze_abi_listmount PRIVATE
+  kinakaze_abi_listxattr
+  "listxattr"=kinakaze_abi_listxattr PRIVATE
+  "listxattr@GLIBC_2.3"=kinakaze_abi_listxattr PRIVATE
+  kinakaze_abi_llabs
+  "llabs"=kinakaze_abi_llabs PRIVATE
+  kinakaze_abi_lldiv
+  "lldiv"=kinakaze_abi_lldiv PRIVATE
+  "lldiv@GLIBC_2.2.5"=kinakaze_abi_lldiv PRIVATE
+  kinakaze_abi_llistxattr
+  "llistxattr"=kinakaze_abi_llistxattr PRIVATE
+  "llistxattr@GLIBC_2.3"=kinakaze_abi_llistxattr PRIVATE
+  kinakaze_abi_localeconv
+  "localeconv"=kinakaze_abi_localeconv PRIVATE
+  "localeconv@GLIBC_2.2.5"=kinakaze_abi_localeconv PRIVATE
+  kinakaze_abi_localtime
+  "localtime"=kinakaze_abi_localtime PRIVATE
+  "localtime@GLIBC_2.2.5"=kinakaze_abi_localtime PRIVATE
+  kinakaze_abi_localtime_r
+  "localtime_r"=kinakaze_abi_localtime_r PRIVATE
+  "localtime_r@GLIBC_2.2.5"=kinakaze_abi_localtime_r PRIVATE
+  kinakaze_abi_lockf
+  "lockf"=kinakaze_abi_lockf PRIVATE
+  "lockf@GLIBC_2.2.5"=kinakaze_abi_lockf PRIVATE
+  kinakaze_abi_lockf64
+  "lockf64"=kinakaze_abi_lockf64 PRIVATE
+  "lockf64@GLIBC_2.2.5"=kinakaze_abi_lockf64 PRIVATE
+  kinakaze_abi_login
+  "login"=kinakaze_abi_login PRIVATE
+  "login@GLIBC_2.34"=kinakaze_abi_login PRIVATE
+  kinakaze_abi_login_tty
+  "login_tty"=kinakaze_abi_login_tty PRIVATE
+  "login_tty@GLIBC_2.34"=kinakaze_abi_login_tty PRIVATE
+  kinakaze_abi_logout
+  "logout"=kinakaze_abi_logout PRIVATE
+  "logout@GLIBC_2.34"=kinakaze_abi_logout PRIVATE
+  kinakaze_abi_logwtmp
+  "logwtmp"=kinakaze_abi_logwtmp PRIVATE
+  "logwtmp@GLIBC_2.34"=kinakaze_abi_logwtmp PRIVATE
+  kinakaze_abi_longjmp
+  "longjmp"=kinakaze_abi_longjmp PRIVATE
+  "longjmp@GLIBC_2.2.5"=kinakaze_abi_longjmp PRIVATE
+  kinakaze_abi_lrand48
+  "lrand48"=kinakaze_abi_lrand48 PRIVATE
+  kinakaze_abi_lrand48_r
+  "lrand48_r"=kinakaze_abi_lrand48_r PRIVATE
+  kinakaze_abi_lremovexattr
+  "lremovexattr"=kinakaze_abi_lremovexattr PRIVATE
+  "lremovexattr@GLIBC_2.3"=kinakaze_abi_lremovexattr PRIVATE
+  kinakaze_abi_lsearch
+  "lsearch"=kinakaze_abi_lsearch PRIVATE
+  kinakaze_abi_lseek
+  "lseek"=kinakaze_abi_lseek PRIVATE
+  "lseek@GLIBC_2.2.5"=kinakaze_abi_lseek PRIVATE
+  kinakaze_abi_lseek64
+  "lseek64"=kinakaze_abi_lseek64 PRIVATE
+  "lseek64@GLIBC_2.2.5"=kinakaze_abi_lseek64 PRIVATE
+  kinakaze_abi_lsetxattr
+  "lsetxattr"=kinakaze_abi_lsetxattr PRIVATE
+  "lsetxattr@GLIBC_2.3"=kinakaze_abi_lsetxattr PRIVATE
+  kinakaze_abi_lstat
+  "lstat"=kinakaze_abi_lstat PRIVATE
+  "lstat@GLIBC_2.33"=kinakaze_abi_lstat PRIVATE
+  kinakaze_abi_lstat64
+  "lstat64"=kinakaze_abi_lstat64 PRIVATE
+  "lstat64@GLIBC_2.33"=kinakaze_abi_lstat64 PRIVATE
+  kinakaze_abi_lutimes
+  "lutimes"=kinakaze_abi_lutimes PRIVATE
+  "lutimes@GLIBC_2.3"=kinakaze_abi_lutimes PRIVATE
+  kinakaze_abi_madvise
+  "madvise"=kinakaze_abi_madvise PRIVATE
+  "madvise@GLIBC_2.2.5"=kinakaze_abi_madvise PRIVATE
+  kinakaze_abi_makecontext
+  "makecontext"=kinakaze_abi_makecontext PRIVATE
+  "makecontext@GLIBC_2.2.5"=kinakaze_abi_makecontext PRIVATE
+  kinakaze_abi_mallinfo
+  "mallinfo"=kinakaze_abi_mallinfo PRIVATE
+  "mallinfo@GLIBC_2.2.5"=kinakaze_abi_mallinfo PRIVATE
+  kinakaze_abi_mallinfo2
+  "mallinfo2"=kinakaze_abi_mallinfo2 PRIVATE
+  "mallinfo2@GLIBC_2.33"=kinakaze_abi_mallinfo2 PRIVATE
+  kinakaze_abi_malloc
+  "malloc"=kinakaze_abi_malloc PRIVATE
+  "malloc@GLIBC_2.2.5"=kinakaze_abi_malloc PRIVATE
+  kinakaze_abi_malloc_trim
+  "malloc_trim"=kinakaze_abi_malloc_trim PRIVATE
+  "malloc_trim@GLIBC_2.2.5"=kinakaze_abi_malloc_trim PRIVATE
+  kinakaze_abi_malloc_usable_size
+  "malloc_usable_size"=kinakaze_abi_malloc_usable_size PRIVATE
+  "malloc_usable_size@GLIBC_2.2.5"=kinakaze_abi_malloc_usable_size PRIVATE
+  kinakaze_abi_mallopt
+  "mallopt"=kinakaze_abi_mallopt PRIVATE
+  "mallopt@GLIBC_2.2.5"=kinakaze_abi_mallopt PRIVATE
+  kinakaze_abi_mapping_fault_signal
+  "mapping_fault_signal"=kinakaze_abi_mapping_fault_signal PRIVATE
+  kinakaze_abi_mblen
+  "mblen"=kinakaze_abi_mblen PRIVATE
+  "mblen@GLIBC_2.2.5"=kinakaze_abi_mblen PRIVATE
+  kinakaze_abi_mbrlen
+  "mbrlen"=kinakaze_abi_mbrlen PRIVATE
+  kinakaze_abi_mbrtoc16
+  "mbrtoc16"=kinakaze_abi_mbrtoc16 PRIVATE
+  kinakaze_abi_mbrtoc32
+  "mbrtoc32"=kinakaze_abi_mbrtoc32 PRIVATE
+  "mbrtoc32@GLIBC_2.16"=kinakaze_abi_mbrtoc32 PRIVATE
+  kinakaze_abi_mbrtowc
+  "mbrtowc"=kinakaze_abi_mbrtowc PRIVATE
+  "mbrtowc@GLIBC_2.2.5"=kinakaze_abi_mbrtowc PRIVATE
+  kinakaze_abi_mbsinit
+  "mbsinit"=kinakaze_abi_mbsinit PRIVATE
+  "mbsinit@GLIBC_2.2.5"=kinakaze_abi_mbsinit PRIVATE
+  kinakaze_abi_mbsnrtowcs
+  "mbsnrtowcs"=kinakaze_abi_mbsnrtowcs PRIVATE
+  "mbsnrtowcs@GLIBC_2.2.5"=kinakaze_abi_mbsnrtowcs PRIVATE
+  kinakaze_abi_mbsrtowcs
+  "mbsrtowcs"=kinakaze_abi_mbsrtowcs PRIVATE
+  "mbsrtowcs@GLIBC_2.2.5"=kinakaze_abi_mbsrtowcs PRIVATE
+  kinakaze_abi_mbstowcs
+  "mbstowcs"=kinakaze_abi_mbstowcs PRIVATE
+  "mbstowcs@GLIBC_2.2.5"=kinakaze_abi_mbstowcs PRIVATE
+  kinakaze_abi_mbtowc
+  "mbtowc"=kinakaze_abi_mbtowc PRIVATE
+  "mbtowc@GLIBC_2.2.5"=kinakaze_abi_mbtowc PRIVATE
+  kinakaze_abi_memalign
+  "memalign"=kinakaze_abi_memalign PRIVATE
+  "memalign@GLIBC_2.2.5"=kinakaze_abi_memalign PRIVATE
+  kinakaze_abi_memccpy
+  "memccpy"=kinakaze_abi_memccpy PRIVATE
+  "memccpy@GLIBC_2.2.5"=kinakaze_abi_memccpy PRIVATE
+  kinakaze_abi_memchr
+  "memchr"=kinakaze_abi_memchr PRIVATE
+  "memchr@GLIBC_2.2.5"=kinakaze_abi_memchr PRIVATE
+  kinakaze_abi_memcmp
+  "memcmp"=kinakaze_abi_memcmp PRIVATE
+  "memcmp@GLIBC_2.2.5"=kinakaze_abi_memcmp PRIVATE
+  kinakaze_abi_memcpy
+  "memcpy"=kinakaze_abi_memcpy PRIVATE
+  "memcpy@GLIBC_2.2.5"=kinakaze_abi_memcpy PRIVATE
+  "memcpy@GLIBC_2.14"=kinakaze_abi_memcpy PRIVATE
+  kinakaze_abi_memfd_create
+  "memfd_create"=kinakaze_abi_memfd_create PRIVATE
+  "memfd_create@GLIBC_2.27"=kinakaze_abi_memfd_create PRIVATE
+  kinakaze_abi_memmem
+  "memmem"=kinakaze_abi_memmem PRIVATE
+  "memmem@GLIBC_2.2.5"=kinakaze_abi_memmem PRIVATE
+  kinakaze_abi_memmove
+  "memmove"=kinakaze_abi_memmove PRIVATE
+  "memmove@GLIBC_2.2.5"=kinakaze_abi_memmove PRIVATE
+  kinakaze_abi_mempcpy
+  "mempcpy"=kinakaze_abi_mempcpy PRIVATE
+  "mempcpy@GLIBC_2.2.5"=kinakaze_abi_mempcpy PRIVATE
+  kinakaze_abi_memrchr
+  "memrchr"=kinakaze_abi_memrchr PRIVATE
+  "memrchr@GLIBC_2.2.5"=kinakaze_abi_memrchr PRIVATE
+  kinakaze_abi_memset
+  "memset"=kinakaze_abi_memset PRIVATE
+  "memset@GLIBC_2.2.5"=kinakaze_abi_memset PRIVATE
+  kinakaze_abi_mincore
+  "mincore"=kinakaze_abi_mincore PRIVATE
+  "mincore@GLIBC_2.2.5"=kinakaze_abi_mincore PRIVATE
+  kinakaze_abi_mkdir
+  "mkdir"=kinakaze_abi_mkdir PRIVATE
+  "mkdir@GLIBC_2.2.5"=kinakaze_abi_mkdir PRIVATE
+  kinakaze_abi_mkdirat
+  "mkdirat"=kinakaze_abi_mkdirat PRIVATE
+  "mkdirat@GLIBC_2.4"=kinakaze_abi_mkdirat PRIVATE
+  kinakaze_abi_mkdtemp
+  "mkdtemp"=kinakaze_abi_mkdtemp PRIVATE
+  "mkdtemp@GLIBC_2.2.5"=kinakaze_abi_mkdtemp PRIVATE
+  kinakaze_abi_mkfifo
+  "mkfifo"=kinakaze_abi_mkfifo PRIVATE
+  "mkfifo@GLIBC_2.2.5"=kinakaze_abi_mkfifo PRIVATE
+  kinakaze_abi_mkfifoat
+  "mkfifoat"=kinakaze_abi_mkfifoat PRIVATE
+  "mkfifoat@GLIBC_2.4"=kinakaze_abi_mkfifoat PRIVATE
+  kinakaze_abi_mknod
+  "mknod"=kinakaze_abi_mknod PRIVATE
+  "mknod@GLIBC_2.33"=kinakaze_abi_mknod PRIVATE
+  kinakaze_abi_mknodat
+  "mknodat"=kinakaze_abi_mknodat PRIVATE
+  "mknodat@GLIBC_2.33"=kinakaze_abi_mknodat PRIVATE
+  kinakaze_abi_mkostemp
+  "mkostemp"=kinakaze_abi_mkostemp PRIVATE
+  "mkostemp@GLIBC_2.7"=kinakaze_abi_mkostemp PRIVATE
+  kinakaze_abi_mkostemp64
+  "mkostemp64"=kinakaze_abi_mkostemp64 PRIVATE
+  "mkostemp64@GLIBC_2.7"=kinakaze_abi_mkostemp64 PRIVATE
+  kinakaze_abi_mkostemps
+  "mkostemps"=kinakaze_abi_mkostemps PRIVATE
+  kinakaze_abi_mkostemps64
+  "mkostemps64"=kinakaze_abi_mkostemps64 PRIVATE
+  kinakaze_abi_mkstemp
+  "mkstemp"=kinakaze_abi_mkstemp PRIVATE
+  "mkstemp@GLIBC_2.2.5"=kinakaze_abi_mkstemp PRIVATE
+  kinakaze_abi_mkstemp64
+  "mkstemp64"=kinakaze_abi_mkstemp64 PRIVATE
+  "mkstemp64@GLIBC_2.2.5"=kinakaze_abi_mkstemp64 PRIVATE
+  kinakaze_abi_mkstemps
+  "mkstemps"=kinakaze_abi_mkstemps PRIVATE
+  "mkstemps@GLIBC_2.11"=kinakaze_abi_mkstemps PRIVATE
+  kinakaze_abi_mkstemps64
+  "mkstemps64"=kinakaze_abi_mkstemps64 PRIVATE
+  kinakaze_abi_mktemp
+  "mktemp"=kinakaze_abi_mktemp PRIVATE
+  "mktemp@GLIBC_2.2.5"=kinakaze_abi_mktemp PRIVATE
+  kinakaze_abi_mktime
+  "mktime"=kinakaze_abi_mktime PRIVATE
+  "mktime@GLIBC_2.2.5"=kinakaze_abi_mktime PRIVATE
+  kinakaze_abi_mlock
+  "mlock"=kinakaze_abi_mlock PRIVATE
+  "mlock@GLIBC_2.2.5"=kinakaze_abi_mlock PRIVATE
+  kinakaze_abi_mlock2
+  "mlock2"=kinakaze_abi_mlock2 PRIVATE
+  kinakaze_abi_mlockall
+  "mlockall"=kinakaze_abi_mlockall PRIVATE
+  "mlockall@GLIBC_2.2.5"=kinakaze_abi_mlockall PRIVATE
+  kinakaze_abi_mmap
+  "mmap"=kinakaze_abi_mmap PRIVATE
+  "mmap@GLIBC_2.2.5"=kinakaze_abi_mmap PRIVATE
+  kinakaze_abi_mmap64
+  "mmap64"=kinakaze_abi_mmap64 PRIVATE
+  "mmap64@GLIBC_2.2.5"=kinakaze_abi_mmap64 PRIVATE
+  kinakaze_abi_modf
+  "modf"=kinakaze_abi_modf PRIVATE
+  "modf@GLIBC_2.2.5"=kinakaze_abi_modf PRIVATE
+  kinakaze_abi_modff
+  "modff"=kinakaze_abi_modff PRIVATE
+  "modff@GLIBC_2.2.5"=kinakaze_abi_modff PRIVATE
+  kinakaze_abi_mount
+  "mount"=kinakaze_abi_mount PRIVATE
+  "mount@GLIBC_2.2.5"=kinakaze_abi_mount PRIVATE
+  kinakaze_abi_mount_setattr
+  "mount_setattr"=kinakaze_abi_mount_setattr PRIVATE
+  kinakaze_abi_move_mount
+  "move_mount"=kinakaze_abi_move_mount PRIVATE
+  kinakaze_abi_mprotect
+  "mprotect"=kinakaze_abi_mprotect PRIVATE
+  "mprotect@GLIBC_2.2.5"=kinakaze_abi_mprotect PRIVATE
+  kinakaze_abi_mq_getattr
+  "mq_getattr"=kinakaze_abi_mq_getattr PRIVATE
+  "mq_getattr@GLIBC_2.34"=kinakaze_abi_mq_getattr PRIVATE
+  kinakaze_abi_mrand48
+  "mrand48"=kinakaze_abi_mrand48 PRIVATE
+  kinakaze_abi_mrand48_r
+  "mrand48_r"=kinakaze_abi_mrand48_r PRIVATE
+  kinakaze_abi_mremap
+  "mremap"=kinakaze_abi_mremap PRIVATE
+  "mremap@GLIBC_2.2.5"=kinakaze_abi_mremap PRIVATE
+  kinakaze_abi_msgctl
+  "msgctl"=kinakaze_abi_msgctl PRIVATE
+  "msgctl@GLIBC_2.2.5"=kinakaze_abi_msgctl PRIVATE
+  kinakaze_abi_msync
+  "msync"=kinakaze_abi_msync PRIVATE
+  "msync@GLIBC_2.2.5"=kinakaze_abi_msync PRIVATE
+  kinakaze_abi_mtrace
+  "mtrace"=kinakaze_abi_mtrace PRIVATE
+  "mtrace@GLIBC_2.2.5"=kinakaze_abi_mtrace PRIVATE
+  kinakaze_abi_munlock
+  "munlock"=kinakaze_abi_munlock PRIVATE
+  "munlock@GLIBC_2.2.5"=kinakaze_abi_munlock PRIVATE
+  kinakaze_abi_munlockall
+  "munlockall"=kinakaze_abi_munlockall PRIVATE
+  "munlockall@GLIBC_2.2.5"=kinakaze_abi_munlockall PRIVATE
+  kinakaze_abi_munmap
+  "munmap"=kinakaze_abi_munmap PRIVATE
+  "munmap@GLIBC_2.2.5"=kinakaze_abi_munmap PRIVATE
+  kinakaze_abi_muntrace
+  "muntrace"=kinakaze_abi_muntrace PRIVATE
+  kinakaze_abi_name_to_handle_at
+  "name_to_handle_at"=kinakaze_abi_name_to_handle_at PRIVATE
+  "name_to_handle_at@GLIBC_2.14"=kinakaze_abi_name_to_handle_at PRIVATE
+  kinakaze_abi_nanosleep
+  "nanosleep"=kinakaze_abi_nanosleep PRIVATE
+  "nanosleep@GLIBC_2.2.5"=kinakaze_abi_nanosleep PRIVATE
+  kinakaze_abi_newlocale
+  "newlocale"=kinakaze_abi_newlocale PRIVATE
+  "newlocale@GLIBC_2.3"=kinakaze_abi_newlocale PRIVATE
+  kinakaze_abi_nftw
+  "nftw"=kinakaze_abi_nftw PRIVATE
+  "nftw@GLIBC_2.3.3"=kinakaze_abi_nftw PRIVATE
+  kinakaze_abi_nftw
+  "nftw64"=kinakaze_abi_nftw PRIVATE
+  "nftw64@GLIBC_2.3.3"=kinakaze_abi_nftw PRIVATE
+  kinakaze_abi_ngettext
+  "ngettext"=kinakaze_abi_ngettext PRIVATE
+  "ngettext@GLIBC_2.2.5"=kinakaze_abi_ngettext PRIVATE
+  kinakaze_abi_nice
+  "nice"=kinakaze_abi_nice PRIVATE
+  "nice@GLIBC_2.2.5"=kinakaze_abi_nice PRIVATE
+  kinakaze_abi_nl_langinfo
+  "nl_langinfo"=kinakaze_abi_nl_langinfo PRIVATE
+  "nl_langinfo@GLIBC_2.2.5"=kinakaze_abi_nl_langinfo PRIVATE
+  kinakaze_abi_nl_langinfo_l
+  "nl_langinfo_l"=kinakaze_abi_nl_langinfo_l PRIVATE
+  "nl_langinfo_l@GLIBC_2.3"=kinakaze_abi_nl_langinfo_l PRIVATE
+  kinakaze_abi_nrand48
+  "nrand48"=kinakaze_abi_nrand48 PRIVATE
+  "nrand48@GLIBC_2.2.5"=kinakaze_abi_nrand48 PRIVATE
+  kinakaze_abi_nrand48_r
+  "nrand48_r"=kinakaze_abi_nrand48_r PRIVATE
+  kinakaze_abi_ns_name_skip
+  "ns_name_skip"=kinakaze_abi_ns_name_skip PRIVATE
+  kinakaze_abi_ns_name_uncompress
+  "ns_name_uncompress"=kinakaze_abi_ns_name_uncompress PRIVATE
+  "ns_name_uncompress@GLIBC_2.34"=kinakaze_abi_ns_name_uncompress PRIVATE
+  kinakaze_abi_ntohl
+  "ntohl"=kinakaze_abi_ntohl PRIVATE
+  kinakaze_abi_ntohs
+  "ntohs"=kinakaze_abi_ntohs PRIVATE
+  kinakaze_abi_obstack_alloc_failed_handler DATA
+  "obstack_alloc_failed_handler"=kinakaze_abi_obstack_alloc_failed_handler DATA PRIVATE
+  kinakaze_abi_obstack_exit_failure DATA
+  "obstack_exit_failure"=kinakaze_abi_obstack_exit_failure DATA PRIVATE
+  kinakaze_abi_obstack_free
+  "obstack_free"=kinakaze_abi_obstack_free PRIVATE
+  "obstack_free@GLIBC_2.2.5"=kinakaze_abi_obstack_free PRIVATE
+  kinakaze_abi_obstack_printf
+  "obstack_printf"=kinakaze_abi_obstack_printf PRIVATE
+  kinakaze_abi_obstack_vprintf
+  "obstack_vprintf"=kinakaze_abi_obstack_vprintf PRIVATE
+  "obstack_vprintf@GLIBC_2.2.5"=kinakaze_abi_obstack_vprintf PRIVATE
+  kinakaze_abi_open
+  "open"=kinakaze_abi_open PRIVATE
+  "open@GLIBC_2.2.5"=kinakaze_abi_open PRIVATE
+  kinakaze_abi_open64
+  "open64"=kinakaze_abi_open64 PRIVATE
+  "open64@GLIBC_2.2.5"=kinakaze_abi_open64 PRIVATE
+  kinakaze_abi_open_by_handle_at
+  "open_by_handle_at"=kinakaze_abi_open_by_handle_at PRIVATE
+  kinakaze_abi_open_memstream
+  "open_memstream"=kinakaze_abi_open_memstream PRIVATE
+  "open_memstream@GLIBC_2.2.5"=kinakaze_abi_open_memstream PRIVATE
+  kinakaze_abi_open_tree
+  "open_tree"=kinakaze_abi_open_tree PRIVATE
+  kinakaze_abi_open_tree_attr
+  "open_tree_attr"=kinakaze_abi_open_tree_attr PRIVATE
+  kinakaze_abi_openat
+  "openat"=kinakaze_abi_openat PRIVATE
+  "openat@GLIBC_2.4"=kinakaze_abi_openat PRIVATE
+  kinakaze_abi_openat64
+  "openat64"=kinakaze_abi_openat64 PRIVATE
+  "openat64@GLIBC_2.4"=kinakaze_abi_openat64 PRIVATE
+  kinakaze_abi_opendir
+  "opendir"=kinakaze_abi_opendir PRIVATE
+  "opendir@GLIBC_2.2.5"=kinakaze_abi_opendir PRIVATE
+  kinakaze_abi_openlog
+  "openlog"=kinakaze_abi_openlog PRIVATE
+  "openlog@GLIBC_2.2.5"=kinakaze_abi_openlog PRIVATE
+  kinakaze_abi_openpty
+  "openpty"=kinakaze_abi_openpty PRIVATE
+  "openpty@GLIBC_2.34"=kinakaze_abi_openpty PRIVATE
+  kinakaze_abi_optarg DATA
+  "optarg"=kinakaze_abi_optarg DATA PRIVATE
+  "optarg@GLIBC_2.2.5"=kinakaze_abi_optarg DATA PRIVATE
+  kinakaze_abi_opterr DATA
+  "opterr"=kinakaze_abi_opterr DATA PRIVATE
+  "opterr@GLIBC_2.2.5"=kinakaze_abi_opterr DATA PRIVATE
+  kinakaze_abi_optind DATA
+  "optind"=kinakaze_abi_optind DATA PRIVATE
+  "optind@GLIBC_2.2.5"=kinakaze_abi_optind DATA PRIVATE
+  kinakaze_abi_optopt DATA
+  "optopt"=kinakaze_abi_optopt DATA PRIVATE
+  "optopt@GLIBC_2.2.5"=kinakaze_abi_optopt DATA PRIVATE
+  kinakaze_abi_parse_printf_format
+  "parse_printf_format"=kinakaze_abi_parse_printf_format PRIVATE
+  "parse_printf_format@GLIBC_2.2.5"=kinakaze_abi_parse_printf_format PRIVATE
+  kinakaze_abi_pathconf
+  "pathconf"=kinakaze_abi_pathconf PRIVATE
+  "pathconf@GLIBC_2.2.5"=kinakaze_abi_pathconf PRIVATE
+  kinakaze_abi_pause
+  "pause"=kinakaze_abi_pause PRIVATE
+  "pause@GLIBC_2.2.5"=kinakaze_abi_pause PRIVATE
+  kinakaze_abi_pclose
+  "pclose"=kinakaze_abi_pclose PRIVATE
+  "pclose@GLIBC_2.2.5"=kinakaze_abi_pclose PRIVATE
+  kinakaze_abi_perror
+  "perror"=kinakaze_abi_perror PRIVATE
+  "perror@GLIBC_2.2.5"=kinakaze_abi_perror PRIVATE
+  kinakaze_abi_personality
+  "personality"=kinakaze_abi_personality PRIVATE
+  "personality@GLIBC_2.2.5"=kinakaze_abi_personality PRIVATE
+  kinakaze_abi_pipe
+  "pipe"=kinakaze_abi_pipe PRIVATE
+  "pipe@GLIBC_2.2.5"=kinakaze_abi_pipe PRIVATE
+  kinakaze_abi_pipe2
+  "pipe2"=kinakaze_abi_pipe2 PRIVATE
+  "pipe2@GLIBC_2.9"=kinakaze_abi_pipe2 PRIVATE
+  kinakaze_abi_pivot_root
+  "pivot_root"=kinakaze_abi_pivot_root PRIVATE
+  "pivot_root@GLIBC_2.2.5"=kinakaze_abi_pivot_root PRIVATE
+  kinakaze_abi_poll
+  "poll"=kinakaze_abi_poll PRIVATE
+  "poll@GLIBC_2.2.5"=kinakaze_abi_poll PRIVATE
+  kinakaze_abi_popen
+  "popen"=kinakaze_abi_popen PRIVATE
+  "popen@GLIBC_2.2.5"=kinakaze_abi_popen PRIVATE
+  kinakaze_abi_posix_fadvise
+  "posix_fadvise"=kinakaze_abi_posix_fadvise PRIVATE
+  "posix_fadvise@GLIBC_2.2.5"=kinakaze_abi_posix_fadvise PRIVATE
+  kinakaze_abi_posix_fadvise64
+  "posix_fadvise64"=kinakaze_abi_posix_fadvise64 PRIVATE
+  "posix_fadvise64@GLIBC_2.2.5"=kinakaze_abi_posix_fadvise64 PRIVATE
+  kinakaze_abi_posix_fallocate
+  "posix_fallocate"=kinakaze_abi_posix_fallocate PRIVATE
+  "posix_fallocate@GLIBC_2.2.5"=kinakaze_abi_posix_fallocate PRIVATE
+  kinakaze_abi_posix_fallocate64
+  "posix_fallocate64"=kinakaze_abi_posix_fallocate64 PRIVATE
+  "posix_fallocate64@GLIBC_2.2.5"=kinakaze_abi_posix_fallocate64 PRIVATE
+  kinakaze_abi_posix_madvise
+  "posix_madvise"=kinakaze_abi_posix_madvise PRIVATE
+  "posix_madvise@GLIBC_2.2.5"=kinakaze_abi_posix_madvise PRIVATE
+  kinakaze_abi_posix_memalign
+  "posix_memalign"=kinakaze_abi_posix_memalign PRIVATE
+  "posix_memalign@GLIBC_2.2.5"=kinakaze_abi_posix_memalign PRIVATE
+  kinakaze_abi_posix_openpt
+  "posix_openpt"=kinakaze_abi_posix_openpt PRIVATE
+  "posix_openpt@GLIBC_2.2.5"=kinakaze_abi_posix_openpt PRIVATE
+  kinakaze_abi_posix_spawn
+  "posix_spawn"=kinakaze_abi_posix_spawn PRIVATE
+  "posix_spawn@GLIBC_2.15"=kinakaze_abi_posix_spawn PRIVATE
+  kinakaze_abi_posix_spawn_file_actions_addchdir_np
+  "posix_spawn_file_actions_addchdir_np"=kinakaze_abi_posix_spawn_file_actions_addchdir_np PRIVATE
+  "posix_spawn_file_actions_addchdir_np@GLIBC_2.29"=kinakaze_abi_posix_spawn_file_actions_addchdir_np PRIVATE
+  kinakaze_abi_posix_spawn_file_actions_addclose
+  "posix_spawn_file_actions_addclose"=kinakaze_abi_posix_spawn_file_actions_addclose PRIVATE
+  "posix_spawn_file_actions_addclose@GLIBC_2.2.5"=kinakaze_abi_posix_spawn_file_actions_addclose PRIVATE
+  kinakaze_abi_posix_spawn_file_actions_addclosefrom_np
+  "posix_spawn_file_actions_addclosefrom_np"=kinakaze_abi_posix_spawn_file_actions_addclosefrom_np PRIVATE
+  kinakaze_abi_posix_spawn_file_actions_adddup2
+  "posix_spawn_file_actions_adddup2"=kinakaze_abi_posix_spawn_file_actions_adddup2 PRIVATE
+  "posix_spawn_file_actions_adddup2@GLIBC_2.2.5"=kinakaze_abi_posix_spawn_file_actions_adddup2 PRIVATE
+  kinakaze_abi_posix_spawn_file_actions_addfchdir_np
+  "posix_spawn_file_actions_addfchdir_np"=kinakaze_abi_posix_spawn_file_actions_addfchdir_np PRIVATE
+  kinakaze_abi_posix_spawn_file_actions_addopen
+  "posix_spawn_file_actions_addopen"=kinakaze_abi_posix_spawn_file_actions_addopen PRIVATE
+  "posix_spawn_file_actions_addopen@GLIBC_2.2.5"=kinakaze_abi_posix_spawn_file_actions_addopen PRIVATE
+  kinakaze_abi_posix_spawn_file_actions_addtcsetpgrp_np
+  "posix_spawn_file_actions_addtcsetpgrp_np"=kinakaze_abi_posix_spawn_file_actions_addtcsetpgrp_np PRIVATE
+  kinakaze_abi_posix_spawn_file_actions_destroy
+  "posix_spawn_file_actions_destroy"=kinakaze_abi_posix_spawn_file_actions_destroy PRIVATE
+  "posix_spawn_file_actions_destroy@GLIBC_2.2.5"=kinakaze_abi_posix_spawn_file_actions_destroy PRIVATE
+  kinakaze_abi_posix_spawn_file_actions_init
+  "posix_spawn_file_actions_init"=kinakaze_abi_posix_spawn_file_actions_init PRIVATE
+  "posix_spawn_file_actions_init@GLIBC_2.2.5"=kinakaze_abi_posix_spawn_file_actions_init PRIVATE
+  kinakaze_abi_posix_spawnattr_destroy
+  "posix_spawnattr_destroy"=kinakaze_abi_posix_spawnattr_destroy PRIVATE
+  "posix_spawnattr_destroy@GLIBC_2.2.5"=kinakaze_abi_posix_spawnattr_destroy PRIVATE
+  kinakaze_abi_posix_spawnattr_getflags
+  "posix_spawnattr_getflags"=kinakaze_abi_posix_spawnattr_getflags PRIVATE
+  "posix_spawnattr_getflags@GLIBC_2.2.5"=kinakaze_abi_posix_spawnattr_getflags PRIVATE
+  kinakaze_abi_posix_spawnattr_getpgroup
+  "posix_spawnattr_getpgroup"=kinakaze_abi_posix_spawnattr_getpgroup PRIVATE
+  "posix_spawnattr_getpgroup@GLIBC_2.2.5"=kinakaze_abi_posix_spawnattr_getpgroup PRIVATE
+  kinakaze_abi_posix_spawnattr_getschedparam
+  "posix_spawnattr_getschedparam"=kinakaze_abi_posix_spawnattr_getschedparam PRIVATE
+  kinakaze_abi_posix_spawnattr_getschedpolicy
+  "posix_spawnattr_getschedpolicy"=kinakaze_abi_posix_spawnattr_getschedpolicy PRIVATE
+  kinakaze_abi_posix_spawnattr_getsigdefault
+  "posix_spawnattr_getsigdefault"=kinakaze_abi_posix_spawnattr_getsigdefault PRIVATE
+  "posix_spawnattr_getsigdefault@GLIBC_2.2.5"=kinakaze_abi_posix_spawnattr_getsigdefault PRIVATE
+  kinakaze_abi_posix_spawnattr_getsigmask
+  "posix_spawnattr_getsigmask"=kinakaze_abi_posix_spawnattr_getsigmask PRIVATE
+  "posix_spawnattr_getsigmask@GLIBC_2.2.5"=kinakaze_abi_posix_spawnattr_getsigmask PRIVATE
+  kinakaze_abi_posix_spawnattr_init
+  "posix_spawnattr_init"=kinakaze_abi_posix_spawnattr_init PRIVATE
+  "posix_spawnattr_init@GLIBC_2.2.5"=kinakaze_abi_posix_spawnattr_init PRIVATE
+  kinakaze_abi_posix_spawnattr_setflags
+  "posix_spawnattr_setflags"=kinakaze_abi_posix_spawnattr_setflags PRIVATE
+  "posix_spawnattr_setflags@GLIBC_2.2.5"=kinakaze_abi_posix_spawnattr_setflags PRIVATE
+  kinakaze_abi_posix_spawnattr_setpgroup
+  "posix_spawnattr_setpgroup"=kinakaze_abi_posix_spawnattr_setpgroup PRIVATE
+  "posix_spawnattr_setpgroup@GLIBC_2.2.5"=kinakaze_abi_posix_spawnattr_setpgroup PRIVATE
+  kinakaze_abi_posix_spawnattr_setschedparam
+  "posix_spawnattr_setschedparam"=kinakaze_abi_posix_spawnattr_setschedparam PRIVATE
+  "posix_spawnattr_setschedparam@GLIBC_2.2.5"=kinakaze_abi_posix_spawnattr_setschedparam PRIVATE
+  kinakaze_abi_posix_spawnattr_setschedpolicy
+  "posix_spawnattr_setschedpolicy"=kinakaze_abi_posix_spawnattr_setschedpolicy PRIVATE
+  "posix_spawnattr_setschedpolicy@GLIBC_2.2.5"=kinakaze_abi_posix_spawnattr_setschedpolicy PRIVATE
+  kinakaze_abi_posix_spawnattr_setsigdefault
+  "posix_spawnattr_setsigdefault"=kinakaze_abi_posix_spawnattr_setsigdefault PRIVATE
+  "posix_spawnattr_setsigdefault@GLIBC_2.2.5"=kinakaze_abi_posix_spawnattr_setsigdefault PRIVATE
+  kinakaze_abi_posix_spawnattr_setsigmask
+  "posix_spawnattr_setsigmask"=kinakaze_abi_posix_spawnattr_setsigmask PRIVATE
+  "posix_spawnattr_setsigmask@GLIBC_2.2.5"=kinakaze_abi_posix_spawnattr_setsigmask PRIVATE
+  kinakaze_abi_posix_spawnp
+  "posix_spawnp"=kinakaze_abi_posix_spawnp PRIVATE
+  "posix_spawnp@GLIBC_2.15"=kinakaze_abi_posix_spawnp PRIVATE
+  kinakaze_abi_ppoll
+  "ppoll"=kinakaze_abi_ppoll PRIVATE
+  "ppoll@GLIBC_2.4"=kinakaze_abi_ppoll PRIVATE
+  kinakaze_abi_prctl
+  "prctl"=kinakaze_abi_prctl PRIVATE
+  "prctl@GLIBC_2.2.5"=kinakaze_abi_prctl PRIVATE
+  kinakaze_abi_pread64
+  "pread"=kinakaze_abi_pread64 PRIVATE
+  "pread@GLIBC_2.2.5"=kinakaze_abi_pread64 PRIVATE
+  kinakaze_abi_pread64
+  "pread64"=kinakaze_abi_pread64 PRIVATE
+  "pread64@GLIBC_2.2.5"=kinakaze_abi_pread64 PRIVATE
+  kinakaze_abi_preadv64
+  "preadv"=kinakaze_abi_preadv64 PRIVATE
+  "preadv@GLIBC_2.10"=kinakaze_abi_preadv64 PRIVATE
+  kinakaze_abi_preadv64v2
+  "preadv2"=kinakaze_abi_preadv64v2 PRIVATE
+  kinakaze_abi_preadv64
+  "preadv64"=kinakaze_abi_preadv64 PRIVATE
+  "preadv64@GLIBC_2.10"=kinakaze_abi_preadv64 PRIVATE
+  kinakaze_abi_preadv64v2
+  "preadv64v2"=kinakaze_abi_preadv64v2 PRIVATE
+  "preadv64v2@GLIBC_2.26"=kinakaze_abi_preadv64v2 PRIVATE
+  kinakaze_abi_printf
+  "printf"=kinakaze_abi_printf PRIVATE
+  "printf@GLIBC_2.2.5"=kinakaze_abi_printf PRIVATE
+  kinakaze_abi_prlimit64
+  "prlimit64"=kinakaze_abi_prlimit64 PRIVATE
+  "prlimit64@GLIBC_2.13"=kinakaze_abi_prlimit64 PRIVATE
+  kinakaze_abi_process_vm_readv
+  "process_vm_readv"=kinakaze_abi_process_vm_readv PRIVATE
+  "process_vm_readv@GLIBC_2.15"=kinakaze_abi_process_vm_readv PRIVATE
+  kinakaze_abi_process_vm_writev
+  "process_vm_writev"=kinakaze_abi_process_vm_writev PRIVATE
+  "process_vm_writev@GLIBC_2.15"=kinakaze_abi_process_vm_writev PRIVATE
+  kinakaze_abi_program_invocation_name DATA
+  "program_invocation_name"=kinakaze_abi_program_invocation_name DATA PRIVATE
+  "program_invocation_name@GLIBC_2.2.5"=kinakaze_abi_program_invocation_name DATA PRIVATE
+  kinakaze_abi_program_invocation_short_name DATA
+  "program_invocation_short_name"=kinakaze_abi_program_invocation_short_name DATA PRIVATE
+  "program_invocation_short_name@GLIBC_2.2.5"=kinakaze_abi_program_invocation_short_name DATA PRIVATE
+  kinakaze_abi_pselect
+  "pselect"=kinakaze_abi_pselect PRIVATE
+  "pselect@GLIBC_2.2.5"=kinakaze_abi_pselect PRIVATE
+  kinakaze_abi_pthread_attr_destroy
+  "pthread_attr_destroy"=kinakaze_abi_pthread_attr_destroy PRIVATE
+  "pthread_attr_destroy@GLIBC_2.2.5"=kinakaze_abi_pthread_attr_destroy PRIVATE
+  "pthread_attr_getaffinity_np"=libpthread.so.0.pthread_attr_getaffinity_np PRIVATE
+  kinakaze_abi_pthread_attr_getdetachstate
+  "pthread_attr_getdetachstate"=kinakaze_abi_pthread_attr_getdetachstate PRIVATE
+  "pthread_attr_getdetachstate@GLIBC_2.2.5"=kinakaze_abi_pthread_attr_getdetachstate PRIVATE
+  kinakaze_abi_pthread_attr_getguardsize
+  "pthread_attr_getguardsize"=kinakaze_abi_pthread_attr_getguardsize PRIVATE
+  "pthread_attr_getguardsize@GLIBC_2.34"=kinakaze_abi_pthread_attr_getguardsize PRIVATE
+  "pthread_attr_getinheritsched"=libpthread.so.0.pthread_attr_getinheritsched PRIVATE
+  "pthread_attr_getschedparam"=libpthread.so.0.pthread_attr_getschedparam PRIVATE
+  "pthread_attr_getschedpolicy"=libpthread.so.0.pthread_attr_getschedpolicy PRIVATE
+  "pthread_attr_getschedpolicy@GLIBC_2.2.5"=libpthread.so.0.pthread_attr_getschedpolicy PRIVATE
+  kinakaze_abi_pthread_attr_getstack
+  "pthread_attr_getstack"=kinakaze_abi_pthread_attr_getstack PRIVATE
+  "pthread_attr_getstack@GLIBC_2.34"=kinakaze_abi_pthread_attr_getstack PRIVATE
+  kinakaze_abi_pthread_attr_getstacksize
+  "pthread_attr_getstacksize"=kinakaze_abi_pthread_attr_getstacksize PRIVATE
+  "pthread_attr_getstacksize@GLIBC_2.34"=kinakaze_abi_pthread_attr_getstacksize PRIVATE
+  kinakaze_abi_pthread_attr_init
+  "pthread_attr_init"=kinakaze_abi_pthread_attr_init PRIVATE
+  "pthread_attr_init@GLIBC_2.2.5"=kinakaze_abi_pthread_attr_init PRIVATE
+  "pthread_attr_setaffinity_np"=libpthread.so.0.pthread_attr_setaffinity_np PRIVATE
+  "pthread_attr_setaffinity_np@GLIBC_2.32"=libpthread.so.0.pthread_attr_setaffinity_np PRIVATE
+  kinakaze_abi_pthread_attr_setdetachstate
+  "pthread_attr_setdetachstate"=kinakaze_abi_pthread_attr_setdetachstate PRIVATE
+  "pthread_attr_setdetachstate@GLIBC_2.2.5"=kinakaze_abi_pthread_attr_setdetachstate PRIVATE
+  kinakaze_abi_pthread_attr_setguardsize
+  "pthread_attr_setguardsize"=kinakaze_abi_pthread_attr_setguardsize PRIVATE
+  "pthread_attr_setguardsize@GLIBC_2.34"=kinakaze_abi_pthread_attr_setguardsize PRIVATE
+  "pthread_attr_setinheritsched"=libpthread.so.0.pthread_attr_setinheritsched PRIVATE
+  "pthread_attr_setinheritsched@GLIBC_2.2.5"=libpthread.so.0.pthread_attr_setinheritsched PRIVATE
+  "pthread_attr_setschedparam"=libpthread.so.0.pthread_attr_setschedparam PRIVATE
+  "pthread_attr_setschedparam@GLIBC_2.2.5"=libpthread.so.0.pthread_attr_setschedparam PRIVATE
+  "pthread_attr_setschedpolicy"=libpthread.so.0.pthread_attr_setschedpolicy PRIVATE
+  "pthread_attr_setschedpolicy@GLIBC_2.2.5"=libpthread.so.0.pthread_attr_setschedpolicy PRIVATE
+  kinakaze_abi_pthread_attr_setscope
+  "pthread_attr_setscope"=kinakaze_abi_pthread_attr_setscope PRIVATE
+  "pthread_attr_setscope@GLIBC_2.2.5"=kinakaze_abi_pthread_attr_setscope PRIVATE
+  kinakaze_abi_pthread_attr_setstacksize
+  "pthread_attr_setstacksize"=kinakaze_abi_pthread_attr_setstacksize PRIVATE
+  "pthread_attr_setstacksize@GLIBC_2.34"=kinakaze_abi_pthread_attr_setstacksize PRIVATE
+  "pthread_barrier_destroy"=libpthread.so.0.pthread_barrier_destroy PRIVATE
+  "pthread_barrier_destroy@GLIBC_2.34"=libpthread.so.0.pthread_barrier_destroy PRIVATE
+  "pthread_barrier_init"=libpthread.so.0.pthread_barrier_init PRIVATE
+  "pthread_barrier_init@GLIBC_2.34"=libpthread.so.0.pthread_barrier_init PRIVATE
+  "pthread_barrier_wait"=libpthread.so.0.pthread_barrier_wait PRIVATE
+  "pthread_barrier_wait@GLIBC_2.34"=libpthread.so.0.pthread_barrier_wait PRIVATE
+  kinakaze_abi_pthread_cancel
+  "pthread_cancel"=kinakaze_abi_pthread_cancel PRIVATE
+  "pthread_cancel@GLIBC_2.34"=kinakaze_abi_pthread_cancel PRIVATE
+  kinakaze_abi_pthread_cond_broadcast
+  "pthread_cond_broadcast"=kinakaze_abi_pthread_cond_broadcast PRIVATE
+  "pthread_cond_broadcast@GLIBC_2.3.2"=kinakaze_abi_pthread_cond_broadcast PRIVATE
+  "pthread_cond_clockwait"=libpthread.so.0.pthread_cond_clockwait PRIVATE
+  "pthread_cond_clockwait@GLIBC_2.34"=libpthread.so.0.pthread_cond_clockwait PRIVATE
+  kinakaze_abi_pthread_cond_destroy
+  "pthread_cond_destroy"=kinakaze_abi_pthread_cond_destroy PRIVATE
+  "pthread_cond_destroy@GLIBC_2.3.2"=kinakaze_abi_pthread_cond_destroy PRIVATE
+  kinakaze_abi_pthread_cond_init
+  "pthread_cond_init"=kinakaze_abi_pthread_cond_init PRIVATE
+  "pthread_cond_init@GLIBC_2.3.2"=kinakaze_abi_pthread_cond_init PRIVATE
+  kinakaze_abi_pthread_cond_signal
+  "pthread_cond_signal"=kinakaze_abi_pthread_cond_signal PRIVATE
+  "pthread_cond_signal@GLIBC_2.3.2"=kinakaze_abi_pthread_cond_signal PRIVATE
+  kinakaze_abi_pthread_cond_timedwait
+  "pthread_cond_timedwait"=kinakaze_abi_pthread_cond_timedwait PRIVATE
+  "pthread_cond_timedwait@GLIBC_2.3.2"=kinakaze_abi_pthread_cond_timedwait PRIVATE
+  kinakaze_abi_pthread_cond_wait
+  "pthread_cond_wait"=kinakaze_abi_pthread_cond_wait PRIVATE
+  "pthread_cond_wait@GLIBC_2.3.2"=kinakaze_abi_pthread_cond_wait PRIVATE
+  kinakaze_abi_pthread_condattr_destroy
+  "pthread_condattr_destroy"=kinakaze_abi_pthread_condattr_destroy PRIVATE
+  "pthread_condattr_destroy@GLIBC_2.2.5"=kinakaze_abi_pthread_condattr_destroy PRIVATE
+  kinakaze_abi_pthread_condattr_getclock
+  "pthread_condattr_getclock"=kinakaze_abi_pthread_condattr_getclock PRIVATE
+  kinakaze_abi_pthread_condattr_init
+  "pthread_condattr_init"=kinakaze_abi_pthread_condattr_init PRIVATE
+  "pthread_condattr_init@GLIBC_2.2.5"=kinakaze_abi_pthread_condattr_init PRIVATE
+  kinakaze_abi_pthread_condattr_setclock
+  "pthread_condattr_setclock"=kinakaze_abi_pthread_condattr_setclock PRIVATE
+  "pthread_condattr_setclock@GLIBC_2.34"=kinakaze_abi_pthread_condattr_setclock PRIVATE
+  kinakaze_abi_pthread_condattr_setpshared
+  "pthread_condattr_setpshared"=kinakaze_abi_pthread_condattr_setpshared PRIVATE
+  "pthread_condattr_setpshared@GLIBC_2.34"=kinakaze_abi_pthread_condattr_setpshared PRIVATE
+  kinakaze_abi_pthread_create
+  "pthread_create"=kinakaze_abi_pthread_create PRIVATE
+  "pthread_create@GLIBC_2.34"=kinakaze_abi_pthread_create PRIVATE
+  kinakaze_abi_pthread_detach
+  "pthread_detach"=kinakaze_abi_pthread_detach PRIVATE
+  "pthread_detach@GLIBC_2.34"=kinakaze_abi_pthread_detach PRIVATE
+  kinakaze_abi_pthread_equal
+  "pthread_equal"=kinakaze_abi_pthread_equal PRIVATE
+  "pthread_equal@GLIBC_2.2.5"=kinakaze_abi_pthread_equal PRIVATE
+  kinakaze_abi_pthread_exit
+  "pthread_exit"=kinakaze_abi_pthread_exit PRIVATE
+  "pthread_exit@GLIBC_2.2.5"=kinakaze_abi_pthread_exit PRIVATE
+  kinakaze_abi_pthread_getaffinity_np
+  "pthread_getaffinity_np"=kinakaze_abi_pthread_getaffinity_np PRIVATE
+  "pthread_getaffinity_np@GLIBC_2.32"=kinakaze_abi_pthread_getaffinity_np PRIVATE
+  kinakaze_abi_pthread_getattr_np
+  "pthread_getattr_np"=kinakaze_abi_pthread_getattr_np PRIVATE
+  "pthread_getattr_np@GLIBC_2.32"=kinakaze_abi_pthread_getattr_np PRIVATE
+  kinakaze_abi_pthread_getconcurrency
+  "pthread_getconcurrency"=kinakaze_abi_pthread_getconcurrency PRIVATE
+  "pthread_getconcurrency@GLIBC_2.34"=kinakaze_abi_pthread_getconcurrency PRIVATE
+  kinakaze_abi_pthread_getcpuclockid
+  "pthread_getcpuclockid"=kinakaze_abi_pthread_getcpuclockid PRIVATE
+  "pthread_getcpuclockid@GLIBC_2.34"=kinakaze_abi_pthread_getcpuclockid PRIVATE
+  kinakaze_abi_pthread_getname_np
+  "pthread_getname_np"=kinakaze_abi_pthread_getname_np PRIVATE
+  "pthread_getname_np@GLIBC_2.34"=kinakaze_abi_pthread_getname_np PRIVATE
+  "pthread_getschedparam"=libpthread.so.0.pthread_getschedparam PRIVATE
+  "pthread_getschedparam@GLIBC_2.2.5"=libpthread.so.0.pthread_getschedparam PRIVATE
+  kinakaze_abi_pthread_getspecific
+  "pthread_getspecific"=kinakaze_abi_pthread_getspecific PRIVATE
+  "pthread_getspecific@GLIBC_2.34"=kinakaze_abi_pthread_getspecific PRIVATE
+  kinakaze_abi_pthread_join
+  "pthread_join"=kinakaze_abi_pthread_join PRIVATE
+  "pthread_join@GLIBC_2.34"=kinakaze_abi_pthread_join PRIVATE
+  kinakaze_abi_pthread_key_create
+  "pthread_key_create"=kinakaze_abi_pthread_key_create PRIVATE
+  "pthread_key_create@GLIBC_2.34"=kinakaze_abi_pthread_key_create PRIVATE
+  kinakaze_abi_pthread_key_delete
+  "pthread_key_delete"=kinakaze_abi_pthread_key_delete PRIVATE
+  "pthread_key_delete@GLIBC_2.34"=kinakaze_abi_pthread_key_delete PRIVATE
+  kinakaze_abi_pthread_kill
+  "pthread_kill"=kinakaze_abi_pthread_kill PRIVATE
+  "pthread_kill@GLIBC_2.34"=kinakaze_abi_pthread_kill PRIVATE
+  "pthread_mutex_clocklock"=libpthread.so.0.pthread_mutex_clocklock PRIVATE
+  "pthread_mutex_clocklock@GLIBC_2.34"=libpthread.so.0.pthread_mutex_clocklock PRIVATE
+  "pthread_mutex_consistent"=libpthread.so.0.pthread_mutex_consistent PRIVATE
+  "pthread_mutex_consistent@GLIBC_2.34"=libpthread.so.0.pthread_mutex_consistent PRIVATE
+  kinakaze_abi_pthread_mutex_destroy
+  "pthread_mutex_destroy"=kinakaze_abi_pthread_mutex_destroy PRIVATE
+  "pthread_mutex_destroy@GLIBC_2.2.5"=kinakaze_abi_pthread_mutex_destroy PRIVATE
+  kinakaze_abi_pthread_mutex_init
+  "pthread_mutex_init"=kinakaze_abi_pthread_mutex_init PRIVATE
+  "pthread_mutex_init@GLIBC_2.2.5"=kinakaze_abi_pthread_mutex_init PRIVATE
+  kinakaze_abi_pthread_mutex_lock
+  "pthread_mutex_lock"=kinakaze_abi_pthread_mutex_lock PRIVATE
+  "pthread_mutex_lock@GLIBC_2.2.5"=kinakaze_abi_pthread_mutex_lock PRIVATE
+  kinakaze_abi_pthread_mutex_timedlock
+  "pthread_mutex_timedlock"=kinakaze_abi_pthread_mutex_timedlock PRIVATE
+  kinakaze_abi_pthread_mutex_trylock
+  "pthread_mutex_trylock"=kinakaze_abi_pthread_mutex_trylock PRIVATE
+  "pthread_mutex_trylock@GLIBC_2.34"=kinakaze_abi_pthread_mutex_trylock PRIVATE
+  kinakaze_abi_pthread_mutex_unlock
+  "pthread_mutex_unlock"=kinakaze_abi_pthread_mutex_unlock PRIVATE
+  "pthread_mutex_unlock@GLIBC_2.2.5"=kinakaze_abi_pthread_mutex_unlock PRIVATE
+  kinakaze_abi_pthread_mutexattr_destroy
+  "pthread_mutexattr_destroy"=kinakaze_abi_pthread_mutexattr_destroy PRIVATE
+  "pthread_mutexattr_destroy@GLIBC_2.34"=kinakaze_abi_pthread_mutexattr_destroy PRIVATE
+  "pthread_mutexattr_getprotocol"=libpthread.so.0.pthread_mutexattr_getprotocol PRIVATE
+  "pthread_mutexattr_getrobust"=libpthread.so.0.pthread_mutexattr_getrobust PRIVATE
+  kinakaze_abi_pthread_mutexattr_gettype
+  "pthread_mutexattr_gettype"=kinakaze_abi_pthread_mutexattr_gettype PRIVATE
+  "pthread_mutexattr_gettype@GLIBC_2.34"=kinakaze_abi_pthread_mutexattr_gettype PRIVATE
+  kinakaze_abi_pthread_mutexattr_init
+  "pthread_mutexattr_init"=kinakaze_abi_pthread_mutexattr_init PRIVATE
+  "pthread_mutexattr_init@GLIBC_2.34"=kinakaze_abi_pthread_mutexattr_init PRIVATE
+  "pthread_mutexattr_setprotocol"=libpthread.so.0.pthread_mutexattr_setprotocol PRIVATE
+  "pthread_mutexattr_setprotocol@GLIBC_2.34"=libpthread.so.0.pthread_mutexattr_setprotocol PRIVATE
+  kinakaze_abi_pthread_mutexattr_setpshared
+  "pthread_mutexattr_setpshared"=kinakaze_abi_pthread_mutexattr_setpshared PRIVATE
+  "pthread_mutexattr_setpshared@GLIBC_2.34"=kinakaze_abi_pthread_mutexattr_setpshared PRIVATE
+  "pthread_mutexattr_setrobust"=libpthread.so.0.pthread_mutexattr_setrobust PRIVATE
+  "pthread_mutexattr_setrobust@GLIBC_2.34"=libpthread.so.0.pthread_mutexattr_setrobust PRIVATE
+  kinakaze_abi_pthread_mutexattr_settype
+  "pthread_mutexattr_settype"=kinakaze_abi_pthread_mutexattr_settype PRIVATE
+  "pthread_mutexattr_settype@GLIBC_2.34"=kinakaze_abi_pthread_mutexattr_settype PRIVATE
+  kinakaze_abi_pthread_once
+  "pthread_once"=kinakaze_abi_pthread_once PRIVATE
+  "pthread_once@GLIBC_2.34"=kinakaze_abi_pthread_once PRIVATE
+  kinakaze_abi_pthread_rwlock_destroy
+  "pthread_rwlock_destroy"=kinakaze_abi_pthread_rwlock_destroy PRIVATE
+  "pthread_rwlock_destroy@GLIBC_2.34"=kinakaze_abi_pthread_rwlock_destroy PRIVATE
+  kinakaze_abi_pthread_rwlock_init
+  "pthread_rwlock_init"=kinakaze_abi_pthread_rwlock_init PRIVATE
+  "pthread_rwlock_init@GLIBC_2.34"=kinakaze_abi_pthread_rwlock_init PRIVATE
+  kinakaze_abi_pthread_rwlock_rdlock
+  "pthread_rwlock_rdlock"=kinakaze_abi_pthread_rwlock_rdlock PRIVATE
+  "pthread_rwlock_rdlock@GLIBC_2.34"=kinakaze_abi_pthread_rwlock_rdlock PRIVATE
+  kinakaze_abi_pthread_rwlock_timedrdlock
+  "pthread_rwlock_timedrdlock"=kinakaze_abi_pthread_rwlock_timedrdlock PRIVATE
+  "pthread_rwlock_timedrdlock@GLIBC_2.34"=kinakaze_abi_pthread_rwlock_timedrdlock PRIVATE
+  kinakaze_abi_pthread_rwlock_timedwrlock
+  "pthread_rwlock_timedwrlock"=kinakaze_abi_pthread_rwlock_timedwrlock PRIVATE
+  "pthread_rwlock_timedwrlock@GLIBC_2.34"=kinakaze_abi_pthread_rwlock_timedwrlock PRIVATE
+  kinakaze_abi_pthread_rwlock_tryrdlock
+  "pthread_rwlock_tryrdlock"=kinakaze_abi_pthread_rwlock_tryrdlock PRIVATE
+  "pthread_rwlock_tryrdlock@GLIBC_2.34"=kinakaze_abi_pthread_rwlock_tryrdlock PRIVATE
+  kinakaze_abi_pthread_rwlock_trywrlock
+  "pthread_rwlock_trywrlock"=kinakaze_abi_pthread_rwlock_trywrlock PRIVATE
+  "pthread_rwlock_trywrlock@GLIBC_2.34"=kinakaze_abi_pthread_rwlock_trywrlock PRIVATE
+  kinakaze_abi_pthread_rwlock_unlock
+  "pthread_rwlock_unlock"=kinakaze_abi_pthread_rwlock_unlock PRIVATE
+  "pthread_rwlock_unlock@GLIBC_2.34"=kinakaze_abi_pthread_rwlock_unlock PRIVATE
+  kinakaze_abi_pthread_rwlock_wrlock
+  "pthread_rwlock_wrlock"=kinakaze_abi_pthread_rwlock_wrlock PRIVATE
+  "pthread_rwlock_wrlock@GLIBC_2.34"=kinakaze_abi_pthread_rwlock_wrlock PRIVATE
+  kinakaze_abi_pthread_rwlockattr_destroy
+  "pthread_rwlockattr_destroy"=kinakaze_abi_pthread_rwlockattr_destroy PRIVATE
+  "pthread_rwlockattr_destroy@GLIBC_2.34"=kinakaze_abi_pthread_rwlockattr_destroy PRIVATE
+  kinakaze_abi_pthread_rwlockattr_getpshared
+  "pthread_rwlockattr_getpshared"=kinakaze_abi_pthread_rwlockattr_getpshared PRIVATE
+  kinakaze_abi_pthread_rwlockattr_init
+  "pthread_rwlockattr_init"=kinakaze_abi_pthread_rwlockattr_init PRIVATE
+  "pthread_rwlockattr_init@GLIBC_2.34"=kinakaze_abi_pthread_rwlockattr_init PRIVATE
+  kinakaze_abi_pthread_rwlockattr_setkind_np
+  "pthread_rwlockattr_setkind_np"=kinakaze_abi_pthread_rwlockattr_setkind_np PRIVATE
+  "pthread_rwlockattr_setkind_np@GLIBC_2.34"=kinakaze_abi_pthread_rwlockattr_setkind_np PRIVATE
+  kinakaze_abi_pthread_rwlockattr_setpshared
+  "pthread_rwlockattr_setpshared"=kinakaze_abi_pthread_rwlockattr_setpshared PRIVATE
+  "pthread_rwlockattr_setpshared@GLIBC_2.34"=kinakaze_abi_pthread_rwlockattr_setpshared PRIVATE
+  kinakaze_abi_pthread_self
+  "pthread_self"=kinakaze_abi_pthread_self PRIVATE
+  "pthread_self@GLIBC_2.2.5"=kinakaze_abi_pthread_self PRIVATE
+  kinakaze_abi_pthread_setaffinity_np
+  "pthread_setaffinity_np"=kinakaze_abi_pthread_setaffinity_np PRIVATE
+  "pthread_setaffinity_np@GLIBC_2.34"=kinakaze_abi_pthread_setaffinity_np PRIVATE
+  kinakaze_abi_pthread_setcancelstate
+  "pthread_setcancelstate"=kinakaze_abi_pthread_setcancelstate PRIVATE
+  "pthread_setcancelstate@GLIBC_2.2.5"=kinakaze_abi_pthread_setcancelstate PRIVATE
+  kinakaze_abi_pthread_setcanceltype
+  "pthread_setcanceltype"=kinakaze_abi_pthread_setcanceltype PRIVATE
+  "pthread_setcanceltype@GLIBC_2.2.5"=kinakaze_abi_pthread_setcanceltype PRIVATE
+  kinakaze_abi_pthread_setconcurrency
+  "pthread_setconcurrency"=kinakaze_abi_pthread_setconcurrency PRIVATE
+  "pthread_setconcurrency@GLIBC_2.34"=kinakaze_abi_pthread_setconcurrency PRIVATE
+  kinakaze_abi_pthread_setname_np
+  "pthread_setname_np"=kinakaze_abi_pthread_setname_np PRIVATE
+  "pthread_setname_np@GLIBC_2.34"=kinakaze_abi_pthread_setname_np PRIVATE
+  "pthread_setschedparam"=libpthread.so.0.pthread_setschedparam PRIVATE
+  "pthread_setschedparam@GLIBC_2.2.5"=libpthread.so.0.pthread_setschedparam PRIVATE
+  "pthread_setschedprio"=libpthread.so.0.pthread_setschedprio PRIVATE
+  kinakaze_abi_pthread_setspecific
+  "pthread_setspecific"=kinakaze_abi_pthread_setspecific PRIVATE
+  "pthread_setspecific@GLIBC_2.34"=kinakaze_abi_pthread_setspecific PRIVATE
+  "pthread_sigmask"=libpthread.so.0.pthread_sigmask PRIVATE
+  "pthread_sigmask@GLIBC_2.32"=libpthread.so.0.pthread_sigmask PRIVATE
+  kinakaze_abi_pthread_testcancel
+  "pthread_testcancel"=kinakaze_abi_pthread_testcancel PRIVATE
+  "pthread_testcancel@GLIBC_2.34"=kinakaze_abi_pthread_testcancel PRIVATE
+  kinakaze_abi_pthread_tryjoin_np
+  "pthread_tryjoin_np"=kinakaze_abi_pthread_tryjoin_np PRIVATE
+  "pthread_tryjoin_np@GLIBC_2.34"=kinakaze_abi_pthread_tryjoin_np PRIVATE
+  kinakaze_abi_ptrace
+  "ptrace"=kinakaze_abi_ptrace PRIVATE
+  "ptrace@GLIBC_2.2.5"=kinakaze_abi_ptrace PRIVATE
+  kinakaze_abi_ptsname
+  "ptsname"=kinakaze_abi_ptsname PRIVATE
+  "ptsname@GLIBC_2.2.5"=kinakaze_abi_ptsname PRIVATE
+  kinakaze_abi_ptsname_r
+  "ptsname_r"=kinakaze_abi_ptsname_r PRIVATE
+  "ptsname_r@GLIBC_2.2.5"=kinakaze_abi_ptsname_r PRIVATE
+  kinakaze_abi_putc
+  "putc"=kinakaze_abi_putc PRIVATE
+  "putc@GLIBC_2.2.5"=kinakaze_abi_putc PRIVATE
+  kinakaze_abi_putc_unlocked
+  "putc_unlocked"=kinakaze_abi_putc_unlocked PRIVATE
+  "putc_unlocked@GLIBC_2.2.5"=kinakaze_abi_putc_unlocked PRIVATE
+  kinakaze_abi_putchar
+  "putchar"=kinakaze_abi_putchar PRIVATE
+  "putchar@GLIBC_2.2.5"=kinakaze_abi_putchar PRIVATE
+  kinakaze_abi_putchar_unlocked
+  "putchar_unlocked"=kinakaze_abi_putchar_unlocked PRIVATE
+  "putchar_unlocked@GLIBC_2.2.5"=kinakaze_abi_putchar_unlocked PRIVATE
+  kinakaze_abi_putenv
+  "putenv"=kinakaze_abi_putenv PRIVATE
+  "putenv@GLIBC_2.2.5"=kinakaze_abi_putenv PRIVATE
+  kinakaze_abi_putgrent
+  "putgrent"=kinakaze_abi_putgrent PRIVATE
+  "putgrent@GLIBC_2.2.5"=kinakaze_abi_putgrent PRIVATE
+  kinakaze_abi_putpwent
+  "putpwent"=kinakaze_abi_putpwent PRIVATE
+  "putpwent@GLIBC_2.2.5"=kinakaze_abi_putpwent PRIVATE
+  kinakaze_abi_puts
+  "puts"=kinakaze_abi_puts PRIVATE
+  "puts@GLIBC_2.2.5"=kinakaze_abi_puts PRIVATE
+  kinakaze_abi_putspent
+  "putspent"=kinakaze_abi_putspent PRIVATE
+  "putspent@GLIBC_2.2.5"=kinakaze_abi_putspent PRIVATE
+  kinakaze_abi_pututline
+  "pututline"=kinakaze_abi_pututline PRIVATE
+  kinakaze_abi_pututxline
+  "pututxline"=kinakaze_abi_pututxline PRIVATE
+  "pututxline@GLIBC_2.2.5"=kinakaze_abi_pututxline PRIVATE
+  kinakaze_abi_putwc
+  "putwc"=kinakaze_abi_putwc PRIVATE
+  "putwc@GLIBC_2.2.5"=kinakaze_abi_putwc PRIVATE
+  kinakaze_abi_putwchar
+  "putwchar"=kinakaze_abi_putwchar PRIVATE
+  kinakaze_abi_pwrite64
+  "pwrite"=kinakaze_abi_pwrite64 PRIVATE
+  "pwrite@GLIBC_2.2.5"=kinakaze_abi_pwrite64 PRIVATE
+  kinakaze_abi_pwrite64
+  "pwrite64"=kinakaze_abi_pwrite64 PRIVATE
+  "pwrite64@GLIBC_2.2.5"=kinakaze_abi_pwrite64 PRIVATE
+  kinakaze_abi_pwritev64
+  "pwritev"=kinakaze_abi_pwritev64 PRIVATE
+  "pwritev@GLIBC_2.10"=kinakaze_abi_pwritev64 PRIVATE
+  kinakaze_abi_pwritev64v2
+  "pwritev2"=kinakaze_abi_pwritev64v2 PRIVATE
+  kinakaze_abi_pwritev64
+  "pwritev64"=kinakaze_abi_pwritev64 PRIVATE
+  "pwritev64@GLIBC_2.10"=kinakaze_abi_pwritev64 PRIVATE
+  kinakaze_abi_pwritev64v2
+  "pwritev64v2"=kinakaze_abi_pwritev64v2 PRIVATE
+  "pwritev64v2@GLIBC_2.26"=kinakaze_abi_pwritev64v2 PRIVATE
+  kinakaze_abi_qsort
+  "qsort"=kinakaze_abi_qsort PRIVATE
+  "qsort@GLIBC_2.2.5"=kinakaze_abi_qsort PRIVATE
+  kinakaze_abi_qsort_r
+  "qsort_r"=kinakaze_abi_qsort_r PRIVATE
+  "qsort_r@GLIBC_2.8"=kinakaze_abi_qsort_r PRIVATE
+  kinakaze_abi_quotactl
+  "quotactl"=kinakaze_abi_quotactl PRIVATE
+  "quotactl@GLIBC_2.2.5"=kinakaze_abi_quotactl PRIVATE
+  kinakaze_abi_raise
+  "raise"=kinakaze_abi_raise PRIVATE
+  "raise@GLIBC_2.2.5"=kinakaze_abi_raise PRIVATE
+  kinakaze_abi_rand
+  "rand"=kinakaze_abi_rand PRIVATE
+  "rand@GLIBC_2.2.5"=kinakaze_abi_rand PRIVATE
+  kinakaze_abi_rand_r
+  "rand_r"=kinakaze_abi_rand_r PRIVATE
+  "rand_r@GLIBC_2.2.5"=kinakaze_abi_rand_r PRIVATE
+  kinakaze_abi_random
+  "random"=kinakaze_abi_random PRIVATE
+  "random@GLIBC_2.2.5"=kinakaze_abi_random PRIVATE
+  kinakaze_abi_random_r
+  "random_r"=kinakaze_abi_random_r PRIVATE
+  "random_r@GLIBC_2.2.5"=kinakaze_abi_random_r PRIVATE
+  kinakaze_abi_rawmemchr
+  "rawmemchr"=kinakaze_abi_rawmemchr PRIVATE
+  "rawmemchr@GLIBC_2.2.5"=kinakaze_abi_rawmemchr PRIVATE
+  kinakaze_abi_re_compile_fastmap
+  "re_compile_fastmap"=kinakaze_abi_re_compile_fastmap PRIVATE
+  kinakaze_abi_re_compile_pattern
+  "re_compile_pattern"=kinakaze_abi_re_compile_pattern PRIVATE
+  "re_compile_pattern@GLIBC_2.2.5"=kinakaze_abi_re_compile_pattern PRIVATE
+  kinakaze_abi_re_match
+  "re_match"=kinakaze_abi_re_match PRIVATE
+  "re_match@GLIBC_2.2.5"=kinakaze_abi_re_match PRIVATE
+  kinakaze_abi_re_search
+  "re_search"=kinakaze_abi_re_search PRIVATE
+  "re_search@GLIBC_2.2.5"=kinakaze_abi_re_search PRIVATE
+  kinakaze_abi_re_set_registers
+  "re_set_registers"=kinakaze_abi_re_set_registers PRIVATE
+  kinakaze_abi_re_set_syntax
+  "re_set_syntax"=kinakaze_abi_re_set_syntax PRIVATE
+  "re_set_syntax@GLIBC_2.2.5"=kinakaze_abi_re_set_syntax PRIVATE
+  re_syntax_options DATA
+  "re_syntax_options"=re_syntax_options DATA
+  "re_syntax_options@GLIBC_2.2.5"=re_syntax_options DATA PRIVATE
+  kinakaze_abi_read
+  "read"=kinakaze_abi_read PRIVATE
+  "read@GLIBC_2.2.5"=kinakaze_abi_read PRIVATE
+  kinakaze_abi_readahead
+  "readahead"=kinakaze_abi_readahead PRIVATE
+  "readahead@GLIBC_2.3"=kinakaze_abi_readahead PRIVATE
+  kinakaze_abi_readdir
+  "readdir"=kinakaze_abi_readdir PRIVATE
+  "readdir@GLIBC_2.2.5"=kinakaze_abi_readdir PRIVATE
+  kinakaze_abi_readdir64
+  "readdir64"=kinakaze_abi_readdir64 PRIVATE
+  "readdir64@GLIBC_2.2.5"=kinakaze_abi_readdir64 PRIVATE
+  kinakaze_abi_readdir64_r
+  "readdir64_r"=kinakaze_abi_readdir64_r PRIVATE
+  "readdir64_r@GLIBC_2.2.5"=kinakaze_abi_readdir64_r PRIVATE
+  kinakaze_abi_readdir_r
+  "readdir_r"=kinakaze_abi_readdir_r PRIVATE
+  kinakaze_abi_readlink
+  "readlink"=kinakaze_abi_readlink PRIVATE
+  "readlink@GLIBC_2.2.5"=kinakaze_abi_readlink PRIVATE
+  kinakaze_abi_readlinkat
+  "readlinkat"=kinakaze_abi_readlinkat PRIVATE
+  "readlinkat@GLIBC_2.4"=kinakaze_abi_readlinkat PRIVATE
+  kinakaze_abi_readv
+  "readv"=kinakaze_abi_readv PRIVATE
+  "readv@GLIBC_2.2.5"=kinakaze_abi_readv PRIVATE
+  kinakaze_abi_realloc
+  "realloc"=kinakaze_abi_realloc PRIVATE
+  "realloc@GLIBC_2.2.5"=kinakaze_abi_realloc PRIVATE
+  kinakaze_abi_reallocarray
+  "reallocarray"=kinakaze_abi_reallocarray PRIVATE
+  "reallocarray@GLIBC_2.26"=kinakaze_abi_reallocarray PRIVATE
+  kinakaze_abi_realpath
+  "realpath"=kinakaze_abi_realpath PRIVATE
+  "realpath@GLIBC_2.3"=kinakaze_abi_realpath PRIVATE
+  kinakaze_abi_reboot
+  "reboot"=kinakaze_abi_reboot PRIVATE
+  "reboot@GLIBC_2.2.5"=kinakaze_abi_reboot PRIVATE
+  kinakaze_abi_recv
+  "recv"=kinakaze_abi_recv PRIVATE
+  "recv@GLIBC_2.2.5"=kinakaze_abi_recv PRIVATE
+  kinakaze_abi_recvfrom
+  "recvfrom"=kinakaze_abi_recvfrom PRIVATE
+  "recvfrom@GLIBC_2.2.5"=kinakaze_abi_recvfrom PRIVATE
+  kinakaze_abi_recvmmsg
+  "recvmmsg"=kinakaze_abi_recvmmsg PRIVATE
+  "recvmmsg@GLIBC_2.12"=kinakaze_abi_recvmmsg PRIVATE
+  kinakaze_abi_recvmsg
+  "recvmsg"=kinakaze_abi_recvmsg PRIVATE
+  "recvmsg@GLIBC_2.2.5"=kinakaze_abi_recvmsg PRIVATE
+  kinakaze_abi_regcomp
+  "regcomp"=kinakaze_abi_regcomp PRIVATE
+  "regcomp@GLIBC_2.2.5"=kinakaze_abi_regcomp PRIVATE
+  kinakaze_abi_regerror
+  "regerror"=kinakaze_abi_regerror PRIVATE
+  "regerror@GLIBC_2.2.5"=kinakaze_abi_regerror PRIVATE
+  kinakaze_abi_regexec
+  "regexec"=kinakaze_abi_regexec PRIVATE
+  "regexec@GLIBC_2.3.4"=kinakaze_abi_regexec PRIVATE
+  kinakaze_abi_regfree
+  "regfree"=kinakaze_abi_regfree PRIVATE
+  "regfree@GLIBC_2.2.5"=kinakaze_abi_regfree PRIVATE
+  kinakaze_abi_register_printf_modifier
+  "register_printf_modifier"=kinakaze_abi_register_printf_modifier PRIVATE
+  "register_printf_modifier@GLIBC_2.10"=kinakaze_abi_register_printf_modifier PRIVATE
+  kinakaze_abi_register_printf_specifier
+  "register_printf_specifier"=kinakaze_abi_register_printf_specifier PRIVATE
+  "register_printf_specifier@GLIBC_2.10"=kinakaze_abi_register_printf_specifier PRIVATE
+  kinakaze_abi_register_printf_type
+  "register_printf_type"=kinakaze_abi_register_printf_type PRIVATE
+  "register_printf_type@GLIBC_2.10"=kinakaze_abi_register_printf_type PRIVATE
+  kinakaze_abi_remove
+  "remove"=kinakaze_abi_remove PRIVATE
+  "remove@GLIBC_2.2.5"=kinakaze_abi_remove PRIVATE
+  kinakaze_abi_removexattr
+  "removexattr"=kinakaze_abi_removexattr PRIVATE
+  "removexattr@GLIBC_2.3"=kinakaze_abi_removexattr PRIVATE
+  kinakaze_abi_rename
+  "rename"=kinakaze_abi_rename PRIVATE
+  "rename@GLIBC_2.2.5"=kinakaze_abi_rename PRIVATE
+  kinakaze_abi_renameat
+  "renameat"=kinakaze_abi_renameat PRIVATE
+  "renameat@GLIBC_2.4"=kinakaze_abi_renameat PRIVATE
+  kinakaze_abi_renameat2
+  "renameat2"=kinakaze_abi_renameat2 PRIVATE
+  "renameat2@GLIBC_2.28"=kinakaze_abi_renameat2 PRIVATE
+  kinakaze_abi_res_mkquery
+  "res_mkquery"=kinakaze_abi_res_mkquery PRIVATE
+  "res_mkquery@GLIBC_2.34"=kinakaze_abi_res_mkquery PRIVATE
+  kinakaze_abi_res_nclose
+  "res_nclose"=kinakaze_abi_res_nclose PRIVATE
+  kinakaze_abi_res_ninit
+  "res_ninit"=kinakaze_abi_res_ninit PRIVATE
+  kinakaze_abi_res_nmkquery
+  "res_nmkquery"=kinakaze_abi_res_nmkquery PRIVATE
+  kinakaze_abi_res_nquery
+  "res_nquery"=kinakaze_abi_res_nquery PRIVATE
+  "res_nquery@GLIBC_2.34"=kinakaze_abi_res_nquery PRIVATE
+  kinakaze_abi_res_nsearch
+  "res_nsearch"=kinakaze_abi_res_nsearch PRIVATE
+  "res_nsearch@GLIBC_2.34"=kinakaze_abi_res_nsearch PRIVATE
+  kinakaze_abi_res_nsend
+  "res_nsend"=kinakaze_abi_res_nsend PRIVATE
+  kinakaze_abi_res_query
+  "res_query"=kinakaze_abi_res_query PRIVATE
+  "res_query@GLIBC_2.34"=kinakaze_abi_res_query PRIVATE
+  kinakaze_abi_res_search
+  "res_search"=kinakaze_abi_res_search PRIVATE
+  "res_search@GLIBC_2.34"=kinakaze_abi_res_search PRIVATE
+  kinakaze_abi_res_send
+  "res_send"=kinakaze_abi_res_send PRIVATE
+  kinakaze_abi_rewind
+  "rewind"=kinakaze_abi_rewind PRIVATE
+  "rewind@GLIBC_2.2.5"=kinakaze_abi_rewind PRIVATE
+  kinakaze_abi_rewinddir
+  "rewinddir"=kinakaze_abi_rewinddir PRIVATE
+  "rewinddir@GLIBC_2.2.5"=kinakaze_abi_rewinddir PRIVATE
+  kinakaze_abi_strrchr
+  "rindex"=kinakaze_abi_strrchr PRIVATE
+  "rindex@GLIBC_2.2.5"=kinakaze_abi_strrchr PRIVATE
+  kinakaze_abi_rmdir
+  "rmdir"=kinakaze_abi_rmdir PRIVATE
+  "rmdir@GLIBC_2.2.5"=kinakaze_abi_rmdir PRIVATE
+  kinakaze_abi_rpmatch
+  "rpmatch"=kinakaze_abi_rpmatch PRIVATE
+  "rpmatch@GLIBC_2.2.5"=kinakaze_abi_rpmatch PRIVATE
+  kinakaze_abi_sbrk
+  "sbrk"=kinakaze_abi_sbrk PRIVATE
+  "sbrk@GLIBC_2.2.5"=kinakaze_abi_sbrk PRIVATE
+  kinakaze_abi_scandir
+  "scandir"=kinakaze_abi_scandir PRIVATE
+  "scandir@GLIBC_2.2.5"=kinakaze_abi_scandir PRIVATE
+  kinakaze_abi_scandir64
+  "scandir64"=kinakaze_abi_scandir64 PRIVATE
+  "scandir64@GLIBC_2.2.5"=kinakaze_abi_scandir64 PRIVATE
+  kinakaze_abi_scandirat
+  "scandirat"=kinakaze_abi_scandirat PRIVATE
+  "scandirat@GLIBC_2.15"=kinakaze_abi_scandirat PRIVATE
+  kinakaze_abi_scanf
+  "scanf"=kinakaze_abi_scanf PRIVATE
+  kinakaze_abi_sched_get_priority_max
+  "sched_get_priority_max"=kinakaze_abi_sched_get_priority_max PRIVATE
+  "sched_get_priority_max@GLIBC_2.2.5"=kinakaze_abi_sched_get_priority_max PRIVATE
+  kinakaze_abi_sched_get_priority_min
+  "sched_get_priority_min"=kinakaze_abi_sched_get_priority_min PRIVATE
+  "sched_get_priority_min@GLIBC_2.2.5"=kinakaze_abi_sched_get_priority_min PRIVATE
+  kinakaze_abi_sched_getaffinity
+  "sched_getaffinity"=kinakaze_abi_sched_getaffinity PRIVATE
+  "sched_getaffinity@GLIBC_2.3.4"=kinakaze_abi_sched_getaffinity PRIVATE
+  kinakaze_abi_sched_getcpu
+  "sched_getcpu"=kinakaze_abi_sched_getcpu PRIVATE
+  "sched_getcpu@GLIBC_2.6"=kinakaze_abi_sched_getcpu PRIVATE
+  kinakaze_abi_sched_getparam
+  "sched_getparam"=kinakaze_abi_sched_getparam PRIVATE
+  "sched_getparam@GLIBC_2.2.5"=kinakaze_abi_sched_getparam PRIVATE
+  kinakaze_abi_sched_getscheduler
+  "sched_getscheduler"=kinakaze_abi_sched_getscheduler PRIVATE
+  "sched_getscheduler@GLIBC_2.2.5"=kinakaze_abi_sched_getscheduler PRIVATE
+  kinakaze_abi_sched_rr_get_interval
+  "sched_rr_get_interval"=kinakaze_abi_sched_rr_get_interval PRIVATE
+  "sched_rr_get_interval@GLIBC_2.2.5"=kinakaze_abi_sched_rr_get_interval PRIVATE
+  kinakaze_abi_sched_setaffinity
+  "sched_setaffinity"=kinakaze_abi_sched_setaffinity PRIVATE
+  "sched_setaffinity@GLIBC_2.3.4"=kinakaze_abi_sched_setaffinity PRIVATE
+  kinakaze_abi_sched_setparam
+  "sched_setparam"=kinakaze_abi_sched_setparam PRIVATE
+  "sched_setparam@GLIBC_2.2.5"=kinakaze_abi_sched_setparam PRIVATE
+  kinakaze_abi_sched_setscheduler
+  "sched_setscheduler"=kinakaze_abi_sched_setscheduler PRIVATE
+  "sched_setscheduler@GLIBC_2.2.5"=kinakaze_abi_sched_setscheduler PRIVATE
+  kinakaze_abi_sched_yield
+  "sched_yield"=kinakaze_abi_sched_yield PRIVATE
+  "sched_yield@GLIBC_2.2.5"=kinakaze_abi_sched_yield PRIVATE
+  kinakaze_abi_seccomp
+  "seccomp"=kinakaze_abi_seccomp PRIVATE
+  kinakaze_abi_secure_getenv
+  "secure_getenv"=kinakaze_abi_secure_getenv PRIVATE
+  "secure_getenv@GLIBC_2.17"=kinakaze_abi_secure_getenv PRIVATE
+  kinakaze_abi_seed48
+  "seed48"=kinakaze_abi_seed48 PRIVATE
+  kinakaze_abi_seed48_r
+  "seed48_r"=kinakaze_abi_seed48_r PRIVATE
+  kinakaze_abi_seekdir
+  "seekdir"=kinakaze_abi_seekdir PRIVATE
+  "seekdir@GLIBC_2.2.5"=kinakaze_abi_seekdir PRIVATE
+  kinakaze_abi_select
+  "select"=kinakaze_abi_select PRIVATE
+  "select@GLIBC_2.2.5"=kinakaze_abi_select PRIVATE
+  kinakaze_abi_sem_clockwait
+  "sem_clockwait"=kinakaze_abi_sem_clockwait PRIVATE
+  "sem_clockwait@GLIBC_2.34"=kinakaze_abi_sem_clockwait PRIVATE
+  kinakaze_abi_sem_close
+  "sem_close"=kinakaze_abi_sem_close PRIVATE
+  "sem_close@GLIBC_2.34"=kinakaze_abi_sem_close PRIVATE
+  kinakaze_abi_sem_destroy
+  "sem_destroy"=kinakaze_abi_sem_destroy PRIVATE
+  "sem_destroy@GLIBC_2.34"=kinakaze_abi_sem_destroy PRIVATE
+  kinakaze_abi_sem_getvalue
+  "sem_getvalue"=kinakaze_abi_sem_getvalue PRIVATE
+  "sem_getvalue@GLIBC_2.34"=kinakaze_abi_sem_getvalue PRIVATE
+  kinakaze_abi_sem_init
+  "sem_init"=kinakaze_abi_sem_init PRIVATE
+  "sem_init@GLIBC_2.34"=kinakaze_abi_sem_init PRIVATE
+  kinakaze_abi_sem_open
+  "sem_open"=kinakaze_abi_sem_open PRIVATE
+  "sem_open@GLIBC_2.34"=kinakaze_abi_sem_open PRIVATE
+  kinakaze_abi_sem_post
+  "sem_post"=kinakaze_abi_sem_post PRIVATE
+  "sem_post@GLIBC_2.34"=kinakaze_abi_sem_post PRIVATE
+  kinakaze_abi_sem_timedwait
+  "sem_timedwait"=kinakaze_abi_sem_timedwait PRIVATE
+  "sem_timedwait@GLIBC_2.34"=kinakaze_abi_sem_timedwait PRIVATE
+  kinakaze_abi_sem_trywait
+  "sem_trywait"=kinakaze_abi_sem_trywait PRIVATE
+  "sem_trywait@GLIBC_2.34"=kinakaze_abi_sem_trywait PRIVATE
+  kinakaze_abi_sem_unlink
+  "sem_unlink"=kinakaze_abi_sem_unlink PRIVATE
+  "sem_unlink@GLIBC_2.34"=kinakaze_abi_sem_unlink PRIVATE
+  kinakaze_abi_sem_wait
+  "sem_wait"=kinakaze_abi_sem_wait PRIVATE
+  "sem_wait@GLIBC_2.34"=kinakaze_abi_sem_wait PRIVATE
+  kinakaze_abi_semctl
+  "semctl"=kinakaze_abi_semctl PRIVATE
+  "semctl@GLIBC_2.2.5"=kinakaze_abi_semctl PRIVATE
+  kinakaze_abi_semget
+  "semget"=kinakaze_abi_semget PRIVATE
+  "semget@GLIBC_2.2.5"=kinakaze_abi_semget PRIVATE
+  kinakaze_abi_semop
+  "semop"=kinakaze_abi_semop PRIVATE
+  "semop@GLIBC_2.2.5"=kinakaze_abi_semop PRIVATE
+  kinakaze_abi_send
+  "send"=kinakaze_abi_send PRIVATE
+  "send@GLIBC_2.2.5"=kinakaze_abi_send PRIVATE
+  kinakaze_abi_sendfile
+  "sendfile"=kinakaze_abi_sendfile PRIVATE
+  "sendfile@GLIBC_2.2.5"=kinakaze_abi_sendfile PRIVATE
+  kinakaze_abi_sendfile64
+  "sendfile64"=kinakaze_abi_sendfile64 PRIVATE
+  "sendfile64@GLIBC_2.3"=kinakaze_abi_sendfile64 PRIVATE
+  kinakaze_abi_sendmmsg
+  "sendmmsg"=kinakaze_abi_sendmmsg PRIVATE
+  "sendmmsg@GLIBC_2.14"=kinakaze_abi_sendmmsg PRIVATE
+  kinakaze_abi_sendmsg
+  "sendmsg"=kinakaze_abi_sendmsg PRIVATE
+  "sendmsg@GLIBC_2.2.5"=kinakaze_abi_sendmsg PRIVATE
+  kinakaze_abi_sendto
+  "sendto"=kinakaze_abi_sendto PRIVATE
+  "sendto@GLIBC_2.2.5"=kinakaze_abi_sendto PRIVATE
+  kinakaze_abi_setbuf
+  "setbuf"=kinakaze_abi_setbuf PRIVATE
+  "setbuf@GLIBC_2.2.5"=kinakaze_abi_setbuf PRIVATE
+  kinakaze_abi_setbuffer
+  "setbuffer"=kinakaze_abi_setbuffer PRIVATE
+  "setbuffer@GLIBC_2.2.5"=kinakaze_abi_setbuffer PRIVATE
+  kinakaze_abi_setcontext
+  "setcontext"=kinakaze_abi_setcontext PRIVATE
+  "setcontext@GLIBC_2.2.5"=kinakaze_abi_setcontext PRIVATE
+  kinakaze_abi_setdomainname
+  "setdomainname"=kinakaze_abi_setdomainname PRIVATE
+  kinakaze_abi_setegid
+  "setegid"=kinakaze_abi_setegid PRIVATE
+  "setegid@GLIBC_2.2.5"=kinakaze_abi_setegid PRIVATE
+  kinakaze_abi_setenv
+  "setenv"=kinakaze_abi_setenv PRIVATE
+  "setenv@GLIBC_2.2.5"=kinakaze_abi_setenv PRIVATE
+  kinakaze_abi_seteuid
+  "seteuid"=kinakaze_abi_seteuid PRIVATE
+  "seteuid@GLIBC_2.2.5"=kinakaze_abi_seteuid PRIVATE
+  kinakaze_abi_setfsgid
+  "setfsgid"=kinakaze_abi_setfsgid PRIVATE
+  "setfsgid@GLIBC_2.2.5"=kinakaze_abi_setfsgid PRIVATE
+  kinakaze_abi_setfsuid
+  "setfsuid"=kinakaze_abi_setfsuid PRIVATE
+  "setfsuid@GLIBC_2.2.5"=kinakaze_abi_setfsuid PRIVATE
+  kinakaze_abi_setgid
+  "setgid"=kinakaze_abi_setgid PRIVATE
+  "setgid@GLIBC_2.2.5"=kinakaze_abi_setgid PRIVATE
+  kinakaze_abi_setgrent
+  "setgrent"=kinakaze_abi_setgrent PRIVATE
+  "setgrent@GLIBC_2.2.5"=kinakaze_abi_setgrent PRIVATE
+  kinakaze_abi_setgroups
+  "setgroups"=kinakaze_abi_setgroups PRIVATE
+  "setgroups@GLIBC_2.2.5"=kinakaze_abi_setgroups PRIVATE
+  kinakaze_abi_sethostname
+  "sethostname"=kinakaze_abi_sethostname PRIVATE
+  "sethostname@GLIBC_2.2.5"=kinakaze_abi_sethostname PRIVATE
+  kinakaze_abi_setitimer
+  "setitimer"=kinakaze_abi_setitimer PRIVATE
+  "setitimer@GLIBC_2.2.5"=kinakaze_abi_setitimer PRIVATE
+  kinakaze_abi_setjmp
+  "setjmp"=kinakaze_abi_setjmp PRIVATE
+  kinakaze_abi_setlinebuf
+  "setlinebuf"=kinakaze_abi_setlinebuf PRIVATE
+  "setlinebuf@GLIBC_2.2.5"=kinakaze_abi_setlinebuf PRIVATE
+  kinakaze_abi_setlocale
+  "setlocale"=kinakaze_abi_setlocale PRIVATE
+  "setlocale@GLIBC_2.2.5"=kinakaze_abi_setlocale PRIVATE
+  kinakaze_abi_setlogmask
+  "setlogmask"=kinakaze_abi_setlogmask PRIVATE
+  "setlogmask@GLIBC_2.2.5"=kinakaze_abi_setlogmask PRIVATE
+  kinakaze_abi_setmntent
+  "setmntent"=kinakaze_abi_setmntent PRIVATE
+  "setmntent@GLIBC_2.2.5"=kinakaze_abi_setmntent PRIVATE
+  kinakaze_abi_setnetent
+  "setnetent"=kinakaze_abi_setnetent PRIVATE
+  "setnetent@GLIBC_2.2.5"=kinakaze_abi_setnetent PRIVATE
+  kinakaze_abi_setnetgrent
+  "setnetgrent"=kinakaze_abi_setnetgrent PRIVATE
+  "setnetgrent@GLIBC_2.2.5"=kinakaze_abi_setnetgrent PRIVATE
+  kinakaze_abi_setns
+  "setns"=kinakaze_abi_setns PRIVATE
+  "setns@GLIBC_2.14"=kinakaze_abi_setns PRIVATE
+  kinakaze_abi_setpgid
+  "setpgid"=kinakaze_abi_setpgid PRIVATE
+  "setpgid@GLIBC_2.2.5"=kinakaze_abi_setpgid PRIVATE
+  kinakaze_abi_setpgrp
+  "setpgrp"=kinakaze_abi_setpgrp PRIVATE
+  "setpgrp@GLIBC_2.2.5"=kinakaze_abi_setpgrp PRIVATE
+  kinakaze_abi_setpriority
+  "setpriority"=kinakaze_abi_setpriority PRIVATE
+  "setpriority@GLIBC_2.2.5"=kinakaze_abi_setpriority PRIVATE
+  kinakaze_abi_setpwent
+  "setpwent"=kinakaze_abi_setpwent PRIVATE
+  "setpwent@GLIBC_2.2.5"=kinakaze_abi_setpwent PRIVATE
+  kinakaze_abi_setregid
+  "setregid"=kinakaze_abi_setregid PRIVATE
+  "setregid@GLIBC_2.2.5"=kinakaze_abi_setregid PRIVATE
+  kinakaze_abi_setresgid
+  "setresgid"=kinakaze_abi_setresgid PRIVATE
+  "setresgid@GLIBC_2.2.5"=kinakaze_abi_setresgid PRIVATE
+  kinakaze_abi_setresuid
+  "setresuid"=kinakaze_abi_setresuid PRIVATE
+  "setresuid@GLIBC_2.2.5"=kinakaze_abi_setresuid PRIVATE
+  kinakaze_abi_setreuid
+  "setreuid"=kinakaze_abi_setreuid PRIVATE
+  "setreuid@GLIBC_2.2.5"=kinakaze_abi_setreuid PRIVATE
+  kinakaze_abi_setrlimit
+  "setrlimit"=kinakaze_abi_setrlimit PRIVATE
+  "setrlimit@GLIBC_2.2.5"=kinakaze_abi_setrlimit PRIVATE
+  kinakaze_abi_setrlimit64
+  "setrlimit64"=kinakaze_abi_setrlimit64 PRIVATE
+  "setrlimit64@GLIBC_2.2.5"=kinakaze_abi_setrlimit64 PRIVATE
+  kinakaze_abi_setservent
+  "setservent"=kinakaze_abi_setservent PRIVATE
+  "setservent@GLIBC_2.2.5"=kinakaze_abi_setservent PRIVATE
+  kinakaze_abi_setsid
+  "setsid"=kinakaze_abi_setsid PRIVATE
+  "setsid@GLIBC_2.2.5"=kinakaze_abi_setsid PRIVATE
+  kinakaze_abi_setsockopt
+  "setsockopt"=kinakaze_abi_setsockopt PRIVATE
+  "setsockopt@GLIBC_2.2.5"=kinakaze_abi_setsockopt PRIVATE
+  kinakaze_abi_setspent
+  "setspent"=kinakaze_abi_setspent PRIVATE
+  "setspent@GLIBC_2.2.5"=kinakaze_abi_setspent PRIVATE
+  kinakaze_abi_setstate_r
+  "setstate_r"=kinakaze_abi_setstate_r PRIVATE
+  kinakaze_abi_settimeofday
+  "settimeofday"=kinakaze_abi_settimeofday PRIVATE
+  "settimeofday@GLIBC_2.2.5"=kinakaze_abi_settimeofday PRIVATE
+  kinakaze_abi_setuid
+  "setuid"=kinakaze_abi_setuid PRIVATE
+  "setuid@GLIBC_2.2.5"=kinakaze_abi_setuid PRIVATE
+  kinakaze_abi_setusershell
+  "setusershell"=kinakaze_abi_setusershell PRIVATE
+  "setusershell@GLIBC_2.2.5"=kinakaze_abi_setusershell PRIVATE
+  kinakaze_abi_setutent
+  "setutent"=kinakaze_abi_setutent PRIVATE
+  "setutent@GLIBC_2.2.5"=kinakaze_abi_setutent PRIVATE
+  kinakaze_abi_setutxent
+  "setutxent"=kinakaze_abi_setutxent PRIVATE
+  "setutxent@GLIBC_2.2.5"=kinakaze_abi_setutxent PRIVATE
+  kinakaze_abi_setvbuf
+  "setvbuf"=kinakaze_abi_setvbuf PRIVATE
+  "setvbuf@GLIBC_2.2.5"=kinakaze_abi_setvbuf PRIVATE
+  kinakaze_abi_setxattr
+  "setxattr"=kinakaze_abi_setxattr PRIVATE
+  "setxattr@GLIBC_2.3"=kinakaze_abi_setxattr PRIVATE
+  kinakaze_abi_sgetspent
+  "sgetspent"=kinakaze_abi_sgetspent PRIVATE
+  "sgetspent@GLIBC_2.2.5"=kinakaze_abi_sgetspent PRIVATE
+  kinakaze_abi_shm_open
+  "shm_open"=kinakaze_abi_shm_open PRIVATE
+  "shm_open@GLIBC_2.34"=kinakaze_abi_shm_open PRIVATE
+  kinakaze_abi_shm_unlink
+  "shm_unlink"=kinakaze_abi_shm_unlink PRIVATE
+  "shm_unlink@GLIBC_2.34"=kinakaze_abi_shm_unlink PRIVATE
+  kinakaze_abi_shmat
+  "shmat"=kinakaze_abi_shmat PRIVATE
+  "shmat@GLIBC_2.2.5"=kinakaze_abi_shmat PRIVATE
+  kinakaze_abi_shmctl
+  "shmctl"=kinakaze_abi_shmctl PRIVATE
+  "shmctl@GLIBC_2.2.5"=kinakaze_abi_shmctl PRIVATE
+  kinakaze_abi_shmdt
+  "shmdt"=kinakaze_abi_shmdt PRIVATE
+  "shmdt@GLIBC_2.2.5"=kinakaze_abi_shmdt PRIVATE
+  kinakaze_abi_shmget
+  "shmget"=kinakaze_abi_shmget PRIVATE
+  "shmget@GLIBC_2.2.5"=kinakaze_abi_shmget PRIVATE
+  kinakaze_abi_shutdown
+  "shutdown"=kinakaze_abi_shutdown PRIVATE
+  "shutdown@GLIBC_2.2.5"=kinakaze_abi_shutdown PRIVATE
+  kinakaze_abi_sigabbrev_np
+  "sigabbrev_np"=kinakaze_abi_sigabbrev_np PRIVATE
+  "sigabbrev_np@GLIBC_2.32"=kinakaze_abi_sigabbrev_np PRIVATE
+  kinakaze_abi_sigaction
+  "sigaction"=kinakaze_abi_sigaction PRIVATE
+  "sigaction@GLIBC_2.2.5"=kinakaze_abi_sigaction PRIVATE
+  kinakaze_abi_sigaddset
+  "sigaddset"=kinakaze_abi_sigaddset PRIVATE
+  "sigaddset@GLIBC_2.2.5"=kinakaze_abi_sigaddset PRIVATE
+  kinakaze_abi_sigaltstack
+  "sigaltstack"=kinakaze_abi_sigaltstack PRIVATE
+  "sigaltstack@GLIBC_2.2.5"=kinakaze_abi_sigaltstack PRIVATE
+  kinakaze_abi_sigblock
+  "sigblock"=kinakaze_abi_sigblock PRIVATE
+  kinakaze_abi_sigdelset
+  "sigdelset"=kinakaze_abi_sigdelset PRIVATE
+  "sigdelset@GLIBC_2.2.5"=kinakaze_abi_sigdelset PRIVATE
+  kinakaze_abi_sigdescr_np
+  "sigdescr_np"=kinakaze_abi_sigdescr_np PRIVATE
+  "sigdescr_np@GLIBC_2.32"=kinakaze_abi_sigdescr_np PRIVATE
+  kinakaze_abi_sigemptyset
+  "sigemptyset"=kinakaze_abi_sigemptyset PRIVATE
+  "sigemptyset@GLIBC_2.2.5"=kinakaze_abi_sigemptyset PRIVATE
+  kinakaze_abi_sigfillset
+  "sigfillset"=kinakaze_abi_sigfillset PRIVATE
+  "sigfillset@GLIBC_2.2.5"=kinakaze_abi_sigfillset PRIVATE
+  kinakaze_abi_siggetmask
+  "siggetmask"=kinakaze_abi_siggetmask PRIVATE
+  kinakaze_abi_sigisemptyset
+  "sigisemptyset"=kinakaze_abi_sigisemptyset PRIVATE
+  "sigisemptyset@GLIBC_2.2.5"=kinakaze_abi_sigisemptyset PRIVATE
+  kinakaze_abi_sigismember
+  "sigismember"=kinakaze_abi_sigismember PRIVATE
+  "sigismember@GLIBC_2.2.5"=kinakaze_abi_sigismember PRIVATE
+  kinakaze_abi_siglongjmp
+  "siglongjmp"=kinakaze_abi_siglongjmp PRIVATE
+  "siglongjmp@GLIBC_2.2.5"=kinakaze_abi_siglongjmp PRIVATE
+  kinakaze_abi_signal
+  "signal"=kinakaze_abi_signal PRIVATE
+  "signal@GLIBC_2.2.5"=kinakaze_abi_signal PRIVATE
+  kinakaze_abi_signalfd
+  "signalfd"=kinakaze_abi_signalfd PRIVATE
+  "signalfd@GLIBC_2.7"=kinakaze_abi_signalfd PRIVATE
+  kinakaze_abi_signalfd4
+  "signalfd4"=kinakaze_abi_signalfd4 PRIVATE
+  kinakaze_abi_sigpending
+  "sigpending"=kinakaze_abi_sigpending PRIVATE
+  "sigpending@GLIBC_2.2.5"=kinakaze_abi_sigpending PRIVATE
+  kinakaze_abi_sigprocmask
+  "sigprocmask"=kinakaze_abi_sigprocmask PRIVATE
+  "sigprocmask@GLIBC_2.2.5"=kinakaze_abi_sigprocmask PRIVATE
+  kinakaze_abi_sigset
+  "sigset"=kinakaze_abi_sigset PRIVATE
+  "sigset@GLIBC_2.2.5"=kinakaze_abi_sigset PRIVATE
+  kinakaze_abi_sigsetmask
+  "sigsetmask"=kinakaze_abi_sigsetmask PRIVATE
+  kinakaze_abi_sigsuspend
+  "sigsuspend"=kinakaze_abi_sigsuspend PRIVATE
+  "sigsuspend@GLIBC_2.2.5"=kinakaze_abi_sigsuspend PRIVATE
+  kinakaze_abi_sigtimedwait
+  "sigtimedwait"=kinakaze_abi_sigtimedwait PRIVATE
+  "sigtimedwait@GLIBC_2.2.5"=kinakaze_abi_sigtimedwait PRIVATE
+  kinakaze_abi_sigwait
+  "sigwait"=kinakaze_abi_sigwait PRIVATE
+  "sigwait@GLIBC_2.2.5"=kinakaze_abi_sigwait PRIVATE
+  kinakaze_abi_sigwaitinfo
+  "sigwaitinfo"=kinakaze_abi_sigwaitinfo PRIVATE
+  "sigwaitinfo@GLIBC_2.2.5"=kinakaze_abi_sigwaitinfo PRIVATE
+  kinakaze_abi_sleep
+  "sleep"=kinakaze_abi_sleep PRIVATE
+  "sleep@GLIBC_2.2.5"=kinakaze_abi_sleep PRIVATE
+  kinakaze_abi_snprintf
+  "snprintf"=kinakaze_abi_snprintf PRIVATE
+  "snprintf@GLIBC_2.2.5"=kinakaze_abi_snprintf PRIVATE
+  kinakaze_abi_socket
+  "socket"=kinakaze_abi_socket PRIVATE
+  "socket@GLIBC_2.2.5"=kinakaze_abi_socket PRIVATE
+  kinakaze_abi_socketpair
+  "socketpair"=kinakaze_abi_socketpair PRIVATE
+  "socketpair@GLIBC_2.2.5"=kinakaze_abi_socketpair PRIVATE
+  kinakaze_abi_splice
+  "splice"=kinakaze_abi_splice PRIVATE
+  "splice@GLIBC_2.5"=kinakaze_abi_splice PRIVATE
+  kinakaze_abi_sprintf
+  "sprintf"=kinakaze_abi_sprintf PRIVATE
+  "sprintf@GLIBC_2.2.5"=kinakaze_abi_sprintf PRIVATE
+  kinakaze_abi_srand
+  "srand"=kinakaze_abi_srand PRIVATE
+  "srand@GLIBC_2.2.5"=kinakaze_abi_srand PRIVATE
+  kinakaze_abi_srand48
+  "srand48"=kinakaze_abi_srand48 PRIVATE
+  kinakaze_abi_srand48_r
+  "srand48_r"=kinakaze_abi_srand48_r PRIVATE
+  kinakaze_abi_srandom
+  "srandom"=kinakaze_abi_srandom PRIVATE
+  "srandom@GLIBC_2.2.5"=kinakaze_abi_srandom PRIVATE
+  kinakaze_abi_srandom_r
+  "srandom_r"=kinakaze_abi_srandom_r PRIVATE
+  kinakaze_abi_sscanf
+  "sscanf"=kinakaze_abi_sscanf PRIVATE
+  "sscanf@GLIBC_2.2.5"=kinakaze_abi_sscanf PRIVATE
+  kinakaze_abi_stat
+  "stat"=kinakaze_abi_stat PRIVATE
+  "stat@GLIBC_2.33"=kinakaze_abi_stat PRIVATE
+  kinakaze_abi_stat64
+  "stat64"=kinakaze_abi_stat64 PRIVATE
+  "stat64@GLIBC_2.33"=kinakaze_abi_stat64 PRIVATE
+  kinakaze_abi_statfs
+  "statfs"=kinakaze_abi_statfs PRIVATE
+  "statfs@GLIBC_2.2.5"=kinakaze_abi_statfs PRIVATE
+  kinakaze_abi_statfs64
+  "statfs64"=kinakaze_abi_statfs64 PRIVATE
+  "statfs64@GLIBC_2.2.5"=kinakaze_abi_statfs64 PRIVATE
+  kinakaze_abi_statmount
+  "statmount"=kinakaze_abi_statmount PRIVATE
+  kinakaze_abi_statvfs
+  "statvfs"=kinakaze_abi_statvfs PRIVATE
+  "statvfs@GLIBC_2.2.5"=kinakaze_abi_statvfs PRIVATE
+  kinakaze_abi_statvfs64
+  "statvfs64"=kinakaze_abi_statvfs64 PRIVATE
+  "statvfs64@GLIBC_2.2.5"=kinakaze_abi_statvfs64 PRIVATE
+  kinakaze_abi_statx
+  "statx"=kinakaze_abi_statx PRIVATE
+  "statx@GLIBC_2.28"=kinakaze_abi_statx PRIVATE
+  kinakaze_abi_stderr DATA
+  "stderr"=kinakaze_abi_stderr DATA PRIVATE
+  "stderr@GLIBC_2.2.5"=kinakaze_abi_stderr DATA PRIVATE
+  kinakaze_abi_stdin DATA
+  "stdin"=kinakaze_abi_stdin DATA PRIVATE
+  "stdin@GLIBC_2.2.5"=kinakaze_abi_stdin DATA PRIVATE
+  kinakaze_abi_stdout DATA
+  "stdout"=kinakaze_abi_stdout DATA PRIVATE
+  "stdout@GLIBC_2.2.5"=kinakaze_abi_stdout DATA PRIVATE
+  kinakaze_abi_stpcpy
+  "stpcpy"=kinakaze_abi_stpcpy PRIVATE
+  "stpcpy@GLIBC_2.2.5"=kinakaze_abi_stpcpy PRIVATE
+  kinakaze_abi_stpncpy
+  "stpncpy"=kinakaze_abi_stpncpy PRIVATE
+  "stpncpy@GLIBC_2.2.5"=kinakaze_abi_stpncpy PRIVATE
+  kinakaze_abi_strcasecmp
+  "strcasecmp"=kinakaze_abi_strcasecmp PRIVATE
+  "strcasecmp@GLIBC_2.2.5"=kinakaze_abi_strcasecmp PRIVATE
+  kinakaze_abi_strcasestr
+  "strcasestr"=kinakaze_abi_strcasestr PRIVATE
+  "strcasestr@GLIBC_2.2.5"=kinakaze_abi_strcasestr PRIVATE
+  kinakaze_abi_strcat
+  "strcat"=kinakaze_abi_strcat PRIVATE
+  "strcat@GLIBC_2.2.5"=kinakaze_abi_strcat PRIVATE
+  kinakaze_abi_strchr
+  "strchr"=kinakaze_abi_strchr PRIVATE
+  "strchr@GLIBC_2.2.5"=kinakaze_abi_strchr PRIVATE
+  kinakaze_abi_strchrnul
+  "strchrnul"=kinakaze_abi_strchrnul PRIVATE
+  "strchrnul@GLIBC_2.2.5"=kinakaze_abi_strchrnul PRIVATE
+  kinakaze_abi_strcmp
+  "strcmp"=kinakaze_abi_strcmp PRIVATE
+  "strcmp@GLIBC_2.2.5"=kinakaze_abi_strcmp PRIVATE
+  kinakaze_abi_strcoll
+  "strcoll"=kinakaze_abi_strcoll PRIVATE
+  "strcoll@GLIBC_2.2.5"=kinakaze_abi_strcoll PRIVATE
+  kinakaze_abi_strcoll_l
+  "strcoll_l"=kinakaze_abi_strcoll_l PRIVATE
+  "strcoll_l@GLIBC_2.3"=kinakaze_abi_strcoll_l PRIVATE
+  kinakaze_abi_strcpy
+  "strcpy"=kinakaze_abi_strcpy PRIVATE
+  "strcpy@GLIBC_2.2.5"=kinakaze_abi_strcpy PRIVATE
+  kinakaze_abi_strcspn
+  "strcspn"=kinakaze_abi_strcspn PRIVATE
+  "strcspn@GLIBC_2.2.5"=kinakaze_abi_strcspn PRIVATE
+  kinakaze_abi_strdup
+  "strdup"=kinakaze_abi_strdup PRIVATE
+  "strdup@GLIBC_2.2.5"=kinakaze_abi_strdup PRIVATE
+  kinakaze_abi_strerror
+  "strerror"=kinakaze_abi_strerror PRIVATE
+  "strerror@GLIBC_2.2.5"=kinakaze_abi_strerror PRIVATE
+  kinakaze_abi_strerror_l
+  "strerror_l"=kinakaze_abi_strerror_l PRIVATE
+  "strerror_l@GLIBC_2.6"=kinakaze_abi_strerror_l PRIVATE
+  kinakaze_abi_strerror_r
+  "strerror_r"=kinakaze_abi_strerror_r PRIVATE
+  "strerror_r@GLIBC_2.2.5"=kinakaze_abi_strerror_r PRIVATE
+  kinakaze_abi_strerrordesc_np
+  "strerrordesc_np"=kinakaze_abi_strerrordesc_np PRIVATE
+  "strerrordesc_np@GLIBC_2.32"=kinakaze_abi_strerrordesc_np PRIVATE
+  kinakaze_abi_strfromf128
+  "strfromf128"=kinakaze_abi_strfromf128 PRIVATE
+  "strfromf128@GLIBC_2.26"=kinakaze_abi_strfromf128 PRIVATE
+  kinakaze_abi_strftime
+  "strftime"=kinakaze_abi_strftime PRIVATE
+  "strftime@GLIBC_2.2.5"=kinakaze_abi_strftime PRIVATE
+  kinakaze_abi___strftime_l
+  "strftime_l"=kinakaze_abi___strftime_l PRIVATE
+  "strftime_l@GLIBC_2.3"=kinakaze_abi___strftime_l PRIVATE
+  kinakaze_abi_strlcat
+  "strlcat"=kinakaze_abi_strlcat PRIVATE
+  "strlcat@GLIBC_2.38"=kinakaze_abi_strlcat PRIVATE
+  kinakaze_abi_strlcpy
+  "strlcpy"=kinakaze_abi_strlcpy PRIVATE
+  "strlcpy@GLIBC_2.38"=kinakaze_abi_strlcpy PRIVATE
+  kinakaze_abi_strlen
+  "strlen"=kinakaze_abi_strlen PRIVATE
+  "strlen@GLIBC_2.2.5"=kinakaze_abi_strlen PRIVATE
+  kinakaze_abi_strncasecmp
+  "strncasecmp"=kinakaze_abi_strncasecmp PRIVATE
+  "strncasecmp@GLIBC_2.2.5"=kinakaze_abi_strncasecmp PRIVATE
+  kinakaze_abi_strncat
+  "strncat"=kinakaze_abi_strncat PRIVATE
+  "strncat@GLIBC_2.2.5"=kinakaze_abi_strncat PRIVATE
+  kinakaze_abi_strncmp
+  "strncmp"=kinakaze_abi_strncmp PRIVATE
+  "strncmp@GLIBC_2.2.5"=kinakaze_abi_strncmp PRIVATE
+  kinakaze_abi_strncpy
+  "strncpy"=kinakaze_abi_strncpy PRIVATE
+  "strncpy@GLIBC_2.2.5"=kinakaze_abi_strncpy PRIVATE
+  kinakaze_abi_strndup
+  "strndup"=kinakaze_abi_strndup PRIVATE
+  "strndup@GLIBC_2.2.5"=kinakaze_abi_strndup PRIVATE
+  kinakaze_abi_strnlen
+  "strnlen"=kinakaze_abi_strnlen PRIVATE
+  "strnlen@GLIBC_2.2.5"=kinakaze_abi_strnlen PRIVATE
+  kinakaze_abi_strpbrk
+  "strpbrk"=kinakaze_abi_strpbrk PRIVATE
+  "strpbrk@GLIBC_2.2.5"=kinakaze_abi_strpbrk PRIVATE
+  kinakaze_abi_strptime
+  "strptime"=kinakaze_abi_strptime PRIVATE
+  "strptime@GLIBC_2.2.5"=kinakaze_abi_strptime PRIVATE
+  kinakaze_abi_strrchr
+  "strrchr"=kinakaze_abi_strrchr PRIVATE
+  "strrchr@GLIBC_2.2.5"=kinakaze_abi_strrchr PRIVATE
+  kinakaze_abi_strsep
+  "strsep"=kinakaze_abi_strsep PRIVATE
+  "strsep@GLIBC_2.2.5"=kinakaze_abi_strsep PRIVATE
+  kinakaze_abi_strsignal
+  "strsignal"=kinakaze_abi_strsignal PRIVATE
+  "strsignal@GLIBC_2.2.5"=kinakaze_abi_strsignal PRIVATE
+  kinakaze_abi_strspn
+  "strspn"=kinakaze_abi_strspn PRIVATE
+  "strspn@GLIBC_2.2.5"=kinakaze_abi_strspn PRIVATE
+  kinakaze_abi_strstr
+  "strstr"=kinakaze_abi_strstr PRIVATE
+  "strstr@GLIBC_2.2.5"=kinakaze_abi_strstr PRIVATE
+  kinakaze_abi_strtod
+  "strtod"=kinakaze_abi_strtod PRIVATE
+  "strtod@GLIBC_2.2.5"=kinakaze_abi_strtod PRIVATE
+  kinakaze_abi___strtod_l
+  "strtod_l"=kinakaze_abi___strtod_l PRIVATE
+  "strtod_l@GLIBC_2.3"=kinakaze_abi___strtod_l PRIVATE
+  kinakaze_abi_strtof
+  "strtof"=kinakaze_abi_strtof PRIVATE
+  "strtof@GLIBC_2.2.5"=kinakaze_abi_strtof PRIVATE
+  kinakaze_abi_strtof128
+  "strtof128"=kinakaze_abi_strtof128 PRIVATE
+  "strtof128@GLIBC_2.26"=kinakaze_abi_strtof128 PRIVATE
+  kinakaze_abi___strtof_l
+  "strtof_l"=kinakaze_abi___strtof_l PRIVATE
+  "strtof_l@GLIBC_2.3"=kinakaze_abi___strtof_l PRIVATE
+  kinakaze_abi_strtoimax
+  "strtoimax"=kinakaze_abi_strtoimax PRIVATE
+  "strtoimax@GLIBC_2.2.5"=kinakaze_abi_strtoimax PRIVATE
+  kinakaze_abi_strtok
+  "strtok"=kinakaze_abi_strtok PRIVATE
+  "strtok@GLIBC_2.2.5"=kinakaze_abi_strtok PRIVATE
+  kinakaze_abi_strtok_r
+  "strtok_r"=kinakaze_abi_strtok_r PRIVATE
+  "strtok_r@GLIBC_2.2.5"=kinakaze_abi_strtok_r PRIVATE
+  kinakaze_abi_strtol
+  "strtol"=kinakaze_abi_strtol PRIVATE
+  "strtol@GLIBC_2.2.5"=kinakaze_abi_strtol PRIVATE
+  kinakaze_abi_strtold
+  "strtold"=kinakaze_abi_strtold PRIVATE
+  "strtold@GLIBC_2.2.5"=kinakaze_abi_strtold PRIVATE
+  kinakaze_abi_strtold_l
+  "strtold_l"=kinakaze_abi_strtold_l PRIVATE
+  "strtold_l@GLIBC_2.3"=kinakaze_abi_strtold_l PRIVATE
+  kinakaze_abi_strtoll
+  "strtoll"=kinakaze_abi_strtoll PRIVATE
+  "strtoll@GLIBC_2.2.5"=kinakaze_abi_strtoll PRIVATE
+  kinakaze_abi_strtoll_l
+  "strtoll_l"=kinakaze_abi_strtoll_l PRIVATE
+  "strtoll_l@GLIBC_2.3.3"=kinakaze_abi_strtoll_l PRIVATE
+  kinakaze_abi_strtoul
+  "strtoul"=kinakaze_abi_strtoul PRIVATE
+  "strtoul@GLIBC_2.2.5"=kinakaze_abi_strtoul PRIVATE
+  kinakaze_abi_strtoull
+  "strtoull"=kinakaze_abi_strtoull PRIVATE
+  "strtoull@GLIBC_2.2.5"=kinakaze_abi_strtoull PRIVATE
+  kinakaze_abi_strtoull_l
+  "strtoull_l"=kinakaze_abi_strtoull_l PRIVATE
+  "strtoull_l@GLIBC_2.3.3"=kinakaze_abi_strtoull_l PRIVATE
+  kinakaze_abi_strtoumax
+  "strtoumax"=kinakaze_abi_strtoumax PRIVATE
+  "strtoumax@GLIBC_2.2.5"=kinakaze_abi_strtoumax PRIVATE
+  kinakaze_abi_strverscmp
+  "strverscmp"=kinakaze_abi_strverscmp PRIVATE
+  "strverscmp@GLIBC_2.2.5"=kinakaze_abi_strverscmp PRIVATE
+  kinakaze_abi_strxfrm
+  "strxfrm"=kinakaze_abi_strxfrm PRIVATE
+  "strxfrm@GLIBC_2.2.5"=kinakaze_abi_strxfrm PRIVATE
+  kinakaze_abi_strxfrm_l
+  "strxfrm_l"=kinakaze_abi_strxfrm_l PRIVATE
+  "strxfrm_l@GLIBC_2.3"=kinakaze_abi_strxfrm_l PRIVATE
+  kinakaze_abi_swab
+  "swab"=kinakaze_abi_swab PRIVATE
+  "swab@GLIBC_2.2.5"=kinakaze_abi_swab PRIVATE
+  kinakaze_abi_swapcontext
+  "swapcontext"=kinakaze_abi_swapcontext PRIVATE
+  "swapcontext@GLIBC_2.2.5"=kinakaze_abi_swapcontext PRIVATE
+  kinakaze_abi_swapoff
+  "swapoff"=kinakaze_abi_swapoff PRIVATE
+  "swapoff@GLIBC_2.2.5"=kinakaze_abi_swapoff PRIVATE
+  kinakaze_abi_swapon
+  "swapon"=kinakaze_abi_swapon PRIVATE
+  "swapon@GLIBC_2.2.5"=kinakaze_abi_swapon PRIVATE
+  kinakaze_abi_swprintf
+  "swprintf"=kinakaze_abi_swprintf PRIVATE
+  "swprintf@GLIBC_2.2.5"=kinakaze_abi_swprintf PRIVATE
+  kinakaze_abi_symlink
+  "symlink"=kinakaze_abi_symlink PRIVATE
+  "symlink@GLIBC_2.2.5"=kinakaze_abi_symlink PRIVATE
+  kinakaze_abi_symlinkat
+  "symlinkat"=kinakaze_abi_symlinkat PRIVATE
+  "symlinkat@GLIBC_2.4"=kinakaze_abi_symlinkat PRIVATE
+  kinakaze_abi_sync
+  "sync"=kinakaze_abi_sync PRIVATE
+  "sync@GLIBC_2.2.5"=kinakaze_abi_sync PRIVATE
+  kinakaze_abi_sync_file_range
+  "sync_file_range"=kinakaze_abi_sync_file_range PRIVATE
+  "sync_file_range@GLIBC_2.6"=kinakaze_abi_sync_file_range PRIVATE
+  kinakaze_abi_syncfs
+  "syncfs"=kinakaze_abi_syncfs PRIVATE
+  "syncfs@GLIBC_2.14"=kinakaze_abi_syncfs PRIVATE
+  kinakaze_abi_syscall
+  "syscall"=kinakaze_abi_syscall PRIVATE
+  "syscall@GLIBC_2.2.5"=kinakaze_abi_syscall PRIVATE
+  kinakaze_abi_syscall_raw
+  "syscall_raw"=kinakaze_abi_syscall_raw PRIVATE
+  kinakaze_abi_sysconf
+  "sysconf"=kinakaze_abi_sysconf PRIVATE
+  "sysconf@GLIBC_2.2.5"=kinakaze_abi_sysconf PRIVATE
+  kinakaze_abi_sysinfo
+  "sysinfo"=kinakaze_abi_sysinfo PRIVATE
+  "sysinfo@GLIBC_2.2.5"=kinakaze_abi_sysinfo PRIVATE
+  kinakaze_abi_syslog
+  "syslog"=kinakaze_abi_syslog PRIVATE
+  "syslog@GLIBC_2.2.5"=kinakaze_abi_syslog PRIVATE
+  kinakaze_abi_system
+  "system"=kinakaze_abi_system PRIVATE
+  "system@GLIBC_2.2.5"=kinakaze_abi_system PRIVATE
+  kinakaze_abi_tcdrain
+  "tcdrain"=kinakaze_abi_tcdrain PRIVATE
+  "tcdrain@GLIBC_2.2.5"=kinakaze_abi_tcdrain PRIVATE
+  kinakaze_abi_tcflow
+  "tcflow"=kinakaze_abi_tcflow PRIVATE
+  "tcflow@GLIBC_2.2.5"=kinakaze_abi_tcflow PRIVATE
+  kinakaze_abi_tcflush
+  "tcflush"=kinakaze_abi_tcflush PRIVATE
+  "tcflush@GLIBC_2.2.5"=kinakaze_abi_tcflush PRIVATE
+  kinakaze_abi_tcgetattr
+  "tcgetattr"=kinakaze_abi_tcgetattr PRIVATE
+  "tcgetattr@GLIBC_2.2.5"=kinakaze_abi_tcgetattr PRIVATE
+  kinakaze_abi_tcgetpgrp
+  "tcgetpgrp"=kinakaze_abi_tcgetpgrp PRIVATE
+  "tcgetpgrp@GLIBC_2.2.5"=kinakaze_abi_tcgetpgrp PRIVATE
+  kinakaze_abi_tcgetsid
+  "tcgetsid"=kinakaze_abi_tcgetsid PRIVATE
+  "tcgetsid@GLIBC_2.2.5"=kinakaze_abi_tcgetsid PRIVATE
+  kinakaze_abi_tcsendbreak
+  "tcsendbreak"=kinakaze_abi_tcsendbreak PRIVATE
+  "tcsendbreak@GLIBC_2.2.5"=kinakaze_abi_tcsendbreak PRIVATE
+  kinakaze_abi_tcsetattr
+  "tcsetattr"=kinakaze_abi_tcsetattr PRIVATE
+  "tcsetattr@GLIBC_2.2.5"=kinakaze_abi_tcsetattr PRIVATE
+  kinakaze_abi_tcsetpgrp
+  "tcsetpgrp"=kinakaze_abi_tcsetpgrp PRIVATE
+  "tcsetpgrp@GLIBC_2.2.5"=kinakaze_abi_tcsetpgrp PRIVATE
+  kinakaze_abi_tdelete
+  "tdelete"=kinakaze_abi_tdelete PRIVATE
+  "tdelete@GLIBC_2.2.5"=kinakaze_abi_tdelete PRIVATE
+  kinakaze_abi_tdestroy
+  "tdestroy"=kinakaze_abi_tdestroy PRIVATE
+  "tdestroy@GLIBC_2.2.5"=kinakaze_abi_tdestroy PRIVATE
+  kinakaze_abi_telldir
+  "telldir"=kinakaze_abi_telldir PRIVATE
+  "telldir@GLIBC_2.2.5"=kinakaze_abi_telldir PRIVATE
+  kinakaze_abi_textdomain
+  "textdomain"=kinakaze_abi_textdomain PRIVATE
+  "textdomain@GLIBC_2.2.5"=kinakaze_abi_textdomain PRIVATE
+  kinakaze_abi_tfind
+  "tfind"=kinakaze_abi_tfind PRIVATE
+  "tfind@GLIBC_2.2.5"=kinakaze_abi_tfind PRIVATE
+  kinakaze_abi_thrd_exit
+  "thrd_exit"=kinakaze_abi_thrd_exit PRIVATE
+  "thrd_exit@GLIBC_2.34"=kinakaze_abi_thrd_exit PRIVATE
+  kinakaze_abi_time
+  "time"=kinakaze_abi_time PRIVATE
+  "time@GLIBC_2.2.5"=kinakaze_abi_time PRIVATE
+  kinakaze_abi_timegm
+  "timegm"=kinakaze_abi_timegm PRIVATE
+  "timegm@GLIBC_2.2.5"=kinakaze_abi_timegm PRIVATE
+  "timer_create"=librt.so.1.kinakaze_engine_librt_timer_create PRIVATE
+  "timer_create@GLIBC_2.34"=librt.so.1.kinakaze_engine_librt_timer_create PRIVATE
+  "timer_delete"=librt.so.1.kinakaze_engine_librt_timer_delete PRIVATE
+  "timer_delete@GLIBC_2.34"=librt.so.1.kinakaze_engine_librt_timer_delete PRIVATE
+  "timer_getoverrun"=librt.so.1.kinakaze_engine_librt_timer_getoverrun PRIVATE
+  "timer_gettime"=librt.so.1.kinakaze_engine_librt_timer_gettime PRIVATE
+  "timer_settime"=librt.so.1.kinakaze_engine_librt_timer_settime PRIVATE
+  "timer_settime@GLIBC_2.34"=librt.so.1.kinakaze_engine_librt_timer_settime PRIVATE
+  kinakaze_abi_timerfd_create
+  "timerfd_create"=kinakaze_abi_timerfd_create PRIVATE
+  "timerfd_create@GLIBC_2.8"=kinakaze_abi_timerfd_create PRIVATE
+  kinakaze_abi_timerfd_gettime
+  "timerfd_gettime"=kinakaze_abi_timerfd_gettime PRIVATE
+  kinakaze_abi_timerfd_settime
+  "timerfd_settime"=kinakaze_abi_timerfd_settime PRIVATE
+  "timerfd_settime@GLIBC_2.8"=kinakaze_abi_timerfd_settime PRIVATE
+  kinakaze_abi_times
+  "times"=kinakaze_abi_times PRIVATE
+  "times@GLIBC_2.2.5"=kinakaze_abi_times PRIVATE
+  kinakaze_abi_timespec_get
+  "timespec_get"=kinakaze_abi_timespec_get PRIVATE
+  "timespec_get@GLIBC_2.16"=kinakaze_abi_timespec_get PRIVATE
+  kinakaze_abi_timespec_getres
+  "timespec_getres"=kinakaze_abi_timespec_getres PRIVATE
+  kinakaze_abi_timezone DATA
+  "timezone"=kinakaze_abi_timezone DATA PRIVATE
+  "timezone@GLIBC_2.2.5"=kinakaze_abi_timezone DATA PRIVATE
+  kinakaze_abi_tmpfile
+  "tmpfile"=kinakaze_abi_tmpfile PRIVATE
+  "tmpfile@GLIBC_2.2.5"=kinakaze_abi_tmpfile PRIVATE
+  kinakaze_abi_tmpfile64
+  "tmpfile64"=kinakaze_abi_tmpfile64 PRIVATE
+  "tmpfile64@GLIBC_2.2.5"=kinakaze_abi_tmpfile64 PRIVATE
+  kinakaze_abi_toascii
+  "toascii"=kinakaze_abi_toascii PRIVATE
+  kinakaze_abi_tolower
+  "tolower"=kinakaze_abi_tolower PRIVATE
+  "tolower@GLIBC_2.2.5"=kinakaze_abi_tolower PRIVATE
+  kinakaze_abi_toupper
+  "toupper"=kinakaze_abi_toupper PRIVATE
+  "toupper@GLIBC_2.2.5"=kinakaze_abi_toupper PRIVATE
+  kinakaze_abi_towctrans
+  "towctrans"=kinakaze_abi_towctrans PRIVATE
+  "towctrans@GLIBC_2.2.5"=kinakaze_abi_towctrans PRIVATE
+  kinakaze_abi_towctrans_l
+  "towctrans_l"=kinakaze_abi_towctrans_l PRIVATE
+  kinakaze_abi_towlower
+  "towlower"=kinakaze_abi_towlower PRIVATE
+  "towlower@GLIBC_2.2.5"=kinakaze_abi_towlower PRIVATE
+  kinakaze_abi_towlower_l
+  "towlower_l"=kinakaze_abi_towlower_l PRIVATE
+  "towlower_l@GLIBC_2.3"=kinakaze_abi_towlower_l PRIVATE
+  kinakaze_abi_towupper
+  "towupper"=kinakaze_abi_towupper PRIVATE
+  "towupper@GLIBC_2.2.5"=kinakaze_abi_towupper PRIVATE
+  kinakaze_abi_towupper_l
+  "towupper_l"=kinakaze_abi_towupper_l PRIVATE
+  "towupper_l@GLIBC_2.3"=kinakaze_abi_towupper_l PRIVATE
+  kinakaze_abi_truncate
+  "truncate"=kinakaze_abi_truncate PRIVATE
+  "truncate@GLIBC_2.2.5"=kinakaze_abi_truncate PRIVATE
+  kinakaze_abi_truncate64
+  "truncate64"=kinakaze_abi_truncate64 PRIVATE
+  "truncate64@GLIBC_2.2.5"=kinakaze_abi_truncate64 PRIVATE
+  kinakaze_abi_tsearch
+  "tsearch"=kinakaze_abi_tsearch PRIVATE
+  "tsearch@GLIBC_2.2.5"=kinakaze_abi_tsearch PRIVATE
+  kinakaze_abi_tss_create
+  "tss_create"=kinakaze_abi_tss_create PRIVATE
+  kinakaze_abi_tss_delete
+  "tss_delete"=kinakaze_abi_tss_delete PRIVATE
+  kinakaze_abi_tss_get
+  "tss_get"=kinakaze_abi_tss_get PRIVATE
+  kinakaze_abi_tss_set
+  "tss_set"=kinakaze_abi_tss_set PRIVATE
+  kinakaze_abi_ttyname
+  "ttyname"=kinakaze_abi_ttyname PRIVATE
+  "ttyname@GLIBC_2.2.5"=kinakaze_abi_ttyname PRIVATE
+  kinakaze_abi_ttyname_r
+  "ttyname_r"=kinakaze_abi_ttyname_r PRIVATE
+  "ttyname_r@GLIBC_2.2.5"=kinakaze_abi_ttyname_r PRIVATE
+  kinakaze_abi_twalk
+  "twalk"=kinakaze_abi_twalk PRIVATE
+  "twalk@GLIBC_2.2.5"=kinakaze_abi_twalk PRIVATE
+  kinakaze_abi_twalk_r
+  "twalk_r"=kinakaze_abi_twalk_r PRIVATE
+  kinakaze_abi_tzname DATA
+  "tzname"=kinakaze_abi_tzname DATA PRIVATE
+  "tzname@GLIBC_2.2.5"=kinakaze_abi_tzname DATA PRIVATE
+  kinakaze_abi_tzset
+  "tzset"=kinakaze_abi_tzset PRIVATE
+  "tzset@GLIBC_2.2.5"=kinakaze_abi_tzset PRIVATE
+  kinakaze_abi_ulckpwdf
+  "ulckpwdf"=kinakaze_abi_ulckpwdf PRIVATE
+  "ulckpwdf@GLIBC_2.2.5"=kinakaze_abi_ulckpwdf PRIVATE
+  kinakaze_abi_umask
+  "umask"=kinakaze_abi_umask PRIVATE
+  "umask@GLIBC_2.2.5"=kinakaze_abi_umask PRIVATE
+  kinakaze_abi_umount
+  "umount"=kinakaze_abi_umount PRIVATE
+  "umount@GLIBC_2.2.5"=kinakaze_abi_umount PRIVATE
+  kinakaze_abi_umount2
+  "umount2"=kinakaze_abi_umount2 PRIVATE
+  "umount2@GLIBC_2.2.5"=kinakaze_abi_umount2 PRIVATE
+  kinakaze_abi_uname
+  "uname"=kinakaze_abi_uname PRIVATE
+  "uname@GLIBC_2.2.5"=kinakaze_abi_uname PRIVATE
+  kinakaze_abi_ungetc
+  "ungetc"=kinakaze_abi_ungetc PRIVATE
+  "ungetc@GLIBC_2.2.5"=kinakaze_abi_ungetc PRIVATE
+  kinakaze_abi_ungetwc
+  "ungetwc"=kinakaze_abi_ungetwc PRIVATE
+  "ungetwc@GLIBC_2.2.5"=kinakaze_abi_ungetwc PRIVATE
+  kinakaze_abi_unlink
+  "unlink"=kinakaze_abi_unlink PRIVATE
+  "unlink@GLIBC_2.2.5"=kinakaze_abi_unlink PRIVATE
+  kinakaze_abi_unlinkat
+  "unlinkat"=kinakaze_abi_unlinkat PRIVATE
+  "unlinkat@GLIBC_2.4"=kinakaze_abi_unlinkat PRIVATE
+  kinakaze_abi_unlockpt
+  "unlockpt"=kinakaze_abi_unlockpt PRIVATE
+  "unlockpt@GLIBC_2.2.5"=kinakaze_abi_unlockpt PRIVATE
+  kinakaze_abi_unsetenv
+  "unsetenv"=kinakaze_abi_unsetenv PRIVATE
+  "unsetenv@GLIBC_2.2.5"=kinakaze_abi_unsetenv PRIVATE
+  kinakaze_abi_unshare
+  "unshare"=kinakaze_abi_unshare PRIVATE
+  "unshare@GLIBC_2.4"=kinakaze_abi_unshare PRIVATE
+  kinakaze_abi_updwtmp
+  "updwtmp"=kinakaze_abi_updwtmp PRIVATE
+  kinakaze_abi_updwtmpx
+  "updwtmpx"=kinakaze_abi_updwtmpx PRIVATE
+  "updwtmpx@GLIBC_2.2.5"=kinakaze_abi_updwtmpx PRIVATE
+  kinakaze_abi_uselocale
+  "uselocale"=kinakaze_abi_uselocale PRIVATE
+  "uselocale@GLIBC_2.3"=kinakaze_abi_uselocale PRIVATE
+  kinakaze_abi_usleep
+  "usleep"=kinakaze_abi_usleep PRIVATE
+  "usleep@GLIBC_2.2.5"=kinakaze_abi_usleep PRIVATE
+  kinakaze_abi_utime
+  "utime"=kinakaze_abi_utime PRIVATE
+  "utime@GLIBC_2.2.5"=kinakaze_abi_utime PRIVATE
+  kinakaze_abi_utimensat
+  "utimensat"=kinakaze_abi_utimensat PRIVATE
+  "utimensat@GLIBC_2.6"=kinakaze_abi_utimensat PRIVATE
+  kinakaze_abi_utimes
+  "utimes"=kinakaze_abi_utimes PRIVATE
+  "utimes@GLIBC_2.2.5"=kinakaze_abi_utimes PRIVATE
+  kinakaze_abi_utmpname
+  "utmpname"=kinakaze_abi_utmpname PRIVATE
+  kinakaze_abi_utmpxname
+  "utmpxname"=kinakaze_abi_utmpxname PRIVATE
+  "utmpxname@GLIBC_2.2.5"=kinakaze_abi_utmpxname PRIVATE
+  kinakaze_abi_vasprintf
+  "vasprintf"=kinakaze_abi_vasprintf PRIVATE
+  "vasprintf@GLIBC_2.2.5"=kinakaze_abi_vasprintf PRIVATE
+  kinakaze_abi_verr
+  "verr"=kinakaze_abi_verr PRIVATE
+  kinakaze_abi_verrx
+  "verrx"=kinakaze_abi_verrx PRIVATE
+  kinakaze_abi_versionsort
+  "versionsort"=kinakaze_abi_versionsort PRIVATE
+  "versionsort@GLIBC_2.2.5"=kinakaze_abi_versionsort PRIVATE
+  kinakaze_abi_versionsort
+  "versionsort64"=kinakaze_abi_versionsort PRIVATE
+  "versionsort64@GLIBC_2.2.5"=kinakaze_abi_versionsort PRIVATE
+  kinakaze_abi_vfork
+  "vfork"=kinakaze_abi_vfork PRIVATE
+  "vfork@GLIBC_2.2.5"=kinakaze_abi_vfork PRIVATE
+  kinakaze_abi_vfprintf
+  "vfprintf"=kinakaze_abi_vfprintf PRIVATE
+  "vfprintf@GLIBC_2.2.5"=kinakaze_abi_vfprintf PRIVATE
+  kinakaze_abi_vfscanf
+  "vfscanf"=kinakaze_abi_vfscanf PRIVATE
+  kinakaze_abi_vscanf
+  "vscanf"=kinakaze_abi_vscanf PRIVATE
+  kinakaze_abi_vsnprintf
+  "vsnprintf"=kinakaze_abi_vsnprintf PRIVATE
+  "vsnprintf@GLIBC_2.2.5"=kinakaze_abi_vsnprintf PRIVATE
+  kinakaze_abi_vsprintf
+  "vsprintf"=kinakaze_abi_vsprintf PRIVATE
+  "vsprintf@GLIBC_2.2.5"=kinakaze_abi_vsprintf PRIVATE
+  kinakaze_abi_vsscanf
+  "vsscanf"=kinakaze_abi_vsscanf PRIVATE
+  "vsscanf@GLIBC_2.2.5"=kinakaze_abi_vsscanf PRIVATE
+  kinakaze_abi_vswprintf
+  "vswprintf"=kinakaze_abi_vswprintf PRIVATE
+  "vswprintf@GLIBC_2.2.5"=kinakaze_abi_vswprintf PRIVATE
+  kinakaze_abi_vsyslog
+  "vsyslog"=kinakaze_abi_vsyslog PRIVATE
+  kinakaze_abi_vwarn
+  "vwarn"=kinakaze_abi_vwarn PRIVATE
+  kinakaze_abi_vwarnx
+  "vwarnx"=kinakaze_abi_vwarnx PRIVATE
+  kinakaze_abi_wait
+  "wait"=kinakaze_abi_wait PRIVATE
+  "wait@GLIBC_2.2.5"=kinakaze_abi_wait PRIVATE
+  kinakaze_abi_wait3
+  "wait3"=kinakaze_abi_wait3 PRIVATE
+  "wait3@GLIBC_2.2.5"=kinakaze_abi_wait3 PRIVATE
+  kinakaze_abi_wait4
+  "wait4"=kinakaze_abi_wait4 PRIVATE
+  "wait4@GLIBC_2.2.5"=kinakaze_abi_wait4 PRIVATE
+  kinakaze_abi_waitid
+  "waitid"=kinakaze_abi_waitid PRIVATE
+  "waitid@GLIBC_2.2.5"=kinakaze_abi_waitid PRIVATE
+  kinakaze_abi_waitpid
+  "waitpid"=kinakaze_abi_waitpid PRIVATE
+  "waitpid@GLIBC_2.2.5"=kinakaze_abi_waitpid PRIVATE
+  kinakaze_abi_warn
+  "warn"=kinakaze_abi_warn PRIVATE
+  "warn@GLIBC_2.2.5"=kinakaze_abi_warn PRIVATE
+  kinakaze_abi_warnx
+  "warnx"=kinakaze_abi_warnx PRIVATE
+  "warnx@GLIBC_2.2.5"=kinakaze_abi_warnx PRIVATE
+  kinakaze_abi_wcrtomb
+  "wcrtomb"=kinakaze_abi_wcrtomb PRIVATE
+  "wcrtomb@GLIBC_2.2.5"=kinakaze_abi_wcrtomb PRIVATE
+  kinakaze_abi_wcscasecmp
+  "wcscasecmp"=kinakaze_abi_wcscasecmp PRIVATE
+  "wcscasecmp@GLIBC_2.2.5"=kinakaze_abi_wcscasecmp PRIVATE
+  kinakaze_abi_wcscat
+  "wcscat"=kinakaze_abi_wcscat PRIVATE
+  kinakaze_abi_wcschr
+  "wcschr"=kinakaze_abi_wcschr PRIVATE
+  "wcschr@GLIBC_2.2.5"=kinakaze_abi_wcschr PRIVATE
+  kinakaze_abi_wcscmp
+  "wcscmp"=kinakaze_abi_wcscmp PRIVATE
+  "wcscmp@GLIBC_2.2.5"=kinakaze_abi_wcscmp PRIVATE
+  kinakaze_abi_wcscoll
+  "wcscoll"=kinakaze_abi_wcscoll PRIVATE
+  "wcscoll@GLIBC_2.2.5"=kinakaze_abi_wcscoll PRIVATE
+  kinakaze_abi_wcscoll_l
+  "wcscoll_l"=kinakaze_abi_wcscoll_l PRIVATE
+  kinakaze_abi_wcscpy
+  "wcscpy"=kinakaze_abi_wcscpy PRIVATE
+  "wcscpy@GLIBC_2.2.5"=kinakaze_abi_wcscpy PRIVATE
+  kinakaze_abi_wcscspn
+  "wcscspn"=kinakaze_abi_wcscspn PRIVATE
+  "wcscspn@GLIBC_2.2.5"=kinakaze_abi_wcscspn PRIVATE
+  kinakaze_abi_wcsdup
+  "wcsdup"=kinakaze_abi_wcsdup PRIVATE
+  "wcsdup@GLIBC_2.2.5"=kinakaze_abi_wcsdup PRIVATE
+  kinakaze_abi_wcsftime
+  "wcsftime"=kinakaze_abi_wcsftime PRIVATE
+  "wcsftime@GLIBC_2.2.5"=kinakaze_abi_wcsftime PRIVATE
+  kinakaze_abi_wcslen
+  "wcslen"=kinakaze_abi_wcslen PRIVATE
+  "wcslen@GLIBC_2.2.5"=kinakaze_abi_wcslen PRIVATE
+  kinakaze_abi_wcsncasecmp
+  "wcsncasecmp"=kinakaze_abi_wcsncasecmp PRIVATE
+  "wcsncasecmp@GLIBC_2.2.5"=kinakaze_abi_wcsncasecmp PRIVATE
+  kinakaze_abi_wcsncat
+  "wcsncat"=kinakaze_abi_wcsncat PRIVATE
+  kinakaze_abi_wcsncmp
+  "wcsncmp"=kinakaze_abi_wcsncmp PRIVATE
+  "wcsncmp@GLIBC_2.2.5"=kinakaze_abi_wcsncmp PRIVATE
+  kinakaze_abi_wcsncpy
+  "wcsncpy"=kinakaze_abi_wcsncpy PRIVATE
+  "wcsncpy@GLIBC_2.2.5"=kinakaze_abi_wcsncpy PRIVATE
+  kinakaze_abi_wcsnlen
+  "wcsnlen"=kinakaze_abi_wcsnlen PRIVATE
+  kinakaze_abi_wcsnrtombs
+  "wcsnrtombs"=kinakaze_abi_wcsnrtombs PRIVATE
+  "wcsnrtombs@GLIBC_2.2.5"=kinakaze_abi_wcsnrtombs PRIVATE
+  kinakaze_abi_wcspbrk
+  "wcspbrk"=kinakaze_abi_wcspbrk PRIVATE
+  "wcspbrk@GLIBC_2.2.5"=kinakaze_abi_wcspbrk PRIVATE
+  kinakaze_abi_wcsrchr
+  "wcsrchr"=kinakaze_abi_wcsrchr PRIVATE
+  "wcsrchr@GLIBC_2.2.5"=kinakaze_abi_wcsrchr PRIVATE
+  kinakaze_abi_wcsrtombs
+  "wcsrtombs"=kinakaze_abi_wcsrtombs PRIVATE
+  "wcsrtombs@GLIBC_2.2.5"=kinakaze_abi_wcsrtombs PRIVATE
+  kinakaze_abi_wcsspn
+  "wcsspn"=kinakaze_abi_wcsspn PRIVATE
+  kinakaze_abi_wcsstr
+  "wcsstr"=kinakaze_abi_wcsstr PRIVATE
+  "wcsstr@GLIBC_2.2.5"=kinakaze_abi_wcsstr PRIVATE
+  kinakaze_abi_wcstod
+  "wcstod"=kinakaze_abi_wcstod PRIVATE
+  kinakaze_abi_wcstof
+  "wcstof"=kinakaze_abi_wcstof PRIVATE
+  kinakaze_abi_wcstok
+  "wcstok"=kinakaze_abi_wcstok PRIVATE
+  "wcstok@GLIBC_2.2.5"=kinakaze_abi_wcstok PRIVATE
+  kinakaze_abi_wcstol
+  "wcstol"=kinakaze_abi_wcstol PRIVATE
+  "wcstol@GLIBC_2.2.5"=kinakaze_abi_wcstol PRIVATE
+  kinakaze_abi_wcstold
+  "wcstold"=kinakaze_abi_wcstold PRIVATE
+  kinakaze_abi_wcstoll
+  "wcstoll"=kinakaze_abi_wcstoll PRIVATE
+  kinakaze_abi_wcstombs
+  "wcstombs"=kinakaze_abi_wcstombs PRIVATE
+  "wcstombs@GLIBC_2.2.5"=kinakaze_abi_wcstombs PRIVATE
+  kinakaze_abi_wcstoul
+  "wcstoul"=kinakaze_abi_wcstoul PRIVATE
+  kinakaze_abi_wcstoull
+  "wcstoull"=kinakaze_abi_wcstoull PRIVATE
+  kinakaze_abi_wcswidth
+  "wcswidth"=kinakaze_abi_wcswidth PRIVATE
+  "wcswidth@GLIBC_2.2.5"=kinakaze_abi_wcswidth PRIVATE
+  kinakaze_abi_wcsxfrm
+  "wcsxfrm"=kinakaze_abi_wcsxfrm PRIVATE
+  "wcsxfrm@GLIBC_2.2.5"=kinakaze_abi_wcsxfrm PRIVATE
+  kinakaze_abi_wcsxfrm_l
+  "wcsxfrm_l"=kinakaze_abi_wcsxfrm_l PRIVATE
+  kinakaze_abi_wctob
+  "wctob"=kinakaze_abi_wctob PRIVATE
+  "wctob@GLIBC_2.2.5"=kinakaze_abi_wctob PRIVATE
+  kinakaze_abi_wctomb
+  "wctomb"=kinakaze_abi_wctomb PRIVATE
+  "wctomb@GLIBC_2.2.5"=kinakaze_abi_wctomb PRIVATE
+  kinakaze_abi_wctrans
+  "wctrans"=kinakaze_abi_wctrans PRIVATE
+  "wctrans@GLIBC_2.2.5"=kinakaze_abi_wctrans PRIVATE
+  kinakaze_abi_wctrans_l
+  "wctrans_l"=kinakaze_abi_wctrans_l PRIVATE
+  kinakaze_abi_wctype
+  "wctype"=kinakaze_abi_wctype PRIVATE
+  "wctype@GLIBC_2.2.5"=kinakaze_abi_wctype PRIVATE
+  kinakaze_abi_wctype_l
+  "wctype_l"=kinakaze_abi_wctype_l PRIVATE
+  kinakaze_abi_wcwidth
+  "wcwidth"=kinakaze_abi_wcwidth PRIVATE
+  "wcwidth@GLIBC_2.2.5"=kinakaze_abi_wcwidth PRIVATE
+  kinakaze_abi_wmemchr
+  "wmemchr"=kinakaze_abi_wmemchr PRIVATE
+  "wmemchr@GLIBC_2.2.5"=kinakaze_abi_wmemchr PRIVATE
+  kinakaze_abi_wmemcmp
+  "wmemcmp"=kinakaze_abi_wmemcmp PRIVATE
+  "wmemcmp@GLIBC_2.2.5"=kinakaze_abi_wmemcmp PRIVATE
+  kinakaze_abi_wmemcpy
+  "wmemcpy"=kinakaze_abi_wmemcpy PRIVATE
+  "wmemcpy@GLIBC_2.2.5"=kinakaze_abi_wmemcpy PRIVATE
+  kinakaze_abi_wmemmove
+  "wmemmove"=kinakaze_abi_wmemmove PRIVATE
+  "wmemmove@GLIBC_2.2.5"=kinakaze_abi_wmemmove PRIVATE
+  kinakaze_abi_wmemset
+  "wmemset"=kinakaze_abi_wmemset PRIVATE
+  "wmemset@GLIBC_2.2.5"=kinakaze_abi_wmemset PRIVATE
+  kinakaze_abi_write
+  "write"=kinakaze_abi_write PRIVATE
+  "write@GLIBC_2.2.5"=kinakaze_abi_write PRIVATE
+  kinakaze_abi_writev
+  "writev"=kinakaze_abi_writev PRIVATE
+  "writev@GLIBC_2.2.5"=kinakaze_abi_writev PRIVATE

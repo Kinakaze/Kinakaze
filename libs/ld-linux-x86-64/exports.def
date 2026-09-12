@@ -1,0 +1,22 @@
+LIBRARY "ld-linux-x86-64.so.2"
+EXPORTS
+  "__libc_stack_end"=libc.so.6.kinakaze_abi___libc_stack_end DATA PRIVATE
+  "__libc_stack_end@GLIBC_2.2.5"=libc.so.6.kinakaze_abi___libc_stack_end DATA PRIVATE
+  "__tls_get_addr"=libc.so.6.kinakaze_abi___tls_get_addr PRIVATE
+  "__tls_get_addr@GLIBC_2.3"=libc.so.6.kinakaze_abi___tls_get_addr PRIVATE
+  kinakaze_process_dl_iterate_phdr
+  "dl_iterate_phdr"=kinakaze_process_dl_iterate_phdr PRIVATE
+  kinakaze_process_dladdr
+  "dladdr"=kinakaze_process_dladdr PRIVATE
+  kinakaze_process_dlclose
+  "dlclose"=kinakaze_process_dlclose PRIVATE
+  kinakaze_process_dlerror
+  "dlerror"=kinakaze_process_dlerror PRIVATE
+  kinakaze_process_dlinfo
+  "dlinfo"=kinakaze_process_dlinfo PRIVATE
+  kinakaze_process_dlopen
+  "dlopen"=kinakaze_process_dlopen PRIVATE
+  kinakaze_process_dlsym
+  "dlsym"=kinakaze_process_dlsym PRIVATE
+  kinakaze_process_dlvsym
+  "dlvsym"=kinakaze_process_dlvsym PRIVATE

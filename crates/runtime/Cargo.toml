@@ -1,0 +1,30 @@
+[package]
+name = "kinakaze-v2-runtime"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+name = "kinakaze_runtime"
+crate-type = ["dylib"]
+
+[dependencies]
+kinakaze-v2-abi.workspace = true
+kinakaze-v2-protocol.workspace = true
+kinakaze-v2-host-win.workspace = true
+serde_json.workspace = true
+serde = { workspace = true, optional = true }
+kinakaze-v2-loader = { workspace = true, optional = true }
+kinakaze-guest-engine = { path = "../../engine/crates/guest-engine", optional = true }
+guest-process = { package = "kinakaze-kernel", path = "../../engine/crates/kinakaze-runtime", optional = true }
+
+
+
+
+[features]
+default = ["guest-engine"]
+guest-engine = ["dep:serde", "dep:kinakaze-v2-loader", "dep:kinakaze-guest-engine", "dep:guest-process"]
+
+[lints]
+workspace = true

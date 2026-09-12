@@ -1,0 +1,15 @@
+[package]
+name = "kinakaze-v2-libopengl"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "kinakaze_libOpenGL"
+crate-type = ["cdylib"]
+test = false
+doctest = false
+
+[lints]
+workspace = true

@@ -1,0 +1,12 @@
+[package]
+name = "kinakaze-v2-bridge"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+kinakaze-v2-host-win.workspace = true
+
+[lints]
+workspace = true

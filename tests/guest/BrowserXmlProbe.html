@@ -1,0 +1,35 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Kinakaze XML test</title>
+<style>html,body{margin:0;background:#000;color:white}h1,pre{margin:40px;white-space:pre-wrap}</style>
+</head><body><h1 id="result">WAIT</h1><pre id="detail"></pre><script>
+try {
+  const parser = new DOMParser();
+  const cases = [
+    ['simple', '<root><child value="42">hello</child></root>', 'root'],
+    ['declaration', '<?xml version="1.0" encoding="UTF-8"?><root>浏览器 😀</root>', 'root'],
+    ['namespace', '<x:root xmlns:x="urn:kinakaze"><x:child/></x:root>', 'root'],
+    ['doctype', '<!DOCTYPE root [<!ENTITY text "working">]><root>&text;</root>', 'root'],
+    ['xhtml', '<html xmlns="http://www.w3.org/1999/xhtml"><head/><body><p>hello</p></body></html>', 'html'],
+  ];
+  const results = [];
+  for (const [name, source, expected] of cases) {
+    const document = parser.parseFromString(source, 'application/xml');
+    const result = {name, root: document.documentElement.localName,
+      text: document.documentElement.textContent};
+    results.push(result);
+    if (result.root !== expected || document.getElementsByTagName('parsererror').length)
+      throw new Error(JSON.stringify(results));
+  }
+  const invalid = parser.parseFromString('<root><child></root>', 'application/xml');
+  if (!invalid.getElementsByTagName('parsererror').length) throw new Error('malformed XML accepted');
+  document.getElementById('detail').textContent = JSON.stringify(results, null, 2);
+  document.getElementById('result').textContent = 'KINAKAZE_BROWSER_JS_42';
+  document.documentElement.style.background = document.body.style.background = '#193b57';
+  document.title = 'PASS: XML declarations, namespaces, entities and XHTML';
+} catch (error) {
+  document.getElementById('result').textContent = 'XML_PROBE_FAILED';
+  document.getElementById('detail').textContent = String(error);
+  document.documentElement.style.background = document.body.style.background = '#790000';
+  document.title = 'FAIL: XML parser';
+}
+</script></body></html>

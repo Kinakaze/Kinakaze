@@ -1,0 +1,6 @@
+LIBRARY "libXxf86vm.so.1"
+EXPORTS
+  "XF86VidModeGetGammaRamp"=libX11.so.6.kinakaze_engine_libX11_XF86VidModeGetGammaRamp PRIVATE
+  "XF86VidModeGetGammaRampSize"=libX11.so.6.kinakaze_engine_libX11_XF86VidModeGetGammaRampSize PRIVATE
+  "XF86VidModeQueryExtension"=libX11.so.6.kinakaze_engine_libX11_XF86VidModeQueryExtension PRIVATE
+  "XF86VidModeSetGammaRamp"=libX11.so.6.kinakaze_engine_libX11_XF86VidModeSetGammaRamp PRIVATE

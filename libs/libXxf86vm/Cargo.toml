@@ -1,0 +1,15 @@
+[package]
+name = "kinakaze-v2-libxxf86vm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "kinakaze_libXxf86vm"
+crate-type = ["cdylib"]
+test = false
+doctest = false
+
+[lints]
+workspace = true

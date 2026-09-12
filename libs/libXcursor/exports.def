@@ -1,0 +1,18 @@
+LIBRARY "libXcursor.so.1"
+EXPORTS
+  "XcursorGetDefaultSize"=libX11.so.6.kinakaze_engine_libX11_XcursorGetDefaultSize PRIVATE
+  "XcursorGetTheme"=libX11.so.6.kinakaze_engine_libX11_XcursorGetTheme PRIVATE
+  "XcursorImageCreate"=libX11.so.6.kinakaze_engine_libX11_XcursorImageCreate PRIVATE
+  "XcursorImageDestroy"=libX11.so.6.kinakaze_engine_libX11_XcursorImageDestroy PRIVATE
+  "XcursorImageLoadCursor"=libX11.so.6.kinakaze_engine_libX11_XcursorImageLoadCursor PRIVATE
+  "XcursorImagesCreate"=libX11.so.6.kinakaze_engine_libX11_XcursorImagesCreate PRIVATE
+  "XcursorImagesDestroy"=libX11.so.6.kinakaze_engine_libX11_XcursorImagesDestroy PRIVATE
+  "XcursorImagesLoadCursor"=libX11.so.6.kinakaze_engine_libX11_XcursorImagesLoadCursor PRIVATE
+  "XcursorLibraryLoadCursor"=libX11.so.6.kinakaze_engine_libX11_XcursorLibraryLoadCursor PRIVATE
+  "XcursorLibraryLoadImage"=libX11.so.6.kinakaze_engine_libX11_XcursorLibraryLoadImage PRIVATE
+  "XcursorLibraryLoadImages"=libX11.so.6.kinakaze_engine_libX11_XcursorLibraryLoadImages PRIVATE
+  "XcursorSetDefaultSize"=libX11.so.6.kinakaze_engine_libX11_XcursorSetDefaultSize PRIVATE
+  "XcursorSetTheme"=libX11.so.6.kinakaze_engine_libX11_XcursorSetTheme PRIVATE
+  "XcursorShapeLoadCursor"=libX11.so.6.kinakaze_engine_libX11_XcursorShapeLoadCursor PRIVATE
+  "XcursorShapeLoadImages"=libX11.so.6.kinakaze_engine_libX11_XcursorShapeLoadImages PRIVATE
+  "XcursorSupportsARGB"=libX11.so.6.kinakaze_engine_libX11_XcursorSupportsARGB PRIVATE

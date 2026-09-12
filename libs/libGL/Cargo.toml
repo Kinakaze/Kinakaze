@@ -1,0 +1,27 @@
+[package]
+name = "kinakaze-v2-libgl"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "kinakaze_libGL"
+path = "src/lib.rs"
+crate-type = ["dylib"]
+test = true
+doctest = false
+
+[dependencies]
+kinakaze-alloc.workspace = true
+kinakaze_libX11 = { package = "kinakaze-v2-libx11", path = "../libX11" }
+kinakaze_libdisplay = { package = "kinakaze-v2-libdisplay", path = "../libdisplay" }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_Graphics_OpenGL",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_System_LibraryLoader",
+] }

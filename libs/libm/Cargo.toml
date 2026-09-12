@@ -1,0 +1,26 @@
+[package]
+name = "kinakaze-v2-libm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "kinakaze_libm"
+path = "src/lib.rs"
+crate-type = ["dylib"]
+test = true
+doctest = false
+
+[dependencies]
+kinakaze-tls.workspace = true
+
+# rust-lang/libm, the musl-derived pure-Rust math library. Only used for the
+# handful of C99 entry points that Rust std does not expose as f64/f32 methods
+# (erf, erfc, lgamma, tgamma, remainder, ldexp). Aliased because this crate's
+# own lib is also named `libm`.
+musl_libm = { package = "libm", version = "0.2.16" }
+
+[dev-dependencies]
+kinakaze-tls.workspace = true
+

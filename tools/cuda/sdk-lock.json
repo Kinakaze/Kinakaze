@@ -1,0 +1,18 @@
+{
+  "header_package": {
+    "version": "12.8.90",
+    "file": "nvidia_cuda_runtime_cu12-12.8.90-py3-none-win_amd64.whl",
+    "url": "https://files.pythonhosted.org/packages/30/a5/a515b7600ad361ea14bfa13fb4d6687abf500adc270f19e89849c0590492/nvidia_cuda_runtime_cu12-12.8.90-py3-none-win_amd64.whl",
+    "sha256": "c0c6027f01505bfed6c3b21ec546f69c687689aad5f1a377554bc6ca4aa993a8"
+  },
+  "compiler_package": {
+    "version": "12.8.93",
+    "file": "nvidia_cuda_nvcc_cu12-12.8.93-py3-none-win_amd64.whl",
+    "url": "https://files.pythonhosted.org/packages/05/e9/0adfcf7b228413645b41b0fafaa0b93a71dfe8f23cb15591a0f7fe6c3f63/nvidia_cuda_nvcc_cu12-12.8.93-py3-none-win_amd64.whl",
+    "sha256": "bb9dc7c291cd105d14f9b220bdcdf6ce6063c2d6ff01a505e358471530a8d226"
+  },
+  "headers": {
+    "cuda.h": "167e383a3791226c5e809dfd6a9614b29b1e11f4d6346c29a921943a71e3e566",
+    "cudaTypedefs.h": "d6532a6e1a9b1111aa3369733c31e8eb6d4c673a8de823891f1727dcfcde9c31"
+  }
+}

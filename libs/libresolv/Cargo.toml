@@ -1,0 +1,17 @@
+[package]
+name = "kinakaze-v2-libresolv"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "kinakaze_libresolv"
+path = "src/lib.rs"
+crate-type = ["dylib"]
+test = true
+doctest = false
+
+[dependencies]
+libc = { package = "kinakaze-v2-libc", path = "../libc" }
+

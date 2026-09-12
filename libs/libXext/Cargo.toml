@@ -1,0 +1,22 @@
+[package]
+name = "kinakaze-v2-libxext"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "kinakaze_libXext"
+crate-type = ["dylib"]
+test = true
+doctest = true
+
+[lints]
+workspace = true
+
+[dependencies]
+kinakaze_libX11 = { package = "kinakaze-v2-libx11", path = "../libX11" }
+libc = { package = "kinakaze-v2-libc", path = "../libc" }
+kinakaze-alloc.workspace = true
+kinakaze-runtime.workspace = true
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_SystemInformation", "Win32_UI_Input_KeyboardAndMouse"] }

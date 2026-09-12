@@ -1,0 +1,4 @@
+LIBRARY "libX11-xcb.so.1"
+EXPORTS
+  "XGetXCBConnection"=libX11.so.6.kinakaze_engine_libX11_XGetXCBConnection PRIVATE
+  "XSetEventQueueOwner"=libX11.so.6.kinakaze_engine_libX11_XSetEventQueueOwner PRIVATE

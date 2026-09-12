@@ -1,0 +1,366 @@
+LIBRARY "libpthread.so.0"
+EXPORTS
+  "__errno_location"=libc.so.6.kinakaze_abi___errno_location PRIVATE
+  "__errno_location@GLIBC_2.2.5"=libc.so.6.kinakaze_abi___errno_location PRIVATE
+  "__h_errno_location"=libc.so.6.kinakaze_abi___h_errno_location PRIVATE
+  "__h_errno_location@GLIBC_2.2.5"=libc.so.6.kinakaze_abi___h_errno_location PRIVATE
+  "__libc_current_sigrtmax"=libc.so.6.kinakaze_abi___libc_current_sigrtmax PRIVATE
+  "__libc_current_sigrtmax@GLIBC_2.2.5"=libc.so.6.kinakaze_abi___libc_current_sigrtmax PRIVATE
+  "__libc_current_sigrtmin"=libc.so.6.kinakaze_abi___libc_current_sigrtmin PRIVATE
+  "__libc_current_sigrtmin@GLIBC_2.2.5"=libc.so.6.kinakaze_abi___libc_current_sigrtmin PRIVATE
+  "__pthread_key_create"=libc.so.6.kinakaze_abi___pthread_key_create PRIVATE
+  "__pthread_key_create@GLIBC_2.2.5"=libc.so.6.kinakaze_abi___pthread_key_create PRIVATE
+  __pthread_register_cancel
+  "__pthread_register_cancel"=__pthread_register_cancel
+  "__pthread_register_cancel@GLIBC_2.3.3"=__pthread_register_cancel PRIVATE
+  __pthread_register_cancel_defer
+  "__pthread_register_cancel_defer"=__pthread_register_cancel_defer
+  __pthread_unregister_cancel
+  "__pthread_unregister_cancel"=__pthread_unregister_cancel
+  "__pthread_unregister_cancel@GLIBC_2.3.3"=__pthread_unregister_cancel PRIVATE
+  __pthread_unregister_cancel_restore
+  "__pthread_unregister_cancel_restore"=__pthread_unregister_cancel_restore
+  __pthread_unwind_next
+  "__pthread_unwind_next"=__pthread_unwind_next
+  "__pthread_unwind_next@GLIBC_2.3.3"=__pthread_unwind_next PRIVATE
+  "__res_state"=libc.so.6.kinakaze_abi___res_state PRIVATE
+  "__res_state@GLIBC_2.2.5"=libc.so.6.kinakaze_abi___res_state PRIVATE
+  "accept"=libc.so.6.kinakaze_abi_accept PRIVATE
+  "accept@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_accept PRIVATE
+  "close"=libc.so.6.kinakaze_abi_close PRIVATE
+  "close@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_close PRIVATE
+  "connect"=libc.so.6.kinakaze_abi_connect PRIVATE
+  "connect@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_connect PRIVATE
+  "fcntl"=libc.so.6.kinakaze_abi_fcntl64 PRIVATE
+  "fcntl@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_fcntl64 PRIVATE
+  "flockfile"=libc.so.6.kinakaze_abi_flockfile PRIVATE
+  "flockfile@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_flockfile PRIVATE
+  "fork"=libc.so.6.kinakaze_abi_fork PRIVATE
+  "fork@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_fork PRIVATE
+  "fsync"=libc.so.6.kinakaze_abi_fsync PRIVATE
+  "fsync@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_fsync PRIVATE
+  "funlockfile"=libc.so.6.kinakaze_abi_funlockfile PRIVATE
+  "funlockfile@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_funlockfile PRIVATE
+  "longjmp"=libc.so.6.kinakaze_abi_longjmp PRIVATE
+  "longjmp@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_longjmp PRIVATE
+  "lseek"=libc.so.6.kinakaze_abi_lseek PRIVATE
+  "lseek@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_lseek PRIVATE
+  "lseek64"=libc.so.6.kinakaze_abi_lseek64 PRIVATE
+  "lseek64@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_lseek64 PRIVATE
+  "msync"=libc.so.6.kinakaze_abi_msync PRIVATE
+  "msync@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_msync PRIVATE
+  "nanosleep"=libc.so.6.kinakaze_abi_nanosleep PRIVATE
+  "nanosleep@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_nanosleep PRIVATE
+  "open"=libc.so.6.kinakaze_abi_open PRIVATE
+  "open@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_open PRIVATE
+  "open64"=libc.so.6.kinakaze_abi_open64 PRIVATE
+  "open64@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_open64 PRIVATE
+  "pause"=libc.so.6.kinakaze_abi_pause PRIVATE
+  "pause@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_pause PRIVATE
+  "pread64"=libc.so.6.kinakaze_abi_pread64 PRIVATE
+  "pread64@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_pread64 PRIVATE
+  pthread_atfork
+  "pthread_atfork"=pthread_atfork
+  pthread_attr_destroy
+  "pthread_attr_destroy"=pthread_attr_destroy
+  "pthread_attr_destroy@GLIBC_2.2.5"=pthread_attr_destroy PRIVATE
+  pthread_attr_getaffinity_np
+  "pthread_attr_getaffinity_np"=pthread_attr_getaffinity_np
+  pthread_attr_getdetachstate
+  "pthread_attr_getdetachstate"=pthread_attr_getdetachstate
+  "pthread_attr_getdetachstate@GLIBC_2.2.5"=pthread_attr_getdetachstate PRIVATE
+  pthread_attr_getguardsize
+  "pthread_attr_getguardsize"=pthread_attr_getguardsize
+  "pthread_attr_getguardsize@GLIBC_2.2.5"=pthread_attr_getguardsize PRIVATE
+  pthread_attr_getinheritsched
+  "pthread_attr_getinheritsched"=pthread_attr_getinheritsched
+  pthread_attr_getschedparam
+  "pthread_attr_getschedparam"=pthread_attr_getschedparam
+  "pthread_attr_getschedparam@GLIBC_2.2.5"=pthread_attr_getschedparam PRIVATE
+  pthread_attr_getschedpolicy
+  "pthread_attr_getschedpolicy"=pthread_attr_getschedpolicy
+  pthread_attr_getstack
+  "pthread_attr_getstack"=pthread_attr_getstack
+  "pthread_attr_getstack@GLIBC_2.2.5"=pthread_attr_getstack PRIVATE
+  pthread_attr_getstacksize
+  "pthread_attr_getstacksize"=pthread_attr_getstacksize
+  "pthread_attr_getstacksize@GLIBC_2.2.5"=pthread_attr_getstacksize PRIVATE
+  pthread_attr_init
+  "pthread_attr_init"=pthread_attr_init
+  "pthread_attr_init@GLIBC_2.2.5"=pthread_attr_init PRIVATE
+  pthread_attr_setaffinity_np
+  "pthread_attr_setaffinity_np"=pthread_attr_setaffinity_np
+  pthread_attr_setdetachstate
+  "pthread_attr_setdetachstate"=pthread_attr_setdetachstate
+  "pthread_attr_setdetachstate@GLIBC_2.2.5"=pthread_attr_setdetachstate PRIVATE
+  pthread_attr_setguardsize
+  "pthread_attr_setguardsize"=pthread_attr_setguardsize
+  "pthread_attr_setguardsize@GLIBC_2.2.5"=pthread_attr_setguardsize PRIVATE
+  pthread_attr_setinheritsched
+  "pthread_attr_setinheritsched"=pthread_attr_setinheritsched
+  "pthread_attr_setinheritsched@GLIBC_2.2.5"=pthread_attr_setinheritsched PRIVATE
+  pthread_attr_setschedparam
+  "pthread_attr_setschedparam"=pthread_attr_setschedparam
+  "pthread_attr_setschedparam@GLIBC_2.2.5"=pthread_attr_setschedparam PRIVATE
+  pthread_attr_setschedpolicy
+  "pthread_attr_setschedpolicy"=pthread_attr_setschedpolicy
+  "pthread_attr_setschedpolicy@GLIBC_2.2.5"=pthread_attr_setschedpolicy PRIVATE
+  "pthread_attr_setscope"=libc.so.6.kinakaze_abi_pthread_attr_setscope PRIVATE
+  "pthread_attr_setscope@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_pthread_attr_setscope PRIVATE
+  pthread_attr_setstacksize
+  "pthread_attr_setstacksize"=pthread_attr_setstacksize
+  "pthread_attr_setstacksize@GLIBC_2.2.5"=pthread_attr_setstacksize PRIVATE
+  pthread_barrier_destroy
+  "pthread_barrier_destroy"=pthread_barrier_destroy
+  "pthread_barrier_destroy@GLIBC_2.2.5"=pthread_barrier_destroy PRIVATE
+  pthread_barrier_init
+  "pthread_barrier_init"=pthread_barrier_init
+  "pthread_barrier_init@GLIBC_2.2.5"=pthread_barrier_init PRIVATE
+  pthread_barrier_wait
+  "pthread_barrier_wait"=pthread_barrier_wait
+  "pthread_barrier_wait@GLIBC_2.2.5"=pthread_barrier_wait PRIVATE
+  pthread_cancel
+  "pthread_cancel"=pthread_cancel
+  "pthread_cancel@GLIBC_2.2.5"=pthread_cancel PRIVATE
+  pthread_cond_broadcast
+  "pthread_cond_broadcast"=pthread_cond_broadcast
+  "pthread_cond_broadcast@GLIBC_2.3.2"=pthread_cond_broadcast PRIVATE
+  pthread_cond_clockwait
+  "pthread_cond_clockwait"=pthread_cond_clockwait
+  pthread_cond_destroy
+  "pthread_cond_destroy"=pthread_cond_destroy
+  "pthread_cond_destroy@GLIBC_2.3.2"=pthread_cond_destroy PRIVATE
+  pthread_cond_init
+  "pthread_cond_init"=pthread_cond_init
+  "pthread_cond_init@GLIBC_2.3.2"=pthread_cond_init PRIVATE
+  pthread_cond_signal
+  "pthread_cond_signal"=pthread_cond_signal
+  "pthread_cond_signal@GLIBC_2.3.2"=pthread_cond_signal PRIVATE
+  pthread_cond_timedwait
+  "pthread_cond_timedwait"=pthread_cond_timedwait
+  "pthread_cond_timedwait@GLIBC_2.3.2"=pthread_cond_timedwait PRIVATE
+  pthread_cond_wait
+  "pthread_cond_wait"=pthread_cond_wait
+  "pthread_cond_wait@GLIBC_2.3.2"=pthread_cond_wait PRIVATE
+  pthread_condattr_destroy
+  "pthread_condattr_destroy"=pthread_condattr_destroy
+  "pthread_condattr_destroy@GLIBC_2.2.5"=pthread_condattr_destroy PRIVATE
+  pthread_condattr_getclock
+  "pthread_condattr_getclock"=pthread_condattr_getclock
+  pthread_condattr_init
+  "pthread_condattr_init"=pthread_condattr_init
+  "pthread_condattr_init@GLIBC_2.2.5"=pthread_condattr_init PRIVATE
+  pthread_condattr_setclock
+  "pthread_condattr_setclock"=pthread_condattr_setclock
+  "pthread_condattr_setclock@GLIBC_2.3.3"=pthread_condattr_setclock PRIVATE
+  pthread_condattr_setpshared
+  "pthread_condattr_setpshared"=pthread_condattr_setpshared
+  "pthread_condattr_setpshared@GLIBC_2.2.5"=pthread_condattr_setpshared PRIVATE
+  pthread_create
+  "pthread_create"=pthread_create
+  "pthread_create@GLIBC_2.2.5"=pthread_create PRIVATE
+  pthread_detach
+  "pthread_detach"=pthread_detach
+  "pthread_detach@GLIBC_2.2.5"=pthread_detach PRIVATE
+  pthread_equal
+  "pthread_equal"=pthread_equal
+  "pthread_equal@GLIBC_2.2.5"=pthread_equal PRIVATE
+  pthread_exit
+  "pthread_exit"=pthread_exit
+  "pthread_exit@GLIBC_2.2.5"=pthread_exit PRIVATE
+  "pthread_getaffinity_np"=libc.so.6.kinakaze_abi_pthread_getaffinity_np PRIVATE
+  "pthread_getaffinity_np@GLIBC_2.3.4"=libc.so.6.kinakaze_abi_pthread_getaffinity_np PRIVATE
+  pthread_getattr_np
+  "pthread_getattr_np"=pthread_getattr_np
+  "pthread_getattr_np@GLIBC_2.2.5"=pthread_getattr_np PRIVATE
+  "pthread_getcpuclockid"=libc.so.6.kinakaze_abi_pthread_getcpuclockid PRIVATE
+  "pthread_getcpuclockid@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_pthread_getcpuclockid PRIVATE
+  pthread_getname_np
+  "pthread_getname_np"=pthread_getname_np
+  "pthread_getname_np@GLIBC_2.12"=pthread_getname_np PRIVATE
+  pthread_getschedparam
+  "pthread_getschedparam"=pthread_getschedparam
+  "pthread_getschedparam@GLIBC_2.2.5"=pthread_getschedparam PRIVATE
+  pthread_getspecific
+  "pthread_getspecific"=pthread_getspecific
+  "pthread_getspecific@GLIBC_2.2.5"=pthread_getspecific PRIVATE
+  pthread_join
+  "pthread_join"=pthread_join
+  "pthread_join@GLIBC_2.2.5"=pthread_join PRIVATE
+  pthread_key_create
+  "pthread_key_create"=pthread_key_create
+  "pthread_key_create@GLIBC_2.2.5"=pthread_key_create PRIVATE
+  pthread_key_delete
+  "pthread_key_delete"=pthread_key_delete
+  "pthread_key_delete@GLIBC_2.2.5"=pthread_key_delete PRIVATE
+  pthread_kill
+  "pthread_kill"=pthread_kill
+  "pthread_kill@GLIBC_2.2.5"=pthread_kill PRIVATE
+  pthread_mutex_clocklock
+  "pthread_mutex_clocklock"=pthread_mutex_clocklock
+  pthread_mutex_consistent
+  "pthread_mutex_consistent"=pthread_mutex_consistent
+  pthread_mutex_destroy
+  "pthread_mutex_destroy"=pthread_mutex_destroy
+  "pthread_mutex_destroy@GLIBC_2.2.5"=pthread_mutex_destroy PRIVATE
+  pthread_mutex_init
+  "pthread_mutex_init"=pthread_mutex_init
+  "pthread_mutex_init@GLIBC_2.2.5"=pthread_mutex_init PRIVATE
+  pthread_mutex_lock
+  "pthread_mutex_lock"=pthread_mutex_lock
+  "pthread_mutex_lock@GLIBC_2.2.5"=pthread_mutex_lock PRIVATE
+  pthread_mutex_timedlock
+  "pthread_mutex_timedlock"=pthread_mutex_timedlock
+  "pthread_mutex_timedlock@GLIBC_2.2.5"=pthread_mutex_timedlock PRIVATE
+  pthread_mutex_trylock
+  "pthread_mutex_trylock"=pthread_mutex_trylock
+  "pthread_mutex_trylock@GLIBC_2.2.5"=pthread_mutex_trylock PRIVATE
+  pthread_mutex_unlock
+  "pthread_mutex_unlock"=pthread_mutex_unlock
+  "pthread_mutex_unlock@GLIBC_2.2.5"=pthread_mutex_unlock PRIVATE
+  pthread_mutexattr_destroy
+  "pthread_mutexattr_destroy"=pthread_mutexattr_destroy
+  "pthread_mutexattr_destroy@GLIBC_2.2.5"=pthread_mutexattr_destroy PRIVATE
+  pthread_mutexattr_getprotocol
+  "pthread_mutexattr_getprotocol"=pthread_mutexattr_getprotocol
+  pthread_mutexattr_getrobust
+  "pthread_mutexattr_getrobust"=pthread_mutexattr_getrobust
+  pthread_mutexattr_gettype
+  "pthread_mutexattr_gettype"=pthread_mutexattr_gettype
+  pthread_mutexattr_init
+  "pthread_mutexattr_init"=pthread_mutexattr_init
+  "pthread_mutexattr_init@GLIBC_2.2.5"=pthread_mutexattr_init PRIVATE
+  pthread_mutexattr_setprotocol
+  "pthread_mutexattr_setprotocol"=pthread_mutexattr_setprotocol
+  "pthread_mutexattr_setpshared"=libc.so.6.kinakaze_abi_pthread_mutexattr_setpshared PRIVATE
+  "pthread_mutexattr_setpshared@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_pthread_mutexattr_setpshared PRIVATE
+  pthread_mutexattr_setrobust
+  "pthread_mutexattr_setrobust"=pthread_mutexattr_setrobust
+  pthread_mutexattr_settype
+  "pthread_mutexattr_settype"=pthread_mutexattr_settype
+  "pthread_mutexattr_settype@GLIBC_2.2.5"=pthread_mutexattr_settype PRIVATE
+  pthread_once
+  "pthread_once"=pthread_once
+  "pthread_once@GLIBC_2.2.5"=pthread_once PRIVATE
+  pthread_rwlock_destroy
+  "pthread_rwlock_destroy"=pthread_rwlock_destroy
+  "pthread_rwlock_destroy@GLIBC_2.2.5"=pthread_rwlock_destroy PRIVATE
+  pthread_rwlock_init
+  "pthread_rwlock_init"=pthread_rwlock_init
+  "pthread_rwlock_init@GLIBC_2.2.5"=pthread_rwlock_init PRIVATE
+  pthread_rwlock_rdlock
+  "pthread_rwlock_rdlock"=pthread_rwlock_rdlock
+  "pthread_rwlock_rdlock@GLIBC_2.2.5"=pthread_rwlock_rdlock PRIVATE
+  pthread_rwlock_timedrdlock
+  "pthread_rwlock_timedrdlock"=pthread_rwlock_timedrdlock
+  "pthread_rwlock_timedrdlock@GLIBC_2.2.5"=pthread_rwlock_timedrdlock PRIVATE
+  pthread_rwlock_timedwrlock
+  "pthread_rwlock_timedwrlock"=pthread_rwlock_timedwrlock
+  "pthread_rwlock_timedwrlock@GLIBC_2.2.5"=pthread_rwlock_timedwrlock PRIVATE
+  pthread_rwlock_tryrdlock
+  "pthread_rwlock_tryrdlock"=pthread_rwlock_tryrdlock
+  "pthread_rwlock_tryrdlock@GLIBC_2.2.5"=pthread_rwlock_tryrdlock PRIVATE
+  pthread_rwlock_trywrlock
+  "pthread_rwlock_trywrlock"=pthread_rwlock_trywrlock
+  "pthread_rwlock_trywrlock@GLIBC_2.2.5"=pthread_rwlock_trywrlock PRIVATE
+  pthread_rwlock_unlock
+  "pthread_rwlock_unlock"=pthread_rwlock_unlock
+  "pthread_rwlock_unlock@GLIBC_2.2.5"=pthread_rwlock_unlock PRIVATE
+  pthread_rwlock_wrlock
+  "pthread_rwlock_wrlock"=pthread_rwlock_wrlock
+  "pthread_rwlock_wrlock@GLIBC_2.2.5"=pthread_rwlock_wrlock PRIVATE
+  "pthread_rwlockattr_destroy"=libc.so.6.kinakaze_abi_pthread_rwlockattr_destroy PRIVATE
+  "pthread_rwlockattr_destroy@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_pthread_rwlockattr_destroy PRIVATE
+  "pthread_rwlockattr_init"=libc.so.6.kinakaze_abi_pthread_rwlockattr_init PRIVATE
+  "pthread_rwlockattr_init@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_pthread_rwlockattr_init PRIVATE
+  pthread_self
+  "pthread_self"=pthread_self
+  "pthread_self@GLIBC_2.2.5"=pthread_self PRIVATE
+  "pthread_setaffinity_np"=libc.so.6.kinakaze_abi_pthread_setaffinity_np PRIVATE
+  "pthread_setaffinity_np@GLIBC_2.3.4"=libc.so.6.kinakaze_abi_pthread_setaffinity_np PRIVATE
+  pthread_setcancelstate
+  "pthread_setcancelstate"=pthread_setcancelstate
+  "pthread_setcancelstate@GLIBC_2.2.5"=pthread_setcancelstate PRIVATE
+  pthread_setcanceltype
+  "pthread_setcanceltype"=pthread_setcanceltype
+  "pthread_setcanceltype@GLIBC_2.2.5"=pthread_setcanceltype PRIVATE
+  pthread_setname_np
+  "pthread_setname_np"=pthread_setname_np
+  "pthread_setname_np@GLIBC_2.12"=pthread_setname_np PRIVATE
+  pthread_setschedparam
+  "pthread_setschedparam"=pthread_setschedparam
+  "pthread_setschedparam@GLIBC_2.2.5"=pthread_setschedparam PRIVATE
+  pthread_setschedprio
+  "pthread_setschedprio"=pthread_setschedprio
+  pthread_setspecific
+  "pthread_setspecific"=pthread_setspecific
+  "pthread_setspecific@GLIBC_2.2.5"=pthread_setspecific PRIVATE
+  pthread_sigmask
+  "pthread_sigmask"=pthread_sigmask
+  "pthread_sigmask@GLIBC_2.2.5"=pthread_sigmask PRIVATE
+  pthread_spin_destroy
+  "pthread_spin_destroy"=pthread_spin_destroy
+  pthread_spin_init
+  "pthread_spin_init"=pthread_spin_init
+  pthread_spin_lock
+  "pthread_spin_lock"=pthread_spin_lock
+  pthread_spin_trylock
+  "pthread_spin_trylock"=pthread_spin_trylock
+  pthread_spin_unlock
+  "pthread_spin_unlock"=pthread_spin_unlock
+  pthread_testcancel
+  "pthread_testcancel"=pthread_testcancel
+  "pthread_testcancel@GLIBC_2.2.5"=pthread_testcancel PRIVATE
+  pthread_tryjoin_np
+  "pthread_tryjoin_np"=pthread_tryjoin_np
+  "pthread_tryjoin_np@GLIBC_2.3.3"=pthread_tryjoin_np PRIVATE
+  "pwrite64"=libc.so.6.kinakaze_abi_pwrite64 PRIVATE
+  "pwrite64@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_pwrite64 PRIVATE
+  "raise"=libc.so.6.kinakaze_abi_raise PRIVATE
+  "raise@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_raise PRIVATE
+  "read"=libc.so.6.kinakaze_abi_read PRIVATE
+  "read@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_read PRIVATE
+  "recv"=libc.so.6.kinakaze_abi_recv PRIVATE
+  "recv@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_recv PRIVATE
+  "recvfrom"=libc.so.6.kinakaze_abi_recvfrom PRIVATE
+  "recvfrom@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_recvfrom PRIVATE
+  "recvmsg"=libc.so.6.kinakaze_abi_recvmsg PRIVATE
+  "recvmsg@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_recvmsg PRIVATE
+  "sem_destroy"=libc.so.6.kinakaze_abi_sem_destroy PRIVATE
+  "sem_destroy@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_sem_destroy PRIVATE
+  "sem_init"=libc.so.6.kinakaze_abi_sem_init PRIVATE
+  "sem_init@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_sem_init PRIVATE
+  "sem_post"=libc.so.6.kinakaze_abi_sem_post PRIVATE
+  "sem_post@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_sem_post PRIVATE
+  "sem_timedwait"=libc.so.6.kinakaze_abi_sem_timedwait PRIVATE
+  "sem_timedwait@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_sem_timedwait PRIVATE
+  "sem_trywait"=libc.so.6.kinakaze_abi_sem_trywait PRIVATE
+  "sem_trywait@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_sem_trywait PRIVATE
+  "sem_wait"=libc.so.6.kinakaze_abi_sem_wait PRIVATE
+  "sem_wait@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_sem_wait PRIVATE
+  "send"=libc.so.6.kinakaze_abi_send PRIVATE
+  "send@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_send PRIVATE
+  "sendmsg"=libc.so.6.kinakaze_abi_sendmsg PRIVATE
+  "sendmsg@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_sendmsg PRIVATE
+  "sendto"=libc.so.6.kinakaze_abi_sendto PRIVATE
+  "sendto@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_sendto PRIVATE
+  "sigaction"=libc.so.6.kinakaze_abi_sigaction PRIVATE
+  "sigaction@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_sigaction PRIVATE
+  "siglongjmp"=libc.so.6.kinakaze_abi_siglongjmp PRIVATE
+  "siglongjmp@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_siglongjmp PRIVATE
+  "sigwait"=libc.so.6.kinakaze_abi_sigwait PRIVATE
+  "sigwait@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_sigwait PRIVATE
+  "tcdrain"=libc.so.6.kinakaze_abi_tcdrain PRIVATE
+  "tcdrain@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_tcdrain PRIVATE
+  "tss_create"=libc.so.6.kinakaze_abi_tss_create PRIVATE
+  "tss_create@GLIBC_2.28"=libc.so.6.kinakaze_abi_tss_create PRIVATE
+  "tss_delete"=libc.so.6.kinakaze_abi_tss_delete PRIVATE
+  "tss_delete@GLIBC_2.28"=libc.so.6.kinakaze_abi_tss_delete PRIVATE
+  "tss_get"=libc.so.6.kinakaze_abi_tss_get PRIVATE
+  "tss_get@GLIBC_2.28"=libc.so.6.kinakaze_abi_tss_get PRIVATE
+  "tss_set"=libc.so.6.kinakaze_abi_tss_set PRIVATE
+  "tss_set@GLIBC_2.28"=libc.so.6.kinakaze_abi_tss_set PRIVATE
+  "waitpid"=libc.so.6.kinakaze_abi_waitpid PRIVATE
+  "waitpid@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_waitpid PRIVATE
+  "write"=libc.so.6.kinakaze_abi_write PRIVATE
+  "write@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_write PRIVATE

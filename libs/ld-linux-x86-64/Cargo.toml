@@ -1,0 +1,30 @@
+[package]
+name = "kinakaze-link"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+crate-type = ["dylib"]
+name = "kinakaze_link"
+path = "src/lib.rs"
+
+[dependencies]
+kinakaze-alloc = { workspace = true }
+kinakaze-elf = { workspace = true }
+kinakaze-runtime = { workspace = true }
+kinakaze-tls = { workspace = true }
+kinakaze-vfs = { workspace = true }
+gimli = { version = "0.32", default-features = false, features = ["read", "std"] }
+
+[target.'cfg(windows)'.dependencies.windows-sys]
+version = "0.61"
+features = [
+    "Win32_Foundation",
+    "Win32_System_Memory",
+    "Win32_System_LibraryLoader",
+    "Win32_System_SystemInformation",
+    "Win32_System_Diagnostics_Debug",
+    "Win32_System_Threading",
+]

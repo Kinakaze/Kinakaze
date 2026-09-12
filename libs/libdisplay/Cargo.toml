@@ -1,0 +1,20 @@
+[package]
+name = "kinakaze-v2-libdisplay"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+# Implementation links once into kinakaze_runtime.dll; the paired provider DLL
+# forwards its public ABI to that runtime. Keep the Rust import name stable.
+name = "kinakaze_libdisplay"
+path = "src/lib.rs"
+crate-type = ["dylib"]
+# The keycode translation and the event queue are pure and worth testing directly;
+# window creation is tested against a real, hidden HWND.
+test = true
+doctest = false
+
+[dependencies]
+kinakaze-runtime.workspace = true

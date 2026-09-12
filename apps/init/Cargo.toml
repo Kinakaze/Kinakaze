@@ -1,0 +1,20 @@
+[package]
+name = "kinakaze-v2-init"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "init"
+path = "src/main.rs"
+
+[dependencies]
+kinakaze-v2-protocol.workspace = true
+kinakaze-v2-manager.workspace = true
+kinakaze-v2-host-win.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

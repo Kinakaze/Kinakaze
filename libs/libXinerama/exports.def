@@ -1,0 +1,5 @@
+LIBRARY "libXinerama.so.1"
+EXPORTS
+  "XineramaIsActive"=libX11.so.6.kinakaze_engine_libX11_XineramaIsActive PRIVATE
+  "XineramaQueryExtension"=libX11.so.6.kinakaze_engine_libX11_XineramaQueryExtension PRIVATE
+  "XineramaQueryScreens"=libX11.so.6.kinakaze_engine_libX11_XineramaQueryScreens PRIVATE

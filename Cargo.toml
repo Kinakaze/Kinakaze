@@ -1,0 +1,93 @@
+[workspace]
+members = [
+    "engine/crates/*",
+    "libs/libcuda",
+
+    "libs/ld-linux-x86-64",
+
+    "libs/libpthread",
+    "libs/libdl",
+    "libs/librt",
+    "libs/libresolv",
+    "libs/libGL",
+    "libs/libGLX",
+    "libs/libEGL",
+    "libs/libX11",
+    "libs/libXext",
+    "libs/libXrandr",
+    "libs/libXcursor",
+    "libs/libXi",
+    "libs/libXinerama",
+    "libs/libXrender",
+    "libs/libXxf86vm",
+    "libs/libX11-xcb",
+    "libs/libxcb",
+    "libs/libvulkan",
+    "libs/libasound",
+    "libs/libpulse",
+    "libs/libpipewire",
+    "libs/libdisplay",
+    "libs/libOpenGL",
+    "libs/libGLESv2",
+
+    "crates/abi",
+    "crates/protocol",
+    "crates/manager",
+    "crates/host-win",
+    "crates/runtime",
+    "crates/loader",
+    "crates/bridge",
+    "libs/libc",
+    "libs/libm",
+    "apps/init",
+    "apps/worker",
+    "tools/packager",
+]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+kinakaze-abi = { path = "engine/crates/kinakaze-abi" }
+kinakaze-alloc = { path = "engine/crates/kinakaze-alloc" }
+kinakaze-runtime = { path = "engine/crates/kinakaze-runtime", package = "kinakaze-kernel" }
+kinakaze-tls = { path = "engine/crates/kinakaze-tls" }
+kinakaze-vfs = { path = "engine/crates/kinakaze-vfs" }
+kinakaze-elf = { path = "engine/crates/kinakaze-elf" }
+kinakaze-link = { path = "libs/ld-linux-x86-64" }
+iced-x86 = { version = "1.21", default-features = false, features = ["std", "decoder", "encoder", "block_encoder", "instr_info"] }
+kinakaze-v2-abi = { path = "crates/abi" }
+kinakaze-v2-protocol = { path = "crates/protocol" }
+kinakaze-v2-manager = { path = "crates/manager" }
+kinakaze-v2-host-win = { path = "crates/host-win" }
+kinakaze-v2-bridge = { path = "crates/bridge" }
+kinakaze-v2-loader = { path = "crates/loader" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+    "Win32_Security_Cryptography",
+    "Win32_Storage_FileSystem",
+    "Win32_System_IO",
+    "Win32_System_JobObjects",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Memory",
+    "Win32_System_Pipes",
+    "Win32_System_Threading",
+] }
+
+[profile.release]
+# Native providers are Rust dylibs sharing one allocator/runtime. Windows
+# cannot combine prefer-dynamic with linker-plugin LTO; retain opt-level 3.
+lto = false
+codegen-units = 1
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"

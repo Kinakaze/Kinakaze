@@ -1,0 +1,25 @@
+[package]
+name = "kinakaze-v2-libasound"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "kinakaze_libasound"
+path = "src/lib.rs"
+crate-type = ["dylib"]
+test = true
+doctest = false
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Media_Audio",
+] }
+
+[dependencies]
+kinakaze-alloc.workspace = true
+kinakaze-vfs.workspace = true
+kinakaze-tls.workspace = true
+libc = { package = "kinakaze-v2-libc", path = "../libc" }

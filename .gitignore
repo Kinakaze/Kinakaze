@@ -1,0 +1,37 @@
+/target/
+/engine/target/
+/dist/
+/artifacts/
+/.cache/
+
+# Local assistant settings and credentials.
+/.claude/settings.local.json
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Editor backups and operating-system metadata.
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Python tool caches and local environments.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# Native build/debug output and local logs.
+*.pdb
+*.ilk
+*.exp
+*.obj
+*.rlib
+*.rmeta
+*.log

@@ -1,0 +1,17 @@
+LIBRARY "libdl.so.2"
+EXPORTS
+  "dl_iterate_phdr"=ld-linux-x86-64.so.2.kinakaze_process_dl_iterate_phdr PRIVATE
+  "dladdr"=ld-linux-x86-64.so.2.kinakaze_process_dladdr PRIVATE
+  "dladdr@GLIBC_2.2.5"=ld-linux-x86-64.so.2.kinakaze_process_dladdr PRIVATE
+  "dlclose"=ld-linux-x86-64.so.2.kinakaze_process_dlclose PRIVATE
+  "dlclose@GLIBC_2.2.5"=ld-linux-x86-64.so.2.kinakaze_process_dlclose PRIVATE
+  "dlerror"=ld-linux-x86-64.so.2.kinakaze_process_dlerror PRIVATE
+  "dlerror@GLIBC_2.2.5"=ld-linux-x86-64.so.2.kinakaze_process_dlerror PRIVATE
+  "dlinfo"=ld-linux-x86-64.so.2.kinakaze_process_dlinfo PRIVATE
+  "dlinfo@GLIBC_2.3.3"=ld-linux-x86-64.so.2.kinakaze_process_dlinfo PRIVATE
+  "dlopen"=ld-linux-x86-64.so.2.kinakaze_process_dlopen PRIVATE
+  "dlopen@GLIBC_2.2.5"=ld-linux-x86-64.so.2.kinakaze_process_dlopen PRIVATE
+  "dlsym"=ld-linux-x86-64.so.2.kinakaze_process_dlsym PRIVATE
+  "dlsym@GLIBC_2.2.5"=ld-linux-x86-64.so.2.kinakaze_process_dlsym PRIVATE
+  "dlvsym"=ld-linux-x86-64.so.2.kinakaze_process_dlvsym PRIVATE
+  "dlvsym@GLIBC_2.2.5"=ld-linux-x86-64.so.2.kinakaze_process_dlvsym PRIVATE

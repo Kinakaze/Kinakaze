@@ -1,0 +1,71 @@
+LIBRARY "libresolv.so.2"
+EXPORTS
+  kinakaze_engine_libresolv___res_init
+  "__res_init"=kinakaze_engine_libresolv___res_init PRIVATE
+  kinakaze_engine_libresolv___res_mkquery
+  "__res_mkquery"=kinakaze_engine_libresolv___res_mkquery PRIVATE
+  kinakaze_engine_libresolv___res_nclose
+  "__res_nclose"=kinakaze_engine_libresolv___res_nclose PRIVATE
+  kinakaze_engine_libresolv___res_ninit
+  "__res_ninit"=kinakaze_engine_libresolv___res_ninit PRIVATE
+  kinakaze_engine_libresolv___res_nmkquery
+  "__res_nmkquery"=kinakaze_engine_libresolv___res_nmkquery PRIVATE
+  kinakaze_engine_libresolv___res_nquery
+  "__res_nquery"=kinakaze_engine_libresolv___res_nquery PRIVATE
+  "__res_nquery@GLIBC_2.2.5"=kinakaze_engine_libresolv___res_nquery PRIVATE
+  kinakaze_engine_libresolv___res_nsearch
+  "__res_nsearch"=kinakaze_engine_libresolv___res_nsearch PRIVATE
+  kinakaze_engine_libresolv___res_nsend
+  "__res_nsend"=kinakaze_engine_libresolv___res_nsend PRIVATE
+  kinakaze_engine_libresolv___res_query
+  "__res_query"=kinakaze_engine_libresolv___res_query PRIVATE
+  kinakaze_engine_libresolv___res_search
+  "__res_search"=kinakaze_engine_libresolv___res_search PRIVATE
+  kinakaze_engine_libresolv___res_send
+  "__res_send"=kinakaze_engine_libresolv___res_send PRIVATE
+  kinakaze_engine_libresolv___res_state
+  "__res_state"=kinakaze_engine_libresolv___res_state PRIVATE
+  kinakaze_engine_libresolv_dn_expand
+  "dn_expand"=kinakaze_engine_libresolv_dn_expand PRIVATE
+  kinakaze_engine_libresolv_dn_skipname
+  "dn_skipname"=kinakaze_engine_libresolv_dn_skipname PRIVATE
+  kinakaze_engine_libresolv_ns_get16
+  "ns_get16"=kinakaze_engine_libresolv_ns_get16 PRIVATE
+  "ns_get16@GLIBC_2.9"=kinakaze_engine_libresolv_ns_get16 PRIVATE
+  kinakaze_engine_libresolv_ns_get32
+  "ns_get32"=kinakaze_engine_libresolv_ns_get32 PRIVATE
+  "ns_get32@GLIBC_2.9"=kinakaze_engine_libresolv_ns_get32 PRIVATE
+  kinakaze_engine_libresolv_ns_initparse
+  "ns_initparse"=kinakaze_engine_libresolv_ns_initparse PRIVATE
+  "ns_initparse@GLIBC_2.9"=kinakaze_engine_libresolv_ns_initparse PRIVATE
+  kinakaze_engine_libresolv_ns_name_skip
+  "ns_name_skip"=kinakaze_engine_libresolv_ns_name_skip PRIVATE
+  kinakaze_engine_libresolv_ns_name_uncompress
+  "ns_name_uncompress"=kinakaze_engine_libresolv_ns_name_uncompress PRIVATE
+  kinakaze_engine_libresolv_ns_parserr
+  "ns_parserr"=kinakaze_engine_libresolv_ns_parserr PRIVATE
+  "ns_parserr@GLIBC_2.9"=kinakaze_engine_libresolv_ns_parserr PRIVATE
+  kinakaze_engine_libresolv_ns_put16
+  "ns_put16"=kinakaze_engine_libresolv_ns_put16 PRIVATE
+  kinakaze_engine_libresolv_ns_put32
+  "ns_put32"=kinakaze_engine_libresolv_ns_put32 PRIVATE
+  kinakaze_engine_libresolv_res_mkquery
+  "res_mkquery"=kinakaze_engine_libresolv_res_mkquery PRIVATE
+  kinakaze_engine_libresolv_res_nclose
+  "res_nclose"=kinakaze_engine_libresolv_res_nclose PRIVATE
+  kinakaze_engine_libresolv_res_ninit
+  "res_ninit"=kinakaze_engine_libresolv_res_ninit PRIVATE
+  kinakaze_engine_libresolv_res_nmkquery
+  "res_nmkquery"=kinakaze_engine_libresolv_res_nmkquery PRIVATE
+  kinakaze_engine_libresolv_res_nquery
+  "res_nquery"=kinakaze_engine_libresolv_res_nquery PRIVATE
+  kinakaze_engine_libresolv_res_nsearch
+  "res_nsearch"=kinakaze_engine_libresolv_res_nsearch PRIVATE
+  kinakaze_engine_libresolv_res_nsend
+  "res_nsend"=kinakaze_engine_libresolv_res_nsend PRIVATE
+  kinakaze_engine_libresolv_res_query
+  "res_query"=kinakaze_engine_libresolv_res_query PRIVATE
+  kinakaze_engine_libresolv_res_search
+  "res_search"=kinakaze_engine_libresolv_res_search PRIVATE
+  kinakaze_engine_libresolv_res_send
+  "res_send"=kinakaze_engine_libresolv_res_send PRIVATE

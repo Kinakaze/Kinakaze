@@ -1,0 +1,35 @@
+[package]
+name = "kinakaze-v2-libpipewire"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "kinakaze_libpipewire"
+path = "src/lib.rs"
+crate-type = ["dylib"]
+test = true
+doctest = false
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.61", default-features = false, features = [
+    "Win32_Foundation",
+    "Win32_Media_Audio",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_Variant",
+] }
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Media_Audio",
+    "Win32_Security",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Performance",
+    "Win32_System_Threading",
+] }
+
+[dependencies]
+kinakaze-tls.workspace = true
+kinakaze-vfs.workspace = true
+libc = { package = "kinakaze-v2-libc", path = "../libc" }

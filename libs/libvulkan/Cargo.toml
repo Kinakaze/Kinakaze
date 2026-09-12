@@ -1,0 +1,27 @@
+[package]
+name = "kinakaze-v2-libvulkan"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+# Implementation links once into kinakaze_runtime.dll; the paired provider DLL
+# forwards its public ABI to that runtime. Keep the Rust import name stable.
+name = "kinakaze_libvulkan"
+path = "src/lib.rs"
+crate-type = ["dylib"]
+# The dispatch table is worth testing directly: a name that resolves to the wrong
+# thunk is an ABI mismatch that only shows up as a crash inside a driver.
+[dependencies]
+kinakaze_libdisplay = { package = "kinakaze-v2-libdisplay", path = "../libdisplay" }
+kinakaze_libxcb = { package = "kinakaze-v2-libxcb", path = "../libxcb" }
+kinakaze-tls.workspace = true
+windows-sys = { version = "0.61", features = [
+    "Win32_System_Diagnostics_Debug",
+    "Win32_System_Memory",
+    "Win32_System_Threading",
+] }
+
+[dev-dependencies]
+iced-x86.workspace = true

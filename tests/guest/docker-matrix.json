@@ -1,0 +1,224 @@
+{
+  "schema_version": 1,
+  "probes": [
+    {
+      "id": "docker-version",
+      "level": "startup",
+      "requires": [
+        "/usr/bin/docker"
+      ],
+      "argv": [
+        "/usr/bin/docker",
+        "--version"
+      ],
+      "expect": "Docker version"
+    },
+    {
+      "id": "dockerd-version",
+      "level": "startup",
+      "requires": [
+        "/usr/bin/dockerd"
+      ],
+      "argv": [
+        "/usr/bin/dockerd",
+        "--version"
+      ],
+      "expect": "Docker version"
+    },
+    {
+      "id": "containerd-version",
+      "level": "startup",
+      "requires": [
+        "/usr/bin/containerd"
+      ],
+      "argv": [
+        "/usr/bin/containerd",
+        "--version"
+      ],
+      "expect": "containerd"
+    },
+    {
+      "id": "containerd-shim-runc-v2-version",
+      "level": "startup",
+      "requires": [
+        "/usr/bin/containerd-shim-runc-v2"
+      ],
+      "argv": [
+        "/usr/bin/containerd-shim-runc-v2",
+        "--version"
+      ],
+      "expect": "containerd-shim-runc-v2"
+    },
+    {
+      "id": "ctr-version",
+      "level": "startup",
+      "requires": [
+        "/usr/bin/ctr"
+      ],
+      "argv": [
+        "/usr/bin/ctr",
+        "--version"
+      ],
+      "expect": "ctr "
+    },
+    {
+      "id": "runc-version",
+      "level": "startup",
+      "requires": [
+        "/usr/bin/runc"
+      ],
+      "argv": [
+        "/usr/bin/runc",
+        "--version"
+      ],
+      "expect": "runc version"
+    },
+    {
+      "id": "runc-spec",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/runc",
+        "/bin/sh",
+        "/bin/busybox"
+      ],
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "d=$(/bin/busybox mktemp -d /tmp/kinakaze-oci.XXXXXX); trap '/bin/busybox rm -rf \"$d\"' EXIT; /usr/bin/runc spec --bundle \"$d\"; test -s \"$d/config.json\"; /bin/busybox grep -q ociVersion \"$d/config.json\"; /bin/busybox grep -q namespaces \"$d/config.json\"; printf \"RUNC_SPEC_OK\\n\""
+      ],
+      "expect": "RUNC_SPEC_OK"
+    },
+    {
+      "id": "docker-daemon-api",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/docker",
+        "/usr/bin/dockerd",
+        "/usr/bin/containerd",
+        "/usr/bin/containerd-shim-runc-v2",
+        "/usr/bin/runc",
+        "/usr/bin/docker-proxy",
+        "/usr/sbin/iptables",
+        "/usr/sbin/ip6tables",
+        "/usr/lib/x86_64-linux-gnu/xtables/libxt_addrtype.so",
+        "/usr/lib/x86_64-linux-gnu/xtables/libxt_MASQUERADE.so"
+      ],
+      "source": "DockerDaemonProbe.sh",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "{source}",
+        "docker-probe",
+        "api"
+      ],
+      "expect": "DOCKER_DAEMON_API_OK"
+    },
+    {
+      "id": "docker-container-lifecycle",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/docker",
+        "/usr/bin/dockerd",
+        "/usr/bin/containerd",
+        "/usr/bin/containerd-shim-runc-v2",
+        "/usr/bin/runc",
+        "/usr/bin/docker-proxy",
+        "/usr/sbin/iptables",
+        "/usr/sbin/ip6tables",
+        "/usr/lib/x86_64-linux-gnu/xtables/libxt_addrtype.so",
+        "/usr/lib/x86_64-linux-gnu/xtables/libxt_MASQUERADE.so"
+      ],
+      "source": "DockerDaemonProbe.sh",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "{source}",
+        "docker-probe",
+        "lifecycle"
+      ],
+      "expect": "DOCKER_CONTAINER_LIFECYCLE_OK"
+    },
+    {
+      "id": "docker-container-network",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/docker",
+        "/usr/bin/dockerd",
+        "/usr/bin/containerd",
+        "/usr/bin/containerd-shim-runc-v2",
+        "/usr/bin/runc",
+        "/usr/bin/docker-proxy",
+        "/usr/sbin/iptables",
+        "/usr/sbin/ip6tables",
+        "/usr/lib/x86_64-linux-gnu/xtables/libxt_addrtype.so",
+        "/usr/lib/x86_64-linux-gnu/xtables/libxt_MASQUERADE.so"
+      ],
+      "source": "DockerDaemonProbe.sh",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "{source}",
+        "docker-probe",
+        "network"
+      ],
+      "expect": "DOCKER_CONTAINER_NETWORK_OK"
+    },
+    {
+      "id": "docker-container-ipv4-network",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/docker",
+        "/usr/bin/dockerd",
+        "/usr/bin/containerd",
+        "/usr/bin/containerd-shim-runc-v2",
+        "/usr/bin/runc",
+        "/usr/bin/docker-proxy",
+        "/usr/sbin/iptables",
+        "/usr/sbin/ip6tables",
+        "/usr/lib/x86_64-linux-gnu/xtables/libxt_addrtype.so",
+        "/usr/lib/x86_64-linux-gnu/xtables/libxt_MASQUERADE.so"
+      ],
+      "source": "DockerDaemonProbe.sh",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "{source}",
+        "docker-probe",
+        "network-ipv4"
+      ],
+      "expect": "DOCKER_CONTAINER_NETWORK_OK"
+    },
+    {
+      "id": "iptables-version",
+      "level": "startup",
+      "requires": [
+        "/usr/sbin/iptables"
+      ],
+      "argv": [
+        "/usr/sbin/iptables",
+        "--version"
+      ],
+      "expect": "iptables v"
+    },
+    {
+      "id": "ip6tables-version",
+      "level": "startup",
+      "requires": [
+        "/usr/sbin/ip6tables"
+      ],
+      "argv": [
+        "/usr/sbin/ip6tables",
+        "--version"
+      ],
+      "expect": "ip6tables v"
+    }
+  ]
+}

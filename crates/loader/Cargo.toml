@@ -1,0 +1,16 @@
+[package]
+name = "kinakaze-v2-loader"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+kinakaze-v2-abi.workspace = true
+kinakaze-v2-bridge.workspace = true
+kinakaze-v2-host-win.workspace = true
+guest-link = { package = "kinakaze-link", path = "../../libs/ld-linux-x86-64" }
+guest-process = { package = "kinakaze-kernel", path = "../../engine/crates/kinakaze-runtime" }
+
+[lints]
+workspace = true

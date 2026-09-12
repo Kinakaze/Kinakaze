@@ -1,0 +1,26 @@
+[package]
+name = "kinakaze-v2-libpulse"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "kinakaze_libpulse"
+path = "src/lib.rs"
+crate-type = ["dylib"]
+test = true
+doctest = false
+
+[dependencies]
+kinakaze-tls.workspace = true
+kinakaze-alloc.workspace = true
+kinakaze-runtime.workspace = true
+libc = { package = "kinakaze-v2-libc", path = "../libc" }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Media_Audio",
+    "Win32_System_LibraryLoader",
+] }

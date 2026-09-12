@@ -1,0 +1,11 @@
+LIBRARY libm.so.6
+EXPORTS
+  kinakaze_engine_libm_copysign
+  kinakaze_engine_libm_ldexp
+  kinakaze_engine_libm_ldexpf
+  kinakaze_engine_libm_ldexpl
+  kinakaze_engine_libm_frexp
+  kinakaze_engine_libm_frexpf
+  kinakaze_engine_libm_frexpl
+  kinakaze_engine_libm_modf
+  kinakaze_engine_libm_modff

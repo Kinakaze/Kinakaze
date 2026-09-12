@@ -1,0 +1,1004 @@
+LIBRARY "libX11.so.6"
+EXPORTS
+  kinakaze_engine_libX11_XAddConnectionWatch
+  "XAddConnectionWatch"=kinakaze_engine_libX11_XAddConnectionWatch PRIVATE
+  kinakaze_engine_libX11_XAddExtension
+  "XAddExtension"=kinakaze_engine_libX11_XAddExtension PRIVATE
+  kinakaze_engine_libX11_XAddPixel
+  "XAddPixel"=kinakaze_engine_libX11_XAddPixel PRIVATE
+  kinakaze_engine_libX11_XAddToSaveSet
+  "XAddToSaveSet"=kinakaze_engine_libX11_XAddToSaveSet PRIVATE
+  kinakaze_engine_libX11_XAllocClassHint
+  "XAllocClassHint"=kinakaze_engine_libX11_XAllocClassHint PRIVATE
+  kinakaze_engine_libX11_XAllocColor
+  "XAllocColor"=kinakaze_engine_libX11_XAllocColor PRIVATE
+  kinakaze_engine_libX11_XAllocColorCells
+  "XAllocColorCells"=kinakaze_engine_libX11_XAllocColorCells PRIVATE
+  kinakaze_engine_libX11_XAllocColorPlanes
+  "XAllocColorPlanes"=kinakaze_engine_libX11_XAllocColorPlanes PRIVATE
+  kinakaze_engine_libX11_XAllocIconSize
+  "XAllocIconSize"=kinakaze_engine_libX11_XAllocIconSize PRIVATE
+  kinakaze_engine_libX11_XAllocNamedColor
+  "XAllocNamedColor"=kinakaze_engine_libX11_XAllocNamedColor PRIVATE
+  kinakaze_engine_libX11_XAllocSizeHints
+  "XAllocSizeHints"=kinakaze_engine_libX11_XAllocSizeHints PRIVATE
+  kinakaze_engine_libX11_XAllocStandardColormap
+  "XAllocStandardColormap"=kinakaze_engine_libX11_XAllocStandardColormap PRIVATE
+  kinakaze_engine_libX11_XAllocWMHints
+  "XAllocWMHints"=kinakaze_engine_libX11_XAllocWMHints PRIVATE
+  kinakaze_engine_libX11_XAllowEvents
+  "XAllowEvents"=kinakaze_engine_libX11_XAllowEvents PRIVATE
+  kinakaze_engine_libX11_XAutoRepeatOff
+  "XAutoRepeatOff"=kinakaze_engine_libX11_XAutoRepeatOff PRIVATE
+  kinakaze_engine_libX11_XAutoRepeatOn
+  "XAutoRepeatOn"=kinakaze_engine_libX11_XAutoRepeatOn PRIVATE
+  kinakaze_engine_libX11_XBaseFontNameListOfFontSet
+  "XBaseFontNameListOfFontSet"=kinakaze_engine_libX11_XBaseFontNameListOfFontSet PRIVATE
+  kinakaze_engine_libX11_XBell
+  "XBell"=kinakaze_engine_libX11_XBell PRIVATE
+  kinakaze_engine_libX11_XBitmapBitOrder
+  "XBitmapBitOrder"=kinakaze_engine_libX11_XBitmapBitOrder PRIVATE
+  kinakaze_engine_libX11_XBitmapPad
+  "XBitmapPad"=kinakaze_engine_libX11_XBitmapPad PRIVATE
+  kinakaze_engine_libX11_XBitmapUnit
+  "XBitmapUnit"=kinakaze_engine_libX11_XBitmapUnit PRIVATE
+  kinakaze_engine_libX11_XBlackPixel
+  "XBlackPixel"=kinakaze_engine_libX11_XBlackPixel PRIVATE
+  kinakaze_engine_libX11_XBlackPixelOfScreen
+  "XBlackPixelOfScreen"=kinakaze_engine_libX11_XBlackPixelOfScreen PRIVATE
+  kinakaze_engine_libX11_XCellsOfScreen
+  "XCellsOfScreen"=kinakaze_engine_libX11_XCellsOfScreen PRIVATE
+  kinakaze_engine_libX11_XChangeGC
+  "XChangeGC"=kinakaze_engine_libX11_XChangeGC PRIVATE
+  kinakaze_engine_libX11_XChangeKeyboardControl
+  "XChangeKeyboardControl"=kinakaze_engine_libX11_XChangeKeyboardControl PRIVATE
+  kinakaze_engine_libX11_XChangePointerControl
+  "XChangePointerControl"=kinakaze_engine_libX11_XChangePointerControl PRIVATE
+  kinakaze_engine_libX11_XChangeProperty
+  "XChangeProperty"=kinakaze_engine_libX11_XChangeProperty PRIVATE
+  kinakaze_engine_libX11_XChangeWindowAttributes
+  "XChangeWindowAttributes"=kinakaze_engine_libX11_XChangeWindowAttributes PRIVATE
+  kinakaze_engine_libX11_XCheckIfEvent
+  "XCheckIfEvent"=kinakaze_engine_libX11_XCheckIfEvent PRIVATE
+  kinakaze_engine_libX11_XCheckMaskEvent
+  "XCheckMaskEvent"=kinakaze_engine_libX11_XCheckMaskEvent PRIVATE
+  kinakaze_engine_libX11_XCheckTypedEvent
+  "XCheckTypedEvent"=kinakaze_engine_libX11_XCheckTypedEvent PRIVATE
+  kinakaze_engine_libX11_XCheckTypedWindowEvent
+  "XCheckTypedWindowEvent"=kinakaze_engine_libX11_XCheckTypedWindowEvent PRIVATE
+  kinakaze_engine_libX11_XCheckWindowEvent
+  "XCheckWindowEvent"=kinakaze_engine_libX11_XCheckWindowEvent PRIVATE
+  kinakaze_engine_libX11_XClearArea
+  "XClearArea"=kinakaze_engine_libX11_XClearArea PRIVATE
+  kinakaze_engine_libX11_XClearWindow
+  "XClearWindow"=kinakaze_engine_libX11_XClearWindow PRIVATE
+  kinakaze_engine_libX11_XClipBox
+  "XClipBox"=kinakaze_engine_libX11_XClipBox PRIVATE
+  kinakaze_engine_libX11_XCloseDisplay
+  "XCloseDisplay"=kinakaze_engine_libX11_XCloseDisplay PRIVATE
+  kinakaze_engine_libX11_XCloseIM
+  "XCloseIM"=kinakaze_engine_libX11_XCloseIM PRIVATE
+  kinakaze_engine_libX11_XConfigureWindow
+  "XConfigureWindow"=kinakaze_engine_libX11_XConfigureWindow PRIVATE
+  kinakaze_engine_libX11_XConnectionNumber
+  "XConnectionNumber"=kinakaze_engine_libX11_XConnectionNumber PRIVATE
+  kinakaze_engine_libX11_XConvertCase
+  "XConvertCase"=kinakaze_engine_libX11_XConvertCase PRIVATE
+  kinakaze_engine_libX11_XConvertSelection
+  "XConvertSelection"=kinakaze_engine_libX11_XConvertSelection PRIVATE
+  kinakaze_engine_libX11_XCopyArea
+  "XCopyArea"=kinakaze_engine_libX11_XCopyArea PRIVATE
+  kinakaze_engine_libX11_XCopyGC
+  "XCopyGC"=kinakaze_engine_libX11_XCopyGC PRIVATE
+  kinakaze_engine_libX11_XCopyPlane
+  "XCopyPlane"=kinakaze_engine_libX11_XCopyPlane PRIVATE
+  kinakaze_engine_libX11_XCreateBitmapFromData
+  "XCreateBitmapFromData"=kinakaze_engine_libX11_XCreateBitmapFromData PRIVATE
+  kinakaze_engine_libX11_XCreateColormap
+  "XCreateColormap"=kinakaze_engine_libX11_XCreateColormap PRIVATE
+  kinakaze_engine_libX11_XCreateFontCursor
+  "XCreateFontCursor"=kinakaze_engine_libX11_XCreateFontCursor PRIVATE
+  kinakaze_engine_libX11_XCreateFontSet
+  "XCreateFontSet"=kinakaze_engine_libX11_XCreateFontSet PRIVATE
+  kinakaze_engine_libX11_XCreateGC
+  "XCreateGC"=kinakaze_engine_libX11_XCreateGC PRIVATE
+  kinakaze_engine_libX11_XCreateGlyphCursor
+  "XCreateGlyphCursor"=kinakaze_engine_libX11_XCreateGlyphCursor PRIVATE
+  kinakaze_engine_libX11_XCreateIC
+  "XCreateIC"=kinakaze_engine_libX11_XCreateIC PRIVATE
+  kinakaze_engine_libX11_XCreateImage
+  "XCreateImage"=kinakaze_engine_libX11_XCreateImage PRIVATE
+  kinakaze_engine_libX11_XCreatePixmap
+  "XCreatePixmap"=kinakaze_engine_libX11_XCreatePixmap PRIVATE
+  kinakaze_engine_libX11_XCreatePixmapCursor
+  "XCreatePixmapCursor"=kinakaze_engine_libX11_XCreatePixmapCursor PRIVATE
+  kinakaze_engine_libX11_XCreatePixmapFromBitmapData
+  "XCreatePixmapFromBitmapData"=kinakaze_engine_libX11_XCreatePixmapFromBitmapData PRIVATE
+  kinakaze_engine_libX11_XCreateRegion
+  "XCreateRegion"=kinakaze_engine_libX11_XCreateRegion PRIVATE
+  kinakaze_engine_libX11_XCreateSimpleWindow
+  "XCreateSimpleWindow"=kinakaze_engine_libX11_XCreateSimpleWindow PRIVATE
+  kinakaze_engine_libX11_XCreateWindow
+  "XCreateWindow"=kinakaze_engine_libX11_XCreateWindow PRIVATE
+  kinakaze_engine_libX11_XDefaultColormap
+  "XDefaultColormap"=kinakaze_engine_libX11_XDefaultColormap PRIVATE
+  kinakaze_engine_libX11_XDefaultColormapOfScreen
+  "XDefaultColormapOfScreen"=kinakaze_engine_libX11_XDefaultColormapOfScreen PRIVATE
+  kinakaze_engine_libX11_XDefaultDepth
+  "XDefaultDepth"=kinakaze_engine_libX11_XDefaultDepth PRIVATE
+  kinakaze_engine_libX11_XDefaultDepthOfScreen
+  "XDefaultDepthOfScreen"=kinakaze_engine_libX11_XDefaultDepthOfScreen PRIVATE
+  kinakaze_engine_libX11_XDefaultGC
+  "XDefaultGC"=kinakaze_engine_libX11_XDefaultGC PRIVATE
+  kinakaze_engine_libX11_XDefaultGCOfScreen
+  "XDefaultGCOfScreen"=kinakaze_engine_libX11_XDefaultGCOfScreen PRIVATE
+  kinakaze_engine_libX11_XDefaultRootWindow
+  "XDefaultRootWindow"=kinakaze_engine_libX11_XDefaultRootWindow PRIVATE
+  kinakaze_engine_libX11_XDefaultScreen
+  "XDefaultScreen"=kinakaze_engine_libX11_XDefaultScreen PRIVATE
+  kinakaze_engine_libX11_XDefaultScreenOfDisplay
+  "XDefaultScreenOfDisplay"=kinakaze_engine_libX11_XDefaultScreenOfDisplay PRIVATE
+  kinakaze_engine_libX11_XDefaultVisual
+  "XDefaultVisual"=kinakaze_engine_libX11_XDefaultVisual PRIVATE
+  kinakaze_engine_libX11_XDefaultVisualOfScreen
+  "XDefaultVisualOfScreen"=kinakaze_engine_libX11_XDefaultVisualOfScreen PRIVATE
+  kinakaze_engine_libX11_XDefineCursor
+  "XDefineCursor"=kinakaze_engine_libX11_XDefineCursor PRIVATE
+  kinakaze_engine_libX11_XDeleteContext
+  "XDeleteContext"=kinakaze_engine_libX11_XDeleteContext PRIVATE
+  kinakaze_engine_libX11_XDeleteProperty
+  "XDeleteProperty"=kinakaze_engine_libX11_XDeleteProperty PRIVATE
+  kinakaze_engine_libX11_XDestroyIC
+  "XDestroyIC"=kinakaze_engine_libX11_XDestroyIC PRIVATE
+  kinakaze_engine_libX11_XDestroyImage
+  "XDestroyImage"=kinakaze_engine_libX11_XDestroyImage PRIVATE
+  kinakaze_engine_libX11_XDestroyRegion
+  "XDestroyRegion"=kinakaze_engine_libX11_XDestroyRegion PRIVATE
+  kinakaze_engine_libX11_XDestroyWindow
+  "XDestroyWindow"=kinakaze_engine_libX11_XDestroyWindow PRIVATE
+  kinakaze_engine_libX11_XDisplayHeightMM
+  "XDisplayHeightMM"=kinakaze_engine_libX11_XDisplayHeightMM PRIVATE
+  kinakaze_engine_libX11_XDisplayKeycodes
+  "XDisplayKeycodes"=kinakaze_engine_libX11_XDisplayKeycodes PRIVATE
+  kinakaze_engine_libX11_XDisplayName
+  "XDisplayName"=kinakaze_engine_libX11_XDisplayName PRIVATE
+  kinakaze_engine_libX11_XDisplayOfIM
+  "XDisplayOfIM"=kinakaze_engine_libX11_XDisplayOfIM PRIVATE
+  kinakaze_engine_libX11_XDisplayOfScreen
+  "XDisplayOfScreen"=kinakaze_engine_libX11_XDisplayOfScreen PRIVATE
+  kinakaze_engine_libX11_XDisplayString
+  "XDisplayString"=kinakaze_engine_libX11_XDisplayString PRIVATE
+  kinakaze_engine_libX11_XDisplayWidthMM
+  "XDisplayWidthMM"=kinakaze_engine_libX11_XDisplayWidthMM PRIVATE
+  kinakaze_engine_libX11_XDoesBackingStore
+  "XDoesBackingStore"=kinakaze_engine_libX11_XDoesBackingStore PRIVATE
+  kinakaze_engine_libX11_XDoesSaveUnders
+  "XDoesSaveUnders"=kinakaze_engine_libX11_XDoesSaveUnders PRIVATE
+  kinakaze_engine_libX11_XDrawArc
+  "XDrawArc"=kinakaze_engine_libX11_XDrawArc PRIVATE
+  kinakaze_engine_libX11_XDrawArcs
+  "XDrawArcs"=kinakaze_engine_libX11_XDrawArcs PRIVATE
+  kinakaze_engine_libX11_XDrawLine
+  "XDrawLine"=kinakaze_engine_libX11_XDrawLine PRIVATE
+  kinakaze_engine_libX11_XDrawLines
+  "XDrawLines"=kinakaze_engine_libX11_XDrawLines PRIVATE
+  kinakaze_engine_libX11_XDrawPoint
+  "XDrawPoint"=kinakaze_engine_libX11_XDrawPoint PRIVATE
+  kinakaze_engine_libX11_XDrawPoints
+  "XDrawPoints"=kinakaze_engine_libX11_XDrawPoints PRIVATE
+  kinakaze_engine_libX11_XDrawRectangle
+  "XDrawRectangle"=kinakaze_engine_libX11_XDrawRectangle PRIVATE
+  kinakaze_engine_libX11_XDrawRectangles
+  "XDrawRectangles"=kinakaze_engine_libX11_XDrawRectangles PRIVATE
+  kinakaze_engine_libX11_XDrawSegments
+  "XDrawSegments"=kinakaze_engine_libX11_XDrawSegments PRIVATE
+  kinakaze_engine_libX11_XDrawString
+  "XDrawString"=kinakaze_engine_libX11_XDrawString PRIVATE
+  kinakaze_engine_libX11_XDrawString16
+  "XDrawString16"=kinakaze_engine_libX11_XDrawString16 PRIVATE
+  kinakaze_engine_libX11_XESetCloseDisplay
+  "XESetCloseDisplay"=kinakaze_engine_libX11_XESetCloseDisplay PRIVATE
+  kinakaze_engine_libX11_XESetCopyEventCookie
+  "XESetCopyEventCookie"=kinakaze_engine_libX11_XESetCopyEventCookie PRIVATE
+  kinakaze_engine_libX11_XESetEventToWire
+  "XESetEventToWire"=kinakaze_engine_libX11_XESetEventToWire PRIVATE
+  kinakaze_engine_libX11_XESetWireToEvent
+  "XESetWireToEvent"=kinakaze_engine_libX11_XESetWireToEvent PRIVATE
+  kinakaze_engine_libX11_XESetWireToEventCookie
+  "XESetWireToEventCookie"=kinakaze_engine_libX11_XESetWireToEventCookie PRIVATE
+  kinakaze_engine_libX11_XEmptyRegion
+  "XEmptyRegion"=kinakaze_engine_libX11_XEmptyRegion PRIVATE
+  kinakaze_engine_libX11_XEqualRegion
+  "XEqualRegion"=kinakaze_engine_libX11_XEqualRegion PRIVATE
+  kinakaze_engine_libX11_XEventMaskOfScreen
+  "XEventMaskOfScreen"=kinakaze_engine_libX11_XEventMaskOfScreen PRIVATE
+  kinakaze_engine_libX11_XEventsQueued
+  "XEventsQueued"=kinakaze_engine_libX11_XEventsQueued PRIVATE
+  kinakaze_engine_libX11_XExtendedMaxRequestSize
+  "XExtendedMaxRequestSize"=kinakaze_engine_libX11_XExtendedMaxRequestSize PRIVATE
+  kinakaze_engine_libX11_XExtentsOfFontSet
+  "XExtentsOfFontSet"=kinakaze_engine_libX11_XExtentsOfFontSet PRIVATE
+  kinakaze_engine_libX11_XFetchName
+  "XFetchName"=kinakaze_engine_libX11_XFetchName PRIVATE
+  kinakaze_engine_libX11_XFillArc
+  "XFillArc"=kinakaze_engine_libX11_XFillArc PRIVATE
+  kinakaze_engine_libX11_XFillArcs
+  "XFillArcs"=kinakaze_engine_libX11_XFillArcs PRIVATE
+  kinakaze_engine_libX11_XFillPolygon
+  "XFillPolygon"=kinakaze_engine_libX11_XFillPolygon PRIVATE
+  kinakaze_engine_libX11_XFillRectangle
+  "XFillRectangle"=kinakaze_engine_libX11_XFillRectangle PRIVATE
+  kinakaze_engine_libX11_XFillRectangles
+  "XFillRectangles"=kinakaze_engine_libX11_XFillRectangles PRIVATE
+  kinakaze_engine_libX11_XFilterEvent
+  "XFilterEvent"=kinakaze_engine_libX11_XFilterEvent PRIVATE
+  kinakaze_engine_libX11_XFindContext
+  "XFindContext"=kinakaze_engine_libX11_XFindContext PRIVATE
+  kinakaze_engine_libX11_XFlush
+  "XFlush"=kinakaze_engine_libX11_XFlush PRIVATE
+  kinakaze_engine_libX11_XFontsOfFontSet
+  "XFontsOfFontSet"=kinakaze_engine_libX11_XFontsOfFontSet PRIVATE
+  kinakaze_engine_libX11_XFree
+  "XFree"=kinakaze_engine_libX11_XFree PRIVATE
+  kinakaze_engine_libX11_XFreeColormap
+  "XFreeColormap"=kinakaze_engine_libX11_XFreeColormap PRIVATE
+  kinakaze_engine_libX11_XFreeColors
+  "XFreeColors"=kinakaze_engine_libX11_XFreeColors PRIVATE
+  kinakaze_engine_libX11_XFreeCursor
+  "XFreeCursor"=kinakaze_engine_libX11_XFreeCursor PRIVATE
+  kinakaze_engine_libX11_XFreeEventData
+  "XFreeEventData"=kinakaze_engine_libX11_XFreeEventData PRIVATE
+  kinakaze_engine_libX11_XFreeExtensionList
+  "XFreeExtensionList"=kinakaze_engine_libX11_XFreeExtensionList PRIVATE
+  kinakaze_engine_libX11_XFreeFont
+  "XFreeFont"=kinakaze_engine_libX11_XFreeFont PRIVATE
+  kinakaze_engine_libX11_XFreeFontSet
+  "XFreeFontSet"=kinakaze_engine_libX11_XFreeFontSet PRIVATE
+  kinakaze_engine_libX11_XFreeGC
+  "XFreeGC"=kinakaze_engine_libX11_XFreeGC PRIVATE
+  kinakaze_engine_libX11_XFreeModifiermap
+  "XFreeModifiermap"=kinakaze_engine_libX11_XFreeModifiermap PRIVATE
+  kinakaze_engine_libX11_XFreePixmap
+  "XFreePixmap"=kinakaze_engine_libX11_XFreePixmap PRIVATE
+  kinakaze_engine_libX11_XFreeStringList
+  "XFreeStringList"=kinakaze_engine_libX11_XFreeStringList PRIVATE
+  kinakaze_engine_libX11_XGetAtomName
+  "XGetAtomName"=kinakaze_engine_libX11_XGetAtomName PRIVATE
+  kinakaze_engine_libX11_XGetClassHint
+  "XGetClassHint"=kinakaze_engine_libX11_XGetClassHint PRIVATE
+  kinakaze_engine_libX11_XGetDefault
+  "XGetDefault"=kinakaze_engine_libX11_XGetDefault PRIVATE
+  kinakaze_engine_libX11_XGetErrorDatabaseText
+  "XGetErrorDatabaseText"=kinakaze_engine_libX11_XGetErrorDatabaseText PRIVATE
+  kinakaze_engine_libX11_XGetErrorText
+  "XGetErrorText"=kinakaze_engine_libX11_XGetErrorText PRIVATE
+  kinakaze_engine_libX11_XGetEventData
+  "XGetEventData"=kinakaze_engine_libX11_XGetEventData PRIVATE
+  kinakaze_engine_libX11_XGetGCValues
+  "XGetGCValues"=kinakaze_engine_libX11_XGetGCValues PRIVATE
+  kinakaze_engine_libX11_XGetGeometry
+  "XGetGeometry"=kinakaze_engine_libX11_XGetGeometry PRIVATE
+  kinakaze_engine_libX11_XGetICValues
+  "XGetICValues"=kinakaze_engine_libX11_XGetICValues PRIVATE
+  kinakaze_engine_libX11_XGetIMValues
+  "XGetIMValues"=kinakaze_engine_libX11_XGetIMValues PRIVATE
+  kinakaze_engine_libX11_XGetIconSizes
+  "XGetIconSizes"=kinakaze_engine_libX11_XGetIconSizes PRIVATE
+  kinakaze_engine_libX11_XGetImage
+  "XGetImage"=kinakaze_engine_libX11_XGetImage PRIVATE
+  kinakaze_engine_libX11_XGetInputFocus
+  "XGetInputFocus"=kinakaze_engine_libX11_XGetInputFocus PRIVATE
+  kinakaze_engine_libX11_XGetKeyboardControl
+  "XGetKeyboardControl"=kinakaze_engine_libX11_XGetKeyboardControl PRIVATE
+  kinakaze_engine_libX11_XGetKeyboardMapping
+  "XGetKeyboardMapping"=kinakaze_engine_libX11_XGetKeyboardMapping PRIVATE
+  kinakaze_engine_libX11_XGetModifierMapping
+  "XGetModifierMapping"=kinakaze_engine_libX11_XGetModifierMapping PRIVATE
+  kinakaze_engine_libX11_XGetMotionEvents
+  "XGetMotionEvents"=kinakaze_engine_libX11_XGetMotionEvents PRIVATE
+  kinakaze_engine_libX11_XGetNormalHints
+  "XGetNormalHints"=kinakaze_engine_libX11_XGetNormalHints PRIVATE
+  kinakaze_engine_libX11_XGetPixel
+  "XGetPixel"=kinakaze_engine_libX11_XGetPixel PRIVATE
+  kinakaze_engine_libX11_XGetPointerControl
+  "XGetPointerControl"=kinakaze_engine_libX11_XGetPointerControl PRIVATE
+  kinakaze_engine_libX11_XGetPointerMapping
+  "XGetPointerMapping"=kinakaze_engine_libX11_XGetPointerMapping PRIVATE
+  kinakaze_engine_libX11_XGetRGBColormaps
+  "XGetRGBColormaps"=kinakaze_engine_libX11_XGetRGBColormaps PRIVATE
+  kinakaze_engine_libX11_XGetScreenSaver
+  "XGetScreenSaver"=kinakaze_engine_libX11_XGetScreenSaver PRIVATE
+  kinakaze_engine_libX11_XGetSelectionOwner
+  "XGetSelectionOwner"=kinakaze_engine_libX11_XGetSelectionOwner PRIVATE
+  kinakaze_engine_libX11_XGetStandardColormap
+  "XGetStandardColormap"=kinakaze_engine_libX11_XGetStandardColormap PRIVATE
+  kinakaze_engine_libX11_XGetSubImage
+  "XGetSubImage"=kinakaze_engine_libX11_XGetSubImage PRIVATE
+  kinakaze_engine_libX11_XGetTextProperty
+  "XGetTextProperty"=kinakaze_engine_libX11_XGetTextProperty PRIVATE
+  kinakaze_engine_libX11_XGetTransientForHint
+  "XGetTransientForHint"=kinakaze_engine_libX11_XGetTransientForHint PRIVATE
+  kinakaze_engine_libX11_XGetVisualInfo
+  "XGetVisualInfo"=kinakaze_engine_libX11_XGetVisualInfo PRIVATE
+  kinakaze_engine_libX11_XGetWMColormapWindows
+  "XGetWMColormapWindows"=kinakaze_engine_libX11_XGetWMColormapWindows PRIVATE
+  kinakaze_engine_libX11_XGetWMHints
+  "XGetWMHints"=kinakaze_engine_libX11_XGetWMHints PRIVATE
+  kinakaze_engine_libX11_XGetWMIconName
+  "XGetWMIconName"=kinakaze_engine_libX11_XGetWMIconName PRIVATE
+  kinakaze_engine_libX11_XGetWMName
+  "XGetWMName"=kinakaze_engine_libX11_XGetWMName PRIVATE
+  kinakaze_engine_libX11_XGetWMNormalHints
+  "XGetWMNormalHints"=kinakaze_engine_libX11_XGetWMNormalHints PRIVATE
+  kinakaze_engine_libX11_XGetWMProtocols
+  "XGetWMProtocols"=kinakaze_engine_libX11_XGetWMProtocols PRIVATE
+  kinakaze_engine_libX11_XGetWMSizeHints
+  "XGetWMSizeHints"=kinakaze_engine_libX11_XGetWMSizeHints PRIVATE
+  kinakaze_engine_libX11_XGetWindowAttributes
+  "XGetWindowAttributes"=kinakaze_engine_libX11_XGetWindowAttributes PRIVATE
+  kinakaze_engine_libX11_XGetWindowProperty
+  "XGetWindowProperty"=kinakaze_engine_libX11_XGetWindowProperty PRIVATE
+  kinakaze_engine_libX11_XGrabButton
+  "XGrabButton"=kinakaze_engine_libX11_XGrabButton PRIVATE
+  kinakaze_engine_libX11_XGrabKey
+  "XGrabKey"=kinakaze_engine_libX11_XGrabKey PRIVATE
+  kinakaze_engine_libX11_XGrabKeyboard
+  "XGrabKeyboard"=kinakaze_engine_libX11_XGrabKeyboard PRIVATE
+  kinakaze_engine_libX11_XGrabPointer
+  "XGrabPointer"=kinakaze_engine_libX11_XGrabPointer PRIVATE
+  kinakaze_engine_libX11_XGrabServer
+  "XGrabServer"=kinakaze_engine_libX11_XGrabServer PRIVATE
+  kinakaze_engine_libX11_XHeightMMOfScreen
+  "XHeightMMOfScreen"=kinakaze_engine_libX11_XHeightMMOfScreen PRIVATE
+  kinakaze_engine_libX11_XHeightOfScreen
+  "XHeightOfScreen"=kinakaze_engine_libX11_XHeightOfScreen PRIVATE
+  kinakaze_engine_libX11_XIMOfIC
+  "XIMOfIC"=kinakaze_engine_libX11_XIMOfIC PRIVATE
+  kinakaze_engine_libX11_XIconifyWindow
+  "XIconifyWindow"=kinakaze_engine_libX11_XIconifyWindow PRIVATE
+  kinakaze_engine_libX11_XIfEvent
+  "XIfEvent"=kinakaze_engine_libX11_XIfEvent PRIVATE
+  kinakaze_engine_libX11_XImageByteOrder
+  "XImageByteOrder"=kinakaze_engine_libX11_XImageByteOrder PRIVATE
+  kinakaze_engine_libX11_XInitExtension
+  "XInitExtension"=kinakaze_engine_libX11_XInitExtension PRIVATE
+  kinakaze_engine_libX11_XInitImage
+  "XInitImage"=kinakaze_engine_libX11_XInitImage PRIVATE
+  kinakaze_engine_libX11_XInitThreads
+  "XInitThreads"=kinakaze_engine_libX11_XInitThreads PRIVATE
+  kinakaze_engine_libX11_XInstallColormap
+  "XInstallColormap"=kinakaze_engine_libX11_XInstallColormap PRIVATE
+  kinakaze_engine_libX11_XInternAtom
+  "XInternAtom"=kinakaze_engine_libX11_XInternAtom PRIVATE
+  kinakaze_engine_libX11_XInternAtoms
+  "XInternAtoms"=kinakaze_engine_libX11_XInternAtoms PRIVATE
+  kinakaze_engine_libX11_XIntersectRegion
+  "XIntersectRegion"=kinakaze_engine_libX11_XIntersectRegion PRIVATE
+  kinakaze_engine_libX11_XKeycodeToKeysym
+  "XKeycodeToKeysym"=kinakaze_engine_libX11_XKeycodeToKeysym PRIVATE
+  kinakaze_engine_libX11_XKeysymToKeycode
+  "XKeysymToKeycode"=kinakaze_engine_libX11_XKeysymToKeycode PRIVATE
+  kinakaze_engine_libX11_XKeysymToString
+  "XKeysymToString"=kinakaze_engine_libX11_XKeysymToString PRIVATE
+  kinakaze_engine_libX11_XKillClient
+  "XKillClient"=kinakaze_engine_libX11_XKillClient PRIVATE
+  kinakaze_engine_libX11_XLastKnownRequestProcessed
+  "XLastKnownRequestProcessed"=kinakaze_engine_libX11_XLastKnownRequestProcessed PRIVATE
+  kinakaze_engine_libX11_XListDepths
+  "XListDepths"=kinakaze_engine_libX11_XListDepths PRIVATE
+  kinakaze_engine_libX11_XListExtensions
+  "XListExtensions"=kinakaze_engine_libX11_XListExtensions PRIVATE
+  kinakaze_engine_libX11_XListInstalledColormaps
+  "XListInstalledColormaps"=kinakaze_engine_libX11_XListInstalledColormaps PRIVATE
+  kinakaze_engine_libX11_XListPixmapFormats
+  "XListPixmapFormats"=kinakaze_engine_libX11_XListPixmapFormats PRIVATE
+  kinakaze_engine_libX11_XLoadFont
+  "XLoadFont"=kinakaze_engine_libX11_XLoadFont PRIVATE
+  kinakaze_engine_libX11_XLoadQueryFont
+  "XLoadQueryFont"=kinakaze_engine_libX11_XLoadQueryFont PRIVATE
+  kinakaze_engine_libX11_XLocaleOfFontSet
+  "XLocaleOfFontSet"=kinakaze_engine_libX11_XLocaleOfFontSet PRIVATE
+  kinakaze_engine_libX11_XLockDisplay
+  "XLockDisplay"=kinakaze_engine_libX11_XLockDisplay PRIVATE
+  kinakaze_engine_libX11_XLookupColor
+  "XLookupColor"=kinakaze_engine_libX11_XLookupColor PRIVATE
+  kinakaze_engine_libX11_XLookupKeysym
+  "XLookupKeysym"=kinakaze_engine_libX11_XLookupKeysym PRIVATE
+  kinakaze_engine_libX11_XLookupString
+  "XLookupString"=kinakaze_engine_libX11_XLookupString PRIVATE
+  kinakaze_engine_libX11_XLowerWindow
+  "XLowerWindow"=kinakaze_engine_libX11_XLowerWindow PRIVATE
+  kinakaze_engine_libX11_XMapRaised
+  "XMapRaised"=kinakaze_engine_libX11_XMapRaised PRIVATE
+  kinakaze_engine_libX11_XMapSubwindows
+  "XMapSubwindows"=kinakaze_engine_libX11_XMapSubwindows PRIVATE
+  kinakaze_engine_libX11_XMapWindow
+  "XMapWindow"=kinakaze_engine_libX11_XMapWindow PRIVATE
+  kinakaze_engine_libX11_XMaskEvent
+  "XMaskEvent"=kinakaze_engine_libX11_XMaskEvent PRIVATE
+  kinakaze_engine_libX11_XMatchVisualInfo
+  "XMatchVisualInfo"=kinakaze_engine_libX11_XMatchVisualInfo PRIVATE
+  kinakaze_engine_libX11_XMaxCmapsOfScreen
+  "XMaxCmapsOfScreen"=kinakaze_engine_libX11_XMaxCmapsOfScreen PRIVATE
+  kinakaze_engine_libX11_XMaxRequestSize
+  "XMaxRequestSize"=kinakaze_engine_libX11_XMaxRequestSize PRIVATE
+  kinakaze_engine_libX11_XMinCmapsOfScreen
+  "XMinCmapsOfScreen"=kinakaze_engine_libX11_XMinCmapsOfScreen PRIVATE
+  kinakaze_engine_libX11_XMissingExtension
+  "XMissingExtension"=kinakaze_engine_libX11_XMissingExtension PRIVATE
+  kinakaze_engine_libX11_XMoveResizeWindow
+  "XMoveResizeWindow"=kinakaze_engine_libX11_XMoveResizeWindow PRIVATE
+  kinakaze_engine_libX11_XMoveWindow
+  "XMoveWindow"=kinakaze_engine_libX11_XMoveWindow PRIVATE
+  kinakaze_engine_libX11_XNextEvent
+  "XNextEvent"=kinakaze_engine_libX11_XNextEvent PRIVATE
+  kinakaze_engine_libX11_XNextRequest
+  "XNextRequest"=kinakaze_engine_libX11_XNextRequest PRIVATE
+  kinakaze_engine_libX11_XOffsetRegion
+  "XOffsetRegion"=kinakaze_engine_libX11_XOffsetRegion PRIVATE
+  kinakaze_engine_libX11_XOpenDisplay
+  "XOpenDisplay"=kinakaze_engine_libX11_XOpenDisplay PRIVATE
+  kinakaze_engine_libX11_XOpenIM
+  "XOpenIM"=kinakaze_engine_libX11_XOpenIM PRIVATE
+  kinakaze_engine_libX11_XParseColor
+  "XParseColor"=kinakaze_engine_libX11_XParseColor PRIVATE
+  kinakaze_engine_libX11_XParseGeometry
+  "XParseGeometry"=kinakaze_engine_libX11_XParseGeometry PRIVATE
+  kinakaze_engine_libX11_XPeekEvent
+  "XPeekEvent"=kinakaze_engine_libX11_XPeekEvent PRIVATE
+  kinakaze_engine_libX11_XPeekIfEvent
+  "XPeekIfEvent"=kinakaze_engine_libX11_XPeekIfEvent PRIVATE
+  kinakaze_engine_libX11_XPending
+  "XPending"=kinakaze_engine_libX11_XPending PRIVATE
+  kinakaze_engine_libX11_XPlanesOfScreen
+  "XPlanesOfScreen"=kinakaze_engine_libX11_XPlanesOfScreen PRIVATE
+  kinakaze_engine_libX11_XPointInRegion
+  "XPointInRegion"=kinakaze_engine_libX11_XPointInRegion PRIVATE
+  kinakaze_engine_libX11_XPolygonRegion
+  "XPolygonRegion"=kinakaze_engine_libX11_XPolygonRegion PRIVATE
+  kinakaze_engine_libX11_XProcessInternalConnection
+  "XProcessInternalConnection"=kinakaze_engine_libX11_XProcessInternalConnection PRIVATE
+  kinakaze_engine_libX11_XProtocolRevision
+  "XProtocolRevision"=kinakaze_engine_libX11_XProtocolRevision PRIVATE
+  kinakaze_engine_libX11_XProtocolVersion
+  "XProtocolVersion"=kinakaze_engine_libX11_XProtocolVersion PRIVATE
+  kinakaze_engine_libX11_XPutBackEvent
+  "XPutBackEvent"=kinakaze_engine_libX11_XPutBackEvent PRIVATE
+  kinakaze_engine_libX11_XPutImage
+  "XPutImage"=kinakaze_engine_libX11_XPutImage PRIVATE
+  kinakaze_engine_libX11_XPutPixel
+  "XPutPixel"=kinakaze_engine_libX11_XPutPixel PRIVATE
+  kinakaze_engine_libX11_XQueryBestCursor
+  "XQueryBestCursor"=kinakaze_engine_libX11_XQueryBestCursor PRIVATE
+  kinakaze_engine_libX11_XQueryColor
+  "XQueryColor"=kinakaze_engine_libX11_XQueryColor PRIVATE
+  kinakaze_engine_libX11_XQueryColors
+  "XQueryColors"=kinakaze_engine_libX11_XQueryColors PRIVATE
+  kinakaze_engine_libX11_XQueryExtension
+  "XQueryExtension"=kinakaze_engine_libX11_XQueryExtension PRIVATE
+  kinakaze_engine_libX11_XQueryFont
+  "XQueryFont"=kinakaze_engine_libX11_XQueryFont PRIVATE
+  kinakaze_engine_libX11_XQueryKeymap
+  "XQueryKeymap"=kinakaze_engine_libX11_XQueryKeymap PRIVATE
+  kinakaze_engine_libX11_XQueryPointer
+  "XQueryPointer"=kinakaze_engine_libX11_XQueryPointer PRIVATE
+  kinakaze_engine_libX11_XQueryTree
+  "XQueryTree"=kinakaze_engine_libX11_XQueryTree PRIVATE
+  kinakaze_engine_libX11_XRaiseWindow
+  "XRaiseWindow"=kinakaze_engine_libX11_XRaiseWindow PRIVATE
+  kinakaze_engine_libX11_XRecolorCursor
+  "XRecolorCursor"=kinakaze_engine_libX11_XRecolorCursor PRIVATE
+  kinakaze_engine_libX11_XReconfigureWMWindow
+  "XReconfigureWMWindow"=kinakaze_engine_libX11_XReconfigureWMWindow PRIVATE
+  kinakaze_engine_libX11_XRectInRegion
+  "XRectInRegion"=kinakaze_engine_libX11_XRectInRegion PRIVATE
+  kinakaze_engine_libX11_XRefreshKeyboardMapping
+  "XRefreshKeyboardMapping"=kinakaze_engine_libX11_XRefreshKeyboardMapping PRIVATE
+  kinakaze_engine_libX11_XRegisterIMInstantiateCallback
+  "XRegisterIMInstantiateCallback"=kinakaze_engine_libX11_XRegisterIMInstantiateCallback PRIVATE
+  kinakaze_engine_libX11_XRemoveFromSaveSet
+  "XRemoveFromSaveSet"=kinakaze_engine_libX11_XRemoveFromSaveSet PRIVATE
+  kinakaze_engine_libX11_XReparentWindow
+  "XReparentWindow"=kinakaze_engine_libX11_XReparentWindow PRIVATE
+  kinakaze_engine_libX11_XResetScreenSaver
+  "XResetScreenSaver"=kinakaze_engine_libX11_XResetScreenSaver PRIVATE
+  kinakaze_engine_libX11_XResizeWindow
+  "XResizeWindow"=kinakaze_engine_libX11_XResizeWindow PRIVATE
+  kinakaze_engine_libX11_XResourceManagerString
+  "XResourceManagerString"=kinakaze_engine_libX11_XResourceManagerString PRIVATE
+  kinakaze_engine_libX11_XRestackWindows
+  "XRestackWindows"=kinakaze_engine_libX11_XRestackWindows PRIVATE
+  kinakaze_engine_libX11_XRootWindow
+  "XRootWindow"=kinakaze_engine_libX11_XRootWindow PRIVATE
+  kinakaze_engine_libX11_XRootWindowOfScreen
+  "XRootWindowOfScreen"=kinakaze_engine_libX11_XRootWindowOfScreen PRIVATE
+  kinakaze_engine_libX11_XSaveContext
+  "XSaveContext"=kinakaze_engine_libX11_XSaveContext PRIVATE
+  kinakaze_engine_libX11_XScreenCount
+  "XScreenCount"=kinakaze_engine_libX11_XScreenCount PRIVATE
+  kinakaze_engine_libX11_XScreenNumberOfScreen
+  "XScreenNumberOfScreen"=kinakaze_engine_libX11_XScreenNumberOfScreen PRIVATE
+  kinakaze_engine_libX11_XScreenResourceString
+  "XScreenResourceString"=kinakaze_engine_libX11_XScreenResourceString PRIVATE
+  kinakaze_engine_libX11_XSelectInput
+  "XSelectInput"=kinakaze_engine_libX11_XSelectInput PRIVATE
+  kinakaze_engine_libX11_XSendEvent
+  "XSendEvent"=kinakaze_engine_libX11_XSendEvent PRIVATE
+  kinakaze_engine_libX11_XServerVendor
+  "XServerVendor"=kinakaze_engine_libX11_XServerVendor PRIVATE
+  kinakaze_engine_libX11_XSetArcMode
+  "XSetArcMode"=kinakaze_engine_libX11_XSetArcMode PRIVATE
+  kinakaze_engine_libX11_XSetBackground
+  "XSetBackground"=kinakaze_engine_libX11_XSetBackground PRIVATE
+  kinakaze_engine_libX11_XSetClassHint
+  "XSetClassHint"=kinakaze_engine_libX11_XSetClassHint PRIVATE
+  kinakaze_engine_libX11_XSetClipMask
+  "XSetClipMask"=kinakaze_engine_libX11_XSetClipMask PRIVATE
+  kinakaze_engine_libX11_XSetClipOrigin
+  "XSetClipOrigin"=kinakaze_engine_libX11_XSetClipOrigin PRIVATE
+  kinakaze_engine_libX11_XSetClipRectangles
+  "XSetClipRectangles"=kinakaze_engine_libX11_XSetClipRectangles PRIVATE
+  kinakaze_engine_libX11_XSetCloseDownMode
+  "XSetCloseDownMode"=kinakaze_engine_libX11_XSetCloseDownMode PRIVATE
+  kinakaze_engine_libX11_XSetCommand
+  "XSetCommand"=kinakaze_engine_libX11_XSetCommand PRIVATE
+  kinakaze_engine_libX11_XSetDashes
+  "XSetDashes"=kinakaze_engine_libX11_XSetDashes PRIVATE
+  kinakaze_engine_libX11_XSetErrorHandler
+  "XSetErrorHandler"=kinakaze_engine_libX11_XSetErrorHandler PRIVATE
+  kinakaze_engine_libX11_XSetFillRule
+  "XSetFillRule"=kinakaze_engine_libX11_XSetFillRule PRIVATE
+  kinakaze_engine_libX11_XSetFillStyle
+  "XSetFillStyle"=kinakaze_engine_libX11_XSetFillStyle PRIVATE
+  kinakaze_engine_libX11_XSetFont
+  "XSetFont"=kinakaze_engine_libX11_XSetFont PRIVATE
+  kinakaze_engine_libX11_XSetForeground
+  "XSetForeground"=kinakaze_engine_libX11_XSetForeground PRIVATE
+  kinakaze_engine_libX11_XSetFunction
+  "XSetFunction"=kinakaze_engine_libX11_XSetFunction PRIVATE
+  kinakaze_engine_libX11_XSetGraphicsExposures
+  "XSetGraphicsExposures"=kinakaze_engine_libX11_XSetGraphicsExposures PRIVATE
+  kinakaze_engine_libX11_XSetICFocus
+  "XSetICFocus"=kinakaze_engine_libX11_XSetICFocus PRIVATE
+  kinakaze_engine_libX11_XSetICValues
+  "XSetICValues"=kinakaze_engine_libX11_XSetICValues PRIVATE
+  kinakaze_engine_libX11_XSetIMValues
+  "XSetIMValues"=kinakaze_engine_libX11_XSetIMValues PRIVATE
+  kinakaze_engine_libX11_XSetIOErrorExitHandler
+  "XSetIOErrorExitHandler"=kinakaze_engine_libX11_XSetIOErrorExitHandler PRIVATE
+  kinakaze_engine_libX11_XSetIOErrorHandler
+  "XSetIOErrorHandler"=kinakaze_engine_libX11_XSetIOErrorHandler PRIVATE
+  kinakaze_engine_libX11_XSetIconSizes
+  "XSetIconSizes"=kinakaze_engine_libX11_XSetIconSizes PRIVATE
+  kinakaze_engine_libX11_XSetInputFocus
+  "XSetInputFocus"=kinakaze_engine_libX11_XSetInputFocus PRIVATE
+  kinakaze_engine_libX11_XSetLineAttributes
+  "XSetLineAttributes"=kinakaze_engine_libX11_XSetLineAttributes PRIVATE
+  kinakaze_engine_libX11_XSetLocaleModifiers
+  "XSetLocaleModifiers"=kinakaze_engine_libX11_XSetLocaleModifiers PRIVATE
+  kinakaze_engine_libX11_XSetNormalHints
+  "XSetNormalHints"=kinakaze_engine_libX11_XSetNormalHints PRIVATE
+  kinakaze_engine_libX11_XSetPlaneMask
+  "XSetPlaneMask"=kinakaze_engine_libX11_XSetPlaneMask PRIVATE
+  kinakaze_engine_libX11_XSetRGBColormaps
+  "XSetRGBColormaps"=kinakaze_engine_libX11_XSetRGBColormaps PRIVATE
+  kinakaze_engine_libX11_XSetRegion
+  "XSetRegion"=kinakaze_engine_libX11_XSetRegion PRIVATE
+  kinakaze_engine_libX11_XSetScreenSaver
+  "XSetScreenSaver"=kinakaze_engine_libX11_XSetScreenSaver PRIVATE
+  kinakaze_engine_libX11_XSetSelectionOwner
+  "XSetSelectionOwner"=kinakaze_engine_libX11_XSetSelectionOwner PRIVATE
+  kinakaze_engine_libX11_XSetStandardColormap
+  "XSetStandardColormap"=kinakaze_engine_libX11_XSetStandardColormap PRIVATE
+  kinakaze_engine_libX11_XSetStandardProperties
+  "XSetStandardProperties"=kinakaze_engine_libX11_XSetStandardProperties PRIVATE
+  kinakaze_engine_libX11_XSetStipple
+  "XSetStipple"=kinakaze_engine_libX11_XSetStipple PRIVATE
+  kinakaze_engine_libX11_XSetSubwindowMode
+  "XSetSubwindowMode"=kinakaze_engine_libX11_XSetSubwindowMode PRIVATE
+  kinakaze_engine_libX11_XSetTSOrigin
+  "XSetTSOrigin"=kinakaze_engine_libX11_XSetTSOrigin PRIVATE
+  kinakaze_engine_libX11_XSetTextProperty
+  "XSetTextProperty"=kinakaze_engine_libX11_XSetTextProperty PRIVATE
+  kinakaze_engine_libX11_XSetTile
+  "XSetTile"=kinakaze_engine_libX11_XSetTile PRIVATE
+  kinakaze_engine_libX11_XSetTransientForHint
+  "XSetTransientForHint"=kinakaze_engine_libX11_XSetTransientForHint PRIVATE
+  kinakaze_engine_libX11_XSetWMColormapWindows
+  "XSetWMColormapWindows"=kinakaze_engine_libX11_XSetWMColormapWindows PRIVATE
+  kinakaze_engine_libX11_XSetWMHints
+  "XSetWMHints"=kinakaze_engine_libX11_XSetWMHints PRIVATE
+  kinakaze_engine_libX11_XSetWMIconName
+  "XSetWMIconName"=kinakaze_engine_libX11_XSetWMIconName PRIVATE
+  kinakaze_engine_libX11_XSetWMName
+  "XSetWMName"=kinakaze_engine_libX11_XSetWMName PRIVATE
+  kinakaze_engine_libX11_XSetWMNormalHints
+  "XSetWMNormalHints"=kinakaze_engine_libX11_XSetWMNormalHints PRIVATE
+  kinakaze_engine_libX11_XSetWMProperties
+  "XSetWMProperties"=kinakaze_engine_libX11_XSetWMProperties PRIVATE
+  kinakaze_engine_libX11_XSetWMProtocols
+  "XSetWMProtocols"=kinakaze_engine_libX11_XSetWMProtocols PRIVATE
+  kinakaze_engine_libX11_XSetWMSizeHints
+  "XSetWMSizeHints"=kinakaze_engine_libX11_XSetWMSizeHints PRIVATE
+  kinakaze_engine_libX11_XSetWindowBackground
+  "XSetWindowBackground"=kinakaze_engine_libX11_XSetWindowBackground PRIVATE
+  kinakaze_engine_libX11_XSetWindowBackgroundPixmap
+  "XSetWindowBackgroundPixmap"=kinakaze_engine_libX11_XSetWindowBackgroundPixmap PRIVATE
+  kinakaze_engine_libX11_XSetWindowBorderWidth
+  "XSetWindowBorderWidth"=kinakaze_engine_libX11_XSetWindowBorderWidth PRIVATE
+  kinakaze_engine_libX11_XSetWindowColormap
+  "XSetWindowColormap"=kinakaze_engine_libX11_XSetWindowColormap PRIVATE
+  kinakaze_engine_libX11_XShrinkRegion
+  "XShrinkRegion"=kinakaze_engine_libX11_XShrinkRegion PRIVATE
+  kinakaze_engine_libX11_XStoreColor
+  "XStoreColor"=kinakaze_engine_libX11_XStoreColor PRIVATE
+  kinakaze_engine_libX11_XStoreColors
+  "XStoreColors"=kinakaze_engine_libX11_XStoreColors PRIVATE
+  kinakaze_engine_libX11_XStoreName
+  "XStoreName"=kinakaze_engine_libX11_XStoreName PRIVATE
+  kinakaze_engine_libX11_XStringListToTextProperty
+  "XStringListToTextProperty"=kinakaze_engine_libX11_XStringListToTextProperty PRIVATE
+  kinakaze_engine_libX11_XStringToKeysym
+  "XStringToKeysym"=kinakaze_engine_libX11_XStringToKeysym PRIVATE
+  kinakaze_engine_libX11_XSubImage
+  "XSubImage"=kinakaze_engine_libX11_XSubImage PRIVATE
+  kinakaze_engine_libX11_XSubtractRegion
+  "XSubtractRegion"=kinakaze_engine_libX11_XSubtractRegion PRIVATE
+  kinakaze_engine_libX11_XSupportsLocale
+  "XSupportsLocale"=kinakaze_engine_libX11_XSupportsLocale PRIVATE
+  kinakaze_engine_libX11_XSync
+  "XSync"=kinakaze_engine_libX11_XSync PRIVATE
+  kinakaze_engine_libX11_XSynchronize
+  "XSynchronize"=kinakaze_engine_libX11_XSynchronize PRIVATE
+  kinakaze_engine_libX11_XTextExtents
+  "XTextExtents"=kinakaze_engine_libX11_XTextExtents PRIVATE
+  kinakaze_engine_libX11_XTextExtents16
+  "XTextExtents16"=kinakaze_engine_libX11_XTextExtents16 PRIVATE
+  kinakaze_engine_libX11_XTextPropertyToStringList
+  "XTextPropertyToStringList"=kinakaze_engine_libX11_XTextPropertyToStringList PRIVATE
+  kinakaze_engine_libX11_XTextWidth
+  "XTextWidth"=kinakaze_engine_libX11_XTextWidth PRIVATE
+  kinakaze_engine_libX11_XTextWidth16
+  "XTextWidth16"=kinakaze_engine_libX11_XTextWidth16 PRIVATE
+  kinakaze_engine_libX11_XTranslateCoordinates
+  "XTranslateCoordinates"=kinakaze_engine_libX11_XTranslateCoordinates PRIVATE
+  kinakaze_engine_libX11_XUndefineCursor
+  "XUndefineCursor"=kinakaze_engine_libX11_XUndefineCursor PRIVATE
+  kinakaze_engine_libX11_XUngrabButton
+  "XUngrabButton"=kinakaze_engine_libX11_XUngrabButton PRIVATE
+  kinakaze_engine_libX11_XUngrabKey
+  "XUngrabKey"=kinakaze_engine_libX11_XUngrabKey PRIVATE
+  kinakaze_engine_libX11_XUngrabKeyboard
+  "XUngrabKeyboard"=kinakaze_engine_libX11_XUngrabKeyboard PRIVATE
+  kinakaze_engine_libX11_XUngrabPointer
+  "XUngrabPointer"=kinakaze_engine_libX11_XUngrabPointer PRIVATE
+  kinakaze_engine_libX11_XUngrabServer
+  "XUngrabServer"=kinakaze_engine_libX11_XUngrabServer PRIVATE
+  kinakaze_engine_libX11_XUninstallColormap
+  "XUninstallColormap"=kinakaze_engine_libX11_XUninstallColormap PRIVATE
+  kinakaze_engine_libX11_XUnionRectWithRegion
+  "XUnionRectWithRegion"=kinakaze_engine_libX11_XUnionRectWithRegion PRIVATE
+  kinakaze_engine_libX11_XUnionRegion
+  "XUnionRegion"=kinakaze_engine_libX11_XUnionRegion PRIVATE
+  kinakaze_engine_libX11_XUniqueContext
+  "XUniqueContext"=kinakaze_engine_libX11_XUniqueContext PRIVATE
+  kinakaze_engine_libX11_XUnloadFont
+  "XUnloadFont"=kinakaze_engine_libX11_XUnloadFont PRIVATE
+  kinakaze_engine_libX11_XUnlockDisplay
+  "XUnlockDisplay"=kinakaze_engine_libX11_XUnlockDisplay PRIVATE
+  kinakaze_engine_libX11_XUnmapWindow
+  "XUnmapWindow"=kinakaze_engine_libX11_XUnmapWindow PRIVATE
+  kinakaze_engine_libX11_XUnregisterIMInstantiateCallback
+  "XUnregisterIMInstantiateCallback"=kinakaze_engine_libX11_XUnregisterIMInstantiateCallback PRIVATE
+  kinakaze_engine_libX11_XUnsetICFocus
+  "XUnsetICFocus"=kinakaze_engine_libX11_XUnsetICFocus PRIVATE
+  kinakaze_engine_libX11_XVaCreateNestedList
+  "XVaCreateNestedList"=kinakaze_engine_libX11_XVaCreateNestedList PRIVATE
+  kinakaze_engine_libX11_XVendorRelease
+  "XVendorRelease"=kinakaze_engine_libX11_XVendorRelease PRIVATE
+  kinakaze_engine_libX11_XVisualIDFromVisual
+  "XVisualIDFromVisual"=kinakaze_engine_libX11_XVisualIDFromVisual PRIVATE
+  kinakaze_engine_libX11_XWMGeometry
+  "XWMGeometry"=kinakaze_engine_libX11_XWMGeometry PRIVATE
+  kinakaze_engine_libX11_XWarpPointer
+  "XWarpPointer"=kinakaze_engine_libX11_XWarpPointer PRIVATE
+  kinakaze_engine_libX11_XWhitePixel
+  "XWhitePixel"=kinakaze_engine_libX11_XWhitePixel PRIVATE
+  kinakaze_engine_libX11_XWhitePixelOfScreen
+  "XWhitePixelOfScreen"=kinakaze_engine_libX11_XWhitePixelOfScreen PRIVATE
+  kinakaze_engine_libX11_XWidthMMOfScreen
+  "XWidthMMOfScreen"=kinakaze_engine_libX11_XWidthMMOfScreen PRIVATE
+  kinakaze_engine_libX11_XWidthOfScreen
+  "XWidthOfScreen"=kinakaze_engine_libX11_XWidthOfScreen PRIVATE
+  kinakaze_engine_libX11_XWindowEvent
+  "XWindowEvent"=kinakaze_engine_libX11_XWindowEvent PRIVATE
+  kinakaze_engine_libX11_XWithdrawWindow
+  "XWithdrawWindow"=kinakaze_engine_libX11_XWithdrawWindow PRIVATE
+  kinakaze_engine_libX11_XXorRegion
+  "XXorRegion"=kinakaze_engine_libX11_XXorRegion PRIVATE
+  kinakaze_engine_libX11_XkbAddGeomColor
+  "XkbAddGeomColor"=kinakaze_engine_libX11_XkbAddGeomColor PRIVATE
+  kinakaze_engine_libX11_XkbAddGeomDoodad
+  "XkbAddGeomDoodad"=kinakaze_engine_libX11_XkbAddGeomDoodad PRIVATE
+  kinakaze_engine_libX11_XkbAddGeomKey
+  "XkbAddGeomKey"=kinakaze_engine_libX11_XkbAddGeomKey PRIVATE
+  kinakaze_engine_libX11_XkbAddGeomOutline
+  "XkbAddGeomOutline"=kinakaze_engine_libX11_XkbAddGeomOutline PRIVATE
+  kinakaze_engine_libX11_XkbAddGeomOverlay
+  "XkbAddGeomOverlay"=kinakaze_engine_libX11_XkbAddGeomOverlay PRIVATE
+  kinakaze_engine_libX11_XkbAddGeomOverlayRow
+  "XkbAddGeomOverlayRow"=kinakaze_engine_libX11_XkbAddGeomOverlayRow PRIVATE
+  kinakaze_engine_libX11_XkbAddGeomProperty
+  "XkbAddGeomProperty"=kinakaze_engine_libX11_XkbAddGeomProperty PRIVATE
+  kinakaze_engine_libX11_XkbAddGeomRow
+  "XkbAddGeomRow"=kinakaze_engine_libX11_XkbAddGeomRow PRIVATE
+  kinakaze_engine_libX11_XkbAddGeomSection
+  "XkbAddGeomSection"=kinakaze_engine_libX11_XkbAddGeomSection PRIVATE
+  kinakaze_engine_libX11_XkbAddGeomShape
+  "XkbAddGeomShape"=kinakaze_engine_libX11_XkbAddGeomShape PRIVATE
+  kinakaze_engine_libX11_XkbAllocClientMap
+  "XkbAllocClientMap"=kinakaze_engine_libX11_XkbAllocClientMap PRIVATE
+  kinakaze_engine_libX11_XkbAllocCompatMap
+  "XkbAllocCompatMap"=kinakaze_engine_libX11_XkbAllocCompatMap PRIVATE
+  kinakaze_engine_libX11_XkbAllocControls
+  "XkbAllocControls"=kinakaze_engine_libX11_XkbAllocControls PRIVATE
+  kinakaze_engine_libX11_XkbAllocGeometry
+  "XkbAllocGeometry"=kinakaze_engine_libX11_XkbAllocGeometry PRIVATE
+  kinakaze_engine_libX11_XkbAllocIndicatorMaps
+  "XkbAllocIndicatorMaps"=kinakaze_engine_libX11_XkbAllocIndicatorMaps PRIVATE
+  kinakaze_engine_libX11_XkbAllocKeyboard
+  "XkbAllocKeyboard"=kinakaze_engine_libX11_XkbAllocKeyboard PRIVATE
+  kinakaze_engine_libX11_XkbAllocNames
+  "XkbAllocNames"=kinakaze_engine_libX11_XkbAllocNames PRIVATE
+  kinakaze_engine_libX11_XkbAllocServerMap
+  "XkbAllocServerMap"=kinakaze_engine_libX11_XkbAllocServerMap PRIVATE
+  kinakaze_engine_libX11_XkbBell
+  "XkbBell"=kinakaze_engine_libX11_XkbBell PRIVATE
+  kinakaze_engine_libX11_XkbBellEvent
+  "XkbBellEvent"=kinakaze_engine_libX11_XkbBellEvent PRIVATE
+  kinakaze_engine_libX11_XkbChangeEnabledControls
+  "XkbChangeEnabledControls"=kinakaze_engine_libX11_XkbChangeEnabledControls PRIVATE
+  kinakaze_engine_libX11_XkbChangeMap
+  "XkbChangeMap"=kinakaze_engine_libX11_XkbChangeMap PRIVATE
+  kinakaze_engine_libX11_XkbChangeTypesOfKey
+  "XkbChangeTypesOfKey"=kinakaze_engine_libX11_XkbChangeTypesOfKey PRIVATE
+  kinakaze_engine_libX11_XkbForceDeviceBell
+  "XkbForceDeviceBell"=kinakaze_engine_libX11_XkbForceDeviceBell PRIVATE
+  kinakaze_engine_libX11_XkbFreeClientMap
+  "XkbFreeClientMap"=kinakaze_engine_libX11_XkbFreeClientMap PRIVATE
+  kinakaze_engine_libX11_XkbFreeCompatMap
+  "XkbFreeCompatMap"=kinakaze_engine_libX11_XkbFreeCompatMap PRIVATE
+  kinakaze_engine_libX11_XkbFreeControls
+  "XkbFreeControls"=kinakaze_engine_libX11_XkbFreeControls PRIVATE
+  kinakaze_engine_libX11_XkbFreeGeometry
+  "XkbFreeGeometry"=kinakaze_engine_libX11_XkbFreeGeometry PRIVATE
+  kinakaze_engine_libX11_XkbFreeIndicatorMaps
+  "XkbFreeIndicatorMaps"=kinakaze_engine_libX11_XkbFreeIndicatorMaps PRIVATE
+  kinakaze_engine_libX11_XkbFreeKeyboard
+  "XkbFreeKeyboard"=kinakaze_engine_libX11_XkbFreeKeyboard PRIVATE
+  kinakaze_engine_libX11_XkbFreeNames
+  "XkbFreeNames"=kinakaze_engine_libX11_XkbFreeNames PRIVATE
+  kinakaze_engine_libX11_XkbFreeServerMap
+  "XkbFreeServerMap"=kinakaze_engine_libX11_XkbFreeServerMap PRIVATE
+  kinakaze_engine_libX11_XkbGetCompatMap
+  "XkbGetCompatMap"=kinakaze_engine_libX11_XkbGetCompatMap PRIVATE
+  kinakaze_engine_libX11_XkbGetControls
+  "XkbGetControls"=kinakaze_engine_libX11_XkbGetControls PRIVATE
+  kinakaze_engine_libX11_XkbGetGeometry
+  "XkbGetGeometry"=kinakaze_engine_libX11_XkbGetGeometry PRIVATE
+  kinakaze_engine_libX11_XkbGetIndicatorMap
+  "XkbGetIndicatorMap"=kinakaze_engine_libX11_XkbGetIndicatorMap PRIVATE
+  kinakaze_engine_libX11_XkbGetKeyboardByName
+  "XkbGetKeyboardByName"=kinakaze_engine_libX11_XkbGetKeyboardByName PRIVATE
+  kinakaze_engine_libX11_XkbGetMap
+  "XkbGetMap"=kinakaze_engine_libX11_XkbGetMap PRIVATE
+  kinakaze_engine_libX11_XkbGetNames
+  "XkbGetNames"=kinakaze_engine_libX11_XkbGetNames PRIVATE
+  kinakaze_engine_libX11_XkbGetState
+  "XkbGetState"=kinakaze_engine_libX11_XkbGetState PRIVATE
+  kinakaze_engine_libX11_XkbGetUpdatedMap
+  "XkbGetUpdatedMap"=kinakaze_engine_libX11_XkbGetUpdatedMap PRIVATE
+  kinakaze_engine_libX11_XkbKeycodeToKeysym
+  "XkbKeycodeToKeysym"=kinakaze_engine_libX11_XkbKeycodeToKeysym PRIVATE
+  kinakaze_engine_libX11_XkbKeysymToModifiers
+  "XkbKeysymToModifiers"=kinakaze_engine_libX11_XkbKeysymToModifiers PRIVATE
+  kinakaze_engine_libX11_XkbLatchModifiers
+  "XkbLatchModifiers"=kinakaze_engine_libX11_XkbLatchModifiers PRIVATE
+  kinakaze_engine_libX11_XkbLibraryVersion
+  "XkbLibraryVersion"=kinakaze_engine_libX11_XkbLibraryVersion PRIVATE
+  kinakaze_engine_libX11_XkbLockGroup
+  "XkbLockGroup"=kinakaze_engine_libX11_XkbLockGroup PRIVATE
+  kinakaze_engine_libX11_XkbLockModifiers
+  "XkbLockModifiers"=kinakaze_engine_libX11_XkbLockModifiers PRIVATE
+  kinakaze_engine_libX11_XkbLookupKeySym
+  "XkbLookupKeySym"=kinakaze_engine_libX11_XkbLookupKeySym PRIVATE
+  kinakaze_engine_libX11_XkbQueryExtension
+  "XkbQueryExtension"=kinakaze_engine_libX11_XkbQueryExtension PRIVATE
+  kinakaze_engine_libX11_XkbRefreshKeyboardMapping
+  "XkbRefreshKeyboardMapping"=kinakaze_engine_libX11_XkbRefreshKeyboardMapping PRIVATE
+  kinakaze_engine_libX11_XkbResizeKeyActions
+  "XkbResizeKeyActions"=kinakaze_engine_libX11_XkbResizeKeyActions PRIVATE
+  kinakaze_engine_libX11_XkbResizeKeySyms
+  "XkbResizeKeySyms"=kinakaze_engine_libX11_XkbResizeKeySyms PRIVATE
+  kinakaze_engine_libX11_XkbSelectEventDetails
+  "XkbSelectEventDetails"=kinakaze_engine_libX11_XkbSelectEventDetails PRIVATE
+  kinakaze_engine_libX11_XkbSelectEvents
+  "XkbSelectEvents"=kinakaze_engine_libX11_XkbSelectEvents PRIVATE
+  kinakaze_engine_libX11_XkbSetAutoRepeatRate
+  "XkbSetAutoRepeatRate"=kinakaze_engine_libX11_XkbSetAutoRepeatRate PRIVATE
+  kinakaze_engine_libX11_XkbSetCompatMap
+  "XkbSetCompatMap"=kinakaze_engine_libX11_XkbSetCompatMap PRIVATE
+  kinakaze_engine_libX11_XkbSetControls
+  "XkbSetControls"=kinakaze_engine_libX11_XkbSetControls PRIVATE
+  kinakaze_engine_libX11_XkbSetDetectableAutoRepeat
+  "XkbSetDetectableAutoRepeat"=kinakaze_engine_libX11_XkbSetDetectableAutoRepeat PRIVATE
+  kinakaze_engine_libX11_XkbSetGeometry
+  "XkbSetGeometry"=kinakaze_engine_libX11_XkbSetGeometry PRIVATE
+  kinakaze_engine_libX11_XkbSetIndicatorMap
+  "XkbSetIndicatorMap"=kinakaze_engine_libX11_XkbSetIndicatorMap PRIVATE
+  kinakaze_engine_libX11_XkbSetMap
+  "XkbSetMap"=kinakaze_engine_libX11_XkbSetMap PRIVATE
+  kinakaze_engine_libX11_XkbSetNames
+  "XkbSetNames"=kinakaze_engine_libX11_XkbSetNames PRIVATE
+  kinakaze_engine_libX11_XkbTranslateKeyCode
+  "XkbTranslateKeyCode"=kinakaze_engine_libX11_XkbTranslateKeyCode PRIVATE
+  kinakaze_engine_libX11_XkbUseExtension
+  "XkbUseExtension"=kinakaze_engine_libX11_XkbUseExtension PRIVATE
+  kinakaze_engine_libX11_XkbVirtualModsToReal
+  "XkbVirtualModsToReal"=kinakaze_engine_libX11_XkbVirtualModsToReal PRIVATE
+  kinakaze_engine_libX11_XmbDrawString
+  "XmbDrawString"=kinakaze_engine_libX11_XmbDrawString PRIVATE
+  kinakaze_engine_libX11_XmbLookupString
+  "XmbLookupString"=kinakaze_engine_libX11_XmbLookupString PRIVATE
+  kinakaze_engine_libX11_XmbResetIC
+  "XmbResetIC"=kinakaze_engine_libX11_XmbResetIC PRIVATE
+  kinakaze_engine_libX11_XmbSetWMProperties
+  "XmbSetWMProperties"=kinakaze_engine_libX11_XmbSetWMProperties PRIVATE
+  kinakaze_engine_libX11_XmbTextEscapement
+  "XmbTextEscapement"=kinakaze_engine_libX11_XmbTextEscapement PRIVATE
+  kinakaze_engine_libX11_XmbTextExtents
+  "XmbTextExtents"=kinakaze_engine_libX11_XmbTextExtents PRIVATE
+  kinakaze_engine_libX11_XmbTextListToTextProperty
+  "XmbTextListToTextProperty"=kinakaze_engine_libX11_XmbTextListToTextProperty PRIVATE
+  kinakaze_engine_libX11_XmbTextPropertyToTextList
+  "XmbTextPropertyToTextList"=kinakaze_engine_libX11_XmbTextPropertyToTextList PRIVATE
+  kinakaze_engine_libX11_XrmCombineDatabase
+  "XrmCombineDatabase"=kinakaze_engine_libX11_XrmCombineDatabase PRIVATE
+  kinakaze_engine_libX11_XrmCombineFileDatabase
+  "XrmCombineFileDatabase"=kinakaze_engine_libX11_XrmCombineFileDatabase PRIVATE
+  kinakaze_engine_libX11_XrmDestroyDatabase
+  "XrmDestroyDatabase"=kinakaze_engine_libX11_XrmDestroyDatabase PRIVATE
+  kinakaze_engine_libX11_XrmEnumerateDatabase
+  "XrmEnumerateDatabase"=kinakaze_engine_libX11_XrmEnumerateDatabase PRIVATE
+  kinakaze_engine_libX11_XrmGetDatabase
+  "XrmGetDatabase"=kinakaze_engine_libX11_XrmGetDatabase PRIVATE
+  kinakaze_engine_libX11_XrmGetFileDatabase
+  "XrmGetFileDatabase"=kinakaze_engine_libX11_XrmGetFileDatabase PRIVATE
+  kinakaze_engine_libX11_XrmGetResource
+  "XrmGetResource"=kinakaze_engine_libX11_XrmGetResource PRIVATE
+  kinakaze_engine_libX11_XrmGetStringDatabase
+  "XrmGetStringDatabase"=kinakaze_engine_libX11_XrmGetStringDatabase PRIVATE
+  kinakaze_engine_libX11_XrmInitialize
+  "XrmInitialize"=kinakaze_engine_libX11_XrmInitialize PRIVATE
+  kinakaze_engine_libX11_XrmMergeDatabases
+  "XrmMergeDatabases"=kinakaze_engine_libX11_XrmMergeDatabases PRIVATE
+  kinakaze_engine_libX11_XrmParseCommand
+  "XrmParseCommand"=kinakaze_engine_libX11_XrmParseCommand PRIVATE
+  kinakaze_engine_libX11_XrmPermStringToQuark
+  "XrmPermStringToQuark"=kinakaze_engine_libX11_XrmPermStringToQuark PRIVATE
+  kinakaze_engine_libX11_XrmPutFileDatabase
+  "XrmPutFileDatabase"=kinakaze_engine_libX11_XrmPutFileDatabase PRIVATE
+  kinakaze_engine_libX11_XrmPutLineResource
+  "XrmPutLineResource"=kinakaze_engine_libX11_XrmPutLineResource PRIVATE
+  kinakaze_engine_libX11_XrmPutStringResource
+  "XrmPutStringResource"=kinakaze_engine_libX11_XrmPutStringResource PRIVATE
+  kinakaze_engine_libX11_XrmQGetResource
+  "XrmQGetResource"=kinakaze_engine_libX11_XrmQGetResource PRIVATE
+  kinakaze_engine_libX11_XrmQGetSearchList
+  "XrmQGetSearchList"=kinakaze_engine_libX11_XrmQGetSearchList PRIVATE
+  kinakaze_engine_libX11_XrmQGetSearchResource
+  "XrmQGetSearchResource"=kinakaze_engine_libX11_XrmQGetSearchResource PRIVATE
+  kinakaze_engine_libX11_XrmQPutResource
+  "XrmQPutResource"=kinakaze_engine_libX11_XrmQPutResource PRIVATE
+  kinakaze_engine_libX11_XrmQPutStringResource
+  "XrmQPutStringResource"=kinakaze_engine_libX11_XrmQPutStringResource PRIVATE
+  kinakaze_engine_libX11_XrmQuarkToString
+  "XrmQuarkToString"=kinakaze_engine_libX11_XrmQuarkToString PRIVATE
+  kinakaze_engine_libX11_XrmSetDatabase
+  "XrmSetDatabase"=kinakaze_engine_libX11_XrmSetDatabase PRIVATE
+  kinakaze_engine_libX11_XrmStringToBindingQuarkList
+  "XrmStringToBindingQuarkList"=kinakaze_engine_libX11_XrmStringToBindingQuarkList PRIVATE
+  kinakaze_engine_libX11_XrmStringToQuark
+  "XrmStringToQuark"=kinakaze_engine_libX11_XrmStringToQuark PRIVATE
+  kinakaze_engine_libX11_XrmStringToQuarkList
+  "XrmStringToQuarkList"=kinakaze_engine_libX11_XrmStringToQuarkList PRIVATE
+  kinakaze_engine_libX11_XrmUniqueQuark
+  "XrmUniqueQuark"=kinakaze_engine_libX11_XrmUniqueQuark PRIVATE
+  kinakaze_engine_libX11_Xutf8DrawString
+  "Xutf8DrawString"=kinakaze_engine_libX11_Xutf8DrawString PRIVATE
+  kinakaze_engine_libX11_Xutf8LookupString
+  "Xutf8LookupString"=kinakaze_engine_libX11_Xutf8LookupString PRIVATE
+  kinakaze_engine_libX11_Xutf8ResetIC
+  "Xutf8ResetIC"=kinakaze_engine_libX11_Xutf8ResetIC PRIVATE
+  kinakaze_engine_libX11_Xutf8SetWMProperties
+  "Xutf8SetWMProperties"=kinakaze_engine_libX11_Xutf8SetWMProperties PRIVATE
+  kinakaze_engine_libX11_Xutf8TextExtents
+  "Xutf8TextExtents"=kinakaze_engine_libX11_Xutf8TextExtents PRIVATE
+  kinakaze_engine_libX11_Xutf8TextListToTextProperty
+  "Xutf8TextListToTextProperty"=kinakaze_engine_libX11_Xutf8TextListToTextProperty PRIVATE
+  kinakaze_engine_libX11_Xutf8TextPropertyToTextList
+  "Xutf8TextPropertyToTextList"=kinakaze_engine_libX11_Xutf8TextPropertyToTextList PRIVATE
+  kinakaze_engine_libX11_XwcDrawString
+  "XwcDrawString"=kinakaze_engine_libX11_XwcDrawString PRIVATE
+  kinakaze_engine_libX11_XwcFreeStringList
+  "XwcFreeStringList"=kinakaze_engine_libX11_XwcFreeStringList PRIVATE
+  kinakaze_engine_libX11_XwcLookupString
+  "XwcLookupString"=kinakaze_engine_libX11_XwcLookupString PRIVATE
+  kinakaze_engine_libX11_XwcResetIC
+  "XwcResetIC"=kinakaze_engine_libX11_XwcResetIC PRIVATE
+  kinakaze_engine_libX11_XwcTextEscapement
+  "XwcTextEscapement"=kinakaze_engine_libX11_XwcTextEscapement PRIVATE
+  kinakaze_engine_libX11_XwcTextExtents
+  "XwcTextExtents"=kinakaze_engine_libX11_XwcTextExtents PRIVATE
+  kinakaze_engine_libX11_XwcTextListToTextProperty
+  "XwcTextListToTextProperty"=kinakaze_engine_libX11_XwcTextListToTextProperty PRIVATE
+  kinakaze_engine_libX11_XwcTextPropertyToTextList
+  "XwcTextPropertyToTextList"=kinakaze_engine_libX11_XwcTextPropertyToTextList PRIVATE
+  kinakaze_engine_libX11__XAllocTemp
+  "_XAllocTemp"=kinakaze_engine_libX11__XAllocTemp PRIVATE
+  kinakaze_engine_libX11__XData32
+  "_XData32"=kinakaze_engine_libX11__XData32 PRIVATE
+  kinakaze_engine_libX11__XDefaultIOError
+  "_XDefaultIOError"=kinakaze_engine_libX11__XDefaultIOError PRIVATE
+  kinakaze_engine_libX11__XDeqAsyncHandler
+  "_XDeqAsyncHandler"=kinakaze_engine_libX11__XDeqAsyncHandler PRIVATE
+  kinakaze_engine_libX11__XEatData
+  "_XEatData"=kinakaze_engine_libX11__XEatData PRIVATE
+  kinakaze_engine_libX11__XEatDataWords
+  "_XEatDataWords"=kinakaze_engine_libX11__XEatDataWords PRIVATE
+  kinakaze_engine_libX11__XEnq
+  "_XEnq"=kinakaze_engine_libX11__XEnq PRIVATE
+  kinakaze_engine_libX11__XEventToWire
+  "_XEventToWire"=kinakaze_engine_libX11__XEventToWire PRIVATE
+  kinakaze_engine_libX11__XFlush
+  "_XFlush"=kinakaze_engine_libX11__XFlush PRIVATE
+  kinakaze_engine_libX11__XFlushGCCache
+  "_XFlushGCCache"=kinakaze_engine_libX11__XFlushGCCache PRIVATE
+  kinakaze_engine_libX11__XFreeTemp
+  "_XFreeTemp"=kinakaze_engine_libX11__XFreeTemp PRIVATE
+  kinakaze_engine_libX11__XGetAsyncData
+  "_XGetAsyncData"=kinakaze_engine_libX11__XGetAsyncData PRIVATE
+  kinakaze_engine_libX11__XGetAsyncReply
+  "_XGetAsyncReply"=kinakaze_engine_libX11__XGetAsyncReply PRIVATE
+  kinakaze_engine_libX11__XGetBitsPerPixel
+  "_XGetBitsPerPixel"=kinakaze_engine_libX11__XGetBitsPerPixel PRIVATE
+  kinakaze_engine_libX11__XGetRequest
+  "_XGetRequest"=kinakaze_engine_libX11__XGetRequest PRIVATE
+  kinakaze_engine_libX11__XGetScanlinePad
+  "_XGetScanlinePad"=kinakaze_engine_libX11__XGetScanlinePad PRIVATE
+  kinakaze_engine_libX11__XLockMutex_fn DATA
+  "_XLockMutex_fn"=kinakaze_engine_libX11__XLockMutex_fn DATA PRIVATE
+  kinakaze_engine_libX11__XRead
+  "_XRead"=kinakaze_engine_libX11__XRead PRIVATE
+  kinakaze_engine_libX11__XRead32
+  "_XRead32"=kinakaze_engine_libX11__XRead32 PRIVATE
+  kinakaze_engine_libX11__XReadEvents
+  "_XReadEvents"=kinakaze_engine_libX11__XReadEvents PRIVATE
+  kinakaze_engine_libX11__XReadPad
+  "_XReadPad"=kinakaze_engine_libX11__XReadPad PRIVATE
+  kinakaze_engine_libX11__XReply
+  "_XReply"=kinakaze_engine_libX11__XReply PRIVATE
+  kinakaze_engine_libX11__XSend
+  "_XSend"=kinakaze_engine_libX11__XSend PRIVATE
+  kinakaze_engine_libX11__XSetLastRequestRead
+  "_XSetLastRequestRead"=kinakaze_engine_libX11__XSetLastRequestRead PRIVATE
+  kinakaze_engine_libX11__XUnknownNativeEvent
+  "_XUnknownNativeEvent"=kinakaze_engine_libX11__XUnknownNativeEvent PRIVATE
+  kinakaze_engine_libX11__XUnlockMutex_fn DATA
+  "_XUnlockMutex_fn"=kinakaze_engine_libX11__XUnlockMutex_fn DATA PRIVATE
+  kinakaze_engine_libX11__XVIDtoVisual
+  "_XVIDtoVisual"=kinakaze_engine_libX11__XVIDtoVisual PRIVATE
+  kinakaze_engine_libX11__XWireToEvent
+  "_XWireToEvent"=kinakaze_engine_libX11__XWireToEvent PRIVATE
+  kinakaze_engine_libX11__Xglobal_lock DATA
+  "_Xglobal_lock"=kinakaze_engine_libX11__Xglobal_lock DATA PRIVATE

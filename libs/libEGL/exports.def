@@ -1,0 +1,32 @@
+LIBRARY "libEGL.so.1"
+EXPORTS
+  "eglBindAPI"=libGL.so.1.kinakaze_engine_libGL_eglBindAPI PRIVATE
+  "eglChooseConfig"=libGL.so.1.kinakaze_engine_libGL_eglChooseConfig PRIVATE
+  "eglCreateContext"=libGL.so.1.kinakaze_engine_libGL_eglCreateContext PRIVATE
+  "eglCreatePbufferSurface"=libGL.so.1.kinakaze_engine_libGL_eglCreatePbufferSurface PRIVATE
+  "eglCreatePixmapSurface"=libGL.so.1.kinakaze_engine_libGL_eglCreatePixmapSurface PRIVATE
+  "eglCreateWindowSurface"=libGL.so.1.kinakaze_engine_libGL_eglCreateWindowSurface PRIVATE
+  "eglDestroyContext"=libGL.so.1.kinakaze_engine_libGL_eglDestroyContext PRIVATE
+  "eglDestroySurface"=libGL.so.1.kinakaze_engine_libGL_eglDestroySurface PRIVATE
+  "eglGetConfigAttrib"=libGL.so.1.kinakaze_engine_libGL_eglGetConfigAttrib PRIVATE
+  "eglGetConfigs"=libGL.so.1.kinakaze_engine_libGL_eglGetConfigs PRIVATE
+  "eglGetCurrentContext"=libGL.so.1.kinakaze_engine_libGL_eglGetCurrentContext PRIVATE
+  "eglGetCurrentDisplay"=libGL.so.1.kinakaze_engine_libGL_eglGetCurrentDisplay PRIVATE
+  "eglGetCurrentSurface"=libGL.so.1.kinakaze_engine_libGL_eglGetCurrentSurface PRIVATE
+  "eglGetDisplay"=libGL.so.1.kinakaze_engine_libGL_eglGetDisplay PRIVATE
+  "eglGetError"=libGL.so.1.kinakaze_engine_libGL_eglGetError PRIVATE
+  "eglGetPlatformDisplay"=libGL.so.1.kinakaze_engine_libGL_eglGetPlatformDisplay PRIVATE
+  "eglGetPlatformDisplayEXT"=libGL.so.1.kinakaze_engine_libGL_eglGetPlatformDisplayEXT PRIVATE
+  "eglGetProcAddress"=libGL.so.1.kinakaze_engine_libGL_eglGetProcAddress PRIVATE
+  "eglInitialize"=libGL.so.1.kinakaze_engine_libGL_eglInitialize PRIVATE
+  "eglMakeCurrent"=libGL.so.1.kinakaze_engine_libGL_eglMakeCurrent PRIVATE
+  "eglQueryAPI"=libGL.so.1.kinakaze_engine_libGL_eglQueryAPI PRIVATE
+  "eglQueryContext"=libGL.so.1.kinakaze_engine_libGL_eglQueryContext PRIVATE
+  "eglQueryString"=libGL.so.1.kinakaze_engine_libGL_eglQueryString PRIVATE
+  "eglQuerySurface"=libGL.so.1.kinakaze_engine_libGL_eglQuerySurface PRIVATE
+  "eglReleaseThread"=libGL.so.1.kinakaze_engine_libGL_eglReleaseThread PRIVATE
+  "eglSwapBuffers"=libGL.so.1.kinakaze_engine_libGL_eglSwapBuffers PRIVATE
+  "eglSwapInterval"=libGL.so.1.kinakaze_engine_libGL_eglSwapInterval PRIVATE
+  "eglTerminate"=libGL.so.1.kinakaze_engine_libGL_eglTerminate PRIVATE
+  "eglWaitClient"=libGL.so.1.kinakaze_engine_libGL_eglWaitClient PRIVATE
+  "eglWaitGL"=libGL.so.1.kinakaze_engine_libGL_eglWaitGL PRIVATE

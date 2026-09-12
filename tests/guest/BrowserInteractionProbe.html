@@ -1,0 +1,47 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>READY: native browser input</title>
+<style>
+html,body { margin:0; height:100%; background:#193b57; color:white; font:20px sans-serif }
+main { padding:32px 5vw }
+button { display:block; width:240px; height:80px; border:0; margin:24px 0;
+         background:#d500a5; color:white; font:20px sans-serif }
+input { width:360px; height:48px; font:24px monospace }
+#resize-marker { position:fixed; right:0; bottom:0; width:64px; height:64px; background:#ffcc00 }
+</style></head><body><main>
+<h1>Native browser interaction</h1>
+<button id="click">Click, then type</button>
+<input id="input" aria-label="Native keyboard input" autocomplete="off">
+<p id="state">Waiting for native input</p>
+</main><div id="resize-marker"></div><script>
+const button = document.getElementById('click'), input = document.getElementById('input');
+const state = document.getElementById('state');
+let clicked = false;
+function report(kind, extra = {}) {
+  fetch('REPORT_URL', {method:'POST', body:JSON.stringify({kind,
+    width:innerWidth, height:innerHeight, title:document.title,
+    value:input.value, time:performance.now(), ...extra})}).catch(() => {});
+}
+for (const kind of ['pointerdown', 'pointerup', 'mousedown', 'mouseup']) {
+  addEventListener(kind, event => report(kind, {trusted:event.isTrusted,
+    x:event.clientX, y:event.clientY, target:event.target.id}));
+}
+button.addEventListener('click', event => {
+  clicked = event.isTrusted;
+  button.style.background = '#00c853';
+  document.title = clicked ? 'CLICKED: native browser input' : 'FAIL: untrusted click';
+  state.textContent = document.title;
+  input.focus();
+  report('click', {trusted:event.isTrusted});
+});
+input.addEventListener('input', event => {
+  if (input.value === 'kinakaze-42') {
+    const passed = clicked && event.isTrusted;
+    document.title = passed ? 'PASS: native click and keyboard' : 'FAIL: untrusted input';
+    state.textContent = document.title;
+    if (passed) document.documentElement.style.background = document.body.style.background = '#174a2f';
+    report('input', {trusted:event.isTrusted});
+  }
+});
+addEventListener('resize', () => requestAnimationFrame(() => report('resize')));
+requestAnimationFrame(() => report('ready'));
+</script></body></html>

@@ -1,0 +1,220 @@
+LIBRARY "libcuda.so.1"
+EXPORTS
+  kinakaze_engine_libcuda_cuCtxCreate_v2
+  "cuCtxCreate_v2"=kinakaze_engine_libcuda_cuCtxCreate_v2 PRIVATE
+  kinakaze_engine_libcuda_cuCtxCreate_v3
+  "cuCtxCreate_v3"=kinakaze_engine_libcuda_cuCtxCreate_v3 PRIVATE
+  kinakaze_engine_libcuda_cuCtxDestroy_v2
+  "cuCtxDestroy_v2"=kinakaze_engine_libcuda_cuCtxDestroy_v2 PRIVATE
+  kinakaze_engine_libcuda_cuCtxGetApiVersion
+  "cuCtxGetApiVersion"=kinakaze_engine_libcuda_cuCtxGetApiVersion PRIVATE
+  kinakaze_engine_libcuda_cuCtxGetCurrent
+  "cuCtxGetCurrent"=kinakaze_engine_libcuda_cuCtxGetCurrent PRIVATE
+  kinakaze_engine_libcuda_cuCtxGetDevice
+  "cuCtxGetDevice"=kinakaze_engine_libcuda_cuCtxGetDevice PRIVATE
+  kinakaze_engine_libcuda_cuCtxGetFlags
+  "cuCtxGetFlags"=kinakaze_engine_libcuda_cuCtxGetFlags PRIVATE
+  kinakaze_engine_libcuda_cuCtxGetLimit
+  "cuCtxGetLimit"=kinakaze_engine_libcuda_cuCtxGetLimit PRIVATE
+  kinakaze_engine_libcuda_cuCtxGetStreamPriorityRange
+  "cuCtxGetStreamPriorityRange"=kinakaze_engine_libcuda_cuCtxGetStreamPriorityRange PRIVATE
+  kinakaze_engine_libcuda_cuCtxPopCurrent_v2
+  "cuCtxPopCurrent_v2"=kinakaze_engine_libcuda_cuCtxPopCurrent_v2 PRIVATE
+  kinakaze_engine_libcuda_cuCtxPushCurrent_v2
+  "cuCtxPushCurrent_v2"=kinakaze_engine_libcuda_cuCtxPushCurrent_v2 PRIVATE
+  kinakaze_engine_libcuda_cuCtxSetCurrent
+  "cuCtxSetCurrent"=kinakaze_engine_libcuda_cuCtxSetCurrent PRIVATE
+  kinakaze_engine_libcuda_cuCtxSetLimit
+  "cuCtxSetLimit"=kinakaze_engine_libcuda_cuCtxSetLimit PRIVATE
+  kinakaze_engine_libcuda_cuCtxSynchronize
+  "cuCtxSynchronize"=kinakaze_engine_libcuda_cuCtxSynchronize PRIVATE
+  kinakaze_engine_libcuda_cuDeviceComputeCapability
+  "cuDeviceComputeCapability"=kinakaze_engine_libcuda_cuDeviceComputeCapability PRIVATE
+  kinakaze_engine_libcuda_cuDeviceGet
+  "cuDeviceGet"=kinakaze_engine_libcuda_cuDeviceGet PRIVATE
+  kinakaze_engine_libcuda_cuDeviceGetAttribute
+  "cuDeviceGetAttribute"=kinakaze_engine_libcuda_cuDeviceGetAttribute PRIVATE
+  kinakaze_engine_libcuda_cuDeviceGetByPCIBusId
+  "cuDeviceGetByPCIBusId"=kinakaze_engine_libcuda_cuDeviceGetByPCIBusId PRIVATE
+  kinakaze_engine_libcuda_cuDeviceGetCount
+  "cuDeviceGetCount"=kinakaze_engine_libcuda_cuDeviceGetCount PRIVATE
+  kinakaze_engine_libcuda_cuDeviceGetName
+  "cuDeviceGetName"=kinakaze_engine_libcuda_cuDeviceGetName PRIVATE
+  kinakaze_engine_libcuda_cuDeviceGetPCIBusId
+  "cuDeviceGetPCIBusId"=kinakaze_engine_libcuda_cuDeviceGetPCIBusId PRIVATE
+  kinakaze_engine_libcuda_cuDeviceGetUuid
+  "cuDeviceGetUuid"=kinakaze_engine_libcuda_cuDeviceGetUuid PRIVATE
+  kinakaze_engine_libcuda_cuDeviceGetUuid_v2
+  "cuDeviceGetUuid_v2"=kinakaze_engine_libcuda_cuDeviceGetUuid_v2 PRIVATE
+  kinakaze_engine_libcuda_cuDevicePrimaryCtxGetState
+  "cuDevicePrimaryCtxGetState"=kinakaze_engine_libcuda_cuDevicePrimaryCtxGetState PRIVATE
+  kinakaze_engine_libcuda_cuDevicePrimaryCtxRelease
+  "cuDevicePrimaryCtxRelease"=kinakaze_engine_libcuda_cuDevicePrimaryCtxRelease PRIVATE
+  kinakaze_engine_libcuda_cuDevicePrimaryCtxRelease_v2
+  "cuDevicePrimaryCtxRelease_v2"=kinakaze_engine_libcuda_cuDevicePrimaryCtxRelease_v2 PRIVATE
+  kinakaze_engine_libcuda_cuDevicePrimaryCtxReset
+  "cuDevicePrimaryCtxReset"=kinakaze_engine_libcuda_cuDevicePrimaryCtxReset PRIVATE
+  kinakaze_engine_libcuda_cuDevicePrimaryCtxReset_v2
+  "cuDevicePrimaryCtxReset_v2"=kinakaze_engine_libcuda_cuDevicePrimaryCtxReset_v2 PRIVATE
+  kinakaze_engine_libcuda_cuDevicePrimaryCtxRetain
+  "cuDevicePrimaryCtxRetain"=kinakaze_engine_libcuda_cuDevicePrimaryCtxRetain PRIVATE
+  kinakaze_engine_libcuda_cuDevicePrimaryCtxSetFlags
+  "cuDevicePrimaryCtxSetFlags"=kinakaze_engine_libcuda_cuDevicePrimaryCtxSetFlags PRIVATE
+  kinakaze_engine_libcuda_cuDevicePrimaryCtxSetFlags_v2
+  "cuDevicePrimaryCtxSetFlags_v2"=kinakaze_engine_libcuda_cuDevicePrimaryCtxSetFlags_v2 PRIVATE
+  kinakaze_engine_libcuda_cuDeviceTotalMem_v2
+  "cuDeviceTotalMem_v2"=kinakaze_engine_libcuda_cuDeviceTotalMem_v2 PRIVATE
+  kinakaze_engine_libcuda_cuDriverGetVersion
+  "cuDriverGetVersion"=kinakaze_engine_libcuda_cuDriverGetVersion PRIVATE
+  kinakaze_engine_libcuda_cuEventCreate
+  "cuEventCreate"=kinakaze_engine_libcuda_cuEventCreate PRIVATE
+  kinakaze_engine_libcuda_cuEventDestroy_v2
+  "cuEventDestroy_v2"=kinakaze_engine_libcuda_cuEventDestroy_v2 PRIVATE
+  kinakaze_engine_libcuda_cuEventElapsedTime
+  "cuEventElapsedTime"=kinakaze_engine_libcuda_cuEventElapsedTime PRIVATE
+  kinakaze_engine_libcuda_cuEventQuery
+  "cuEventQuery"=kinakaze_engine_libcuda_cuEventQuery PRIVATE
+  kinakaze_engine_libcuda_cuEventRecord
+  "cuEventRecord"=kinakaze_engine_libcuda_cuEventRecord PRIVATE
+  kinakaze_engine_libcuda_cuEventRecord_ptsz
+  "cuEventRecord_ptsz"=kinakaze_engine_libcuda_cuEventRecord_ptsz PRIVATE
+  kinakaze_engine_libcuda_cuEventSynchronize
+  "cuEventSynchronize"=kinakaze_engine_libcuda_cuEventSynchronize PRIVATE
+  kinakaze_engine_libcuda_cuFuncGetAttribute
+  "cuFuncGetAttribute"=kinakaze_engine_libcuda_cuFuncGetAttribute PRIVATE
+  kinakaze_engine_libcuda_cuFuncSetAttribute
+  "cuFuncSetAttribute"=kinakaze_engine_libcuda_cuFuncSetAttribute PRIVATE
+  kinakaze_engine_libcuda_cuFuncSetCacheConfig
+  "cuFuncSetCacheConfig"=kinakaze_engine_libcuda_cuFuncSetCacheConfig PRIVATE
+  kinakaze_engine_libcuda_cuGetErrorName
+  "cuGetErrorName"=kinakaze_engine_libcuda_cuGetErrorName PRIVATE
+  kinakaze_engine_libcuda_cuGetErrorString
+  "cuGetErrorString"=kinakaze_engine_libcuda_cuGetErrorString PRIVATE
+  kinakaze_engine_libcuda_cuGetProcAddress
+  "cuGetProcAddress"=kinakaze_engine_libcuda_cuGetProcAddress PRIVATE
+  kinakaze_engine_libcuda_cuGetProcAddress_v2
+  "cuGetProcAddress_v2"=kinakaze_engine_libcuda_cuGetProcAddress_v2 PRIVATE
+  kinakaze_engine_libcuda_cuInit
+  "cuInit"=kinakaze_engine_libcuda_cuInit PRIVATE
+  kinakaze_engine_libcuda_cuLaunchKernel
+  "cuLaunchKernel"=kinakaze_engine_libcuda_cuLaunchKernel PRIVATE
+  kinakaze_engine_libcuda_cuLaunchKernel_ptsz
+  "cuLaunchKernel_ptsz"=kinakaze_engine_libcuda_cuLaunchKernel_ptsz PRIVATE
+  kinakaze_engine_libcuda_cuMemAllocHost_v2
+  "cuMemAllocHost_v2"=kinakaze_engine_libcuda_cuMemAllocHost_v2 PRIVATE
+  kinakaze_engine_libcuda_cuMemAllocManaged
+  "cuMemAllocManaged"=kinakaze_engine_libcuda_cuMemAllocManaged PRIVATE
+  kinakaze_engine_libcuda_cuMemAlloc_v2
+  "cuMemAlloc_v2"=kinakaze_engine_libcuda_cuMemAlloc_v2 PRIVATE
+  kinakaze_engine_libcuda_cuMemFreeHost
+  "cuMemFreeHost"=kinakaze_engine_libcuda_cuMemFreeHost PRIVATE
+  kinakaze_engine_libcuda_cuMemFree_v2
+  "cuMemFree_v2"=kinakaze_engine_libcuda_cuMemFree_v2 PRIVATE
+  kinakaze_engine_libcuda_cuMemGetInfo_v2
+  "cuMemGetInfo_v2"=kinakaze_engine_libcuda_cuMemGetInfo_v2 PRIVATE
+  kinakaze_engine_libcuda_cuMemHostAlloc
+  "cuMemHostAlloc"=kinakaze_engine_libcuda_cuMemHostAlloc PRIVATE
+  kinakaze_engine_libcuda_cuMemHostGetDevicePointer_v2
+  "cuMemHostGetDevicePointer_v2"=kinakaze_engine_libcuda_cuMemHostGetDevicePointer_v2 PRIVATE
+  kinakaze_engine_libcuda_cuMemHostGetFlags
+  "cuMemHostGetFlags"=kinakaze_engine_libcuda_cuMemHostGetFlags PRIVATE
+  kinakaze_engine_libcuda_cuMemHostRegister_v2
+  "cuMemHostRegister_v2"=kinakaze_engine_libcuda_cuMemHostRegister_v2 PRIVATE
+  kinakaze_engine_libcuda_cuMemHostUnregister
+  "cuMemHostUnregister"=kinakaze_engine_libcuda_cuMemHostUnregister PRIVATE
+  kinakaze_engine_libcuda_cuMemcpy
+  "cuMemcpy"=kinakaze_engine_libcuda_cuMemcpy PRIVATE
+  kinakaze_engine_libcuda_cuMemcpyAsync
+  "cuMemcpyAsync"=kinakaze_engine_libcuda_cuMemcpyAsync PRIVATE
+  kinakaze_engine_libcuda_cuMemcpyAsync_ptsz
+  "cuMemcpyAsync_ptsz"=kinakaze_engine_libcuda_cuMemcpyAsync_ptsz PRIVATE
+  kinakaze_engine_libcuda_cuMemcpyDtoDAsync_v2
+  "cuMemcpyDtoDAsync_v2"=kinakaze_engine_libcuda_cuMemcpyDtoDAsync_v2 PRIVATE
+  kinakaze_engine_libcuda_cuMemcpyDtoDAsync_v2_ptsz
+  "cuMemcpyDtoDAsync_v2_ptsz"=kinakaze_engine_libcuda_cuMemcpyDtoDAsync_v2_ptsz PRIVATE
+  kinakaze_engine_libcuda_cuMemcpyDtoD_v2
+  "cuMemcpyDtoD_v2"=kinakaze_engine_libcuda_cuMemcpyDtoD_v2 PRIVATE
+  kinakaze_engine_libcuda_cuMemcpyDtoD_v2_ptds
+  "cuMemcpyDtoD_v2_ptds"=kinakaze_engine_libcuda_cuMemcpyDtoD_v2_ptds PRIVATE
+  kinakaze_engine_libcuda_cuMemcpyDtoHAsync_v2
+  "cuMemcpyDtoHAsync_v2"=kinakaze_engine_libcuda_cuMemcpyDtoHAsync_v2 PRIVATE
+  kinakaze_engine_libcuda_cuMemcpyDtoHAsync_v2_ptsz
+  "cuMemcpyDtoHAsync_v2_ptsz"=kinakaze_engine_libcuda_cuMemcpyDtoHAsync_v2_ptsz PRIVATE
+  kinakaze_engine_libcuda_cuMemcpyDtoH_v2
+  "cuMemcpyDtoH_v2"=kinakaze_engine_libcuda_cuMemcpyDtoH_v2 PRIVATE
+  kinakaze_engine_libcuda_cuMemcpyDtoH_v2_ptds
+  "cuMemcpyDtoH_v2_ptds"=kinakaze_engine_libcuda_cuMemcpyDtoH_v2_ptds PRIVATE
+  kinakaze_engine_libcuda_cuMemcpyHtoDAsync_v2
+  "cuMemcpyHtoDAsync_v2"=kinakaze_engine_libcuda_cuMemcpyHtoDAsync_v2 PRIVATE
+  kinakaze_engine_libcuda_cuMemcpyHtoDAsync_v2_ptsz
+  "cuMemcpyHtoDAsync_v2_ptsz"=kinakaze_engine_libcuda_cuMemcpyHtoDAsync_v2_ptsz PRIVATE
+  kinakaze_engine_libcuda_cuMemcpyHtoD_v2
+  "cuMemcpyHtoD_v2"=kinakaze_engine_libcuda_cuMemcpyHtoD_v2 PRIVATE
+  kinakaze_engine_libcuda_cuMemcpyHtoD_v2_ptds
+  "cuMemcpyHtoD_v2_ptds"=kinakaze_engine_libcuda_cuMemcpyHtoD_v2_ptds PRIVATE
+  kinakaze_engine_libcuda_cuMemcpy_ptds
+  "cuMemcpy_ptds"=kinakaze_engine_libcuda_cuMemcpy_ptds PRIVATE
+  kinakaze_engine_libcuda_cuMemsetD16Async
+  "cuMemsetD16Async"=kinakaze_engine_libcuda_cuMemsetD16Async PRIVATE
+  kinakaze_engine_libcuda_cuMemsetD16Async_ptsz
+  "cuMemsetD16Async_ptsz"=kinakaze_engine_libcuda_cuMemsetD16Async_ptsz PRIVATE
+  kinakaze_engine_libcuda_cuMemsetD16_v2
+  "cuMemsetD16_v2"=kinakaze_engine_libcuda_cuMemsetD16_v2 PRIVATE
+  kinakaze_engine_libcuda_cuMemsetD16_v2_ptds
+  "cuMemsetD16_v2_ptds"=kinakaze_engine_libcuda_cuMemsetD16_v2_ptds PRIVATE
+  kinakaze_engine_libcuda_cuMemsetD32Async
+  "cuMemsetD32Async"=kinakaze_engine_libcuda_cuMemsetD32Async PRIVATE
+  kinakaze_engine_libcuda_cuMemsetD32Async_ptsz
+  "cuMemsetD32Async_ptsz"=kinakaze_engine_libcuda_cuMemsetD32Async_ptsz PRIVATE
+  kinakaze_engine_libcuda_cuMemsetD32_v2
+  "cuMemsetD32_v2"=kinakaze_engine_libcuda_cuMemsetD32_v2 PRIVATE
+  kinakaze_engine_libcuda_cuMemsetD32_v2_ptds
+  "cuMemsetD32_v2_ptds"=kinakaze_engine_libcuda_cuMemsetD32_v2_ptds PRIVATE
+  kinakaze_engine_libcuda_cuMemsetD8Async
+  "cuMemsetD8Async"=kinakaze_engine_libcuda_cuMemsetD8Async PRIVATE
+  kinakaze_engine_libcuda_cuMemsetD8Async_ptsz
+  "cuMemsetD8Async_ptsz"=kinakaze_engine_libcuda_cuMemsetD8Async_ptsz PRIVATE
+  kinakaze_engine_libcuda_cuMemsetD8_v2
+  "cuMemsetD8_v2"=kinakaze_engine_libcuda_cuMemsetD8_v2 PRIVATE
+  kinakaze_engine_libcuda_cuMemsetD8_v2_ptds
+  "cuMemsetD8_v2_ptds"=kinakaze_engine_libcuda_cuMemsetD8_v2_ptds PRIVATE
+  kinakaze_engine_libcuda_cuModuleGetFunction
+  "cuModuleGetFunction"=kinakaze_engine_libcuda_cuModuleGetFunction PRIVATE
+  kinakaze_engine_libcuda_cuModuleGetGlobal_v2
+  "cuModuleGetGlobal_v2"=kinakaze_engine_libcuda_cuModuleGetGlobal_v2 PRIVATE
+  kinakaze_engine_libcuda_cuModuleLoad
+  "cuModuleLoad"=kinakaze_engine_libcuda_cuModuleLoad PRIVATE
+  kinakaze_engine_libcuda_cuModuleLoadData
+  "cuModuleLoadData"=kinakaze_engine_libcuda_cuModuleLoadData PRIVATE
+  kinakaze_engine_libcuda_cuModuleLoadDataEx
+  "cuModuleLoadDataEx"=kinakaze_engine_libcuda_cuModuleLoadDataEx PRIVATE
+  kinakaze_engine_libcuda_cuModuleLoadFatBinary
+  "cuModuleLoadFatBinary"=kinakaze_engine_libcuda_cuModuleLoadFatBinary PRIVATE
+  kinakaze_engine_libcuda_cuModuleUnload
+  "cuModuleUnload"=kinakaze_engine_libcuda_cuModuleUnload PRIVATE
+  kinakaze_engine_libcuda_cuStreamCreate
+  "cuStreamCreate"=kinakaze_engine_libcuda_cuStreamCreate PRIVATE
+  kinakaze_engine_libcuda_cuStreamCreateWithPriority
+  "cuStreamCreateWithPriority"=kinakaze_engine_libcuda_cuStreamCreateWithPriority PRIVATE
+  kinakaze_engine_libcuda_cuStreamDestroy_v2
+  "cuStreamDestroy_v2"=kinakaze_engine_libcuda_cuStreamDestroy_v2 PRIVATE
+  kinakaze_engine_libcuda_cuStreamGetFlags
+  "cuStreamGetFlags"=kinakaze_engine_libcuda_cuStreamGetFlags PRIVATE
+  kinakaze_engine_libcuda_cuStreamGetFlags_ptsz
+  "cuStreamGetFlags_ptsz"=kinakaze_engine_libcuda_cuStreamGetFlags_ptsz PRIVATE
+  kinakaze_engine_libcuda_cuStreamGetPriority
+  "cuStreamGetPriority"=kinakaze_engine_libcuda_cuStreamGetPriority PRIVATE
+  kinakaze_engine_libcuda_cuStreamGetPriority_ptsz
+  "cuStreamGetPriority_ptsz"=kinakaze_engine_libcuda_cuStreamGetPriority_ptsz PRIVATE
+  kinakaze_engine_libcuda_cuStreamQuery
+  "cuStreamQuery"=kinakaze_engine_libcuda_cuStreamQuery PRIVATE
+  kinakaze_engine_libcuda_cuStreamQuery_ptsz
+  "cuStreamQuery_ptsz"=kinakaze_engine_libcuda_cuStreamQuery_ptsz PRIVATE
+  kinakaze_engine_libcuda_cuStreamSynchronize
+  "cuStreamSynchronize"=kinakaze_engine_libcuda_cuStreamSynchronize PRIVATE
+  kinakaze_engine_libcuda_cuStreamSynchronize_ptsz
+  "cuStreamSynchronize_ptsz"=kinakaze_engine_libcuda_cuStreamSynchronize_ptsz PRIVATE
+  kinakaze_engine_libcuda_cuStreamWaitEvent
+  "cuStreamWaitEvent"=kinakaze_engine_libcuda_cuStreamWaitEvent PRIVATE
+  kinakaze_engine_libcuda_cuStreamWaitEvent_ptsz
+  "cuStreamWaitEvent_ptsz"=kinakaze_engine_libcuda_cuStreamWaitEvent_ptsz PRIVATE

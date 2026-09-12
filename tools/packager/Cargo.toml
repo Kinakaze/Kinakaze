@@ -1,0 +1,16 @@
+[package]
+name = "kinakaze-v2-packager"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "kinakaze-packager"
+path = "src/main.rs"
+
+[dependencies]
+kinakaze-v2-bridge.workspace = true
+
+[lints]
+workspace = true

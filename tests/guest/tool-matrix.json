@@ -1,0 +1,2407 @@
+{
+  "schema_version": 1,
+  "probes": [
+    {
+      "id": "shell",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox"
+      ],
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "test $((17 * 19)) = 323; test \"$(printf 'b\\na\\n' | /bin/busybox sort)\" = \"$(printf 'a\\nb')\"; printf 'SHELL_OK\\n'"
+      ],
+      "expect": "SHELL_OK"
+    },
+    {
+      "id": "fork-shared-file",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox"
+      ],
+      "source": "ForkIoProbe.sh",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "{source}"
+      ],
+      "expect": "FORK_SHARED_IO_OK"
+    },
+    {
+      "id": "bash",
+      "level": "behavior",
+      "requires": [
+        "/bin/bash"
+      ],
+      "argv": [
+        "/bin/bash",
+        "--noprofile",
+        "--norc",
+        "-ec",
+        "a=(alpha beta); [[ ${a[1]} = beta ]]; read -r value < <(printf 'substitution\\n'); [[ $value = substitution ]]; printf 'BASH_OK\\n'"
+      ],
+      "expect": "BASH_OK"
+    },
+    {
+      "id": "archives",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox"
+      ],
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "d=$(/bin/busybox mktemp -d /tmp/kinakaze-archive.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$d\"' EXIT; cd \"$d\"; printf 'roundtrip\\n' > input; /bin/busybox tar czf data.tar.gz input; /bin/busybox mkdir output; /bin/busybox tar xzf data.tar.gz -C output; /bin/busybox cmp input output/input; printf 'ARCHIVE_OK\\n'"
+      ],
+      "expect": "ARCHIVE_OK"
+    },
+    {
+      "id": "gpgv",
+      "level": "startup",
+      "requires": [
+        "/usr/bin/gpgv"
+      ],
+      "argv": [
+        "/usr/bin/gpgv",
+        "--version"
+      ],
+      "expect": "gpgv (GnuPG)"
+    },
+    {
+      "id": "gpg",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/gpg",
+        "/usr/bin/gpgv",
+        "/usr/bin/gpg-agent",
+        "/bin/sh",
+        "/bin/busybox"
+      ],
+      "source": "GpgProbe.sh",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "{source}"
+      ],
+      "expect": "GPG_OK"
+    },
+    {
+      "id": "procfs",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox"
+      ],
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "/bin/busybox cat /proc/self/status; /bin/busybox cat /proc/meminfo; /bin/busybox uname -a; /bin/busybox ps; printf 'PROCFS_OK\\n'"
+      ],
+      "expect": "PROCFS_OK"
+    },
+    {
+      "id": "python",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3"
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "-c",
+        "import socket,sqlite3,zlib,json,subprocess; a,b=socket.socketpair(); a.sendall(b'unix'); assert b.recv(4)==b'unix'; a.close(); b.close(); c=sqlite3.connect(':memory:'); assert c.execute('select 6*7').fetchone()[0]==42; assert zlib.decompress(zlib.compress(b'hello'))==b'hello'; assert subprocess.check_output(['/bin/busybox','echo','child']).strip()==b'child'; print('PYTHON_OK')"
+      ],
+      "expect": "PYTHON_OK"
+    },
+    {
+      "id": "python-runtime",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3",
+        "/bin/busybox"
+      ],
+      "source": "PythonRuntimeProbe.py",
+      "argv": [
+        "/usr/bin/python3",
+        "-c",
+        "{source}"
+      ],
+      "expect": "PYTHON_RUNTIME_OK"
+    },
+    {
+      "id": "node",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/node"
+      ],
+      "argv": [
+        "/usr/bin/node",
+        "-e",
+        "const z=require('zlib'); const b=Buffer.from('hello'); if(!z.gunzipSync(z.gzipSync(b)).equals(b))process.exit(2); const c=require('child_process').execFileSync('/bin/busybox',['echo','child']); if(c.toString().trim()!=='child')process.exit(3); console.log('NODE_OK')"
+      ],
+      "expect": "NODE_OK"
+    },
+    {
+      "id": "node-runtime",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/node",
+        "/bin/busybox",
+        "/bin/sh"
+      ],
+      "source": "NodeRuntimeProbe.js",
+      "argv": [
+        "/usr/bin/node",
+        "-e",
+        "{source}"
+      ],
+      "expect": "NODE_RUNTIME_OK"
+    },
+    {
+      "id": "java",
+      "level": "startup",
+      "requires": [
+        "/usr/lib/jvm/jdk-25.0.4.1+1-jre/bin/java"
+      ],
+      "argv": [
+        "/usr/lib/jvm/jdk-25.0.4.1+1-jre/bin/java",
+        "-version"
+      ],
+      "expect": "version"
+    },
+    {
+      "id": "curl",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/curl"
+      ],
+      "argv": [
+        "/usr/bin/curl",
+        "--fail",
+        "--silent",
+        "--show-error",
+        "--noproxy",
+        "*",
+        "{http_url}/fixture"
+      ],
+      "expect": "KINAKAZE_HTTP_OK"
+    },
+    {
+      "id": "wget",
+      "level": "behavior",
+      "requires": [
+        "/bin/busybox"
+      ],
+      "argv": [
+        "/bin/busybox",
+        "wget",
+        "-q",
+        "-O",
+        "-",
+        "{http_url}/fixture"
+      ],
+      "expect": "KINAKAZE_HTTP_OK"
+    },
+    {
+      "id": "ssh",
+      "level": "startup",
+      "requires": [
+        "/usr/bin/ssh"
+      ],
+      "argv": [
+        "/usr/bin/ssh",
+        "-V"
+      ],
+      "expect": "OpenSSH"
+    },
+    {
+      "id": "sshd",
+      "level": "startup",
+      "requires": [
+        "/usr/sbin/sshd"
+      ],
+      "argv": [
+        "/usr/sbin/sshd",
+        "-V"
+      ],
+      "expect": "OpenSSH"
+    },
+    {
+      "id": "gcc",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/gcc",
+        "/bin/sh"
+      ],
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "d=$(/bin/busybox mktemp -d /tmp/kinakaze-gcc.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$d\"' EXIT; printf 'int main(void){return 0;}\\n' > \"$d/test.c\"; /usr/bin/gcc \"$d/test.c\" -o \"$d/test\"; \"$d/test\"; printf 'GCC_OK\\n'"
+      ],
+      "expect": "GCC_OK"
+    },
+    {
+      "id": "clang",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/clang",
+        "/bin/sh"
+      ],
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "d=$(/bin/busybox mktemp -d /tmp/kinakaze-clang.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$d\"' EXIT; printf 'int main(void){return 0;}\\n' > \"$d/test.c\"; /usr/bin/clang \"$d/test.c\" -o \"$d/test\"; \"$d/test\"; printf 'CLANG_OK\\n'"
+      ],
+      "expect": "CLANG_OK"
+    },
+    {
+      "id": "ffmpeg",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/ffmpeg"
+      ],
+      "argv": [
+        "/usr/bin/ffmpeg",
+        "-nostdin",
+        "-hide_banner",
+        "-f",
+        "lavfi",
+        "-i",
+        "sine=frequency=1000:duration=0.1",
+        "-f",
+        "null",
+        "-"
+      ],
+      "expect": "audio:"
+    },
+    {
+      "id": "dpkg",
+      "level": "startup",
+      "requires": [
+        "/usr/bin/dpkg"
+      ],
+      "argv": [
+        "/usr/bin/dpkg",
+        "--version"
+      ],
+      "expect": "Debian"
+    },
+    {
+      "id": "dpkg-deb",
+      "level": "startup",
+      "requires": [
+        "/usr/bin/dpkg-deb"
+      ],
+      "argv": [
+        "/usr/bin/dpkg-deb",
+        "--version"
+      ],
+      "expect": "Debian"
+    },
+    {
+      "id": "dpkg-deb-roundtrip",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/dpkg-deb",
+        "/bin/tar",
+        "/bin/gzip",
+        "/bin/sh",
+        "/bin/busybox"
+      ],
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "d=$(/bin/busybox mktemp -d /tmp/kinakaze-deb.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$d\"' EXIT; /bin/busybox mkdir -p \"$d/pkg/DEBIAN\" \"$d/pkg/usr/share/kinakaze-probe\" \"$d/out\"; printf 'Package: kinakaze-probe\nVersion: 1.0\nArchitecture: all\nMaintainer: Runtime Test <test@localhost>\nDescription: isolated package roundtrip\n' > \"$d/pkg/DEBIAN/control\"; printf 'package-data\n' > \"$d/pkg/usr/share/kinakaze-probe/payload\"; /usr/bin/dpkg-deb --root-owner-group -Zgzip --build \"$d/pkg\" \"$d/probe.deb\"; test \"$(/usr/bin/dpkg-deb --field \"$d/probe.deb\" Package)\" = kinakaze-probe; /usr/bin/dpkg-deb --extract \"$d/probe.deb\" \"$d/out\"; /bin/busybox cmp \"$d/pkg/usr/share/kinakaze-probe/payload\" \"$d/out/usr/share/kinakaze-probe/payload\"; printf 'DEB_ROUNDTRIP_OK\n'"
+      ],
+      "expect": "DEB_ROUNDTRIP_OK"
+    },
+    {
+      "id": "dpkg-install-remove",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/dpkg-deb",
+        "/bin/tar",
+        "/bin/gzip",
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/dpkg",
+        "/usr/bin/dpkg-split",
+        "/bin/rm",
+        "/bin/diff",
+        "/sbin/ldconfig",
+        "/sbin/start-stop-daemon",
+        "/usr/share/dpkg/cputable"
+      ],
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "d=$(/bin/busybox mktemp -d /tmp/kinakaze-deb.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$d\"' EXIT; /bin/busybox mkdir -p \"$d/pkg/DEBIAN\" \"$d/pkg/usr/share/kinakaze-probe\" \"$d/out\"; printf 'Package: kinakaze-probe\nVersion: 1.0\nArchitecture: all\nMaintainer: Runtime Test <test@localhost>\nDescription: isolated package roundtrip\n' > \"$d/pkg/DEBIAN/control\"; printf 'package-data\n' > \"$d/pkg/usr/share/kinakaze-probe/payload\"; /usr/bin/dpkg-deb --root-owner-group -Zgzip --build \"$d/pkg\" \"$d/probe.deb\"; test \"$(/usr/bin/dpkg-deb --field \"$d/probe.deb\" Package)\" = kinakaze-probe; /usr/bin/dpkg-deb --extract \"$d/probe.deb\" \"$d/out\"; /bin/busybox cmp \"$d/pkg/usr/share/kinakaze-probe/payload\" \"$d/out/usr/share/kinakaze-probe/payload\"; /bin/busybox mkdir -p \"$d/admin/updates\" \"$d/admin/info\" \"$d/admin/triggers\" \"$d/install\"; : > \"$d/admin/status\"; /usr/bin/dpkg --admindir=\"$d/admin\" --instdir=\"$d/install\" --install \"$d/probe.deb\"; /bin/busybox cmp \"$d/pkg/usr/share/kinakaze-probe/payload\" \"$d/install/usr/share/kinakaze-probe/payload\"; /usr/bin/dpkg --admindir=\"$d/admin\" --instdir=\"$d/install\" --remove kinakaze-probe; test ! -e \"$d/install/usr/share/kinakaze-probe/payload\"; printf 'DPKG_INSTALL_REMOVE_OK\\n'"
+      ],
+      "expect": "DPKG_INSTALL_REMOVE_OK"
+    },
+    {
+      "id": "apt",
+      "level": "startup",
+      "requires": [
+        "/usr/bin/apt"
+      ],
+      "argv": [
+        "/usr/bin/apt",
+        "--version"
+      ],
+      "expect": "apt"
+    },
+    {
+      "id": "sqlite",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/sqlite3"
+      ],
+      "argv": [
+        "/usr/bin/sqlite3",
+        ":memory:",
+        "create table t(n); insert into t values(42); select n from t;"
+      ],
+      "expect": "42"
+    },
+    {
+      "id": "sqlite-transactions",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/sqlite3"
+      ],
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "d=$(/bin/busybox mktemp -d /tmp/sqlite-XXXXXX); trap '/bin/busybox rm -rf \"$d\"' EXIT; db=\"$d/store.db\"; [ \"$(/usr/bin/sqlite3 \"$db\" 'pragma journal_mode=WAL; create table t(id integer primary key, v text unique); begin; insert into t values(1,\"committed\"); commit; begin; insert into t values(2,\"rolled-back\"); rollback; select count(*) from t;')\" = \"$(printf 'wal\\n1')\" ]; [ \"$(/usr/bin/sqlite3 \"$db\" 'select v from t where id=1; pragma integrity_check;')\" = \"$(printf 'committed\\nok')\" ]; if /usr/bin/sqlite3 \"$db\" 'insert into t values(3,\"committed\");' 2>/dev/null; then exit 4; fi; [ \"$(/usr/bin/sqlite3 \"$db\" 'select count(*) from t;')\" = 1 ]; printf 'SQLITE_TRANSACTIONS_OK\\n'"
+      ],
+      "expect": "SQLITE_TRANSACTIONS_OK"
+    },
+    {
+      "id": "redis",
+      "level": "startup",
+      "requires": [
+        "/usr/bin/redis-server"
+      ],
+      "argv": [
+        "/usr/bin/redis-server",
+        "--version"
+      ],
+      "expect": "Redis"
+    },
+    {
+      "id": "postgresql",
+      "level": "startup",
+      "requires": [
+        "/usr/lib/postgresql/15/bin/postgres"
+      ],
+      "argv": [
+        "/usr/lib/postgresql/15/bin/postgres",
+        "--version"
+      ],
+      "expect": "PostgreSQL"
+    },
+    {
+      "id": "gcc-runtime",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/gcc",
+        "/bin/sh",
+        "/bin/busybox"
+      ],
+      "source": "CompilerRuntimeProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "d=$(/bin/busybox mktemp -d /tmp/compiler-XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$d\"' EXIT; printf \"%s\" \"$1\" > \"$d/main.c\"; printf \"%s\\n\" '__thread int counter=40; int ready; __attribute__((constructor)) static void init(void){ready=9;} int increment(void){return ++counter;}' > \"$d/plugin.c\"; /usr/bin/gcc -fPIC -shared \"$d/plugin.c\" -o \"$d/plugin.so\"; /usr/bin/gcc -O2 -fno-builtin \"$d/main.c\" -o \"$d/main\" -lm -ldl -pthread; \"$d/main\" \"$d/plugin.so\"",
+        "compiler-probe",
+        "{source}"
+      ],
+      "expect": "COMPILER_RUNTIME_OK"
+    },
+    {
+      "id": "clang-runtime",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/clang",
+        "/bin/sh",
+        "/bin/busybox"
+      ],
+      "source": "CompilerRuntimeProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "d=$(/bin/busybox mktemp -d /tmp/compiler-XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$d\"' EXIT; printf \"%s\" \"$1\" > \"$d/main.c\"; printf \"%s\\n\" '__thread int counter=40; int ready; __attribute__((constructor)) static void init(void){ready=9;} int increment(void){return ++counter;}' > \"$d/plugin.c\"; /usr/bin/clang -fPIC -shared \"$d/plugin.c\" -o \"$d/plugin.so\"; /usr/bin/clang -O2 -fno-builtin \"$d/main.c\" -o \"$d/main\" -lm -ldl -pthread; \"$d/main\" \"$d/plugin.so\"",
+        "compiler-probe",
+        "{source}"
+      ],
+      "expect": "COMPILER_RUNTIME_OK"
+    },
+    {
+      "id": "redis-runtime",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/redis-server",
+        "/usr/bin/python3"
+      ],
+      "source": "RedisRuntimeProbe.py",
+      "argv": [
+        "/usr/bin/python3",
+        "-c",
+        "{source}"
+      ],
+      "expect": "REDIS_RUNTIME_OK"
+    },
+    {
+      "id": "cookie-streams",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/gcc",
+        "/bin/sh",
+        "/bin/busybox"
+      ],
+      "source": "CookieStreamsProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "d=$(/bin/busybox mktemp -d /tmp/cookie-XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$d\"' EXIT; printf \"%s\" \"$1\" > \"$d/main.c\"; /usr/bin/gcc -O1 -fno-builtin \"$d/main.c\" -o \"$d/main\"; \"$d/main\"",
+        "cookie-probe",
+        "{source}"
+      ],
+      "expect": "COOKIE_FORK_STREAMS_OK"
+    },
+    {
+      "id": "spawn-runtime",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/gcc",
+        "/bin/sh",
+        "/bin/busybox"
+      ],
+      "source": "SpawnRuntimeProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "d=$(/bin/busybox mktemp -d /tmp/cookie-XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$d\"' EXIT; printf \"%s\" \"$1\" > \"$d/main.c\"; /usr/bin/gcc -O1 -fno-builtin \"$d/main.c\" -o \"$d/main\"; \"$d/main\"",
+        "cookie-probe",
+        "{source}"
+      ],
+      "expect": "SPAWN_RUNTIME_OK"
+    },
+    {
+      "id": "locale-runtime",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/gcc",
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/lib/locale/C.utf8/LC_CTYPE"
+      ],
+      "source": "LocaleRuntimeProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "d=$(/bin/busybox mktemp -d /tmp/locale-XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$d\"' EXIT; printf \"%s\" \"$1\" > \"$d/main.c\"; /usr/bin/gcc -O1 -fno-builtin \"$d/main.c\" -o \"$d/main\"; \"$d/main\"",
+        "locale-probe",
+        "{source}"
+      ],
+      "expect": "LOCALE_RUNTIME_OK"
+    },
+    {
+      "id": "locale-command",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/locale",
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/lib/locale/C.utf8/LC_CTYPE"
+      ],
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "names=$(/usr/bin/locale -a); printf \"%s\\n\" \"$names\" | /bin/busybox grep -qx C.utf8; test \"$(/usr/bin/locale charmap)\" = UTF-8; printf \"LOCALE_COMMAND_OK\\n\""
+      ],
+      "expect": "LOCALE_COMMAND_OK"
+    },
+    {
+      "id": "timezone-runtime",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3",
+        "/usr/share/zoneinfo/America/New_York",
+        "/usr/share/zoneinfo/posix/Asia/Shanghai"
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "-c",
+        "from datetime import datetime; from zoneinfo import ZoneInfo; ny=ZoneInfo('America/New_York'); assert datetime(2026,1,15,tzinfo=ny).utcoffset().total_seconds()==-18000; assert datetime(2026,7,15,tzinfo=ny).utcoffset().total_seconds()==-14400; a=ZoneInfo('Asia/Shanghai'); b=ZoneInfo('posix/Asia/Shanghai'); assert datetime(2026,1,15,tzinfo=a).utcoffset()==datetime(2026,1,15,tzinfo=b).utcoffset(); assert datetime(2026,1,15,tzinfo=a).utcoffset().total_seconds()==28800; print('TIMEZONE_RUNTIME_OK')"
+      ],
+      "expect": "TIMEZONE_RUNTIME_OK"
+    },
+    {
+      "id": "search-runtime",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/gcc",
+        "/bin/sh",
+        "/bin/busybox"
+      ],
+      "source": "SearchRuntimeProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "d=$(/bin/busybox mktemp -d /tmp/kinakaze-search-runtime.XXXXXX); trap '/bin/busybox rm -rf \"$d\"' EXIT; printf '%s\\n' \"$1\" | /usr/bin/gcc -O2 -x c -  -o \"$d/probe\"; \"$d/probe\"",
+        "probe",
+        "{source}"
+      ],
+      "expect": "SEARCH_TREE_FORK_OK"
+    },
+    {
+      "id": "media-abi",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/gcc",
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/include/X11/extensions/XInput2.h",
+        "/usr/include/alsa/asoundlib.h",
+        "/usr/include/X11/extensions/Xrandr.h",
+        "/usr/include/pulse/volume.h"
+      ],
+      "source": "MediaAbiProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "d=$(/bin/busybox mktemp -d /tmp/kinakaze-media-abi.XXXXXX); trap '/bin/busybox rm -rf \"$d\"' EXIT; printf '%s\\n' \"$1\" | /usr/bin/gcc -O2 -x c - -lX11 -lXi -lXrandr -lasound -lpulse -o \"$d/probe\"; \"$d/probe\"",
+        "probe",
+        "{source}"
+      ],
+      "expect": "MEDIA_XINPUT_IMAGE_PARAMS_OK"
+    },
+    {
+      "id": "nginx",
+      "level": "startup",
+      "requires": [
+        "/usr/sbin/nginx"
+      ],
+      "argv": [
+        "/usr/sbin/nginx",
+        "-v"
+      ],
+      "expect": "nginx version:"
+    },
+    {
+      "id": "nginx-runtime",
+      "level": "behavior",
+      "requires": [
+        "/usr/sbin/nginx",
+        "/usr/bin/python3.11"
+      ],
+      "source": "NginxRuntimeProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "NGINX_HTTP_FILES_RELOAD_OK"
+    },
+    {
+      "id": "common-make",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/make",
+        "/usr/bin/python3.11"
+      ],
+      "source": "CommonToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "make"
+      ],
+      "expect": "COMMON_TOOL_MAKE_OK"
+    },
+    {
+      "id": "common-ninja",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/ninja",
+        "/usr/bin/python3.11"
+      ],
+      "source": "CommonToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "ninja"
+      ],
+      "expect": "COMMON_TOOL_NINJA_OK"
+    },
+    {
+      "id": "common-pkgconf",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/pkgconf",
+        "/usr/bin/python3.11"
+      ],
+      "source": "CommonToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "pkgconf"
+      ],
+      "expect": "COMMON_TOOL_PKGCONF_OK"
+    },
+    {
+      "id": "common-git",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/git",
+        "/usr/bin/python3.11"
+      ],
+      "source": "CommonToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "git"
+      ],
+      "expect": "COMMON_TOOL_GIT_OK"
+    },
+    {
+      "id": "common-sed",
+      "level": "behavior",
+      "requires": [
+        "/bin/sed",
+        "/usr/bin/python3.11"
+      ],
+      "source": "CommonToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "sed"
+      ],
+      "expect": "COMMON_TOOL_SED_OK"
+    },
+    {
+      "id": "common-grep",
+      "level": "behavior",
+      "requires": [
+        "/bin/grep",
+        "/usr/bin/python3.11"
+      ],
+      "source": "CommonToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "grep"
+      ],
+      "expect": "COMMON_TOOL_GREP_OK"
+    },
+    {
+      "id": "common-find",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/find",
+        "/usr/bin/python3.11"
+      ],
+      "source": "CommonToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "find"
+      ],
+      "expect": "COMMON_TOOL_FIND_OK"
+    },
+    {
+      "id": "common-patch",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/patch",
+        "/usr/bin/python3.11"
+      ],
+      "source": "CommonToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "patch"
+      ],
+      "expect": "COMMON_TOOL_PATCH_OK"
+    },
+    {
+      "id": "common-jq",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/jq",
+        "/usr/bin/python3.11"
+      ],
+      "source": "CommonToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "jq"
+      ],
+      "expect": "COMMON_TOOL_JQ_OK"
+    },
+    {
+      "id": "common-openssl",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/openssl",
+        "/usr/bin/python3.11"
+      ],
+      "source": "CommonToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "openssl"
+      ],
+      "expect": "COMMON_TOOL_OPENSSL_OK"
+    },
+    {
+      "id": "common-rsync",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/rsync",
+        "/usr/bin/python3.11"
+      ],
+      "source": "CommonToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "rsync"
+      ],
+      "expect": "COMMON_TOOL_RSYNC_OK"
+    },
+    {
+      "id": "common-file",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/file",
+        "/usr/bin/python3.11"
+      ],
+      "source": "CommonToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "file"
+      ],
+      "expect": "COMMON_TOOL_FILE_OK"
+    },
+    {
+      "id": "common-procps",
+      "level": "behavior",
+      "requires": [
+        "/bin/ps",
+        "/usr/bin/python3.11"
+      ],
+      "source": "CommonToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "procps"
+      ],
+      "expect": "COMMON_TOOL_PROCPS_OK"
+    },
+    {
+      "id": "common-git-transfer",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/git",
+        "/usr/bin/python3.11"
+      ],
+      "source": "CommonToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "git_transfer"
+      ],
+      "expect": "COMMON_TOOL_GIT_TRANSFER_OK"
+    },
+    {
+      "id": "unix-rights",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "UnixRightsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "UNIX_RIGHTS_LIFETIME_OK"
+    },
+    {
+      "id": "unix-credentials",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "UnixCredentialsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "UNIX_CREDENTIALS_LIFETIME_OK"
+    },
+    {
+      "id": "file-allocation",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/gcc",
+        "/bin/sh",
+        "/bin/busybox"
+      ],
+      "source": "FileAllocationProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-allocation.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -x c -o probe - <<'PROBE_C'\n{source}\nPROBE_C\n{ /bin/busybox printf \"%0300d\\nchild\\n\" 0 | /bin/busybox tr 0 p; } | ./probe"
+      ],
+      "expect": "FILE_ALLOCATION_PASSWORD_FORK_OK"
+    },
+    {
+      "id": "password-pty",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/gcc",
+        "/usr/bin/python3.11"
+      ],
+      "source": "PasswordPtyProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "PASSWORD_TERMINAL_RESTORED_OK"
+    },
+    {
+      "id": "rsync-daemon",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/rsync",
+        "/usr/bin/python3.11"
+      ],
+      "source": "RsyncDaemonProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "RSYNC_TCP_AUTH_COMPRESSION_OK"
+    },
+    {
+      "id": "xext-shm",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/gcc",
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/include/X11/extensions/XShm.h"
+      ],
+      "source": "XextShmProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-xext.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -x c -o probe - -lXext -lX11 <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "XSHM_PIXELS_COMPLETION_OWNERSHIP_OK"
+    },
+    {
+      "id": "xext-dbe",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/gcc",
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/include/X11/extensions/Xdbe.h"
+      ],
+      "source": "XdbeProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-dbe.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -x c -o probe - -lXext -lX11 <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "XDBE_PIXELS_SWAP_ALIAS_LIFETIME_OK"
+    },
+    {
+      "id": "x11-event-wire",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/gcc",
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/include/X11/Xlibint.h"
+      ],
+      "source": "XEventWireProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-event-wire.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -x c -o probe - -lX11 <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "XEVENT_WIRE_CALLBACK_FORK_OK"
+    },
+    {
+      "id": "nginx-proxy",
+      "level": "behavior",
+      "requires": [
+        "/usr/sbin/nginx",
+        "/usr/bin/python3.11",
+        "/usr/bin/openssl"
+      ],
+      "source": "NginxProxyProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "NGINX_TLS_UNIX_PROXY_GZIP_KEEPALIVE_OK"
+    },
+    {
+      "id": "pulse-mainloop",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/gcc",
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/include/pulse/mainloop.h"
+      ],
+      "source": "PulseMainloopProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-pulse-loop.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -x c -o probe - -lpulse -lpthread <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "PULSE_MAINLOOP_IO_TIMER_DEFER_THREAD_FORK_OK"
+    },
+    {
+      "id": "x11-input-method",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/gcc",
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/include/X11/Xlib.h"
+      ],
+      "source": "XimProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-xim.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -x c -o probe - -lX11 <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "XIM_ATTRIBUTES_LOOKUP_OWNERSHIP_FORK_OK"
+    },
+    {
+      "id": "common-binutils",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/gcc",
+        "/usr/bin/ar",
+        "/usr/bin/ranlib",
+        "/usr/bin/nm",
+        "/usr/bin/readelf",
+        "/usr/bin/objcopy",
+        "/usr/bin/objdump",
+        "/usr/bin/strip",
+        "/usr/bin/addr2line",
+        "/usr/bin/size",
+        "/usr/bin/strings",
+        "/usr/bin/c++filt",
+        "/usr/bin/elfedit"
+      ],
+      "source": "BinutilsProbe.sh",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "{source}"
+      ],
+      "expect": "BINUTILS_ARCHIVE_DEBUG_STRIP_SYMBOLS_OK"
+    },
+    {
+      "id": "common-gcov",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/gcc",
+        "/usr/bin/gcov",
+        "/usr/bin/gcov-dump"
+      ],
+      "source": "GcovProbe.sh",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "{source}"
+      ],
+      "expect": "GCOV_EXECUTION_BRANCH_COUNTS_OK"
+    },
+    {
+      "id": "x11-event-selection",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/gcc",
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/include/X11/Xlib.h"
+      ],
+      "source": "XEventSelectProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-event-select.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -x c -o probe - -lX11 -lpthread <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "XEVENT_SELECT_QUEUE_CONCURRENT_WAKE_OK"
+    },
+    {
+      "id": "exit-lifecycle",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/gcc"
+      ],
+      "source": "ExitLifecycleProbe.sh",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "{source}"
+      ],
+      "expect": "ELF_EXIT_ORDER_REENTRY_FORK_DESTRUCTORS_OK"
+    },
+    {
+      "id": "x11-properties",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/gcc",
+        "/usr/include/X11/Xlib.h"
+      ],
+      "source": "XPropertyProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-properties.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -x c -o probe - -lX11 <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "XPROPERTY_ATOMS_LP64_HINTS_FORK_OK"
+    },
+    {
+      "id": "x11-font-metrics",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/gcc",
+        "/usr/include/X11/Xlib.h"
+      ],
+      "source": "XFontMetricsProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-font-metrics.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -x c -o probe - -lX11 <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "XFONT_METRICS_8_16_DEFAULT_BEARINGS_WIDTH_OK"
+    },
+    {
+      "id": "x11-pointer-control",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/gcc",
+        "/usr/include/X11/Xlib.h"
+      ],
+      "source": "XPointerControlProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-x11-pointer-control.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -x c -o probe - -lX11 <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "XPOINTER_NATIVE_MASKS_ERRORS_DEFAULTS_FORK_OK",
+      "host_fixture": "pointer-control"
+    },
+    {
+      "id": "x11-window-tree",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/gcc",
+        "/usr/include/X11/Xlib.h"
+      ],
+      "source": "XWindowTreeProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-x11-window-tree.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -x c -o probe - -lX11 <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "XWINDOW_REPARENT_TREE_COORDINATES_ERRORS_OK"
+    },
+    {
+      "id": "x11-colormap",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/gcc",
+        "/usr/include/X11/Xlib.h"
+      ],
+      "source": "XColormapProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-x11-colormap.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -x c -o probe - -lX11 <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "XCOLORMAP_TRUECOLOR_PROPERTIES_OWNERSHIP_FORK_OK"
+    },
+    {
+      "id": "x11-core-abi",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/gcc",
+        "/usr/include/X11/Xlib.h"
+      ],
+      "source": "XCoreAbiProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-x11-core-abi.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -x c -o probe - -lX11 <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "XCORE_ACCESSORS_TEXTLIST_OWNERSHIP_OK"
+    },
+    {
+      "id": "alsa-interfaces",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/gcc",
+        "/usr/include/alsa/asoundlib.h"
+      ],
+      "source": "AlsaInterfacesProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-alsa.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -x c -o probe - -lasound <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "ALSA_FORMATS_MIDI_POLL_OUTPUT_STATUS_OK"
+    },
+    {
+      "id": "libc-symbols",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/gcc"
+      ],
+      "source": "LibcSymbolsProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-symbols.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -O1 -fno-builtin -x c -o probe - -ldl -lm -pthread <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "LIBC_SYMBOLS_CLOCK_MEMORY_STREAM_FORK_OK"
+    },
+    {
+      "id": "thread-stack",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/gcc"
+      ],
+      "source": "ThreadStackProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-thread-stack.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -O2 -fno-stack-clash-protection -fno-stack-protector -x c -o probe - -pthread <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "THREAD_STACK_LARGE_FRAMES_RED_ZONE_FORK_OK"
+    },
+    {
+      "id": "memory-lock",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/gcc"
+      ],
+      "source": "MemoryLockProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-memory-lock.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -O2 -x c -o probe - <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "MEMORY_LOCK_RANGES_SYSCALLS_ERRORS_FORK_OK"
+    },
+    {
+      "id": "printf-hooks",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/gcc"
+      ],
+      "source": "PrintfHooksProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-printf-hooks.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -O2 -Wno-format -x c -o probe - <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "PRINTF_HOOKS_TYPES_MODIFIERS_STREAMS_TRUNCATION_FORK_OK"
+    },
+    {
+      "id": "random-state",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/gcc"
+      ],
+      "source": "RandomStateProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-random-state.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -O2 -Wno-format -x c -o probe - <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "RANDOM_STATE_ALL_TYPES_UNALIGNED_SWITCH_FORK_OK"
+    },
+    {
+      "id": "quadmath-printf",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/gcc"
+      ],
+      "source": "QuadmathHooksProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-quadmath.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -O2 -Wno-format -x c -o probe - -l:libquadmath.so.0 -lm <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "QUADMATH_PRINTF_BINARY128_FORK_OK"
+    },
+    {
+      "id": "ffmpeg-runtime",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/ffmpeg",
+        "/usr/bin/ffprobe",
+        "/usr/bin/python3"
+      ],
+      "source": "FfmpegRuntimeProbe.py",
+      "argv": [
+        "/usr/bin/python3",
+        "-c",
+        "{source}"
+      ],
+      "expect": "FFMPEG_FLAC_FILE_PIPE_RESAMPLE_FFV1_PIXELS_OK"
+    },
+    {
+      "id": "pulse-timing",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/gcc",
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/include/pulse/pulseaudio.h"
+      ],
+      "source": "PulseTimingProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-pulse-timing.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -O2 -x c -o probe - -lpulse <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "PULSE_NATIVE_TIME_LATENCY_CORK_FLUSH_REFS_OK"
+    },
+    {
+      "id": "file-tree",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/gcc",
+        "/bin/sh",
+        "/bin/busybox"
+      ],
+      "source": "FileTreeProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-file-tree.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -O2 -x c -o probe - -pthread <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "FTW_NFTW_LINKS_DEPTH_ACTIONS_CHDIR_FORK_OK"
+    },
+    {
+      "id": "message-catalog",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/gcc",
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/gencat"
+      ],
+      "source": "CatalogProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-message-catalog.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -O2 -x c -o probe - -pthread <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "GENCAT_CATOPEN_CATGETS_SEARCH_ENDIAN_FORK_OK"
+    },
+    {
+      "id": "thread-compat",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/gcc",
+        "/bin/sh",
+        "/bin/busybox"
+      ],
+      "source": "ThreadCompatProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-thread-compat.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -O2 -x c -o probe - -pthread <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "CLOCKWAIT_AFFINITY_THRD_EXIT_TLS_OK"
+    },
+    {
+      "id": "gnu-error",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/gcc",
+        "/bin/sh",
+        "/bin/busybox"
+      ],
+      "source": "GnuErrorProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-gnu-error.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; printf '%s' \"$1\" > probe.c; /usr/bin/gcc -O2 -no-pie probe.c -o copy; ./copy; /usr/bin/gcc -O2 -fPIC -pie probe.c -o got; ./got",
+        "gnu-error",
+        "{source}"
+      ],
+      "expect": "GNU_ERROR_COUNTER_PREFIX_COPY_FORK_OK"
+    },
+    {
+      "id": "iconv",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/gcc",
+        "/bin/sh",
+        "/bin/busybox"
+      ],
+      "source": "IconvProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-iconv.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -O2 -x c -o probe - -pthread <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "ICONV_UNICODE_LATIN1_BOUNDS_ERRORS_FORK_OK"
+    },
+    {
+      "id": "desktop-core-files",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/bin/cp",
+        "/bin/mv",
+        "/bin/ln",
+        "/bin/mkdir",
+        "/bin/chmod",
+        "/usr/bin/stat",
+        "/bin/readlink",
+        "/bin/cat",
+        "/bin/rm",
+        "/bin/rmdir"
+      ],
+      "source": "DesktopToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "core-files"
+      ],
+      "expect": "DESKTOP_TOOL_CORE_FILES_OK"
+    },
+    {
+      "id": "desktop-core-text",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/bin/sort",
+        "/usr/bin/uniq",
+        "/usr/bin/cut",
+        "/usr/bin/tr",
+        "/usr/bin/join",
+        "/usr/bin/paste",
+        "/usr/bin/head",
+        "/usr/bin/tail",
+        "/usr/bin/wc",
+        "/usr/bin/seq"
+      ],
+      "source": "DesktopToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "core-text"
+      ],
+      "expect": "DESKTOP_TOOL_CORE_TEXT_OK"
+    },
+    {
+      "id": "desktop-core-streams",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/bin/dd",
+        "/usr/bin/split",
+        "/usr/bin/tee",
+        "/usr/bin/base32",
+        "/usr/bin/base64",
+        "/usr/bin/truncate"
+      ],
+      "source": "DesktopToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "core-streams"
+      ],
+      "expect": "DESKTOP_TOOL_CORE_STREAMS_OK"
+    },
+    {
+      "id": "desktop-hashes",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/bin/md5sum",
+        "/usr/bin/sha1sum",
+        "/usr/bin/sha256sum",
+        "/usr/bin/sha512sum",
+        "/usr/bin/b2sum"
+      ],
+      "source": "DesktopToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "hashes"
+      ],
+      "expect": "DESKTOP_TOOL_HASHES_OK"
+    },
+    {
+      "id": "desktop-gzip",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/bin/gzip"
+      ],
+      "source": "DesktopToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "gzip"
+      ],
+      "expect": "DESKTOP_TOOL_GZIP_OK"
+    },
+    {
+      "id": "desktop-bzip2",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/bin/bzip2"
+      ],
+      "source": "DesktopToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "bzip2"
+      ],
+      "expect": "DESKTOP_TOOL_BZIP2_OK"
+    },
+    {
+      "id": "desktop-xz",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/bin/xz"
+      ],
+      "source": "DesktopToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "xz"
+      ],
+      "expect": "DESKTOP_TOOL_XZ_OK"
+    },
+    {
+      "id": "desktop-tar",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/bin/tar"
+      ],
+      "source": "DesktopToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "tar"
+      ],
+      "expect": "DESKTOP_TOOL_TAR_OK"
+    },
+    {
+      "id": "desktop-zip",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/bin/zip",
+        "/usr/bin/unzip"
+      ],
+      "source": "DesktopToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "zip"
+      ],
+      "expect": "DESKTOP_TOOL_ZIP_OK"
+    },
+    {
+      "id": "desktop-gawk",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/bin/gawk"
+      ],
+      "source": "DesktopToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "gawk"
+      ],
+      "expect": "DESKTOP_TOOL_GAWK_OK"
+    },
+    {
+      "id": "desktop-diffutils",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/bin/diff",
+        "/usr/bin/cmp"
+      ],
+      "source": "DesktopToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "diffutils"
+      ],
+      "expect": "DESKTOP_TOOL_DIFFUTILS_OK"
+    },
+    {
+      "id": "desktop-ripgrep",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/bin/rg"
+      ],
+      "source": "DesktopToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "ripgrep"
+      ],
+      "expect": "DESKTOP_TOOL_RIPGREP_OK"
+    },
+    {
+      "id": "desktop-fd",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/bin/fdfind"
+      ],
+      "source": "DesktopToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "fd"
+      ],
+      "expect": "DESKTOP_TOOL_FD_OK"
+    },
+    {
+      "id": "desktop-tree",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/bin/tree"
+      ],
+      "source": "DesktopToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "tree"
+      ],
+      "expect": "DESKTOP_TOOL_TREE_OK"
+    },
+    {
+      "id": "desktop-bc",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/bin/bc"
+      ],
+      "source": "DesktopToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "bc"
+      ],
+      "expect": "DESKTOP_TOOL_BC_OK"
+    },
+    {
+      "id": "desktop-vim",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/bin/vim.tiny"
+      ],
+      "source": "DesktopToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "vim"
+      ],
+      "expect": "DESKTOP_TOOL_VIM_OK"
+    },
+    {
+      "id": "desktop-gio",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/bin/gio"
+      ],
+      "source": "DesktopToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "gio"
+      ],
+      "expect": "DESKTOP_TOOL_GIO_OK"
+    },
+    {
+      "id": "desktop-dbus",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/bin/dbus-run-session",
+        "/usr/bin/dbus-daemon",
+        "/usr/bin/gdbus",
+        "/usr/bin/gsettings",
+        "/usr/bin/env",
+        "/usr/share/glib-2.0/schemas/gschemas.compiled"
+      ],
+      "source": "DesktopToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "dbus"
+      ],
+      "expect": "DESKTOP_TOOL_DBUS_OK"
+    },
+    {
+      "id": "gtk-startup",
+      "level": "startup",
+      "requires": [
+        "/usr/bin/gtk3-demo"
+      ],
+      "argv": [
+        "/usr/bin/gtk3-demo",
+        "--version"
+      ],
+      "expect": "gtk3-demo"
+    },
+    {
+      "id": "gnome-dictionary-startup",
+      "level": "startup",
+      "requires": [
+        "/usr/bin/gnome-dictionary"
+      ],
+      "argv": [
+        "/usr/bin/gnome-dictionary",
+        "--help"
+      ],
+      "expect": "Application Options"
+    },
+    {
+      "id": "nano-startup",
+      "level": "startup",
+      "requires": [
+        "/bin/nano"
+      ],
+      "argv": [
+        "/bin/nano",
+        "--version"
+      ],
+      "expect": "GNU nano"
+    },
+    {
+      "id": "less-startup",
+      "level": "startup",
+      "requires": [
+        "/usr/bin/less"
+      ],
+      "argv": [
+        "/usr/bin/less",
+        "--version"
+      ],
+      "expect": "less"
+    },
+    {
+      "id": "desktop-abi",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/gcc"
+      ],
+      "source": "DesktopAbiProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-desktop.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -O1 -x c -o probe - -pthread <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "DESKTOP_ABI_POSITION_FLAGS_ALIGNMENT_SCHED_TIME_SIGNAL_OK"
+    },
+    {
+      "id": "desktop-x11",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/gcc"
+      ],
+      "source": "DesktopX11Probe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-desktop.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -O1 -x c -o probe - -lX11 <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "DESKTOP_X11_MODIFIERS_POINTS_TILES_PROPERTIES_OK"
+    },
+    {
+      "id": "desktop-qt-core",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/lib/x86_64-linux-gnu/qt5/examples/corelib/serialization/savegame/savegame"
+      ],
+      "source": "DesktopToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "qt-core"
+      ],
+      "expect": "DESKTOP_TOOL_QT_CORE_OK"
+    },
+    {
+      "id": "desktop-xi",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/gcc"
+      ],
+      "source": "DesktopXiProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-desktop.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -O1 -x c -o probe - -lX11 -lXi <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "DESKTOP_XI_QUERY_PROPERTY_UNSUPPORTED_GRABS_OK"
+    },
+    {
+      "id": "desktop-cursor-sync",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/gcc"
+      ],
+      "source": "DesktopCursorSyncProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-desktop.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -O1 -x c -o probe - -lX11 -lXcursor -lXext -lXrandr <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "DESKTOP_CURSOR_SYNC_MONITORS_FORK_OK"
+    },
+    {
+      "id": "desktop-gtk-window",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/lib/x86_64-linux-gnu/libgtk-3.so.0"
+      ],
+      "source": "DesktopGtkProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "DESKTOP_GTK_WINDOW_REALIZED_DESTROYED_OK"
+    },
+    {
+      "id": "desktop-connection",
+      "level": "behavior",
+      "requires": [
+        "/bin/sh",
+        "/bin/busybox",
+        "/usr/bin/gcc",
+        "/usr/include/X11/Xlib.h",
+        "/usr/include/X11/XKBlib.h"
+      ],
+      "source": "DesktopConnectionProbe.c",
+      "argv": [
+        "/bin/sh",
+        "-ec",
+        "work=$(/bin/busybox mktemp -d /tmp/kinakaze-desktop.XXXXXX); trap 'cd /; /bin/busybox rm -rf \"$work\"' EXIT; cd \"$work\"; /usr/bin/gcc -O1 -x c -o probe - -lX11 <<'PROBE_C'\n{source}\nPROBE_C\n./probe"
+      ],
+      "expect": "DESKTOP_CONNECTION_REFS_POLL_FORK_CLOSE_OK"
+    },
+    {
+      "id": "desktop-atspi",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/bin/dbus-run-session",
+        "/usr/bin/gdbus",
+        "/usr/libexec/at-spi-bus-launcher",
+        "/usr/libexec/at-spi2-registryd",
+        "/usr/share/dbus-1/services/org.a11y.Bus.service"
+      ],
+      "source": "DesktopToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "atspi"
+      ],
+      "expect": "DESKTOP_TOOL_ATSPI_OK"
+    },
+    {
+      "id": "fd-capacity",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "FdCapacityProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "FD_CAPACITY_SPARSE_LIMITS_SELECT_RIGHTS_FORK_EXEC_OK"
+    },
+    {
+      "id": "desktop-xcb-core",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "XcbCoreProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "XCB_SHARED_PROPERTIES_QUERIES_FORK_OWNERSHIP_OK"
+    },
+    {
+      "id": "desktop-xcb-drawing",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "XcbDrawingProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "XCB_PIXELS_FORMATS_CLIP_RASTER_COPY_FORK_OK"
+    },
+    {
+      "id": "desktop-xcb-input",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "XcbInputProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "XCB_CONTROLS_EVENTFD_WAIT_WINDOW_FOCUS_FORK_OK"
+    },
+    {
+      "id": "desktop-xcb-selection",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "XcbSelectionProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "XCB_SELECTION_HANDSHAKE_CURSOR_COLORMAP_FORK_OK"
+    },
+    {
+      "id": "desktop-glx-context",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "GLXContextProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "GLX_CONTEXT_QUERY_AND_LIFETIME_OK"
+    },
+    {
+      "id": "desktop-xcb-egl",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "XcbEglProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "XCB_EGL_PIXELS_NATIVE_WINDOW_FORK_DESTROY_OK"
+    },
+    {
+      "id": "fts-tree",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "FtsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "FTS_TRAVERSAL_SKIP_FOLLOW_CYCLE_SORT_CHDIR_FORK_OK"
+    },
+    {
+      "id": "linear-search",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "LinearSearchProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "LINEAR_SEARCH_FIRST_MATCH_INSERT_COUNT_ERRNO_OK"
+    },
+    {
+      "id": "account-files",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "AccountFilesProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "ACCOUNT_FILES_PARSE_WRITE_FORTIFY_FORK_OK"
+    },
+    {
+      "id": "password-lock",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "PasswordLockProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "PASSWORD_LOCK_PROCESS_FORK_WAKE_TIMEOUT_SIGNAL_RESTORE_OK"
+    },
+    {
+      "id": "account-tools",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/sbin/useradd",
+        "/usr/sbin/groupadd",
+        "/usr/sbin/userdel",
+        "/usr/sbin/groupdel"
+      ],
+      "source": "AccountToolsProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "ACCOUNT_TOOLS_CREATE_DUPLICATE_PRIMARY_GROUP_DELETE_OK"
+    },
+    {
+      "id": "desktop-xregion-clip",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "XRegionClipProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "XREGION_RECTANGLE_BITMAP_CLIPPING_OK"
+    },
+    {
+      "id": "desktop-render-fill",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "RenderFillProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "RENDER_FILL_PIXELS_CLIP_OK"
+    },
+    {
+      "id": "desktop-cursor-contrast",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "CursorContrastProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "CURSOR_CONTRAST_OK"
+    },
+    {
+      "id": "desktop-render-copy",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "RenderCopyProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "RENDER_COPY_FORMAT_CLIP_OVERLAP_OK"
+    },
+    {
+      "id": "desktop-pulse-mixer",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/lib/x86_64-linux-gnu/libpulse-mainloop-glib.so.0"
+      ],
+      "source": "PulseMixerProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "PULSE_MIXER_NATIVE_GLIB_ASYNC_OK"
+    },
+    {
+      "id": "desktop-xfixes-tracking",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/lib/x86_64-linux-gnu/libXfixes.so.3"
+      ],
+      "source": "XFixesTrackingProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "XFIXES_SELECTION_CURSOR_SHAPE_BARRIER_OK"
+    },
+    {
+      "id": "desktop-compositor-surface",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/lib/x86_64-linux-gnu/libXdamage.so.1",
+        "/usr/lib/x86_64-linux-gnu/libXfixes.so.3"
+      ],
+      "source": "CompositorProtocolProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "GLX_PIXMAP_TEXTURE_READBACK_OK"
+    },
+    {
+      "id": "desktop-sync-alarms",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "SyncAlarmProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "SYNC_COUNTER_ALARM_TIMER_FENCE_OK"
+    },
+    {
+      "id": "host-lookup-reentrant",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "HostLookupReentrantProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "HOST_LOOKUP_REENTRANT_IPV4_IPV6_OWNERSHIP_OK"
+    },
+    {
+      "id": "desktop-netgroup-shadow",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "DesktopAccountProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "DESKTOP_NETGROUP_SHADOW_STREAM_OK"
+    },
+    {
+      "id": "gnome-introspection",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/lib/x86_64-linux-gnu/libgirepository-1.0.so.1",
+        "/usr/bin/gnome-shell"
+      ],
+      "source": "GnomeDependenciesProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "GNOME_TYPELIB_SHARED_LIBRARY_CLOSURE_OK"
+    },
+    {
+      "id": "desktop-overlay-coordinates",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/lib/x86_64-linux-gnu/libXcomposite.so.1"
+      ],
+      "source": "OverlayCoordinatesProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "COMPOSITE_BORDERLESS_ROOT_POINTER_COORDINATES_OK"
+    },
+    {
+      "id": "desktop-window-stack",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "WindowStackProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "MAPPED_WINDOW_RAISE_ACTIVATION_STACKING_OK"
+    },
+    {
+      "id": "desktop-shm-fork",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "ShmForkProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "SYSV_MIT_SHM_FORK_SHARED_RMID_DETACH_OK"
+    },
+    {
+      "id": "desktop-webp-pixbuf",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders/libpixbufloader-webp.so",
+        "/usr/share/backgrounds/gnome/adwaita-l.webp"
+      ],
+      "source": "WebpPixbufProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "WEBP_PIXBUF_FILE_STREAM_ALPHA_LOSSY_WALLPAPER_OK"
+    },
+    {
+      "id": "desktop-gdk-error-trap",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/lib/x86_64-linux-gnu/libgdk-3.so.0"
+      ],
+      "source": "GdkErrorTrapProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "GDK_GEOMETRY_REQUEST_ERROR_TRAP_OK"
+    },
+    {
+      "id": "desktop-recursive-mutex-fork",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "RecursiveMutexForkProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "RECURSIVE_MUTEX_FORK_NATIVE_WAITERS_OWNERSHIP_OK"
+    },
+    {
+      "id": "desktop-composite-pixmap",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/lib/x86_64-linux-gnu/libXcomposite.so.1"
+      ],
+      "source": "CompositePixmapProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "COMPOSITE_SHARED_PIXMAP_LIFETIME_OK"
+    },
+    {
+      "id": "desktop-compat-abi",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "DesktopAbiProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "DESKTOP_ABI_OK"
+    },
+    {
+      "id": "desktop-transient-coordinates",
+      "level": "behavior",
+      "requires": ["/usr/bin/python3.11"],
+      "source": "TransientCoordinatesProbe.py",
+      "argv": ["/usr/bin/python3.11", "-c", "{source}"],
+      "expect": "TRANSIENT_ROOT_AND_CHILD_COORDINATES_OK"
+    },
+    {
+      "id": "desktop-configure-stack",
+      "level": "behavior",
+      "requires": ["/usr/bin/python3.11"],
+      "source": "ConfigureStackProbe.py",
+      "argv": ["/usr/bin/python3.11", "-c", "{source}"],
+      "expect": "CONFIGURE_STACK_OK"
+    },
+    {
+      "id": "desktop-tls-relocation",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/lib/x86_64-linux-gnu/libmpfr.so.6"
+      ],
+      "source": "TlsRelocationProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "ELF_TLS_RELOCATED_CALLBACKS_THREADS_OK"
+    }
+  ]
+}

@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "probes": [
+    {
+      "id": "boundary-sqlite",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/bin/sqlite3"
+      ],
+      "source": "SoftwareBoundaryProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "sqlite"
+      ],
+      "expect": "SOFTWARE_BOUNDARY_SQLITE_OK"
+    },
+    {
+      "id": "boundary-git",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/bin/git"
+      ],
+      "source": "SoftwareBoundaryProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "git"
+      ],
+      "expect": "SOFTWARE_BOUNDARY_GIT_OK"
+    },
+    {
+      "id": "boundary-ffmpeg",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/bin/ffmpeg"
+      ],
+      "source": "SoftwareBoundaryProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "ffmpeg"
+      ],
+      "expect": "SOFTWARE_BOUNDARY_FFMPEG_OK"
+    },
+    {
+      "id": "boundary-compiler",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/bin/gcc",
+        "/usr/bin/clang"
+      ],
+      "source": "SoftwareBoundaryProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "compiler"
+      ],
+      "expect": "SOFTWARE_BOUNDARY_COMPILER_OK"
+    },
+    {
+      "id": "boundary-node",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/bin/node"
+      ],
+      "source": "SoftwareBoundaryProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "node"
+      ],
+      "expect": "SOFTWARE_BOUNDARY_NODE_OK"
+    },
+    {
+      "id": "boundary-archive",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/bin/gzip",
+        "/bin/tar"
+      ],
+      "source": "SoftwareBoundaryProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "archive"
+      ],
+      "expect": "SOFTWARE_BOUNDARY_ARCHIVE_OK"
+    },
+    {
+      "id": "boundary-bzip2",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/bin/bzip2"
+      ],
+      "source": "SoftwareBoundaryProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "bzip2"
+      ],
+      "expect": "SOFTWARE_BOUNDARY_BZIP2_OK"
+    },
+    {
+      "id": "boundary-xz",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11",
+        "/usr/bin/xz"
+      ],
+      "source": "SoftwareBoundaryProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}",
+        "xz"
+      ],
+      "expect": "SOFTWARE_BOUNDARY_XZ_OK"
+    },
+    {
+      "id": "boundary-sqlite-process",
+      "level": "behavior",
+      "requires": [
+        "/usr/bin/python3.11"
+      ],
+      "source": "SqliteProcessBoundaryProbe.py",
+      "argv": [
+        "/usr/bin/python3.11",
+        "-c",
+        "{source}"
+      ],
+      "expect": "\"total\": 16"
+    }
+  ]
+}

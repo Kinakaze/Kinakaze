@@ -1,0 +1,156 @@
+LIBRARY "libXext.so.6"
+EXPORTS
+  kinakaze_engine_libXext_DPMSCapable
+  "DPMSCapable"=kinakaze_engine_libXext_DPMSCapable PRIVATE
+  kinakaze_engine_libXext_DPMSForceLevel
+  "DPMSForceLevel"=kinakaze_engine_libXext_DPMSForceLevel PRIVATE
+  kinakaze_engine_libXext_DPMSInfo
+  "DPMSInfo"=kinakaze_engine_libXext_DPMSInfo PRIVATE
+  kinakaze_engine_libXext_DPMSQueryExtension
+  "DPMSQueryExtension"=kinakaze_engine_libXext_DPMSQueryExtension PRIVATE
+  kinakaze_engine_libXext_DPMSSetTimeouts
+  "DPMSSetTimeouts"=kinakaze_engine_libXext_DPMSSetTimeouts PRIVATE
+  kinakaze_engine_libXext_XShapeCombineMask
+  "XShapeCombineMask"=kinakaze_engine_libXext_XShapeCombineMask PRIVATE
+  kinakaze_engine_libXext_XShapeCombineRectangles
+  "XShapeCombineRectangles"=kinakaze_engine_libXext_XShapeCombineRectangles PRIVATE
+  kinakaze_engine_libXext_XShapeCombineRegion
+  "XShapeCombineRegion"=kinakaze_engine_libXext_XShapeCombineRegion PRIVATE
+  kinakaze_engine_libXext_XShapeCombineShape
+  "XShapeCombineShape"=kinakaze_engine_libXext_XShapeCombineShape PRIVATE
+  kinakaze_engine_libXext_XShapeGetRectangles
+  "XShapeGetRectangles"=kinakaze_engine_libXext_XShapeGetRectangles PRIVATE
+  kinakaze_engine_libXext_XShapeInputSelected
+  "XShapeInputSelected"=kinakaze_engine_libXext_XShapeInputSelected PRIVATE
+  kinakaze_engine_libXext_XShapeOffsetShape
+  "XShapeOffsetShape"=kinakaze_engine_libXext_XShapeOffsetShape PRIVATE
+  kinakaze_engine_libXext_XShapeQueryExtension
+  "XShapeQueryExtension"=kinakaze_engine_libXext_XShapeQueryExtension PRIVATE
+  kinakaze_engine_libXext_XShapeQueryExtents
+  "XShapeQueryExtents"=kinakaze_engine_libXext_XShapeQueryExtents PRIVATE
+  kinakaze_engine_libXext_XShapeQueryVersion
+  "XShapeQueryVersion"=kinakaze_engine_libXext_XShapeQueryVersion PRIVATE
+  kinakaze_engine_libXext_XShapeSelectInput
+  "XShapeSelectInput"=kinakaze_engine_libXext_XShapeSelectInput PRIVATE
+  kinakaze_engine_libXext_XShmAttach
+  "XShmAttach"=kinakaze_engine_libXext_XShmAttach PRIVATE
+  kinakaze_engine_libXext_XShmCreateImage
+  "XShmCreateImage"=kinakaze_engine_libXext_XShmCreateImage PRIVATE
+  kinakaze_engine_libXext_XShmCreatePixmap
+  "XShmCreatePixmap"=kinakaze_engine_libXext_XShmCreatePixmap PRIVATE
+  kinakaze_engine_libXext_XShmDetach
+  "XShmDetach"=kinakaze_engine_libXext_XShmDetach PRIVATE
+  kinakaze_engine_libXext_XShmGetEventBase
+  "XShmGetEventBase"=kinakaze_engine_libXext_XShmGetEventBase PRIVATE
+  kinakaze_engine_libXext_XShmGetImage
+  "XShmGetImage"=kinakaze_engine_libXext_XShmGetImage PRIVATE
+  kinakaze_engine_libXext_XShmPixmapFormat
+  "XShmPixmapFormat"=kinakaze_engine_libXext_XShmPixmapFormat PRIVATE
+  kinakaze_engine_libXext_XShmPutImage
+  "XShmPutImage"=kinakaze_engine_libXext_XShmPutImage PRIVATE
+  kinakaze_engine_libXext_XShmQueryExtension
+  "XShmQueryExtension"=kinakaze_engine_libXext_XShmQueryExtension PRIVATE
+  kinakaze_engine_libXext_XShmQueryVersion
+  "XShmQueryVersion"=kinakaze_engine_libXext_XShmQueryVersion PRIVATE
+  kinakaze_engine_libXext_XSyncAwaitFence
+  "XSyncAwaitFence"=kinakaze_engine_libXext_XSyncAwaitFence PRIVATE
+  kinakaze_engine_libXext_XSyncChangeAlarm
+  "XSyncChangeAlarm"=kinakaze_engine_libXext_XSyncChangeAlarm PRIVATE
+  kinakaze_engine_libXext_XSyncChangeCounter
+  "XSyncChangeCounter"=kinakaze_engine_libXext_XSyncChangeCounter PRIVATE
+  kinakaze_engine_libXext_XSyncCreateAlarm
+  "XSyncCreateAlarm"=kinakaze_engine_libXext_XSyncCreateAlarm PRIVATE
+  kinakaze_engine_libXext_XSyncCreateCounter
+  "XSyncCreateCounter"=kinakaze_engine_libXext_XSyncCreateCounter PRIVATE
+  kinakaze_engine_libXext_XSyncCreateFence
+  "XSyncCreateFence"=kinakaze_engine_libXext_XSyncCreateFence PRIVATE
+  kinakaze_engine_libXext_XSyncDestroyAlarm
+  "XSyncDestroyAlarm"=kinakaze_engine_libXext_XSyncDestroyAlarm PRIVATE
+  kinakaze_engine_libXext_XSyncDestroyCounter
+  "XSyncDestroyCounter"=kinakaze_engine_libXext_XSyncDestroyCounter PRIVATE
+  kinakaze_engine_libXext_XSyncDestroyFence
+  "XSyncDestroyFence"=kinakaze_engine_libXext_XSyncDestroyFence PRIVATE
+  kinakaze_engine_libXext_XSyncFreeSystemCounterList
+  "XSyncFreeSystemCounterList"=kinakaze_engine_libXext_XSyncFreeSystemCounterList PRIVATE
+  kinakaze_engine_libXext_XSyncGetPriority
+  "XSyncGetPriority"=kinakaze_engine_libXext_XSyncGetPriority PRIVATE
+  kinakaze_engine_libXext_XSyncInitialize
+  "XSyncInitialize"=kinakaze_engine_libXext_XSyncInitialize PRIVATE
+  kinakaze_engine_libXext_XSyncIntToValue
+  "XSyncIntToValue"=kinakaze_engine_libXext_XSyncIntToValue PRIVATE
+  kinakaze_engine_libXext_XSyncIntsToValue
+  "XSyncIntsToValue"=kinakaze_engine_libXext_XSyncIntsToValue PRIVATE
+  kinakaze_engine_libXext_XSyncListSystemCounters
+  "XSyncListSystemCounters"=kinakaze_engine_libXext_XSyncListSystemCounters PRIVATE
+  kinakaze_engine_libXext_XSyncMaxValue
+  "XSyncMaxValue"=kinakaze_engine_libXext_XSyncMaxValue PRIVATE
+  kinakaze_engine_libXext_XSyncMinValue
+  "XSyncMinValue"=kinakaze_engine_libXext_XSyncMinValue PRIVATE
+  kinakaze_engine_libXext_XSyncQueryAlarm
+  "XSyncQueryAlarm"=kinakaze_engine_libXext_XSyncQueryAlarm PRIVATE
+  kinakaze_engine_libXext_XSyncQueryCounter
+  "XSyncQueryCounter"=kinakaze_engine_libXext_XSyncQueryCounter PRIVATE
+  kinakaze_engine_libXext_XSyncQueryExtension
+  "XSyncQueryExtension"=kinakaze_engine_libXext_XSyncQueryExtension PRIVATE
+  kinakaze_engine_libXext_XSyncQueryFence
+  "XSyncQueryFence"=kinakaze_engine_libXext_XSyncQueryFence PRIVATE
+  kinakaze_engine_libXext_XSyncResetFence
+  "XSyncResetFence"=kinakaze_engine_libXext_XSyncResetFence PRIVATE
+  kinakaze_engine_libXext_XSyncSetCounter
+  "XSyncSetCounter"=kinakaze_engine_libXext_XSyncSetCounter PRIVATE
+  kinakaze_engine_libXext_XSyncSetPriority
+  "XSyncSetPriority"=kinakaze_engine_libXext_XSyncSetPriority PRIVATE
+  kinakaze_engine_libXext_XSyncTriggerFence
+  "XSyncTriggerFence"=kinakaze_engine_libXext_XSyncTriggerFence PRIVATE
+  kinakaze_engine_libXext_XSyncValueAdd
+  "XSyncValueAdd"=kinakaze_engine_libXext_XSyncValueAdd PRIVATE
+  kinakaze_engine_libXext_XSyncValueEqual
+  "XSyncValueEqual"=kinakaze_engine_libXext_XSyncValueEqual PRIVATE
+  kinakaze_engine_libXext_XSyncValueGreaterOrEqual
+  "XSyncValueGreaterOrEqual"=kinakaze_engine_libXext_XSyncValueGreaterOrEqual PRIVATE
+  kinakaze_engine_libXext_XSyncValueGreaterThan
+  "XSyncValueGreaterThan"=kinakaze_engine_libXext_XSyncValueGreaterThan PRIVATE
+  kinakaze_engine_libXext_XSyncValueHigh32
+  "XSyncValueHigh32"=kinakaze_engine_libXext_XSyncValueHigh32 PRIVATE
+  kinakaze_engine_libXext_XSyncValueIsNegative
+  "XSyncValueIsNegative"=kinakaze_engine_libXext_XSyncValueIsNegative PRIVATE
+  kinakaze_engine_libXext_XSyncValueIsPositive
+  "XSyncValueIsPositive"=kinakaze_engine_libXext_XSyncValueIsPositive PRIVATE
+  kinakaze_engine_libXext_XSyncValueIsZero
+  "XSyncValueIsZero"=kinakaze_engine_libXext_XSyncValueIsZero PRIVATE
+  kinakaze_engine_libXext_XSyncValueLessOrEqual
+  "XSyncValueLessOrEqual"=kinakaze_engine_libXext_XSyncValueLessOrEqual PRIVATE
+  kinakaze_engine_libXext_XSyncValueLessThan
+  "XSyncValueLessThan"=kinakaze_engine_libXext_XSyncValueLessThan PRIVATE
+  kinakaze_engine_libXext_XSyncValueLow32
+  "XSyncValueLow32"=kinakaze_engine_libXext_XSyncValueLow32 PRIVATE
+  kinakaze_engine_libXext_XSyncValueSubtract
+  "XSyncValueSubtract"=kinakaze_engine_libXext_XSyncValueSubtract PRIVATE
+  kinakaze_engine_libXext_XdbeAllocateBackBufferName
+  "XdbeAllocateBackBufferName"=kinakaze_engine_libXext_XdbeAllocateBackBufferName PRIVATE
+  kinakaze_engine_libXext_XdbeBeginIdiom
+  "XdbeBeginIdiom"=kinakaze_engine_libXext_XdbeBeginIdiom PRIVATE
+  kinakaze_engine_libXext_XdbeDeallocateBackBufferName
+  "XdbeDeallocateBackBufferName"=kinakaze_engine_libXext_XdbeDeallocateBackBufferName PRIVATE
+  kinakaze_engine_libXext_XdbeEndIdiom
+  "XdbeEndIdiom"=kinakaze_engine_libXext_XdbeEndIdiom PRIVATE
+  kinakaze_engine_libXext_XdbeFreeVisualInfo
+  "XdbeFreeVisualInfo"=kinakaze_engine_libXext_XdbeFreeVisualInfo PRIVATE
+  kinakaze_engine_libXext_XdbeGetBackBufferAttributes
+  "XdbeGetBackBufferAttributes"=kinakaze_engine_libXext_XdbeGetBackBufferAttributes PRIVATE
+  kinakaze_engine_libXext_XdbeGetVisualInfo
+  "XdbeGetVisualInfo"=kinakaze_engine_libXext_XdbeGetVisualInfo PRIVATE
+  kinakaze_engine_libXext_XdbeQueryExtension
+  "XdbeQueryExtension"=kinakaze_engine_libXext_XdbeQueryExtension PRIVATE
+  kinakaze_engine_libXext_XdbeSwapBuffers
+  "XdbeSwapBuffers"=kinakaze_engine_libXext_XdbeSwapBuffers PRIVATE
+  kinakaze_engine_libXext_XextAddDisplay
+  "XextAddDisplay"=kinakaze_engine_libXext_XextAddDisplay PRIVATE
+  kinakaze_engine_libXext_XextCreateExtension
+  "XextCreateExtension"=kinakaze_engine_libXext_XextCreateExtension PRIVATE
+  kinakaze_engine_libXext_XextDestroyExtension
+  "XextDestroyExtension"=kinakaze_engine_libXext_XextDestroyExtension PRIVATE
+  kinakaze_engine_libXext_XextFindDisplay
+  "XextFindDisplay"=kinakaze_engine_libXext_XextFindDisplay PRIVATE
+  kinakaze_engine_libXext_XextRemoveDisplay
+  "XextRemoveDisplay"=kinakaze_engine_libXext_XextRemoveDisplay PRIVATE

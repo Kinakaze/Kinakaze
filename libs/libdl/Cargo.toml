@@ -1,0 +1,15 @@
+[package]
+name = "kinakaze-v2-libdl"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "kinakaze_libdl"
+crate-type = ["cdylib"]
+test = false
+doctest = false
+
+[lints]
+workspace = true

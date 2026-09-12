@@ -1,0 +1,4 @@
+LIBRARY "libkinakaze-runtime.so.1"
+EXPORTS
+  kinakaze_runtime_abi_version_sysv
+  "kinakaze_runtime_abi_version"=kinakaze_runtime_abi_version_sysv PRIVATE

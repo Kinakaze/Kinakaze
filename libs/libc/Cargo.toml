@@ -1,0 +1,40 @@
+[package]
+name = "kinakaze-v2-libc"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "kinakaze_libc"
+path = "src/lib.rs"
+crate-type = ["dylib"]
+# The unit tests exercise the ABI functions directly, in-process. Every exported
+# name carries the `kinakaze_abi_` prefix, so linking them into a test executable
+# alongside the host CRT introduces no collisions.
+test = true
+doctest = false
+
+[dependencies]
+kinakaze-abi.workspace = true
+kinakaze-elf.workspace = true
+kinakaze-alloc.workspace = true
+kinakaze-runtime.workspace = true
+kinakaze-tls.workspace = true
+kinakaze-vfs.workspace = true
+libpthread = { path = "../libpthread", package = "kinakaze-v2-libpthread" }
+rustc_apfloat = "0.2.3"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Networking_WinSock",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Memory",
+    "Win32_System_ProcessStatus",
+    "Win32_System_SystemInformation",
+    "Win32_System_Threading",
+] }
+
+[dev-dependencies]
+engine-math = { path = "../libm", package = "kinakaze-v2-libm" }

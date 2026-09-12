@@ -1,0 +1,51 @@
+LIBRARY "librt.so.1"
+EXPORTS
+  kinakaze_engine_librt_clock_getres
+  "clock_getres"=kinakaze_engine_librt_clock_getres PRIVATE
+  "clock_getres@GLIBC_2.2.5"=kinakaze_engine_librt_clock_getres PRIVATE
+  kinakaze_engine_librt_clock_gettime
+  "clock_gettime"=kinakaze_engine_librt_clock_gettime PRIVATE
+  "clock_gettime@GLIBC_2.2.5"=kinakaze_engine_librt_clock_gettime PRIVATE
+  kinakaze_engine_librt_clock_nanosleep
+  "clock_nanosleep"=kinakaze_engine_librt_clock_nanosleep PRIVATE
+  kinakaze_engine_librt_clock_settime
+  "clock_settime"=kinakaze_engine_librt_clock_settime PRIVATE
+  kinakaze_engine_librt_mq_close
+  "mq_close"=kinakaze_engine_librt_mq_close PRIVATE
+  kinakaze_engine_librt_mq_getattr
+  "mq_getattr"=kinakaze_engine_librt_mq_getattr PRIVATE
+  kinakaze_engine_librt_mq_notify
+  "mq_notify"=kinakaze_engine_librt_mq_notify PRIVATE
+  kinakaze_engine_librt_mq_open
+  "mq_open"=kinakaze_engine_librt_mq_open PRIVATE
+  kinakaze_engine_librt_mq_receive
+  "mq_receive"=kinakaze_engine_librt_mq_receive PRIVATE
+  kinakaze_engine_librt_mq_send
+  "mq_send"=kinakaze_engine_librt_mq_send PRIVATE
+  kinakaze_engine_librt_mq_setattr
+  "mq_setattr"=kinakaze_engine_librt_mq_setattr PRIVATE
+  kinakaze_engine_librt_mq_timedreceive
+  "mq_timedreceive"=kinakaze_engine_librt_mq_timedreceive PRIVATE
+  kinakaze_engine_librt_mq_timedsend
+  "mq_timedsend"=kinakaze_engine_librt_mq_timedsend PRIVATE
+  kinakaze_engine_librt_mq_unlink
+  "mq_unlink"=kinakaze_engine_librt_mq_unlink PRIVATE
+  kinakaze_engine_librt_shm_open
+  "shm_open"=kinakaze_engine_librt_shm_open PRIVATE
+  "shm_open@GLIBC_2.2.5"=kinakaze_engine_librt_shm_open PRIVATE
+  kinakaze_engine_librt_shm_unlink
+  "shm_unlink"=kinakaze_engine_librt_shm_unlink PRIVATE
+  "shm_unlink@GLIBC_2.2.5"=kinakaze_engine_librt_shm_unlink PRIVATE
+  kinakaze_engine_librt_timer_create
+  "timer_create"=kinakaze_engine_librt_timer_create PRIVATE
+  "timer_create@GLIBC_2.3.3"=kinakaze_engine_librt_timer_create PRIVATE
+  kinakaze_engine_librt_timer_delete
+  "timer_delete"=kinakaze_engine_librt_timer_delete PRIVATE
+  "timer_delete@GLIBC_2.3.3"=kinakaze_engine_librt_timer_delete PRIVATE
+  kinakaze_engine_librt_timer_getoverrun
+  "timer_getoverrun"=kinakaze_engine_librt_timer_getoverrun PRIVATE
+  kinakaze_engine_librt_timer_gettime
+  "timer_gettime"=kinakaze_engine_librt_timer_gettime PRIVATE
+  kinakaze_engine_librt_timer_settime
+  "timer_settime"=kinakaze_engine_librt_timer_settime PRIVATE
+  "timer_settime@GLIBC_2.3.3"=kinakaze_engine_librt_timer_settime PRIVATE

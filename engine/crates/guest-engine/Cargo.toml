@@ -1,0 +1,29 @@
+[package]
+name = "kinakaze-guest-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+crate-type = ["dylib"]
+name = "kinakaze_guest_engine"
+
+[dependencies]
+kinakaze-alloc.workspace = true
+kinakaze-elf.workspace = true
+kinakaze-link.workspace = true
+kinakaze-runtime.workspace = true
+kinakaze-tls.workspace = true
+kinakaze-vfs.workspace = true
+libc = { path = "../../../libs/libc", package = "kinakaze-v2-libc" }
+iced-x86.workspace = true
+blake3 = "1.8"
+gimli = { version = "0.32", default-features = false, features = ["read", "std"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation", "Win32_System_LibraryLoader", "Win32_System_Kernel",
+    "Win32_System_Memory", "Win32_System_Diagnostics_Debug",
+    "Win32_System_Threading", "Win32_System_Console", "Win32_System_SystemInformation",
+] }

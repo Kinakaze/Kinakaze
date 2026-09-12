@@ -1,0 +1,15 @@
+[package]
+name = "kinakaze-v2-libx11-xcb"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "kinakaze_libX11_xcb"
+crate-type = ["cdylib"]
+test = false
+doctest = false
+
+[lints]
+workspace = true

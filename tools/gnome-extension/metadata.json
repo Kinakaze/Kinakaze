@@ -1,0 +1,7 @@
+{
+  "uuid": "desktop-windows@kinakaze",
+  "name": "Kinakaze Desktop Windows",
+  "description": "Manage native application windows across the hosted GNOME session",
+  "shell-version": ["43"],
+  "version": 1
+}

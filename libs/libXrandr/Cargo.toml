@@ -1,0 +1,20 @@
+[package]
+name = "kinakaze-v2-libxrandr"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "kinakaze_libXrandr"
+crate-type = ["dylib"]
+test = true
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+kinakaze_libX11 = { package = "kinakaze-v2-libx11", path = "../libX11" }
+kinakaze-alloc.workspace = true
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Devices_Display", "Win32_Graphics_Gdi", "Win32_UI_ColorSystem", "Win32_UI_WindowsAndMessaging"] }

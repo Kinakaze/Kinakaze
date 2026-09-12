@@ -1,0 +1,20 @@
+[package]
+name = "kinakaze-tls"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+crate-type = ["dylib"]
+path = "src/lib.rs"
+
+[dependencies]
+kinakaze-alloc.workspace = true
+kinakaze-runtime.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_System_LibraryLoader",
+    "Win32_System_Threading",
+] }

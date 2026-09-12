@@ -1,0 +1,21 @@
+[package]
+name = "kinakaze-v2-libxi"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "kinakaze_libXi"
+crate-type = ["dylib"]
+test = true
+doctest = true
+
+[lints]
+workspace = true
+
+[dependencies]
+kinakaze_libX11 = { package = "kinakaze-v2-libx11", path = "../libX11" }
+kinakaze_libdisplay = { package = "kinakaze-v2-libdisplay", path = "../libdisplay" }
+kinakaze-alloc.workspace = true
+kinakaze-runtime.workspace = true

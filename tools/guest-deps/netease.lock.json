@@ -1,0 +1,176 @@
+{
+  "fonts-wqy-zenhei": {
+    "Version": "0.9.45-7",
+    "Filename": "pool/main/f/fonts-wqy-zenhei/fonts-wqy-zenhei_0.9.45-7_all.deb",
+    "Size": "7472002",
+    "SHA256": "68cedf025e0d953ef108ae0a8b765d38299bb9a87efa5e6b6d33b1b76d5c8f29"
+  },
+  "libdbus-glib-1-2": {
+    "Version": "0.110-4",
+    "Filename": "pool/main/d/dbus-glib/libdbus-glib-1-2_0.110-4_amd64.deb",
+    "Size": "71500",
+    "SHA256": "64746681d66d507d07b6158adc9151836f4bd892dcf5e7c9c2085b079a3294b7"
+  },
+  "libdouble-conversion1": {
+    "Version": "3.1.0-3",
+    "Filename": "pool/main/d/double-conversion/libdouble-conversion1_3.1.0-3_amd64.deb",
+    "Size": "39388",
+    "SHA256": "1d9d2762a750d20c48933fb1303fc7e22fee56f2a02d3dcdec0f0cd93a17da4f"
+  },
+  "libfaad2": {
+    "Version": "2.8.8.2-1+security",
+    "Filename": "pool/main/f/faad2/libfaad2_2.8.8.2-1+security_amd64.deb",
+    "Size": "158964",
+    "SHA256": "f585fa75beb38d7c351d92f1a46cd6b768f4b8972dcdde783cc1fc58f698d9ad"
+  },
+  "libflac8": {
+    "Version": "1.3.2.2-3+dde",
+    "Filename": "pool/main/f/flac/libflac8_1.3.2.2-3+dde_amd64.deb",
+    "Size": "193336",
+    "SHA256": "656e2eecc4b3d99469f5e946d1e399f51bf8d7c27e7a4c05465bf666668a32a6"
+  },
+  "libgconf-2-4": {
+    "Version": "3.2.6-5",
+    "Filename": "pool/main/g/gconf/libgconf-2-4_3.2.6-5_amd64.deb",
+    "Size": "426276",
+    "SHA256": "e9ea9d3b13dce484b575e1337e39ec9102a48a1a0d440e4dad6b8f96f6fbbf0b"
+  },
+  "libicu63": {
+    "Version": "63.1.2+dde",
+    "Filename": "pool/main/i/icu/libicu63_63.1.2+dde_amd64.deb",
+    "Size": "8296764",
+    "SHA256": "a6b6b2cb7483e4f89fa69ab6bdf8bde23b976eff2b7b9b46dad9e208c3294015"
+  },
+  "libidn11": {
+    "Version": "1.33-2.2",
+    "Filename": "pool/main/libi/libidn/libidn11_1.33-2.2_amd64.deb",
+    "Size": "116008",
+    "SHA256": "b2914bceda8e88cbff57af85b14edb9676a1f1ee015c2ecf1cbc84af07c9d3fd"
+  },
+  "libqcef1": {
+    "Version": "1.1.9-1",
+    "Filename": "pool/main/q/qcef/libqcef1_1.1.9-1_amd64.deb",
+    "Size": "44095740",
+    "SHA256": "0e105063137551a576419c0f6eeeb99a18ca4ba0b83d78079108b8db7ed57d97"
+  },
+  "libqt5core5a": {
+    "Version": "5.15.1.5+dde-1+eagle",
+    "Filename": "pool/main/q/qtbase-opensource-src/libqt5core5a_5.15.1.5+dde-1+eagle_amd64.deb",
+    "Size": "2118528",
+    "SHA256": "2dbcae5c2f32e4daf0df37bd10e654a5a047c6c6b205f6eea8ee1fb1fcb3d24e"
+  },
+  "libqt5dbus5": {
+    "Version": "5.15.1.5+dde-1+eagle",
+    "Filename": "pool/main/q/qtbase-opensource-src/libqt5dbus5_5.15.1.5+dde-1+eagle_amd64.deb",
+    "Size": "239560",
+    "SHA256": "952d44d9a331eac967983c5742c6761bfb7ba95ff16430cf89c38e1aff55360c"
+  },
+  "libqt5gui5": {
+    "Version": "5.15.1.5+dde-1+eagle",
+    "Filename": "pool/main/q/qtbase-opensource-src/libqt5gui5_5.15.1.5+dde-1+eagle_amd64.deb",
+    "Size": "3232748",
+    "SHA256": "56bf12f77181c399744632bb05869ab770a2330980aac3ced33faf46d3d056e1"
+  },
+  "libqt5network5": {
+    "Version": "5.15.1.5+dde-1+eagle",
+    "Filename": "pool/main/q/qtbase-opensource-src/libqt5network5_5.15.1.5+dde-1+eagle_amd64.deb",
+    "Size": "708364",
+    "SHA256": "c143e0373b711f5277968443835ef445a8ad2361d6ce8fe4a848fda03c517e32"
+  },
+  "libqt5opengl5": {
+    "Version": "5.15.1.5+dde-1+eagle",
+    "Filename": "pool/main/q/qtbase-opensource-src/libqt5opengl5_5.15.1.5+dde-1+eagle_amd64.deb",
+    "Size": "169700",
+    "SHA256": "faef8b841248ce63610859b9fd08e7b5a546b5d1ccca4a4a30886c2c9650f2bb"
+  },
+  "libqt5printsupport5": {
+    "Version": "5.15.1.5+dde-1+eagle",
+    "Filename": "pool/main/q/qtbase-opensource-src/libqt5printsupport5_5.15.1.5+dde-1+eagle_amd64.deb",
+    "Size": "225712",
+    "SHA256": "d52522764a944646c2d3d6025ca9dd0f9c465f617e24091dd617e5ab28e21429"
+  },
+  "libqt5qml5": {
+    "Version": "5.15.1.2+dde-1+eagle",
+    "Filename": "pool/main/q/qtdeclarative-opensource-src/libqt5qml5_5.15.1.2+dde-1+eagle_amd64.deb",
+    "Size": "1359484",
+    "SHA256": "bfb1b7fc8ac0837649939e9de5bef538b8b7c1133bedca6ab4b545901cd00e1d"
+  },
+  "libqt5sql5": {
+    "Version": "5.15.1.5+dde-1+eagle",
+    "Filename": "pool/main/q/qtbase-opensource-src/libqt5sql5_5.15.1.5+dde-1+eagle_amd64.deb",
+    "Size": "153736",
+    "SHA256": "0c2a56ba8b73c239ed31264c5fc1387ac062efb28c4f5eb14cccb553ec090350"
+  },
+  "libqt5svg5": {
+    "Version": "5.15.1.2+dde-1+eagle",
+    "Filename": "pool/main/q/qtsvg-opensource-src/libqt5svg5_5.15.1.2+dde-1+eagle_amd64.deb",
+    "Size": "132920",
+    "SHA256": "1b53e5c8422b52995994c4e0be8837d1229f9530b484dd04d818846a663de150"
+  },
+  "libqt5webchannel5": {
+    "Version": "5.15.1.2+dde-1+eagle",
+    "Filename": "pool/main/q/qtwebchannel-opensource-src/libqt5webchannel5_5.15.1.2+dde-1+eagle_amd64.deb",
+    "Size": "58028",
+    "SHA256": "aa58214b2668881c894c634f83655bc70676dc86eec0fa3c7a392f4e9a7a6084"
+  },
+  "libqt5widgets5": {
+    "Version": "5.15.1.5+dde-1+eagle",
+    "Filename": "pool/main/q/qtbase-opensource-src/libqt5widgets5_5.15.1.5+dde-1+eagle_amd64.deb",
+    "Size": "2372272",
+    "SHA256": "9f4e1895aba76d9cd9c9fc9962b7f68d4703607f5193849d222e18441d4cdf01"
+  },
+  "libqt5x11extras5": {
+    "Version": "5.15.1.2+dde-1+eagle",
+    "Filename": "pool/main/q/qtx11extras-opensource-src/libqt5x11extras5_5.15.1.2+dde-1+eagle_amd64.deb",
+    "Size": "12624",
+    "SHA256": "3fa1b9604e9c00522ed2c6d9b7d6db664520ef355143b464d611f08b64a0d11a"
+  },
+  "libqt5xml5": {
+    "Version": "5.15.1.5+dde-1+eagle",
+    "Filename": "pool/main/q/qtbase-opensource-src/libqt5xml5_5.15.1.5+dde-1+eagle_amd64.deb",
+    "Size": "141820",
+    "SHA256": "a18d6b04b753352c4c11d6a4328cd29c02655454772d5a20f7de85b639cdd8f1"
+  },
+  "libssl1.1": {
+    "Version": "1.1.1d.9-1",
+    "Filename": "pool/non-free/o/openssl/libssl1.1_1.1.1d.9-1_amd64.deb",
+    "Size": "1553988",
+    "SHA256": "b84e94775065875bbc3d4a9144461a195b919b7c51d6b24cfb21b64c1cf8e79c"
+  },
+  "libtag1v5-vanilla": {
+    "Version": "1.11.1+dfsg.1.1-1+dde",
+    "Filename": "pool/main/t/taglib/libtag1v5-vanilla_1.11.1+dfsg.1.1-1+dde_amd64.deb",
+    "Size": "285976",
+    "SHA256": "d6d28932600f290ff4f81a25315ebee01a33499436265cb993608fcde85f8533"
+  },
+  "libvlc5": {
+    "Version": "3.0.12.1-1+dde",
+    "Filename": "pool/main/v/vlc/libvlc5_3.0.12.1-1+dde_amd64.deb",
+    "Size": "174272",
+    "SHA256": "b8945eedf1f077fa0744c70d302038a73991604f0e200d4194aa7c5921a71472"
+  },
+  "libvlccore9": {
+    "Version": "3.0.12.1-1+dde",
+    "Filename": "pool/main/v/vlc/libvlccore9_3.0.12.1-1+dde_amd64.deb",
+    "Size": "533680",
+    "SHA256": "c018ddffc6097a49d3d98752bfba6b86ad093b3d3d24cee76566d2110e9b40e1"
+  },
+  "netease-cloud-music": {
+    "Version": "1.2.0.3-1",
+    "Filename": "pool/non-free/n/netease-cloud-music/netease-cloud-music_1.2.0.3-1_amd64.deb",
+    "Size": "6195076",
+    "SHA256": "5c05c0e27f2f60ecbf6dd5d4d1e842f971a0526588c861e2a55d673ab780aa6b"
+  },
+  "vlc-data": {
+    "Version": "3.0.12.1-1+dde",
+    "Filename": "pool/main/v/vlc/vlc-data_3.0.12.1-1+dde_all.deb",
+    "Size": "450548",
+    "SHA256": "ca05993ddbd4fb9d2922ec43774d7071ac8350c47b25f2098c897a1346c58503"
+  },
+  "vlc-plugin-base": {
+    "Version": "3.0.12.1-1+dde",
+    "Filename": "pool/main/v/vlc/vlc-plugin-base_3.0.12.1-1+dde_amd64.deb",
+    "Size": "2966380",
+    "SHA256": "05a0f2eac4a6bcacab5dd5850e234f3725207a0f990566ca413d41253ef83c33"
+  }
+}
