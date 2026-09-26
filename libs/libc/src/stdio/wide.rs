@@ -1,9 +1,59 @@
 //! Wide stream I/O with the encoding captured at orientation. The decoder is shared
 //! with mbrtowc; stream operations keep one lock across a complete character.
 use super::{File, Stream, standard, with_oriented, with_stream};
+use crate::format::VaList;
 use core::{ffi::c_int, ptr};
 const WEOF: u32 = u32::MAX;
 const EILSEQ: i32 = 84;
+
+/// # Safety
+/// The format and va_list must describe readable Linux wide arguments.
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_vfwprintf(
+    file: *mut File,
+    format: *const i32,
+    arguments: *mut VaList,
+) -> c_int {
+    with_oriented(file, 1, -1, |stream| unsafe {
+        crate::format::wide::write(format, arguments, &mut |scalar| {
+            write_scalar(stream, scalar) != WEOF
+        })
+    })
+}
+
+/// # Safety
+/// The format and va_list must describe readable Linux wide arguments.
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_vwprintf(
+    format: *const i32,
+    arguments: *mut VaList,
+) -> c_int {
+    unsafe { kinakaze_abi_vfwprintf(standard(1), format, arguments) }
+}
+
+/// # Safety
+/// Same argument contract as vfwprintf. Like the narrow checked frontends,
+/// this accepts the flag but does not enforce its writable-%n format policy.
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi___vfwprintf_chk(
+    file: *mut File,
+    _flag: c_int,
+    format: *const i32,
+    arguments: *mut VaList,
+) -> c_int {
+    unsafe { kinakaze_abi_vfwprintf(file, format, arguments) }
+}
+
+/// # Safety
+/// Same argument contract as vwprintf.
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi___vwprintf_chk(
+    _flag: c_int,
+    format: *const i32,
+    arguments: *mut VaList,
+) -> c_int {
+    unsafe { kinakaze_abi_vwprintf(format, arguments) }
+}
 
 fn read_scalar(stream: &mut Stream) -> u32 {
     let mut state = crate::uchar::MbState::default();

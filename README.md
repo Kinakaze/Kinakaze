@@ -29,6 +29,8 @@ Kinakaze 在用户态实现 Linux 程序所需的装载器、系统调用与基�
 
 v0.1.0 增加可选 rootfs 清单和可重新连接的 init 启动客户端。外部清单优先，仅在目标 rootfs 不存在或为空时初始化；已有非空 rootfs 保持原样。发行包内置经过哈希校验的基础 shell，启动方式及 `init launch --parent` 示例见 [v0.1.0 运行说明](docs/runtime-release-v0.1.0.md)。
 
+当前源码的默认构建进一步预装 APT、dpkg、软件源、签名密钥、证书和包数据库。执行生成目录中的 `kinakaze.cmd` 即可进入 shell；`kinakaze.cmd setup --root <目录>` 可离线初始化。详见 [首次安装与包管理](docs/first-run.md)。这部分改进尚未进入已发布的 v0.1.0 二进制。
+
 ### 构建环境
 
 - Windows x86-64。
@@ -45,11 +47,11 @@ Set-Location Kinakaze
 ./tools/build.ps1 -DistDirectory artifacts/kinakaze-dist
 ```
 
-构建脚本检查原生导出、格式、Rust/Python 测试，并生成 `init.exe`、`worker.exe` 与 `rootfs/lib/`。环境配置、快速编译检查及 Release 构建见 [上手指南](docs/getting-started.md)。
+构建脚本检查原生导出、格式、Rust/Python 测试，并生成入口程序、完整默认清单、离线种子与 rootfs。`-Offline` 使用已验证缓存，`-NativeOnly` 仅构建原生模块。环境配置、快速编译检查及 Release 构建见 [上手指南](docs/getting-started.md)。
 
 ### 准备并运行 Linux 程序
 
-客体程序需另行准备。提供一个 Linux x86-64 文件树，其中至少包含 `usr/bin/busybox`、`usr/bin/curl` 及其依赖；输入目录应与本仓库的输出目录分开。
+基础环境已经预制，可直接执行 `./artifacts/kinakaze-dist/kinakaze.cmd`，再用 APT 安装其他程序。需要导入已有 Linux 文件树时，可以使用下面的方式；输入目录应与本仓库的输出目录分开，并包含 `usr/bin/busybox`、`usr/bin/curl` 及其依赖。
 
 ```powershell
 # 将此路径改为你自己的 Linux 文件树。

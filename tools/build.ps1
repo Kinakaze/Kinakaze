@@ -4,6 +4,8 @@ param(
     [string]$TargetDirectory = 'target',
     [switch]$RefreshExports,
     [switch]$Development,
+    [switch]$NativeOnly,
+    [switch]$Offline,
     [switch]$SkipFormat,
     [switch]$SkipTests
 )
@@ -56,6 +58,11 @@ try {
     )
     if ($Development) { $packageArgs += '--development' }
     Invoke-Checked (Join-Path $binaryDir 'kinakaze-packager.exe') $packageArgs
+    if (-not $NativeOnly) {
+        $rootfsArgs = @('tools/prepare-release-rootfs.py', '--dist', $DistDirectory)
+        if ($Offline) { $rootfsArgs += '--offline' }
+        Invoke-Checked 'python' $rootfsArgs
+    }
     if (-not $SkipTests) {
         Invoke-Checked 'python' @('-m', 'unittest', 'discover', '-s', 'tools/native-exports')
         Invoke-Checked 'python' @('-m', 'unittest', 'discover', '-s', 'tools/guest-deps')
@@ -87,6 +94,9 @@ try {
             Copy-Item -LiteralPath (Join-Path $entryDir $entry) -Destination $binaryDir -Force
         }
         Invoke-Checked (Join-Path $entryDir 'worker.exe') @('smoke', '--dist', $DistDirectory)
+        if (-not $NativeOnly) {
+            Invoke-Checked 'python' @('tools/test-first-run.py', '--dist', $DistDirectory)
+        }
     }
 }
 finally {

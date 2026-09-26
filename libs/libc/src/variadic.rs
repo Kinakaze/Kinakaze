@@ -116,8 +116,47 @@ kinakaze_abi_snprintf:
     leave
     ret
 
-// sprintf(buffer, format, ...)
-//   -> kinakaze_sprintf_impl(buffer, format, va_list)
+// Wide formatting uses 32-bit Linux wchar_t and the same SysV register frame.
+.globl kinakaze_abi_wprintf
+kinakaze_abi_wprintf:
+    KINAKAZE_VA_FRAME 8
+    mov     rsi, rax
+    call    kinakaze_abi_vwprintf
+    leave
+    ret
+
+.globl kinakaze_abi_fwprintf
+kinakaze_abi_fwprintf:
+    KINAKAZE_VA_FRAME 16
+    mov     rdx, rax
+    call    kinakaze_abi_vfwprintf
+    leave
+    ret
+
+.globl kinakaze_abi___wprintf_chk
+kinakaze_abi___wprintf_chk:
+    KINAKAZE_VA_FRAME 16
+    mov     rdx, rax
+    call    kinakaze_abi___vwprintf_chk
+    leave
+    ret
+
+.globl kinakaze_abi___fwprintf_chk
+kinakaze_abi___fwprintf_chk:
+    KINAKAZE_VA_FRAME 24
+    mov     rcx, rax
+    call    kinakaze_abi___vfwprintf_chk
+    leave
+    ret
+
+.globl kinakaze_abi___swprintf_chk
+kinakaze_abi___swprintf_chk:
+    KINAKAZE_VA_FRAME 40
+    mov     r9, rax
+    call    kinakaze_abi___vswprintf_chk
+    leave
+    ret
+
 .globl kinakaze_abi_swprintf
 kinakaze_abi_swprintf:
     KINAKAZE_VA_FRAME 24

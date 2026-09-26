@@ -3333,3 +3333,5 @@
 {"path":"artifacts/netease-cloud-music/rootfs/usr/sbin/vigr","sha256":"def13298eae570eefb09dfd9fa5e56c56859df8d11b6d5b069c35b803e546f16"}
 {"path":"artifacts/netease-cloud-music/rootfs/usr/sbin/vipw","sha256":"def13298eae570eefb09dfd9fa5e56c56859df8d11b6d5b069c35b803e546f16"}
 {"path":"artifacts/netease-cloud-music/rootfs/usr/lib/x86_64-linux-gnu/vlc/plugins/audio_output/libalsa_plugin.so","sha256":"d2042747c352db3bd8bdda1700cb184d2ebf6d507ee2a4f9a61dda809d51fcbe"}
+{"path":"artifacts/abi-first-run/hello","sha256":"1aab5d66fba9313733ca534dc9693f262532ab696eb9d29cc70978c5e1c7078c"}
+{"path":"artifacts/abi-first-run/wide-printf","sha256":"01d9dae9fc114e0d974c593a8d472b7d0e7c94193dd7480eb5292c3fedb911eb"}

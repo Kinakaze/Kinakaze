@@ -6,7 +6,10 @@ from native_image import modules
 
 
 def module_image(dist, soname):
-    path = Path(dist) / 'rootfs/lib' / soname
+    host = Path(dist) / 'native'
+    if not host.is_dir():
+        host = Path(dist) / 'rootfs/lib'
+    path = host / soname
     if not path.is_file():
         raise FileNotFoundError(path)
     return path

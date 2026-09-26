@@ -18,7 +18,8 @@ pub fn run(mode: &OsStr) -> Result<()> {
         token: std::env::var("KINAKAZE_V2_TOKEN")?,
         adoption_ticket: None,
     })?;
-    let runtime = kinakaze_v2_bridge::native::runtime_path(&dist.join("rootfs/lib"))?;
+    let runtime =
+        kinakaze_v2_bridge::native::runtime_path(&kinakaze_v2_bridge::native::directory(&dist))?;
     let library = Library::open(&runtime)?;
     let run: RuntimeHelperRunV1 =
         unsafe { std::mem::transmute(library.symbol(c"kinakaze_runtime_helper_run_v1")?) };

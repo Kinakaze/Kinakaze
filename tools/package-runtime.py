@@ -19,6 +19,7 @@ def main():
     parser.add_argument('--output-dir', type=Path, default=ROOT / 'artifacts/releases')
     parser.add_argument('--source-cache', type=Path, default=ROOT / 'artifacts/guest-sources')
     parser.add_argument('--offline', action='store_true')
+    parser.add_argument('--preview', action='store_true', help='mark a local candidate without changing the release version')
     args = parser.parse_args()
     version = tomllib.loads((ROOT / 'Cargo.toml').read_text(encoding='utf-8'))['workspace']['package']['version']
     revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
@@ -30,7 +31,7 @@ def main():
     if (dist / 'rootfs/.kinakaze-rootfs.sha256').exists():
         raise ValueError('publish an uninitialized distribution, not a used guest root')
     files = {}
-    for name in ('init.exe', 'worker.exe', 'rootfs.manifest.json'):
+    for name in ('init.exe', 'worker.exe', 'rootfs.manifest.json', 'kinakaze.cmd'):
         files[name] = (dist / name).read_bytes()
     for directory in ('rootfs',):
         for path in sorted((dist / directory).rglob('*')):
@@ -55,8 +56,7 @@ def main():
     unexpected = {name for name in files if name.startswith('rootfs/')} - planned
     if unexpected:
         raise ValueError(f'root contains files absent from the install manifest: {sorted(unexpected)}')
-    # Nonempty roots skip initialization. Keep even empty mount/temp directories
-    # in the ZIP so the bundled root has the same layout as a first install.
+    # Verify the build root's directory layout before archiving its install seed.
     for directory in manifest['directories']:
         if not (dist / 'rootfs' / directory).is_dir():
             raise ValueError(f'missing root directory: {directory}')
@@ -68,7 +68,7 @@ def main():
             raise ValueError(f'acceptance report belongs to a different image: {name}')
     for name in ('LICENSE-MIT', 'LICENSE-APACHE', 'THIRD_PARTY.md'):
         files[name] = (ROOT / name).read_bytes()
-    files['README.md'] = (ROOT / 'docs/runtime-release-v0.1.0.md').read_bytes()
+    files['README.md'] = (ROOT / 'docs/first-run.md').read_bytes()
     files['validation.json'] = args.report.read_bytes()
     metadata = json.loads(subprocess.check_output([
         'cargo', 'metadata', '--locked', '--offline', '--format-version', '1',
@@ -88,8 +88,13 @@ def main():
     files['licenses/rust/COPYRIGHT-library.html'] = (sysroot / 'share/doc/rust/COPYRIGHT-library.html').read_bytes()
     files['licenses/kinakaze-libm-powl.c'] = (ROOT / 'libs/libm/src/ld80/powl.c').read_bytes()
     source_lock = ROOT / 'config/release-sources.lock.json'
+    base = json.loads(files['rootfs/usr/share/kinakaze/bootstrap-packages.json'])
+    required_sources = {(p['source_package'], p['source_version']) for p in base['packages']}
+    locked_sources = json.loads(source_lock.read_text(encoding='utf-8'))['packages']
+    if required_sources != {(p['package'], p['version']) for p in locked_sources}:
+        raise ValueError('corresponding sources differ from the base image; run tools/update-release-sources.py')
     files['sources/manifest.json'] = source_lock.read_bytes()
-    for package in json.loads(source_lock.read_text(encoding='utf-8'))['packages']:
+    for package in locked_sources:
         for source in package['files']:
             filename = source['filename']
             if Path(filename).name != filename or '/' in filename or '\\' in filename:
@@ -108,15 +113,26 @@ def main():
                 args.source_cache.mkdir(parents=True, exist_ok=True)
                 cached.write_bytes(data)
             files[f'sources/{package["package"]}/{filename}'] = data
-    files['build.json'] = (json.dumps(dict(version=version, revision=revision,
+    dirty = bool(subprocess.check_output(['git', 'status', '--porcelain'], cwd=ROOT))
+    if dirty and not args.preview:
+        raise ValueError('formal runtime packages require a clean checkout; use --preview for local validation')
+    files['build.json'] = (json.dumps(dict(version=version, revision=revision, dirty=dirty, preview=args.preview,
         rustc=subprocess.check_output(['rustc', '--version'], text=True).strip()), indent=2) + '\n').encode()
+    for path in (dist / 'rootfs/lib').iterdir():
+        if path.is_file():
+            files[f'native/{path.name}'] = files[f'rootfs/lib/{path.name}']
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    archive = args.output_dir / f'Kinakaze-{version}-windows-x86_64.zip'
-    prefix = f'Kinakaze-{version}/'
+    label = f'{version}-preview' if args.preview else version
+    archive = args.output_dir / f'Kinakaze-{label}-windows-x86_64.zip'
+    prefix = f'Kinakaze-{label}/'
     timestamp = int(subprocess.check_output(['git', 'show', '-s', '--format=%ct', 'HEAD'], cwd=ROOT))
     date = datetime.fromtimestamp(timestamp, timezone.utc).timetuple()[:6]
     with zipfile.ZipFile(archive, 'x', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as output:
         for name, data in sorted(files.items()):
+            # ZIP cannot preserve the VFS inode EAs. Install the complete seed
+            # on first launch instead of shipping a root with lost permissions.
+            if name.startswith('rootfs/'):
+                continue
             info = zipfile.ZipInfo(prefix + name, date_time=date)
             info.compress_type = zipfile.ZIP_DEFLATED
             output.writestr(info, data)

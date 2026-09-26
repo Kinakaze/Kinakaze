@@ -11,7 +11,7 @@ use core::fmt::Write as _;
 mod extension;
 mod legacy_float;
 mod positional;
-mod wide;
+pub(crate) mod wide;
 
 /// Receives formatted bytes.
 ///

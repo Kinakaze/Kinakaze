@@ -37,11 +37,11 @@ git push origin "v$Version"
 源码工作流不自动打包开发机的 `artifacts/` 或客体环境。提供 Windows 二进制前，还需：
 
 1. 从独立构建目录运行 `./tools/build.ps1 -Release -TargetDirectory target/release-v0.1.0 -DistDirectory artifacts/release-v0.1.0`，保留对应提交和测试记录。
-2. 运行 `tools/prepare-release-rootfs.py` 生成完整基础 rootfs 与首次安装清单，再运行 `tools/test-release-runtime.py` 验证入口、原生模块、首次安装及进程树。说明测试主机环境，不能把临时目录测试称为全新主机测试。
+2. 构建默认生成完整基础 rootfs 与首次安装清单。运行 `tools/test-release-runtime.py` 验证入口、原生模块、首次安装及进程树，再运行 `tools/test-first-run.py --network` 验证默认 shell、权限、APT 签名源及安装卸载。说明测试主机环境，不能把临时目录测试称为全新主机测试。
 3. 随包附上 Kinakaze 许可证，以及实际包含的第三方代码、运行库和客体软件要求的声明。
 4. 核对不包含缓存、日志、机器配置、账号数据、密钥、SDK 或未经确认可再分发的资源。
 5. 按架构和版本命名归档，生成 SHA-256，并明确适用环境及未验证场景。
 
-`tools/package-runtime.py --dist artifacts/release-v0.1.0 --report artifacts/release-runtime-report.json` 检查实际镜像哈希与安装清单后生成运行 ZIP。`tools/package-source.py --ref HEAD --tag v0.1.0` 生成相同提交的源码 ZIP。运行包会附带许可证、对应客体包源码和验证报告；源码缓存按 `config/release-sources.lock.json` 校验。
+预装组件变更后先运行 `tools/update-release-sources.py --dist <发行目录>`，核对并提交对应源码锁。`tools/package-runtime.py --dist <发行目录> --report <运行时报告>` 检查实际镜像哈希、安装清单和对应源码集合后生成运行 ZIP，正式打包要求干净工作区；`--preview` 可生成明确标记的本地候选包。运行包包含独立 `native/`、清单和种子，由首次安装恢复 Linux 权限。`tools/package-source.py` 生成相同提交的源码 ZIP；对应客体源码缓存按 `config/release-sources.lock.json` 校验。
 
 `-SkipTests` 的构建与历史构建的通过记录不能替代当前发行包的验证。

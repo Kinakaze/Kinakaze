@@ -2,7 +2,7 @@
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
     fs::{self, File, OpenOptions},
     io::{self, Read, Write},
     path::{Path, PathBuf},
@@ -10,6 +10,7 @@ use std::{
 };
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+mod permissions;
 const MAX_MANIFEST: u64 = 4 * 1024 * 1024;
 const STATE: &str = ".kinakaze-rootfs.sha256";
 
@@ -19,6 +20,8 @@ struct Manifest {
     schema: u32,
     directories: Vec<String>,
     files: Vec<Entry>,
+    #[serde(default)]
+    permissions: BTreeMap<String, u32>,
 }
 
 #[derive(Deserialize)]
@@ -250,6 +253,18 @@ pub fn prepare(root: &Path, dist: &Path, explicit: Option<&Path>) -> Result<()> 
             return Err(format!("rootfs file is also a parent directory: {}", entry.path).into());
         }
     }
+    let mut permissions = Vec::new();
+    for (name, mode) in &manifest.permissions {
+        if mode & !0o7777 != 0 || name != "/" && !paths.contains(&name.to_ascii_lowercase()) {
+            return Err(format!("invalid rootfs permission entry: {name}").into());
+        }
+        let path = if name == "/" {
+            root.to_owned()
+        } else {
+            checked_path(root, name)?
+        };
+        permissions.push((path, *mode));
+    }
     for directory in directories {
         fs::create_dir_all(directory)?;
     }
@@ -263,6 +278,9 @@ pub fn prepare(root: &Path, dist: &Path, explicit: Option<&Path>) -> Result<()> 
             .open(&path)?;
         file.write_all(&content)?;
         file.sync_all()?;
+    }
+    for (path, mode) in permissions {
+        permissions::initialize(&path, mode)?;
     }
     fs::write(root.join(STATE), manifest_hash.as_bytes())?;
     // Both paths are verified children of the caller-selected canonical parent.

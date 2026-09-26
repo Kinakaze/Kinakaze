@@ -201,7 +201,7 @@ pub struct Session {
 
 impl Session {
     pub fn load(dist: &Path, config: RuntimeOpenConfig) -> Result<Self> {
-        let modules = ModuleSet::discover(&dist.join("rootfs/lib"))?;
+        let modules = ModuleSet::discover(&kinakaze_v2_bridge::native::directory(dist))?;
         let module = |name: &str| {
             modules
                 .modules

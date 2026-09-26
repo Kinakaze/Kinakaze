@@ -37,7 +37,9 @@ def exports(path):
 
 
 def modules(dist):
-    host = Path(dist) / 'rootfs/lib'
+    host = Path(dist) / 'native'
+    if not host.is_dir():
+        host = Path(dist) / 'rootfs/lib'
     if not host.is_dir():
         raise FileNotFoundError(host)
     result = {}

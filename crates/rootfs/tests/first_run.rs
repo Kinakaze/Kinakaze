@@ -7,6 +7,35 @@ use std::{
 };
 
 static NEXT: AtomicUsize = AtomicUsize::new(0);
+
+#[test]
+fn invalid_permissions_do_not_publish_files() {
+    for permissions in [
+        json!({"etc/config": 0o10000}),
+        json!({"../escape": 0o644}),
+        json!({"not-in-plan": 0o644}),
+    ] {
+        let fixture = Fixture::new();
+        fixture.manifest(json!({"schema": 1, "directories": ["etc"],
+            "files": [{"path": "etc/config", "content": "content"}],
+            "permissions": permissions}));
+        assert!(!fixture.run());
+        assert!(!fixture.0.join("root").exists());
+    }
+}
+
+#[test]
+fn permission_metadata_installs_in_the_same_transaction_as_payloads() {
+    let fixture = Fixture::new();
+    fixture.manifest(json!({"schema": 1, "directories": ["etc", "tmp"],
+        "files": [{"path": "etc/config", "content": "content"}],
+        "permissions": {"/": 0o755, "etc": 0o755, "tmp": 0o1777, "etc/config": 0o644}}));
+    assert!(fixture.run());
+    assert_eq!(
+        fs::read_to_string(fixture.0.join("root/etc/config")).unwrap(),
+        "content"
+    );
+}
 struct Fixture(PathBuf);
 impl Fixture {
     fn new() -> Self {

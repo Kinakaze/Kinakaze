@@ -574,9 +574,11 @@ dependencies = [
 name = "kinakaze-v2-rootfs"
 version = "0.1.0"
 dependencies = [
+ "kinakaze-v2-abi",
  "serde",
  "serde_json",
  "sha2",
+ "windows-sys",
 ]
 
 [[package]]
@@ -611,6 +613,7 @@ version = "0.1.0"
 dependencies = [
  "kinakaze-kernel",
  "kinakaze-tls",
+ "kinakaze-v2-abi",
  "sha2",
  "smallvec",
  "smoltcp",

@@ -1,13 +1,15 @@
 {
   "schema": 1,
-  "directories": ["bin", "sbin", "usr/bin", "usr/sbin", "usr/lib", "etc", "root", "home", "tmp", "var/tmp", "var/log", "var/cache", "run", "dev/shm", "proc", "sys"],
+  "directories": ["bin", "sbin", "usr/bin", "usr/sbin", "usr/lib", "etc", "root", "home", "tmp", "var/tmp", "var/log", "var/cache", "run", "dev/shm", "proc", "sys", "etc/apt/apt.conf.d", "etc/apt/preferences.d", "etc/apt/trusted.gpg.d", "etc/ca-certificates/update.d", "etc/ssl/certs", "usr/local/share/ca-certificates", "var/lib/apt/lists/partial", "var/cache/apt/archives/partial", "var/log/apt", "var/lib/dpkg/info", "var/lib/dpkg/updates", "var/lib/dpkg/triggers", "var/lib/dpkg/alternatives"],
   "files": [
-    {"path": "etc/passwd", "content": "root:x:0:0:root:/root:/bin/sh\n"},
-    {"path": "etc/group", "content": "root:x:0:\n"},
+    {"path": "etc/passwd", "content": "root:x:0:0:root:/root:/bin/sh\n_apt:x:100:65534:APT sandbox:/nonexistent:/bin/false\nnobody:x:65534:65534:nobody:/nonexistent:/bin/false\n"},
+    {"path": "etc/group", "content": "root:x:0:\nnogroup:x:65534:\n"},
     {"path": "etc/hosts", "content": "127.0.0.1 localhost\n::1 localhost\n"},
     {"path": "etc/hostname", "content": "kinakaze\n"},
     {"path": "etc/nsswitch.conf", "content": "passwd: files\ngroup: files\nhosts: files dns\n"},
-    {"path": "etc/profile", "content": "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\nexport HOME=/root\nexport TMPDIR=/tmp\n"},
-    {"path": "etc/os-release", "content": "NAME=Kinakaze\nID=kinakaze\nPRETTY_NAME=Kinakaze\n"}
+    {"path": "etc/profile", "content": "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\nexport HOME=/root\nexport TMPDIR=/tmp\nexport LANG=C.UTF-8\nexport SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt\n"},
+    {"path": "etc/os-release", "content": "NAME=Kinakaze\nID=kinakaze\nID_LIKE=debian\nPRETTY_NAME=Kinakaze\n"},
+    {"path": "etc/apt/sources.list.d/debian.sources", "content": "Types: deb\nURIs: https://deb.debian.org/debian\nSuites: bookworm bookworm-updates\nComponents: main\nArchitectures: amd64\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg\n\nTypes: deb\nURIs: https://deb.debian.org/debian-security\nSuites: bookworm-security\nComponents: main\nArchitectures: amd64\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg\n"},
+    {"path": "etc/apt/apt.conf.d/00kinakaze", "content": "APT::Architecture \"amd64\";\nAPT::Install-Recommends \"false\";\nAPT::Install-Suggests \"false\";\n// Reserve enough space for the three default Debian indexes.\nAPT::Cache-Start \"67108864\";\nAcquire::Languages \"none\";\nAcquire::Retries \"3\";\nDPkg::Use-Pty \"false\";\n"}
   ]
 }

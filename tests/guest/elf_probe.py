@@ -32,7 +32,7 @@ def build(source, root, dist, libraries=(), cflags=(), ldflags=(), link_dir=None
              *[f'-l:{name}' for name in libraries], *ldflags, '-o', root / 'probe'])
 
 
-def run(source_name, root_name, marker, prepare=None, extra_files=None, libraries=(), cflags=(), ldflags=()):
+def run(source_name, root_name, marker, prepare=None, extra_files=None, libraries=(), cflags=(), ldflags=(), root_files=()):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--dist', type=Path, default=WORKSPACE / 'dist')
     parser.add_argument('--worker', type=Path, default=WORKSPACE / 'target/debug/worker.exe')
@@ -42,6 +42,10 @@ def run(source_name, root_name, marker, prepare=None, extra_files=None, librarie
     root = WORKSPACE / 'artifacts' / root_name
     for directory in ('etc', 'tmp'):
         (root / directory).mkdir(parents=True, exist_ok=True)
+    for name in root_files:
+        destination = root / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(dist / 'rootfs' / name, destination)
     if prepare:
         prepare(root)
     source = Path(__file__).with_name(source_name)

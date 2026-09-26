@@ -109,7 +109,7 @@ impl Module {
     /// Real image registered with the guest linker. PE implementations live
     /// beside their native dependencies and use their SONAME as the filename.
     pub fn image_path(&self, dist: &Path) -> std::path::PathBuf {
-        dist.join("rootfs/lib").join(&self.soname)
+        crate::native::directory(dist).join(&self.soname)
     }
 
     pub fn validate(&self) -> Result<()> {

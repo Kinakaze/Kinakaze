@@ -2,14 +2,20 @@
 //! units for widths, precision, %n and capacity. Common formats use the stack.
 use super::*;
 
-struct WideBuffer {
+struct WideBuffer<'a> {
     output: *mut i32,
     capacity: usize,
     count: usize,
+    emit: Option<&'a mut dyn FnMut(u32) -> bool>,
+    failed: bool,
 }
-impl WideBuffer {
+impl WideBuffer<'_> {
     fn push(&mut self, value: i32) {
-        if self.count < self.capacity.saturating_sub(1) {
+        if let Some(emit) = &mut self.emit {
+            if !self.failed && !emit(value as u32) {
+                self.failed = true;
+            }
+        } else if self.count < self.capacity.saturating_sub(1) {
             unsafe {
                 *self.output.add(self.count) = value;
             }
@@ -17,6 +23,15 @@ impl WideBuffer {
         self.count = self.count.saturating_add(1);
     }
     fn spaces(&mut self, count: usize) {
+        if self.emit.is_some() {
+            for _ in 0..count {
+                self.push(32);
+                if self.failed {
+                    break;
+                }
+            }
+            return;
+        }
         let fit = count.min(self.capacity.saturating_sub(1).saturating_sub(self.count));
         for index in 0..fit {
             unsafe {
@@ -35,7 +50,7 @@ impl WideBuffer {
 }
 // Built-in numeric conversions emit ASCII. Strings and wchar_t conversions
 // take a separate path below; UTF-8 bytes must never be counted as wide units.
-impl Sink for WideBuffer {
+impl Sink for WideBuffer<'_> {
     fn write(&mut self, bytes: &[u8]) {
         for &byte in bytes {
             self.push(byte as i32);
@@ -77,7 +92,11 @@ unsafe fn multibyte(
     Ok(count)
 }
 
-unsafe fn string(sink: &mut WideBuffer, spec: &Spec, arguments: &mut VaList) -> Result<(), i32> {
+unsafe fn string(
+    sink: &mut WideBuffer<'_>,
+    spec: &Spec,
+    arguments: &mut VaList,
+) -> Result<(), i32> {
     let input = unsafe { arguments.next_integer::<*const c_void>() };
     let limit = spec.precision.unwrap_or(usize::MAX);
     let wide = spec.length == Length::Long;
@@ -115,7 +134,7 @@ unsafe fn string(sink: &mut WideBuffer, spec: &Spec, arguments: &mut VaList) -> 
 }
 
 unsafe fn render(
-    sink: &mut WideBuffer,
+    sink: &mut WideBuffer<'_>,
     wide: *const i32,
     arguments: &mut VaList,
 ) -> Result<(), i32> {
@@ -171,6 +190,10 @@ unsafe fn render(
     }
     let mut cursor = 0;
     while cursor < length {
+        if sink.failed {
+            let error = unsafe { *crate::kinakaze___errno_location() };
+            return Err(if error == 0 { 5 } else { error });
+        }
         let value = unsafe { *wide.add(cursor) };
         cursor += 1;
         if value != 37 {
@@ -282,6 +305,8 @@ pub unsafe extern "sysv64" fn kinakaze_abi_vswprintf(
         output,
         capacity,
         count: 0,
+        emit: None,
+        failed: false,
     };
     let result = unsafe { render(&mut sink, format, &mut *arguments) };
     sink.finish();
@@ -290,6 +315,38 @@ pub unsafe extern "sysv64" fn kinakaze_abi_vswprintf(
         return -1;
     }
     if sink.count >= capacity || sink.count > i32::MAX as usize {
+        crate::set_errno(75);
+        return -1;
+    }
+    sink.count as i32
+}
+
+/// Render once to an already locked/oriented wide stream. %n observes wide
+/// characters, and no retry pass can repeat its side effects.
+pub(crate) unsafe fn write(
+    format: *const i32,
+    arguments: *mut VaList,
+    emit: &mut dyn FnMut(u32) -> bool,
+) -> c_int {
+    if format.is_null() || arguments.is_null() {
+        crate::set_errno(22);
+        return -1;
+    }
+    let mut sink = WideBuffer {
+        output: core::ptr::null_mut(),
+        capacity: usize::MAX,
+        count: 0,
+        emit: Some(emit),
+        failed: false,
+    };
+    if let Err(error) = unsafe { render(&mut sink, format, &mut *arguments) } {
+        crate::set_errno(error);
+        return -1;
+    }
+    if sink.failed {
+        return -1;
+    }
+    if sink.count > i32::MAX as usize {
         crate::set_errno(75);
         return -1;
     }

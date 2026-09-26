@@ -1665,17 +1665,6 @@ pub mod exports {
         kinakaze_abi_ungetwc(wc, file)
     }
 
-    /// `fwprintf` — wide char fprintf stub, returns -1 always.
-    #[unsafe(no_mangle)]
-    pub extern "sysv64" fn kinakaze_abi_fwprintf(_file: *mut File, _fmt: *const i32) -> c_int {
-        -1
-    }
-
-    #[unsafe(no_mangle)]
-    pub extern "sysv64" fn fwprintf(_file: *mut File, _fmt: *const i32) -> c_int {
-        -1
-    }
-
     /// `tmpfile` — creates a temporary file opened for reading and writing.
     #[unsafe(no_mangle)]
     pub extern "sysv64" fn kinakaze_abi_tmpfile() -> *mut File {

@@ -104,6 +104,9 @@ EXPORTS
   kinakaze_abi___fsetlocking
   "__fsetlocking"=kinakaze_abi___fsetlocking PRIVATE
   "__fsetlocking@GLIBC_2.2.5"=kinakaze_abi___fsetlocking PRIVATE
+  kinakaze_abi___fwprintf_chk
+  "__fwprintf_chk"=kinakaze_abi___fwprintf_chk PRIVATE
+  "__fwprintf_chk@GLIBC_2.4"=kinakaze_abi___fwprintf_chk PRIVATE
   kinakaze_abi___fwriting
   "__fwriting"=kinakaze_abi___fwriting PRIVATE
   "__fwriting@GLIBC_2.2.5"=kinakaze_abi___fwriting PRIVATE
@@ -407,6 +410,9 @@ EXPORTS
   kinakaze_abi___strxfrm_l
   "__strxfrm_l"=kinakaze_abi___strxfrm_l PRIVATE
   "__strxfrm_l@GLIBC_2.2.5"=kinakaze_abi___strxfrm_l PRIVATE
+  kinakaze_abi___swprintf_chk
+  "__swprintf_chk"=kinakaze_abi___swprintf_chk PRIVATE
+  "__swprintf_chk@GLIBC_2.4"=kinakaze_abi___swprintf_chk PRIVATE
   kinakaze_abi_sysconf
   "__sysconf"=kinakaze_abi_sysconf PRIVATE
   "__sysconf@GLIBC_2.2.5"=kinakaze_abi_sysconf PRIVATE
@@ -448,6 +454,9 @@ EXPORTS
   kinakaze_abi___vfprintf_chk
   "__vfprintf_chk"=kinakaze_abi___vfprintf_chk PRIVATE
   "__vfprintf_chk@GLIBC_2.3.4"=kinakaze_abi___vfprintf_chk PRIVATE
+  kinakaze_abi___vfwprintf_chk
+  "__vfwprintf_chk"=kinakaze_abi___vfwprintf_chk PRIVATE
+  "__vfwprintf_chk@GLIBC_2.4"=kinakaze_abi___vfwprintf_chk PRIVATE
   kinakaze_abi___vprintf_chk
   "__vprintf_chk"=kinakaze_abi___vprintf_chk PRIVATE
   "__vprintf_chk@GLIBC_2.3.4"=kinakaze_abi___vprintf_chk PRIVATE
@@ -463,6 +472,9 @@ EXPORTS
   kinakaze_abi___vsyslog_chk
   "__vsyslog_chk"=kinakaze_abi___vsyslog_chk PRIVATE
   "__vsyslog_chk@GLIBC_2.4"=kinakaze_abi___vsyslog_chk PRIVATE
+  kinakaze_abi___vwprintf_chk
+  "__vwprintf_chk"=kinakaze_abi___vwprintf_chk PRIVATE
+  "__vwprintf_chk@GLIBC_2.4"=kinakaze_abi___vwprintf_chk PRIVATE
   kinakaze_abi___wcscoll_l
   "__wcscoll_l"=kinakaze_abi___wcscoll_l PRIVATE
   "__wcscoll_l@GLIBC_2.2.5"=kinakaze_abi___wcscoll_l PRIVATE
@@ -478,6 +490,9 @@ EXPORTS
   kinakaze_abi___wctype_l
   "__wctype_l"=kinakaze_abi___wctype_l PRIVATE
   "__wctype_l@GLIBC_2.2.5"=kinakaze_abi___wctype_l PRIVATE
+  kinakaze_abi___wprintf_chk
+  "__wprintf_chk"=kinakaze_abi___wprintf_chk PRIVATE
+  "__wprintf_chk@GLIBC_2.4"=kinakaze_abi___wprintf_chk PRIVATE
   kinakaze_abi___xmknod
   "__xmknod"=kinakaze_abi___xmknod PRIVATE
   "__xmknod@GLIBC_2.2.5"=kinakaze_abi___xmknod PRIVATE
@@ -1098,6 +1113,7 @@ EXPORTS
   "fgetwc@GLIBC_2.2.5"=kinakaze_abi_fgetwc PRIVATE
   kinakaze_abi_fgetws
   "fgetws"=kinakaze_abi_fgetws PRIVATE
+  "fgetws@GLIBC_2.2.5"=kinakaze_abi_fgetws PRIVATE
   kinakaze_abi_fgetxattr
   "fgetxattr"=kinakaze_abi_fgetxattr PRIVATE
   "fgetxattr@GLIBC_2.3"=kinakaze_abi_fgetxattr PRIVATE
@@ -1323,6 +1339,7 @@ EXPORTS
   "fwide"=kinakaze_abi_fwide PRIVATE
   kinakaze_abi_fwprintf
   "fwprintf"=kinakaze_abi_fwprintf PRIVATE
+  "fwprintf@GLIBC_2.2.5"=kinakaze_abi_fwprintf PRIVATE
   kinakaze_abi_fwrite
   "fwrite"=kinakaze_abi_fwrite PRIVATE
   "fwrite@GLIBC_2.2.5"=kinakaze_abi_fwrite PRIVATE
@@ -3808,6 +3825,9 @@ EXPORTS
   "vfprintf@GLIBC_2.2.5"=kinakaze_abi_vfprintf PRIVATE
   kinakaze_abi_vfscanf
   "vfscanf"=kinakaze_abi_vfscanf PRIVATE
+  kinakaze_abi_vfwprintf
+  "vfwprintf"=kinakaze_abi_vfwprintf PRIVATE
+  "vfwprintf@GLIBC_2.2.5"=kinakaze_abi_vfwprintf PRIVATE
   kinakaze_abi_vscanf
   "vscanf"=kinakaze_abi_vscanf PRIVATE
   kinakaze_abi_vsnprintf
@@ -3828,6 +3848,9 @@ EXPORTS
   "vwarn"=kinakaze_abi_vwarn PRIVATE
   kinakaze_abi_vwarnx
   "vwarnx"=kinakaze_abi_vwarnx PRIVATE
+  kinakaze_abi_vwprintf
+  "vwprintf"=kinakaze_abi_vwprintf PRIVATE
+  "vwprintf@GLIBC_2.2.5"=kinakaze_abi_vwprintf PRIVATE
   kinakaze_abi_wait
   "wait"=kinakaze_abi_wait PRIVATE
   "wait@GLIBC_2.2.5"=kinakaze_abi_wait PRIVATE
@@ -3976,6 +3999,9 @@ EXPORTS
   kinakaze_abi_wmemset
   "wmemset"=kinakaze_abi_wmemset PRIVATE
   "wmemset@GLIBC_2.2.5"=kinakaze_abi_wmemset PRIVATE
+  kinakaze_abi_wprintf
+  "wprintf"=kinakaze_abi_wprintf PRIVATE
+  "wprintf@GLIBC_2.2.5"=kinakaze_abi_wprintf PRIVATE
   kinakaze_abi_write
   "write"=kinakaze_abi_write PRIVATE
   "write@GLIBC_2.2.5"=kinakaze_abi_write PRIVATE

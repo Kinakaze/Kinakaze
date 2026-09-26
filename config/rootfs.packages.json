@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "packages": [
+    "busybox", "netbase", "apt", "dpkg", "gpgv", "debian-archive-keyring",
+    "ca-certificates", "openssl", "debianutils", "coreutils", "tar", "gzip",
+    "xz-utils", "diffutils", "findutils", "grep", "sed", "libc-bin"
+  ],
+  "busybox_applets": [
+    "sh", "ash", "awk", "cat", "echo", "ls", "mkdir", "pwd", "rm", "sleep",
+    "true", "false", "env", "printf", "ps", "which", "vi", "wget", "unzip"
+  ],
+  "native_packages": ["libc6"]
+}

@@ -5,6 +5,8 @@
 
 use core::ffi::c_void;
 
+pub mod inode;
+
 pub const ABI_VERSION: u32 = 1;
 pub const RPC_BUFFER_SIZE: usize = 64 * 1024;
 pub const STATUS_OK: i32 = 0;

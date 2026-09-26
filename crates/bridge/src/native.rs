@@ -3,6 +3,18 @@ use crate::{Export, ExportKind, Module, ModuleLifecycle, ModuleSet, Result, inva
 use kinakaze_v2_host_win::{Library, ReadOnlyFile};
 use std::{collections::BTreeMap, fs, path::Path, sync::Arc};
 
+/// Portable archives keep native images outside the writable guest root, so a
+/// caller can select any new root on its very first launch. Developer and older
+/// distributions retain their original layout.
+pub fn directory(dist: &Path) -> std::path::PathBuf {
+    let native = dist.join("native");
+    if native.is_dir() {
+        native
+    } else {
+        dist.join("rootfs/lib")
+    }
+}
+
 pub struct NativeExport {
     pub name: String,
     /// A forwarder has no section of its own.

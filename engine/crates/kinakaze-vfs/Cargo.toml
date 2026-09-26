@@ -8,6 +8,7 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+kinakaze-v2-abi.workspace = true
 kinakaze-runtime.workspace = true
 kinakaze-tls.workspace = true
 sha2 = "0.10.9"

@@ -69,6 +69,9 @@ fn parse(arguments: Vec<OsString>, pool: bool, prepare: bool) -> Result<Options>
             }
         }
     }
+    if prepare && !pool && guest.is_empty() {
+        guest = vec!["/bin/sh".into(), "-l".into()];
+    }
     if !(pool && guest.is_empty())
         && !guest
             .first()
@@ -115,6 +118,14 @@ impl Drop for ChildGuard {
 pub fn dispatch(mode: &std::ffi::OsStr, arguments: Vec<OsString>) -> Result<i32> {
     match mode.to_str() {
         Some("run") => supervisor(parse(arguments, false, true)?),
+        Some("setup") => {
+            if arguments.iter().any(|argument| argument == "--") {
+                return Err(failure("worker setup does not accept a guest program"));
+            }
+            let options = parse(arguments, true, true)?;
+            println!("Rootfs ready: {}", options.root.display());
+            Ok(0)
+        }
         Some("guest") => guest(parse(arguments, false, false)?, None, false, false),
         Some("guest-prewarm") => guest(parse(arguments, false, false)?, None, true, false),
         Some("guest-pool") => guest(parse(arguments, true, false)?, None, false, true),
@@ -238,7 +249,9 @@ fn guest(options: Options, executable: Option<PathBuf>, prewarm: bool, pool: boo
     // starting guest threads, so later exec/fork children cannot replay it.
     unsafe { std::env::remove_var("KINAKAZE_V2_ADOPTION") };
     let discovery = StartupSpan::begin("worker-discover-modules");
-    let runtime = kinakaze_v2_bridge::native::runtime_path(&options.dist.join("rootfs/lib"))?;
+    let runtime = kinakaze_v2_bridge::native::runtime_path(
+        &kinakaze_v2_bridge::native::directory(&options.dist),
+    )?;
     drop(discovery);
     let loading = StartupSpan::begin("worker-open-runtime");
     let library = Library::open(&runtime)?;

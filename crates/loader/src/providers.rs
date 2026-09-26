@@ -22,7 +22,9 @@ impl SharedModules {
             libraries: Vec::with_capacity(modules.shared_libraries.len()),
         };
         for name in &modules.shared_libraries {
-            let library = kinakaze_v2_host_win::Library::open(&dist.join("rootfs/lib").join(name))?;
+            let library = kinakaze_v2_host_win::Library::open(
+                &kinakaze_v2_bridge::native::directory(dist).join(name),
+            )?;
             if !guest_process::register_fork_module(library.base_address()) {
                 return Err("shared native module registration failed".into());
             }
@@ -117,7 +119,7 @@ pub fn load(
 ) -> Result<Arc<ProviderRegistry>, Box<dyn std::error::Error>> {
     let _total = kinakaze_v2_host_win::StartupSpan::begin("providers-total");
     let discovery = kinakaze_v2_host_win::StartupSpan::begin("providers-discover");
-    let modules = ModuleSet::discover(&dist.join("rootfs/lib"))?;
+    let modules = ModuleSet::discover(&kinakaze_v2_bridge::native::directory(dist))?;
     drop(discovery);
     if !modules
         .modules

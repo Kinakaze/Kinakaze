@@ -12891,6 +12891,7 @@ libc.so.6	__fread_unlocked_chk	GLIBC_2.7
 libc.so.6	__freading	GLIBC_2.2.5
 libc.so.6	__freelocale	GLIBC_2.2.5
 libc.so.6	__fsetlocking	GLIBC_2.2.5
+libc.so.6	__fwprintf_chk	GLIBC_2.4
 libc.so.6	__fwriting	GLIBC_2.2.5
 libc.so.6	__fxstat	GLIBC_2.2.5
 libc.so.6	__fxstat64	GLIBC_2.2.5
@@ -12982,6 +12983,7 @@ libc.so.6	__strtod_l	GLIBC_2.2.5
 libc.so.6	__strtof_l	GLIBC_2.2.5
 libc.so.6	__strtok_r	GLIBC_2.2.5
 libc.so.6	__strxfrm_l	GLIBC_2.2.5
+libc.so.6	__swprintf_chk	GLIBC_2.4
 libc.so.6	__sysconf	GLIBC_2.2.5
 libc.so.6	__syslog_chk	GLIBC_2.4
 libc.so.6	__sysv_signal	GLIBC_2.2.5
@@ -12993,16 +12995,19 @@ libc.so.6	__uflow	GLIBC_2.2.5
 libc.so.6	__uselocale	GLIBC_2.3
 libc.so.6	__vasprintf_chk	GLIBC_2.8
 libc.so.6	__vfprintf_chk	GLIBC_2.3.4
+libc.so.6	__vfwprintf_chk	GLIBC_2.4
 libc.so.6	__vprintf_chk	GLIBC_2.3.4
 libc.so.6	__vsnprintf_chk	GLIBC_2.3.4
 libc.so.6	__vsprintf_chk	GLIBC_2.3.4
 libc.so.6	__vswprintf_chk	GLIBC_2.4
 libc.so.6	__vsyslog_chk	GLIBC_2.4
+libc.so.6	__vwprintf_chk	GLIBC_2.4
 libc.so.6	__wcscoll_l	GLIBC_2.2.5
 libc.so.6	__wcsftime_l	GLIBC_2.3
 libc.so.6	__wcsxfrm_l	GLIBC_2.2.5
 libc.so.6	__wctomb_chk	GLIBC_2.4
 libc.so.6	__wctype_l	GLIBC_2.2.5
+libc.so.6	__wprintf_chk	GLIBC_2.4
 libc.so.6	__xmknod	GLIBC_2.2.5
 libc.so.6	__xpg_basename	GLIBC_2.2.5
 libc.so.6	__xpg_strerror_r	GLIBC_2.3.4
@@ -13192,6 +13197,7 @@ libc.so.6	fgets_unlocked	GLIBC_2.2.5
 libc.so.6	fgetspent	GLIBC_2.2.5
 libc.so.6	fgetspent_r	GLIBC_2.2.5
 libc.so.6	fgetwc	GLIBC_2.2.5
+libc.so.6	fgetws	GLIBC_2.2.5
 libc.so.6	fgetxattr	GLIBC_2.3
 libc.so.6	fileno	GLIBC_2.2.5
 libc.so.6	fileno_unlocked	GLIBC_2.2.5
@@ -13259,6 +13265,7 @@ libc.so.6	funlockfile	GLIBC_2.2.5
 libc.so.6	futimens	GLIBC_2.6
 libc.so.6	futimes	GLIBC_2.3
 libc.so.6	futimesat	GLIBC_2.4
+libc.so.6	fwprintf	GLIBC_2.2.5
 libc.so.6	fwrite	GLIBC_2.2.5
 libc.so.6	fwrite_unlocked	GLIBC_2.2.5
 libc.so.6	gai_strerror	GLIBC_2.2.5
@@ -14031,10 +14038,12 @@ libc.so.6	versionsort	GLIBC_2.2.5
 libc.so.6	versionsort64	GLIBC_2.2.5
 libc.so.6	vfork	GLIBC_2.2.5
 libc.so.6	vfprintf	GLIBC_2.2.5
+libc.so.6	vfwprintf	GLIBC_2.2.5
 libc.so.6	vsnprintf	GLIBC_2.2.5
 libc.so.6	vsprintf	GLIBC_2.2.5
 libc.so.6	vsscanf	GLIBC_2.2.5
 libc.so.6	vswprintf	GLIBC_2.2.5
+libc.so.6	vwprintf	GLIBC_2.2.5
 libc.so.6	wait	GLIBC_2.2.5
 libc.so.6	wait3	GLIBC_2.2.5
 libc.so.6	wait4	GLIBC_2.2.5
@@ -14075,6 +14084,7 @@ libc.so.6	wmemcmp	GLIBC_2.2.5
 libc.so.6	wmemcpy	GLIBC_2.2.5
 libc.so.6	wmemmove	GLIBC_2.2.5
 libc.so.6	wmemset	GLIBC_2.2.5
+libc.so.6	wprintf	GLIBC_2.2.5
 libc.so.6	write	GLIBC_2.2.5
 libc.so.6	writev	GLIBC_2.2.5
 libcdio.so.19	cdio_destroy	CDIO_19

@@ -33,9 +33,14 @@ fn main() {
 
 fn run() -> Result<()> {
     let mut args = std::env::args_os().skip(1);
-    let mode = args
-        .next()
-        .ok_or_else(|| failure("usage: worker smoke [--dist DIST]"))?;
+    let mode = args.next().unwrap_or_else(|| "run".into());
+    if matches!(
+        mode.to_str(),
+        Some("--root" | "--dist" | "--cwd" | "--rootfs-manifest" | "--web" | "--")
+    ) {
+        let arguments = std::iter::once(mode).chain(args).collect();
+        std::process::exit(launch::dispatch(std::ffi::OsStr::new("run"), arguments)?);
+    }
     if matches!(
         mode.to_str(),
         Some("--unix-rights-keeper" | "--usernet-broker")
@@ -49,6 +54,7 @@ fn run() -> Result<()> {
         mode.to_str(),
         Some(
             "run"
+                | "setup"
                 | "guest"
                 | "guest-prewarm"
                 | "guest-pool"
@@ -65,7 +71,7 @@ fn run() -> Result<()> {
     }
     if mode == "--help" || mode == "-h" {
         println!(
-            "Usage: worker run [--root ROOT] [--dist DIST] [--cwd /] [--rootfs-manifest FILE] [--web 127.0.0.1:PORT] -- /linux/program [args...]\n       worker smoke [--dist DIST]\nInternal parent/child modes use the inherited V2 session environment."
+            "Usage: worker [run] [--root ROOT] [--dist DIST] [--cwd /] [--rootfs-manifest FILE] [--web 127.0.0.1:PORT] [-- /linux/program args...]\n       worker setup [--root ROOT] [--dist DIST] [--rootfs-manifest FILE]\n       worker smoke [--dist DIST]\nWith no program, run opens the default login shell. setup prepares rootfs without starting a guest."
         );
         return Ok(());
     }

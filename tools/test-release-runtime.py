@@ -100,8 +100,9 @@ def main():
                 init.wait(timeout=10)
             run([str(dist / 'init.exe'), 'launch', '--session-file', str(session), '--', '/bin/true'], expected=1)
             results.append('stale session is rejected after init exits')
+    native = dist / 'native' if (dist / 'native').is_dir() else dist / 'rootfs/lib'
     images = [dist / 'init.exe', dist / 'worker.exe', dist / 'rootfs.manifest.json',
-              *sorted((dist / 'rootfs/lib').glob('*'))]
+              *sorted(native.glob('*'))]
     hashes = {path.relative_to(dist).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
               for path in images if path.is_file()}
     report = dict(passed=True, checks=results, images=hashes)
