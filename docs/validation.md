@@ -1,5 +1,7 @@
 # 集成验证记录
 
+2026-09-26 v0.1.0：[正式版本运行与验证](runtime-release-v0.1.0.md)。完整 release 构建通过：1,853 项 Rust 测试通过、0 失败、27 项现有忽略；43 项 Python 测试通过。完整基础 rootfs 的空目录安装、外部清单优先、并发初始化、真实 PPID 和重连启动客户端等 8 项运行验收通过，运行 ZIP 解压后复验通过。该版本不打包 Java/Minecraft 或编译开发环境；下列应用结果保留为历史记录。
+
 2026-09-23 futex：[MAP_SHARED 跨进程实现](futex-shared-2026-09-23.md)。普通 WAIT/WAKE、BITSET、REQUEUE/CMP_REQUEUE 和 WAKE_OP 使用内核域共享队列；最终发布包的 5 项客体探针、8 项单元测试通过，包含真实 fork/exec、文件别名、信号和异常退出恢复。PI/robust-list 不在此次实现范围内。
 
 2026-09-23 Minecraft：[白屏与后续音频初始化崩溃修复](minecraft-rendering-2026-09-23.md)。发布包 `artifacts/minecraft-render-dist` 已显示真实主菜单，Continue 按钮响应正常，窗口关闭后退出码为 0；4 项客体探针及 7 项 futex 单元测试通过，世界内游玩尚未验收。

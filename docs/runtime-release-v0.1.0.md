@@ -49,6 +49,8 @@ $ParentPid = .\init.exe launch --session-file .\session.json -- /bin/sh -c 'whil
 
 ## 构建与验证
 
+v0.1.0 发布检查：完整 release 构建成功；1,853 项 Rust 测试通过、0 失败、27 项按现有设置忽略；43 项 Python 测试通过；29 个原生模块的 5,721 个客体导出检查通过。全工作区 Clippy 和管理 smoke 通过。运行包及解压后的 ZIP 均通过 8 项实际运行验收。
+
 ```powershell
 ./tools/build.ps1 -Release -TargetDirectory target/release-v0.1.0 -DistDirectory artifacts/release-v0.1.0
 python tools/prepare-release-rootfs.py --dist artifacts/release-v0.1.0 --offline
