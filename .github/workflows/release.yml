@@ -1,0 +1,46 @@
+name: Source release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
+  source:
+    name: Prepare release draft
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
+      - name: Package tagged source and checksums
+        run: python tools/package-source.py --ref "$GITHUB_SHA" --tag "$RELEASE_TAG"
+      - name: Create draft prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > "$RUNNER_TEMP/release-notes.md" <<'NOTES'
+          Experimental source release. This archive does not include Linux guest programs or a prebuilt Windows runtime.
+
+          See CHANGELOG.md for changes, docs/getting-started.md for build instructions, and docs/validation.md for compatibility limits. SHA-256 checksums accompany the archive.
+
+          Maintainer: review this draft, add version-specific notes, and verify the archive before publishing.
+          NOTES
+          gh release create "$RELEASE_TAG" artifacts/releases/*.zip artifacts/releases/*.sha256 \
+            --verify-tag --draft --prerelease --title "Kinakaze $RELEASE_TAG" \
+            --notes-file "$RUNNER_TEMP/release-notes.md"

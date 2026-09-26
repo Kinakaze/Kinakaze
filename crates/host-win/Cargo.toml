@@ -4,6 +4,8 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+authors.workspace = true
+repository.workspace = true
 
 [dependencies]
 windows-sys = { workspace = true, features = ["Win32_System_SystemInformation", "Win32_System_Diagnostics_Debug", "Win32_System_ProcessStatus", "Win32_System_WindowsProgramming"] }

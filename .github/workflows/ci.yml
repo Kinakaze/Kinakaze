@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows x86-64
+    runs-on: windows-2022
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      CARGO_TERM_COLOR: always
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
+      - name: Set up Rust and LLVM
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal --component rustfmt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          rustup override set 1.95.0
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $llvm = Join-Path $env:ProgramFiles 'LLVM/bin'
+          $llvm | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Check all targets
+        run: cargo check --workspace --all-targets --locked
+      - name: Test core libraries
+        run: cargo test --locked -p kinakaze-v2-abi -p kinakaze-v2-protocol -p kinakaze-v2-manager --lib
+      - name: Test export tooling
+        run: python -m unittest discover -s tools/native-exports
+      - name: Test guest dependency tooling
+        run: python -m unittest discover -s tools/guest-deps
+      - name: Build native modules and entry points
+        run: cargo build --workspace --locked --features kinakaze-v2-runtime/guest-engine
+      - name: Verify native exports
+        run: python tools/native-exports/generate.py --image-dir target/debug --check
+      - name: Verify source packaging
+        run: python tools/package-source.py --ref HEAD --output-dir artifacts/source-check
