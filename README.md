@@ -27,6 +27,8 @@ Kinakaze 在用户态实现 Linux 程序所需的装载器、系统调用与基�
 
 ## 快速开始
 
+v0.1.0 增加可选 rootfs 清单和可重新连接的 init 启动客户端。外部清单优先，仅在目标 rootfs 不存在或为空时初始化；已有非空 rootfs 保持原样。发行包内置经过哈希校验的基础 shell，启动方式及 `init launch --parent` 示例见 [v0.1.0 运行说明](docs/runtime-release-v0.1.0.md)。
+
 ### 构建环境
 
 - Windows x86-64。

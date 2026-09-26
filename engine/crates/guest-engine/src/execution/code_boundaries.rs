@@ -81,6 +81,7 @@ impl CodeBoundaries {
         fresh
     }
 
+    #[cfg(test)]
     pub(crate) fn iter(&self) -> impl Iterator<Item = usize> + '_ {
         self.segments.iter().flat_map(|segment| {
             segment

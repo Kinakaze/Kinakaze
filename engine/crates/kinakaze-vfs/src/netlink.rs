@@ -131,7 +131,6 @@ const VETH_INFO_PEER: u16 = 1;
 
 const IFA_ADDRESS: u16 = 1;
 const IFA_LOCAL: u16 = 2;
-const IFA_LABEL: u16 = 3;
 const IFA_BROADCAST: u16 = 4;
 const IFA_FLAGS: u16 = 8;
 
@@ -139,12 +138,8 @@ const RTA_DST: u16 = 1;
 const RTA_OIF: u16 = 4;
 const RTA_TABLE: u16 = 15;
 
-const NLA_F_NESTED: u16 = 1 << 15;
-
 const IFF_UP: u32 = 0x0001;
 const IFF_BROADCAST: u32 = 0x0002;
-const IFF_LOOPBACK: u32 = 0x0008;
-const IFF_RUNNING: u32 = 0x0040;
 const IFF_MULTICAST: u32 = 0x1000;
 
 const ARPHRD_ETHER: u16 = 1;
@@ -594,39 +589,6 @@ fn host_loopback() -> Result<Loopback, i32> {
         operational: host.operstate == IF_OPER_UP,
         address: host.link.address,
     })
-}
-
-fn parse_attributes(bytes: &[u8]) -> Result<Vec<(u16, &[u8])>, i32> {
-    let mut attributes = Vec::new();
-    let mut cursor = 0usize;
-    while cursor < bytes.len() {
-        if bytes[cursor..].iter().all(|byte| *byte == 0) {
-            break;
-        }
-        if cursor
-            .checked_add(RTATTR_HEADER_LEN)
-            .is_none_or(|end| end > bytes.len())
-        {
-            return Err(EINVAL);
-        }
-        let length =
-            u16::from_ne_bytes(bytes[cursor..cursor + 2].try_into().map_err(|_| EINVAL)?) as usize;
-        let kind = u16::from_ne_bytes(
-            bytes[cursor + 2..cursor + 4]
-                .try_into()
-                .map_err(|_| EINVAL)?,
-        ) & 0x3fff;
-        if length < RTATTR_HEADER_LEN
-            || cursor
-                .checked_add(length)
-                .is_none_or(|end| end > bytes.len())
-        {
-            return Err(EINVAL);
-        }
-        attributes.push((kind, &bytes[cursor + RTATTR_HEADER_LEN..cursor + length]));
-        cursor = cursor.checked_add(align4(length)?).ok_or(EINVAL)?;
-    }
-    Ok(attributes)
 }
 
 fn route_attributes(bytes: &[u8]) -> Result<Vec<crate::route_state::Attribute>, i32> {

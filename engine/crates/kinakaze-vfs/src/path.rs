@@ -158,8 +158,7 @@ pub fn create_emulated_symlink(path: &Path, target: &str) -> Result<(), i32> {
             DELETE, FILE_DISPOSITION_FLAG_DELETE, FILE_DISPOSITION_FLAG_POSIX_SEMANTICS,
             FILE_DISPOSITION_INFO_EX, FileDispositionInfoEx, SetFileInformationByHandle,
         };
-        let object =
-            unsafe { crate::fs::object::Object::reopen(placeholder.as_raw_handle(), DELETE)? };
+        let object = crate::fs::object::Object::reopen(placeholder.as_raw_handle(), DELETE)?;
         let disposition = FILE_DISPOSITION_INFO_EX {
             Flags: FILE_DISPOSITION_FLAG_DELETE | FILE_DISPOSITION_FLAG_POSIX_SEMANTICS,
         };
@@ -277,9 +276,9 @@ pub(crate) use root::{
     OverlayRoot, default_system_root, namespace_root_path, overlay_root, set_overlay_root,
     to_namespace_path,
 };
-#[cfg(windows)]
-pub(crate) use root::{decode_root, restore_root, scoped_base, serialize_root};
 pub use root::{initialize_namespace_root, set_system_root, system_root};
+#[cfg(windows)]
+pub(crate) use root::{restore_root, serialize_root};
 
 #[cfg(windows)]
 fn translate_mount_path(path: &str) -> Result<String, PathError> {

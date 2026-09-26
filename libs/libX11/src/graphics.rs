@@ -1,8 +1,8 @@
 //! X11 2D Graphics, GC management, Pixmaps, Colors, and Query functions.
 
 use std::collections::HashMap;
-use std::ffi::{CStr, CString, c_void};
-use std::os::raw::{c_char, c_int, c_short, c_uchar, c_uint, c_ushort};
+use std::ffi::c_void;
+use std::os::raw::{c_char, c_int, c_short, c_uint, c_ushort};
 use std::sync::{Arc, Condvar, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
@@ -10,8 +10,8 @@ use windows_sys::Win32::Foundation::{HWND, POINT, RECT};
 use windows_sys::Win32::Graphics::Gdi::{
     BI_RGB, BITMAPINFO, BITMAPINFOHEADER, BitBlt, ClientToScreen, CreateCompatibleDC,
     CreateDIBSection, CreateSolidBrush, DIB_RGB_COLORS, DeleteDC, DeleteObject, Ellipse, FillRect,
-    GdiFlush, GetDC, GetStockObject, HDC, LineTo, MoveToEx, Pie, Polyline, Rectangle, ReleaseDC,
-    SRCCOPY, ScreenToClient, SelectObject, SetBkColor, SetDCBrushColor, SetDCPenColor,
+    GdiFlush, GetDC, GetStockObject, HDC, LineTo, MoveToEx, Polyline, Rectangle, ReleaseDC,
+    SRCCOPY, ScreenToClient, SelectObject, SetDCPenColor,
 };
 use windows_sys::Win32::Graphics::GdiPlus::{
     CompositingModeSourceCopy, CompositingModeSourceOver, FillModeAlternate, FillModeWinding,
@@ -22,7 +22,8 @@ use windows_sys::Win32::Graphics::GdiPlus::{
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{ClipCursor, GetClientRect, GetCursorPos};
 
-use crate::{Colormap, Display, Visual, Window, XRectangle};
+pub use crate::region::XPoint;
+use crate::{Display, Window, XRectangle};
 
 pub(crate) mod background;
 pub mod buffered;
@@ -586,9 +587,8 @@ pub(crate) fn flush_all() {
                 GdiFlush();
                 if presented != 0 {
                     kinakaze_libdisplay::ui::presentation::frame_ready(*window);
-                    if unsafe {
-                        windows_sys::Win32::UI::WindowsAndMessaging::GetWindowLongW(hwnd, -16)
-                    } as u32
+                    if { windows_sys::Win32::UI::WindowsAndMessaging::GetWindowLongW(hwnd, -16) }
+                        as u32
                         & 0x4000_0000
                         != 0
                     {
@@ -1041,13 +1041,6 @@ pub struct XSegment {
     pub y1: c_short,
     pub x2: c_short,
     pub y2: c_short,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default)]
-pub struct XPoint {
-    pub x: c_short,
-    pub y: c_short,
 }
 
 #[repr(C)]

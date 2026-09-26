@@ -80,3 +80,27 @@ pub fn random_token() -> io::Result<String> {
     }
     Ok(result)
 }
+
+/// Create a credential file with a protected current-user DACL from its first byte.
+pub fn private_file(path: &std::path::Path) -> io::Result<std::fs::File> {
+    use windows_sys::Win32::Storage::FileSystem::{
+        CREATE_NEW, CreateFileW, FILE_ATTRIBUTE_NORMAL, FILE_SHARE_READ,
+    };
+    let name = wide(path.as_os_str())?;
+    let security = security::UserSecurity::new()?;
+    let attributes = security.attributes();
+    // SAFETY: All inputs remain live during CreateFileW; CREATE_NEW never opens
+    // an existing file or link, and this returned handle has one owner.
+    let handle = unsafe {
+        owned(CreateFileW(
+            name.as_ptr(),
+            windows_sys::Win32::Foundation::GENERIC_WRITE,
+            FILE_SHARE_READ,
+            &attributes,
+            CREATE_NEW,
+            FILE_ATTRIBUTE_NORMAL,
+            std::ptr::null_mut(),
+        ))?
+    };
+    Ok(std::fs::File::from(handle))
+}

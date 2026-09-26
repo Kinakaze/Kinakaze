@@ -127,7 +127,7 @@ fn identifier_reopen_observes_native_unlink_lifetime() {
                 assert_eq!(identity(reopened).FileId.Identifier, info.FileId.Identifier);
             }
             // Empty-name reopen is a different operation from opening a saved ID.
-            let direct = unsafe { Object::reopen(pin.raw(), FILE_READ_ATTRIBUTES) }.unwrap();
+            let direct = Object::reopen(pin.raw(), FILE_READ_ATTRIBUTES).unwrap();
             assert_eq!(identity(&direct).FileId.Identifier, info.FileId.Identifier);
         }
         drop(pin);
@@ -247,7 +247,7 @@ fn compare_native_open_costs() {
                 let opened = match mode {
                     0 => Object::open(&path, FILE_READ_ATTRIBUTES).unwrap(),
                     1 => by_id(&volume, &info, FILE_READ_ATTRIBUTES).unwrap(),
-                    2 => unsafe { Object::reopen(pin.raw(), FILE_READ_ATTRIBUTES) }.unwrap(),
+                    2 => Object::reopen(pin.raw(), FILE_READ_ATTRIBUTES).unwrap(),
                     _ => {
                         let mut duplicate = ptr::null_mut();
                         assert_ne!(

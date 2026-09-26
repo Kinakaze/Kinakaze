@@ -278,13 +278,15 @@ mod exports {
         buffer: *mut c_char,
         max_len: usize,
     ) -> isize {
-        crate::clipboard::get_text(buffer, max_len)
+        // SAFETY: The exported ABI forwards its caller-owned buffer contract.
+        unsafe { crate::clipboard::get_text(buffer, max_len) }
     }
 
     /// Sets UTF-8 text to the Win32 clipboard. Returns 0 on success, -1 on failure.
     #[unsafe(export_name = "kinakaze_engine_libdisplay_kinakaze_clipboard_set_text")]
     pub unsafe extern "sysv64" fn kinakaze_clipboard_set_text(text: *const c_char) -> c_int {
-        crate::clipboard::set_text(text)
+        // SAFETY: The exported ABI forwards its caller-owned buffer contract.
+        unsafe { crate::clipboard::set_text(text) }
     }
 
     /// Clears the Win32 clipboard. Returns 0 on success.
@@ -410,7 +412,8 @@ mod exports {
         } else {
             unsafe { CStr::from_ptr(filter) }.to_str().ok()
         };
-        crate::dialog::open_file(t, f, buffer, max_len)
+        // SAFETY: The exported ABI forwards its caller-owned buffer contract.
+        unsafe { crate::dialog::open_file(t, f, buffer, max_len) }
     }
 
     /// Opens a native Win32 save file dialog. Returns path length or -1.
@@ -437,7 +440,8 @@ mod exports {
         } else {
             unsafe { CStr::from_ptr(default_name) }.to_str().ok()
         };
-        crate::dialog::save_file(t, f, n, buffer, max_len)
+        // SAFETY: The exported ABI forwards its caller-owned buffer contract.
+        unsafe { crate::dialog::save_file(t, f, n, buffer, max_len) }
     }
 
     /// Shows a Win32 message box. Returns clicked button ID (1=OK, 2=Cancel, 6=Yes, 7=No).

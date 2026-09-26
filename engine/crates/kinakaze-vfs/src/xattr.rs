@@ -164,7 +164,7 @@ impl Attributes {
     /// # Safety
     /// The borrowed handle must remain live throughout the native reopen.
     pub(crate) unsafe fn from_handle(handle: HANDLE, write: bool) -> Result<Self, i32> {
-        let object = unsafe { crate::fs::object::Object::reopen(handle, Self::access(write))? };
+        let object = crate::fs::object::Object::reopen(handle, Self::access(write))?;
         Ok(Self(Handle(object.into_raw()), None))
     }
 

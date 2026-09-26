@@ -62,16 +62,6 @@ thread_local! { static TASK: std::cell::RefCell<Option<Arc<Store>>> = const { st
 pub(crate) fn inherit(store: Arc<Store>) {
     TASK.with(|slot| *slot.borrow_mut() = Some(store));
 }
-pub(crate) struct Scope(Option<Arc<Store>>);
-impl Drop for Scope {
-    fn drop(&mut self) {
-        TASK.with(|slot| *slot.borrow_mut() = self.0.take());
-    }
-}
-/// Resolve one operation in a retained mount view without changing membership.
-pub(crate) fn scoped(store: Arc<Store>) -> Scope {
-    Scope(TASK.with(|slot| slot.borrow_mut().replace(store)))
-}
 pub(super) fn install(store: Arc<Store>) -> Result<(), i32> {
     let tid = unsafe { windows_sys::Win32::System::Threading::GetCurrentThreadId() };
     let _ = LEADER.compare_exchange(0, tid, Ordering::AcqRel, Ordering::Acquire);
@@ -121,7 +111,7 @@ pub(crate) struct Store {
     // Section pages are never decommitted while this Store is alive. Remember
     // successful commits per view; a reopened Store starts conservatively at 0.
     committed_banks: [AtomicUsize; 2],
-    pub(crate) cache: RwLock<Option<(u64, std::sync::Arc<Vec<MountPoint>>)>>,
+    pub(super) cache: RwLock<Option<(u64, std::sync::Arc<Vec<MountPoint>>)>>,
     pub(crate) eventfd_events: std::sync::OnceLock<Result<crate::eventfd::ReadyEvents, i32>>,
 }
 // The view remains mapped while Store is live. Native mutations take the named
@@ -773,16 +763,6 @@ pub(crate) fn descriptor_id(fd: i32) -> Result<u64, i32> {
     };
     unsafe { UnmapViewOfFile(view) };
     result
-}
-
-/// Registered VFS fork/exec restoration must discard parent-local addresses and
-/// non-inherited native handles. Reopening the same section preserves the shared
-/// mount table, rather than replacing it with the parent's serialized snapshot.
-pub(crate) fn restore() {
-    TASK.with(|slot| *slot.borrow_mut() = None);
-    if let Ok(mut slot) = CURRENT.lock() {
-        *slot = None;
-    }
 }
 
 #[cfg(test)]

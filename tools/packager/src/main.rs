@@ -272,6 +272,13 @@ fn package(args: Args) -> Result<()> {
     }
     let count = modules.modules.len();
     drop(modules);
+    let manifest = dist.join("rootfs.manifest.json");
+    if !manifest.exists() {
+        atomic_write(
+            &manifest,
+            include_bytes!("../../../config/rootfs.manifest.json"),
+        )?;
+    }
     let root = output_directory(&dist, "rootfs")?;
     let documentation = output_directory(
         &output_directory(

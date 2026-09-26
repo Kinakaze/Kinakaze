@@ -6,7 +6,7 @@
 //! linear arithmetic and committed to a drawable as one dirty rectangle.
 
 use std::collections::HashMap;
-use std::ffi::{CStr, c_char, c_void};
+use std::ffi::{CStr, c_char};
 use std::os::raw::{c_int, c_short, c_ushort};
 use std::sync::{Arc, Mutex, OnceLock};
 

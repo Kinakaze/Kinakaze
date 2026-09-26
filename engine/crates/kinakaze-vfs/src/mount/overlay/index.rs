@@ -20,7 +20,7 @@ impl Installation {
     }
     pub(super) fn flush(&self) -> Result<(), i32> {
         use windows_sys::Win32::Foundation::{GENERIC_READ, GENERIC_WRITE};
-        unsafe { Object::reopen(self.entry.raw(), GENERIC_READ | GENERIC_WRITE)? }.flush()
+        Object::reopen(self.entry.raw(), GENERIC_READ | GENERIC_WRITE)?.flush()
     }
 }
 impl Drop for Installation {
@@ -34,7 +34,7 @@ impl Drop for Installation {
 impl Index {
     pub(super) fn flush(&self) -> Result<(), i32> {
         use windows_sys::Win32::Foundation::{GENERIC_READ, GENERIC_WRITE};
-        unsafe { Object::reopen(self.directory.raw(), GENERIC_READ | GENERIC_WRITE)? }.flush()
+        Object::reopen(self.directory.raw(), GENERIC_READ | GENERIC_WRITE)?.flush()
     }
     pub(super) fn adjust_links(&self, node: &Node, delta: i64, work: &Object) -> Result<(), i32> {
         let bytes =
@@ -202,9 +202,10 @@ impl Index {
         if Identity::decode(&bytes)? != *origin {
             return Err(crate::ESTALE);
         }
-        Ok(Some(unsafe {
-            Object::reopen(entry.object.raw(), FILE_READ_ATTRIBUTES | FILE_READ_EA)?
-        }))
+        Ok(Some(Object::reopen(
+            entry.object.raw(),
+            FILE_READ_ATTRIBUTES | FILE_READ_EA,
+        )?))
     }
 
     pub(super) fn install(

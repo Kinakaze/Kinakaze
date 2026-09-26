@@ -59,7 +59,7 @@ pub enum Publication {
 }
 
 pub fn publication(handle: HANDLE) -> Result<Publication, i32> {
-    let query = unsafe { Object::reopen(handle, QUERY_ACCESS)? };
+    let query = Object::reopen(handle, QUERY_ACCESS)?;
     let _lock = crate::xattr::InodeLock::acquire(query.raw())?;
     Ok(match read_record(&query)? {
         None => Publication::Absent,
@@ -110,7 +110,7 @@ impl Opened {
         if self.is_directory() {
             return Err(EISDIR);
         }
-        let query = unsafe { Object::reopen(self.borrowed_handle(), QUERY_ACCESS)? };
+        let query = Object::reopen(self.borrowed_handle(), QUERY_ACCESS)?;
         let before = read_record(&query)?;
         if before
             .as_ref()

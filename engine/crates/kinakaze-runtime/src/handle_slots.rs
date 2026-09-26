@@ -6,6 +6,9 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[cfg(windows)]
 pub(super) type RegistrationExport = unsafe extern "system" fn(*const AtomicUsize) -> i32;
+// Unregistration compares the address as an opaque key; it never reads the slot.
+#[cfg(windows)]
+pub(super) type UnregistrationExport = extern "system" fn(*const AtomicUsize) -> i32;
 
 pub(super) fn valid_slot_address(slot: usize) -> bool {
     slot.is_multiple_of(core::mem::align_of::<AtomicUsize>())
@@ -45,7 +48,7 @@ pub fn unregister_fork_handle_slot(slot: *const AtomicUsize) -> bool {
     if let Some(unregister) =
         unsafe { (*super::PROCESS_THREAD_EXPORTS.0.get()).unregister_handle_slot }
     {
-        return unsafe { unregister(slot) != 0 };
+        return unregister(slot) != 0;
     }
     kinakaze_runtime_unregister_fork_handle_slot(slot) != 0
 }
@@ -126,7 +129,7 @@ pub(super) struct ChildSlot {
 /// terminate that child; its handle table owns all duplicates already produced.
 /// Keep the mapping transaction held from handoff serialization through this
 /// function and the final arena copy/slot patch.
-#[cfg(all(windows, target_arch = "x86_64"))]
+#[cfg(all(test, windows, target_arch = "x86_64"))]
 pub(super) unsafe fn duplicate_into(
     process: windows_sys::Win32::Foundation::HANDLE,
 ) -> Result<Vec<ChildSlot>, ForkError> {

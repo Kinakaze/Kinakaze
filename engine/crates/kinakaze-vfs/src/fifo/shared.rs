@@ -619,6 +619,7 @@ impl Context {
         })
     }
 
+    #[cfg(test)]
     pub(super) fn readiness(&self) -> Result<Readiness, i32> {
         self.readiness_locked(&mut self.channel.lock()?)
     }
@@ -697,6 +698,7 @@ impl Context {
         }
     }
 
+    #[cfg(test)]
     pub(super) fn write(&self, buffer: &[u8]) -> Result<usize, i32> {
         self.write_report(buffer).0
     }

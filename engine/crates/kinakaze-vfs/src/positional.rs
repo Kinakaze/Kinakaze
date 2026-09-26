@@ -107,7 +107,7 @@ impl File {
                 // DuplicateHandle shares a synchronous file position. Reopen
                 // the same pinned inode with no synchronous-open flags instead.
                 let access = Object::granted_access(entry.raw as _)?;
-                let object = unsafe { Object::reopen(entry.raw as _, access)? };
+                let object = Object::reopen(entry.raw as _, access)?;
                 entry.raw = object.raw() as usize;
                 entry.flags = entry.flags.union(FdFlags::OVERLAPPED);
                 reopened = Some(object);

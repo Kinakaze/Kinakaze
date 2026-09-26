@@ -281,7 +281,7 @@ pub(crate) fn restore(bytes: &[u8]) -> bool {
             let mut objects = Vec::new();
             for _ in 0..r.count()? {
                 let raw = r.word()? as usize;
-                let object = unsafe { Object::reopen(raw as _, ACCESS)? };
+                let object = Object::reopen(raw as _, ACCESS)?;
                 crate::platform::try_set_inheritable(object.raw() as usize, true)?;
                 objects.push(Arc::new(object));
                 inherited.insert(raw);

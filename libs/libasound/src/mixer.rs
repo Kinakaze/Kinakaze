@@ -443,6 +443,7 @@ pub unsafe extern "sysv64" fn snd_mixer_selem_set_playback_volume_all(
         0
     }
 }
+#[allow(non_snake_case, reason = "The exported name is part of the ALSA ABI.")]
 #[unsafe(export_name = "kinakaze_engine_libasound_snd_mixer_selem_ask_playback_vol_dB")]
 pub unsafe extern "sysv64" fn snd_mixer_selem_ask_playback_vol_dB(
     mixer: *mut Mixer,
@@ -464,6 +465,7 @@ pub unsafe extern "sysv64" fn snd_mixer_selem_ask_playback_vol_dB(
     }
     0
 }
+#[allow(non_snake_case, reason = "The exported name is part of the ALSA ABI.")]
 #[unsafe(export_name = "kinakaze_engine_libasound_snd_mixer_selem_ask_playback_dB_vol")]
 pub unsafe extern "sysv64" fn snd_mixer_selem_ask_playback_dB_vol(
     mixer: *mut Mixer,

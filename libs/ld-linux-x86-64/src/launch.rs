@@ -233,7 +233,7 @@ pub unsafe fn enter(entry: usize, stack_pointer: usize) -> ! {
             "jmp rax",
             in("rcx") stack_pointer,
             in("rax") entry,
-            in("rdx") crate::process::rtld_fini as usize,
+            in("rdx") crate::process::rtld_fini as *const () as usize,
             options(noreturn)
         )
     }

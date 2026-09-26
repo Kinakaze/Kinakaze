@@ -307,6 +307,7 @@ mod tests {
             connections: std::sync::atomic::AtomicUsize::new(0),
             endpoint: String::new(),
             token: "secret".into(),
+            launch_token: None,
             controller: kinakaze_v2_manager::PeerIdentity {
                 host_pid: 1,
                 birth: 1,

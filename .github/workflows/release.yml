@@ -12,7 +12,7 @@ jobs:
     uses: ./.github/workflows/ci.yml
 
   source:
-    name: Prepare release draft
+    name: Publish source release
     needs: checks
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -30,17 +30,14 @@ jobs:
           python-version: '3.13'
       - name: Package tagged source and checksums
         run: python tools/package-source.py --ref "$GITHUB_SHA" --tag "$RELEASE_TAG"
-      - name: Create draft prerelease
+      - name: Publish tagged source
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cat > "$RUNNER_TEMP/release-notes.md" <<'NOTES'
-          Experimental source release. This archive does not include Linux guest programs or a prebuilt Windows runtime.
-
-          See CHANGELOG.md for changes, docs/getting-started.md for build instructions, and docs/validation.md for compatibility limits. SHA-256 checksums accompany the archive.
-
-          Maintainer: review this draft, add version-specific notes, and verify the archive before publishing.
-          NOTES
-          gh release create "$RELEASE_TAG" artifacts/releases/*.zip artifacts/releases/*.sha256 \
-            --verify-tag --draft --prerelease --title "Kinakaze $RELEASE_TAG" \
-            --notes-file "$RUNNER_TEMP/release-notes.md"
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" artifacts/releases/*.zip artifacts/releases/*.sha256 --clobber
+          else
+            gh release create "$RELEASE_TAG" artifacts/releases/*.zip artifacts/releases/*.sha256 \
+              --verify-tag --title "Kinakaze $RELEASE_TAG" \
+              --notes-file "docs/releases/$RELEASE_TAG.md"
+          fi

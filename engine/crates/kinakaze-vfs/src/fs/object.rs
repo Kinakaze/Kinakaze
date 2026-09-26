@@ -284,9 +284,11 @@ impl Object {
         })
     }
 
-    /// # Safety
-    /// The borrowed inode handle must remain live throughout the native reopen.
-    pub(crate) unsafe fn reopen(file: HANDLE, access: u32) -> Result<Self, i32> {
+    /// Reopen an opaque kernel handle; the kernel validates invalid handles.
+    /// Callers retain the handle to preserve inode identity across this call.
+    pub(crate) fn reopen(file: HANDLE, access: u32) -> Result<Self, i32> {
+        // SAFETY: The name and output storage are owned here. The native handle
+        // is an opaque kernel key and is never dereferenced in host memory.
         unsafe { Self::relative(file, vec![0], access, 1) }
     }
 
@@ -494,7 +496,7 @@ impl Object {
     }
 
     fn entries_with_atime(&self, suppress_atime: bool) -> Result<Vec<OsString>, i32> {
-        let query = unsafe {
+        let query = {
             Self::reopen(
                 self.raw(),
                 FILE_READ_ATTRIBUTES
@@ -576,7 +578,7 @@ impl Object {
     /// Enumerate streams on this inode without reopening its pathname. The
     /// private query handle keeps pending I/O independent of shared references.
     pub(crate) fn streams(&self) -> Result<Vec<(OsString, u64)>, i32> {
-        let query = unsafe { Self::reopen(self.raw(), FILE_READ_ATTRIBUTES)? };
+        let query = Self::reopen(self.raw(), FILE_READ_ATTRIBUTES)?;
         let mut storage = vec![0u64; 512];
         loop {
             let length = u32::try_from(storage.len() * 8).map_err(|_| crate::EOVERFLOW)?;
@@ -915,12 +917,10 @@ mod tests {
         let f = Fixture::new();
         std::fs::write(f.path("file"), b"data").unwrap();
         let object = Object::open(&f.path("file"), FILE_READ_ATTRIBUTES).unwrap();
-        let writer = unsafe {
-            Object::reopen(
-                object.raw(),
-                windows_sys::Win32::Storage::FileSystem::FILE_WRITE_EA,
-            )
-        }
+        let writer = Object::reopen(
+            object.raw(),
+            windows_sys::Win32::Storage::FileSystem::FILE_WRITE_EA,
+        )
         .unwrap();
         for value in [b"bad".as_slice(), b"BAD!0000", b"CYINODE2"] {
             super::super::ea::write(&writer, super::super::inode::EA_NAME, value).unwrap();
@@ -1103,10 +1103,8 @@ mod tests {
                             .unwrap();
                     }
                     5 => {
-                        let _ = unsafe {
-                            Object::reopen(object.raw(), FILE_READ_ATTRIBUTES | FILE_READ_EA)
-                        }
-                        .unwrap();
+                        let _ = Object::reopen(object.raw(), FILE_READ_ATTRIBUTES | FILE_READ_EA)
+                            .unwrap();
                     }
                     6 => {
                         let _ = fs::stat_handle(object.raw(), false).unwrap();

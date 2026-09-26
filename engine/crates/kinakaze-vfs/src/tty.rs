@@ -46,10 +46,7 @@ use windows_sys::Win32::Foundation::{
     WAIT_OBJECT_0,
 };
 use windows_sys::Win32::Security::SECURITY_ATTRIBUTES;
-use windows_sys::Win32::Storage::FileSystem::{
-    FindClose, FindFirstFileW, PIPE_ACCESS_DUPLEX, ReadFile, SYNCHRONIZE, WIN32_FIND_DATAW,
-    WriteFile,
-};
+use windows_sys::Win32::Storage::FileSystem::{ReadFile, SYNCHRONIZE, WriteFile};
 use windows_sys::Win32::System::Console::{
     ENABLE_EXTENDED_FLAGS, ENABLE_PROCESSED_OUTPUT, ENABLE_VIRTUAL_TERMINAL_INPUT,
     ENABLE_VIRTUAL_TERMINAL_PROCESSING, GetConsoleMode, SetConsoleMode,
@@ -57,9 +54,6 @@ use windows_sys::Win32::System::Console::{
 use windows_sys::Win32::System::Memory::{
     CreateFileMappingW, FILE_MAP_ALL_ACCESS, FILE_MAP_READ, MEMORY_MAPPED_VIEW_ADDRESS,
     MapViewOfFile, OpenFileMappingW, PAGE_READWRITE, UnmapViewOfFile,
-};
-use windows_sys::Win32::System::Pipes::{
-    CreateNamedPipeW, PIPE_TYPE_BYTE, PIPE_UNLIMITED_INSTANCES,
 };
 use windows_sys::Win32::System::Threading::{
     CreateEventW, CreateMutexW, EVENT_MODIFY_STATE, INFINITE, OpenEventW, ReleaseMutex, ResetEvent,
@@ -2978,7 +2972,7 @@ pub fn terminal_name(fd: i32) -> Result<String, i32> {
 mod tests {
     use super::*;
     use crate::fs::{O_NOCTTY, O_NONBLOCK, O_RDWR};
-    use crate::pty::{ECHO, ICANON, ICRNL, ONLCR, OPOST, VMIN, VTIME};
+    use crate::pty::{ECHO, ICANON, ICRNL, OPOST, VMIN, VTIME};
 
     /// A pseudo-terminal pair that closes both ends when the test ends.
     ///

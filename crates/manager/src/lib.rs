@@ -59,6 +59,7 @@ struct Client {
 enum ClientKind {
     Helper,
     Controller,
+    Launcher,
     Worker { pid: u32 },
     ExecCandidate { pid: u32, transaction: u64 },
     Retired { pid: u32, transaction: u64 },
@@ -96,7 +97,11 @@ enum PrewarmState {
     Activated,
     PoolReady,
     PoolReserved(ClientId),
-    PoolActivated(Box<PoolLaunch>),
+    PoolActivated {
+        launch: Box<PoolLaunch>,
+        owner: ClientId,
+        parent_pid: u32,
+    },
 }
 
 #[derive(Clone, Copy)]
@@ -250,7 +255,8 @@ impl StateManager {
             .find_map(|(&id, transaction)| (transaction.target == peer).then_some(id));
         let known_worker = self.processes.values().any(|process| process.peer == peer)
             || self.clients.values().any(|client| {
-                client.peer == peer && !matches!(client.kind, ClientKind::Controller)
+                client.peer == peer
+                    && !matches!(client.kind, ClientKind::Controller | ClientKind::Launcher)
             })
             || self.retired_peers.contains(&peer);
         let (process, kind) = match hello.role {
@@ -267,14 +273,21 @@ impl StateManager {
                 }
                 (None, ClientKind::Helper)
             }
-            ClientRole::Controller => {
+            ClientRole::Controller | ClientRole::Launcher => {
                 if hello.adoption_ticket.is_some() || known_worker || reserved_exec.is_some() {
                     return Err(error(
                         ErrorCode::Unauthorized,
                         "worker identities cannot open controller connections",
                     ));
                 }
-                (None, ClientKind::Controller)
+                (
+                    None,
+                    if hello.role == ClientRole::Launcher {
+                        ClientKind::Launcher
+                    } else {
+                        ClientKind::Controller
+                    },
+                )
             }
             ClientRole::Worker => {
                 if known_worker {
@@ -363,7 +376,23 @@ impl StateManager {
                 "Hello is only valid when opening a connection",
             ));
         }
-        if matches!(kind, ClientKind::Controller) {
+        if matches!(kind, ClientKind::Launcher)
+            && !matches!(
+                request,
+                Request::Stats
+                    | Request::AwaitExit { .. }
+                    | Request::ReservePoolWorker
+                    | Request::ReleasePoolWorker { .. }
+                    | Request::ActivatePoolWorker { .. }
+                    | Request::ActivatePoolWorkerUnderParent { .. }
+            )
+        {
+            return Err(error(
+                ErrorCode::Unauthorized,
+                "launcher can only launch and observe processes",
+            ));
+        }
+        if matches!(kind, ClientKind::Controller | ClientKind::Launcher) {
             return match request {
                 Request::Stats => Ok(Reply::Stats(self.stats())),
                 Request::AwaitExit { pid } => self.await_exit(pid),
@@ -385,8 +414,13 @@ impl StateManager {
                 Request::ReservePoolWorker => self.reserve_pool_worker(client),
                 Request::ReleasePoolWorker { pid } => self.release_pool_worker(client, pid),
                 Request::ActivatePoolWorker { pid, launch } => {
-                    self.activate_pool_worker(client, pid, launch)
+                    self.activate_pool_worker(client, pid, 0, launch)
                 }
+                Request::ActivatePoolWorkerUnderParent {
+                    pid,
+                    parent_pid,
+                    launch,
+                } => self.activate_pool_worker(client, pid, parent_pid, launch),
                 Request::Shutdown => {
                     self.shutdown_requested = true;
                     Ok(Reply::Ok)
@@ -406,6 +440,7 @@ impl StateManager {
                 | Request::ReservePoolWorker
                 | Request::ReleasePoolWorker { .. }
                 | Request::ActivatePoolWorker { .. }
+                | Request::ActivatePoolWorkerUnderParent { .. }
         ) {
             return Err(error(
                 ErrorCode::Unauthorized,
@@ -431,7 +466,9 @@ impl StateManager {
                     )),
                 };
             }
-            ClientKind::Controller | ClientKind::Helper => unreachable!("handled before dispatch"),
+            ClientKind::Controller | ClientKind::Launcher | ClientKind::Helper => {
+                unreachable!("handled before dispatch")
+            }
         };
         let process = self
             .processes
@@ -503,7 +540,9 @@ impl StateManager {
                 Ok(Reply::Ok)
             }
             Request::AwaitPoolActivation => match &self.processes[&pid].prewarm {
-                PrewarmState::PoolActivated(launch) => Ok(Reply::PoolLaunch((**launch).clone())),
+                PrewarmState::PoolActivated { launch, .. } => {
+                    Ok(Reply::PoolLaunch((**launch).clone()))
+                }
                 PrewarmState::PoolReady | PrewarmState::PoolReserved(_) => {
                     Err(error(ErrorCode::NotReady, "awaiting pool assignment"))
                 }
@@ -596,7 +635,8 @@ impl StateManager {
             | Request::AwaitPoolReady { .. }
             | Request::ReservePoolWorker
             | Request::ReleasePoolWorker { .. }
-            | Request::ActivatePoolWorker { .. } => {
+            | Request::ActivatePoolWorker { .. }
+            | Request::ActivatePoolWorkerUnderParent { .. } => {
                 unreachable!("handled before dispatch")
             }
         }
@@ -700,6 +740,7 @@ impl StateManager {
         &mut self,
         client: ClientId,
         pid: u32,
+        parent_pid: u32,
         launch: PoolLaunch,
     ) -> RpcResult<Reply> {
         if !launch.valid() {
@@ -708,12 +749,23 @@ impl StateManager {
                 "pool launch requires absolute Linux argv[0]/cwd and NUL-free strings",
             ));
         }
+        if parent_pid == pid {
+            return Err(error(
+                ErrorCode::InvalidRequest,
+                "process cannot be its own parent",
+            ));
+        }
         let process = self
             .processes
-            .get_mut(&pid)
+            .get(&pid)
             .ok_or_else(|| error(ErrorCode::NotFound, "unknown pool worker"))?;
-        if let PrewarmState::PoolActivated(previous) = &process.prewarm {
-            return if **previous == launch {
+        if let PrewarmState::PoolActivated {
+            launch: previous,
+            owner,
+            parent_pid: previous_parent,
+        } = &process.prewarm
+        {
+            return if **previous == launch && *owner == client && *previous_parent == parent_pid {
                 Ok(Reply::Ok)
             } else {
                 Err(error(
@@ -728,7 +780,31 @@ impl StateManager {
                 "connection does not hold this pool reservation",
             ));
         }
-        process.prewarm = PrewarmState::PoolActivated(Box::new(launch));
+        if parent_pid != 0 {
+            let parent = self
+                .processes
+                .get(&parent_pid)
+                .ok_or_else(|| error(ErrorCode::NotFound, "parent process does not exist"))?;
+            if !matches!(parent.state, ProcessState::Active)
+                || matches!(
+                    parent.prewarm,
+                    PrewarmState::Ready | PrewarmState::PoolReady | PrewarmState::PoolReserved(_)
+                )
+                || self.retired_peers.contains(&parent.peer)
+            {
+                return Err(error(
+                    ErrorCode::Conflict,
+                    "parent is not an active application",
+                ));
+            }
+        }
+        let process = self.processes.get_mut(&pid).unwrap();
+        process.identity.parent_pid = parent_pid;
+        process.prewarm = PrewarmState::PoolActivated {
+            launch: Box::new(launch),
+            owner: client,
+            parent_pid,
+        };
         Ok(Reply::Ok)
     }
 
@@ -802,7 +878,10 @@ impl StateManager {
             ClientKind::ExecCandidate { transaction, .. } => {
                 self.abort_exec_transaction(transaction);
             }
-            ClientKind::Controller | ClientKind::Helper | ClientKind::Retired { .. } => {}
+            ClientKind::Controller
+            | ClientKind::Launcher
+            | ClientKind::Helper
+            | ClientKind::Retired { .. } => {}
         }
         self.collect_objects();
     }

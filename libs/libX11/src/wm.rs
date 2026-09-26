@@ -1,6 +1,6 @@
 //! Window management hints, property, selection, atom, font, and event helpers for Xlib.
 
-use std::ffi::{CStr, CString, c_char, c_int, c_uchar, c_uint, c_void};
+use std::ffi::{CStr, c_char, c_int, c_uchar, c_uint, c_void};
 
 use windows_sys::Win32::Foundation::{HWND, POINT};
 use windows_sys::Win32::Graphics::Gdi::ClientToScreen;
@@ -10,9 +10,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     ShowWindow,
 };
 
-use crate::{
-    Atom, Bool, Display, KeySym, Pixmap, Status, Time, Visual, Window, XEvent, XSizeHints,
-};
+use crate::{Atom, Bool, Display, KeySym, Pixmap, Status, Visual, Window, XEvent, XSizeHints};
 
 type c_long = i64;
 type c_ulong = u64;
@@ -29,15 +27,17 @@ pub unsafe extern "sysv64" fn XInternAtoms(
     only_if_exists: Bool,
     atoms_return: *mut Atom,
 ) -> Status {
-    if names.is_null() || atoms_return.is_null() || count <= 0 {
-        return 0;
+    unsafe {
+        if names.is_null() || atoms_return.is_null() || count <= 0 {
+            return 0;
+        }
+        for i in 0..count as usize {
+            let name_ptr = *names.add(i);
+            let atom = crate::XInternAtom(dpy, name_ptr, only_if_exists);
+            *atoms_return.add(i) = atom;
+        }
+        1
     }
-    for i in 0..count as usize {
-        let name_ptr = *names.add(i);
-        let atom = crate::XInternAtom(dpy, name_ptr, only_if_exists);
-        *atoms_return.add(i) = atom;
-    }
-    1
 }
 
 // ---------------------------------------------------------------------------
@@ -472,32 +472,44 @@ pub unsafe extern "sysv64" fn XWMGeometry(
     height_return: *mut c_int,
     gravity_return: *mut c_int,
 ) -> c_int {
-    let def_w = if !hints.is_null() && (*hints).width > 0 {
-        (*hints).width
-    } else {
-        300
-    };
-    let def_h = if !hints.is_null() && (*hints).height > 0 {
-        (*hints).height
-    } else {
-        200
-    };
-    if !x_return.is_null() {
-        unsafe { *x_return = 100 };
+    unsafe {
+        let def_w = if !hints.is_null() && (*hints).width > 0 {
+            (*hints).width
+        } else {
+            300
+        };
+        let def_h = if !hints.is_null() && (*hints).height > 0 {
+            (*hints).height
+        } else {
+            200
+        };
+        if !x_return.is_null() {
+            {
+                *x_return = 100
+            };
+        }
+        if !y_return.is_null() {
+            {
+                *y_return = 100
+            };
+        }
+        if !width_return.is_null() {
+            {
+                *width_return = def_w
+            };
+        }
+        if !height_return.is_null() {
+            {
+                *height_return = def_h
+            };
+        }
+        if !gravity_return.is_null() {
+            {
+                *gravity_return = 1
+            }; // NorthWestGravity
+        }
+        0
     }
-    if !y_return.is_null() {
-        unsafe { *y_return = 100 };
-    }
-    if !width_return.is_null() {
-        unsafe { *width_return = def_w };
-    }
-    if !height_return.is_null() {
-        unsafe { *height_return = def_h };
-    }
-    if !gravity_return.is_null() {
-        unsafe { *gravity_return = 1 }; // NorthWestGravity
-    }
-    0
 }
 
 #[unsafe(export_name = "kinakaze_engine_libX11_XIconifyWindow")]
@@ -814,7 +826,8 @@ pub unsafe extern "sysv64" fn XEventsQueued(dpy: *mut Display, mode: c_int) -> c
         crate::graphics::flush_all();
     }
     if mode == 1 || mode == 2 {
-        crate::drain_native_events(dpy);
+        // SAFETY: The caller owns the selected live display for this dispatch.
+        unsafe { crate::drain_native_events(dpy) };
     }
     let state = crate::state().lock().unwrap_or_else(|e| e.into_inner());
     let count = state.count_for(dpy);
@@ -868,7 +881,7 @@ pub unsafe extern "sysv64" fn XkbLookupKeySym(
 
 #[unsafe(export_name = "kinakaze_engine_libX11_XSynchronize")]
 pub unsafe extern "sysv64" fn XSynchronize(
-    dpy: *mut Display,
+    _dpy: *mut Display,
     _onoff: Bool,
 ) -> Option<unsafe extern "sysv64" fn(*mut Display) -> c_int> {
     None
@@ -899,22 +912,26 @@ pub unsafe extern "sysv64" fn XGetVisualInfo(
     _vinfo_template: *mut XVisualInfo,
     nitems_return: *mut c_int,
 ) -> *mut XVisualInfo {
-    if !nitems_return.is_null() {
-        unsafe { *nitems_return = 1 };
+    unsafe {
+        if !nitems_return.is_null() {
+            {
+                *nitems_return = 1
+            };
+        }
+        let vinfo = Box::new(XVisualInfo {
+            visual: crate::XDefaultVisual(dpy, 0),
+            visualid: 1,
+            screen: 0,
+            depth: 24,
+            class: 4, // TrueColor
+            red_mask: 0x00ff0000,
+            green_mask: 0x0000ff00,
+            blue_mask: 0x000000ff,
+            colormap_size: 256,
+            bits_per_rgb: 8,
+        });
+        Box::into_raw(vinfo)
     }
-    let vinfo = Box::new(XVisualInfo {
-        visual: crate::XDefaultVisual(dpy, 0),
-        visualid: 1,
-        screen: 0,
-        depth: 24,
-        class: 4, // TrueColor
-        red_mask: 0x00ff0000,
-        green_mask: 0x0000ff00,
-        blue_mask: 0x000000ff,
-        colormap_size: 256,
-        bits_per_rgb: 8,
-    });
-    Box::into_raw(vinfo)
 }
 
 #[unsafe(export_name = "kinakaze_engine_libX11_XMatchVisualInfo")]
@@ -963,7 +980,7 @@ pub unsafe extern "sysv64" fn XListDepths(
         unsafe { *count_return = 1 };
     }
     static mut DEPTHS: [c_int; 1] = [24];
-    unsafe { &raw mut DEPTHS as *mut c_int }
+    &raw mut DEPTHS as *mut c_int
 }
 
 // ---------------------------------------------------------------------------
@@ -1011,7 +1028,7 @@ pub unsafe extern "sysv64" fn XUnloadFont(_dpy: *mut Display, _font: usize) -> c
 #[unsafe(export_name = "kinakaze_engine_libX11_XQueryFont")]
 pub unsafe extern "sysv64" fn XQueryFont(_dpy: *mut Display, _font_ID: usize) -> *mut c_void {
     static mut DUMMY_FONT_STRUCT: [usize; 64] = [0; 64];
-    unsafe { &raw mut DUMMY_FONT_STRUCT as *mut c_void }
+    &raw mut DUMMY_FONT_STRUCT as *mut c_void
 }
 
 #[unsafe(export_name = "kinakaze_engine_libX11_XChangeWindowAttributes")]
@@ -1091,7 +1108,7 @@ pub unsafe extern "sysv64" fn XLoadQueryFont(
     _name: *const c_char,
 ) -> *mut c_void {
     static mut DUMMY_FONT: [usize; 64] = [0; 64];
-    unsafe { &raw mut DUMMY_FONT as *mut c_void }
+    &raw mut DUMMY_FONT as *mut c_void
 }
 
 #[unsafe(export_name = "kinakaze_engine_libX11_XNextRequest")]

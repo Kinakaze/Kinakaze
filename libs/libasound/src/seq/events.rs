@@ -261,7 +261,11 @@ api!(snd_seq_event_input(seq:*mut Seq,out:*mut *mut u8)->i32 {
         if libc::fdio::kinakaze_abi_poll(&raw mut fd,1,-1)<0 {return -kinakaze_tls::errno();}
     }
 });
-api!(snd_seq_free_event(_event:*mut u8)->i32 {0}); // Input storage is owned by the handle.
+// Input storage is owned by the handle.
+#[unsafe(export_name = "kinakaze_engine_libasound_snd_seq_free_event")]
+pub unsafe extern "sysv64" fn snd_seq_free_event(_event: *mut u8) -> i32 {
+    0
+}
 fn allowed(state: &Client, events: i16) -> i16 {
     events
         & (if state.streams & 1 != 0 { 4 } else { 0 } | if state.streams & 2 != 0 { 1 } else { 0 })

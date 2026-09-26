@@ -1,7 +1,7 @@
 //! `xinerama.rs`: Xinerama stubs.
 
-use crate::{Bool, Display, Status, XEvent};
-use core::ffi::{c_char, c_int, c_short, c_void};
+use crate::{Bool, Display};
+use core::ffi::{c_int, c_short};
 
 #[repr(C)]
 pub struct XineramaScreenInfo {

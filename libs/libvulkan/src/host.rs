@@ -96,7 +96,7 @@ fn with_nul_terminated<T>(name: &str, use_name: impl FnOnce(*const u8) -> T) -> 
 
 /// Resolves an instance-level or device-level command through the host loader.
 /// Unlike [`symbol`], this reaches commands supplied only by an ICD extension.
-pub fn instance_symbol(instance: VkInstance, name: &str) -> Option<usize> {
+pub(crate) fn instance_symbol(instance: VkInstance, name: &str) -> Option<usize> {
     if instance.is_null() {
         return None;
     }
@@ -106,7 +106,7 @@ pub fn instance_symbol(instance: VkInstance, name: &str) -> Option<usize> {
 }
 
 /// Resolves a command enabled on one host logical device.
-pub fn device_symbol(device: VkDevice, name: &str) -> Option<usize> {
+pub(crate) fn device_symbol(device: VkDevice, name: &str) -> Option<usize> {
     if device.is_null() {
         return None;
     }

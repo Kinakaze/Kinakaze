@@ -18,15 +18,20 @@ struct Options {
     web_address: Option<String>,
     arguments: Vec<String>,
 }
-fn parse(arguments: Vec<OsString>, pool: bool) -> Result<Options> {
+fn parse(arguments: Vec<OsString>, pool: bool, prepare: bool) -> Result<Options> {
     let mut args = arguments.into_iter();
     let mut root = None;
     let mut dist = None;
     let mut cwd = "/".to_owned();
     let mut guest = Vec::new();
     let mut web_address = None;
+    let mut rootfs_manifest = None;
     while let Some(arg) = args.next() {
         match arg.to_str() {
+            Some("--rootfs-manifest") => {
+                rootfs_manifest =
+                    Some(PathBuf::from(args.next().ok_or("missing rootfs manifest")?));
+            }
             Some("--root") => {
                 root = Some(PathBuf::from(args.next().ok_or("missing --root value")?))
             }
@@ -82,8 +87,14 @@ fn parse(arguments: Vec<OsString>, pool: bool) -> Result<Options> {
                 .to_owned(),
         )
         .canonicalize()?;
+    let root = root.unwrap_or_else(|| dist.join("rootfs"));
+    if prepare {
+        kinakaze_v2_rootfs::prepare(&root, &dist, rootfs_manifest.as_deref())?;
+    } else if rootfs_manifest.is_some() {
+        return Err(failure("rootfs manifest is only accepted by worker run"));
+    }
     Ok(Options {
-        root: root.unwrap_or_else(|| dist.join("rootfs")).canonicalize()?,
+        root: root.canonicalize()?,
         dist,
         cwd,
         web_address,
@@ -103,10 +114,10 @@ impl Drop for ChildGuard {
 
 pub fn dispatch(mode: &std::ffi::OsStr, arguments: Vec<OsString>) -> Result<i32> {
     match mode.to_str() {
-        Some("run") => supervisor(parse(arguments, false)?),
-        Some("guest") => guest(parse(arguments, false)?, None, false, false),
-        Some("guest-prewarm") => guest(parse(arguments, false)?, None, true, false),
-        Some("guest-pool") => guest(parse(arguments, true)?, None, false, true),
+        Some("run") => supervisor(parse(arguments, false, true)?),
+        Some("guest") => guest(parse(arguments, false, false)?, None, false, false),
+        Some("guest-prewarm") => guest(parse(arguments, false, false)?, None, true, false),
+        Some("guest-pool") => guest(parse(arguments, true, false)?, None, false, true),
         Some("--kinakaze-exec") => {
             let executable = arguments.first().ok_or("exec handoff lacks executable")?;
             let argv = arguments

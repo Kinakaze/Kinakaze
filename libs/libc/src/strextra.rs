@@ -571,7 +571,7 @@ pub mod windows {
 
     #[unsafe(no_mangle)]
     pub unsafe extern "sysv64" fn wcwidth(wc: WcharT) -> c_int {
-        unsafe { kinakaze_abi_wcwidth(wc as u32) }
+        kinakaze_abi_wcwidth(wc as u32)
     }
 
     #[unsafe(no_mangle)]
@@ -590,7 +590,7 @@ pub mod windows {
             if ch == 0 {
                 break;
             }
-            let w = unsafe { kinakaze_abi_wcwidth(ch as u32) };
+            let w = kinakaze_abi_wcwidth(ch as u32);
             if w < 0 {
                 return -1;
             }
@@ -621,17 +621,17 @@ pub mod windows {
 
     #[unsafe(no_mangle)]
     pub unsafe extern "sysv64" fn nl_langinfo(item: c_int) -> *const c_char {
-        unsafe { kinakaze_abi_nl_langinfo(item) }
+        kinakaze_abi_nl_langinfo(item)
     }
 
     #[unsafe(no_mangle)]
     pub unsafe extern "sysv64" fn nl_langinfo_l(item: c_int, loc: *mut c_void) -> *const c_char {
-        unsafe { kinakaze_abi___nl_langinfo_l(item, loc) }
+        kinakaze_abi___nl_langinfo_l(item, loc)
     }
 
     #[unsafe(no_mangle)]
     pub unsafe extern "sysv64" fn __nl_langinfo_l(item: c_int, loc: *mut c_void) -> *const c_char {
-        unsafe { kinakaze_abi___nl_langinfo_l(item, loc) }
+        kinakaze_abi___nl_langinfo_l(item, loc)
     }
 
     pub use crate::glob::{GlobT, glob, globfree};
@@ -1271,8 +1271,10 @@ pub mod windows {
         -1
     }
 
+    /// # Safety
+    /// A non-null buf must be writable for len bytes.
     #[unsafe(no_mangle)]
-    pub extern "sysv64" fn kinakaze_abi_confstr(
+    pub unsafe extern "sysv64" fn kinakaze_abi_confstr(
         name: c_int,
         buf: *mut c_char,
         len: usize,

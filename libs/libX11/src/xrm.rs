@@ -346,18 +346,22 @@ pub unsafe extern "sysv64" fn XrmMergeDatabases(
     source_db: *mut XrmDatabaseRec,
     target_db: *mut *mut XrmDatabaseRec,
 ) {
-    if source_db.is_null() || target_db.is_null() {
-        return;
-    }
-    if (*target_db).is_null() {
-        unsafe { *target_db = source_db };
-        return;
-    }
     unsafe {
-        for entry in &(*source_db).entries {
-            (**target_db).entries.push(entry.clone());
+        if source_db.is_null() || target_db.is_null() {
+            return;
         }
-        drop(Box::from_raw(source_db));
+        if (*target_db).is_null() {
+            {
+                *target_db = source_db
+            };
+            return;
+        }
+        {
+            for entry in &(*source_db).entries {
+                (**target_db).entries.push(entry.clone());
+            }
+            drop(Box::from_raw(source_db));
+        }
     }
 }
 
@@ -507,34 +511,40 @@ pub unsafe extern "sysv64" fn XrmPutStringResource(
     spec: *const c_char,
     value: *const c_char,
 ) {
-    if database.is_null() || spec.is_null() || value.is_null() {
-        return;
-    }
-    if (*database).is_null() {
-        unsafe { *database = Box::into_raw(Box::new(XrmDatabaseRec::default())) };
-    }
-    let mut bindings = [0; 64];
-    let mut quarks = [0; 64];
     unsafe {
-        XrmStringToBindingQuarkList(spec, bindings.as_mut_ptr(), quarks.as_mut_ptr());
-    }
-    let val_cstr = unsafe { CStr::from_ptr(value) }.to_owned();
-    let mut q_vec = Vec::new();
-    let mut b_vec = Vec::new();
-    let mut i = 0;
-    while quarks[i] != NULLQUARK && i < 63 {
-        b_vec.push(bindings[i]);
-        q_vec.push(quarks[i]);
-        i += 1;
-    }
-    if !q_vec.is_empty() {
-        let entry = ResourceEntry {
-            bindings: b_vec,
-            quarks: q_vec,
-            representation: "String".to_string(),
-            value: val_cstr,
-        };
-        unsafe { (**database).entries.push(entry) };
+        if database.is_null() || spec.is_null() || value.is_null() {
+            return;
+        }
+        if (*database).is_null() {
+            {
+                *database = Box::into_raw(Box::new(XrmDatabaseRec::default()))
+            };
+        }
+        let mut bindings = [0; 64];
+        let mut quarks = [0; 64];
+        {
+            XrmStringToBindingQuarkList(spec, bindings.as_mut_ptr(), quarks.as_mut_ptr());
+        }
+        let val_cstr = CStr::from_ptr(value).to_owned();
+        let mut q_vec = Vec::new();
+        let mut b_vec = Vec::new();
+        let mut i = 0;
+        while quarks[i] != NULLQUARK && i < 63 {
+            b_vec.push(bindings[i]);
+            q_vec.push(quarks[i]);
+            i += 1;
+        }
+        if !q_vec.is_empty() {
+            let entry = ResourceEntry {
+                bindings: b_vec,
+                quarks: q_vec,
+                representation: "String".to_string(),
+                value: val_cstr,
+            };
+            {
+                (**database).entries.push(entry)
+            };
+        }
     }
 }
 
@@ -560,35 +570,41 @@ pub unsafe extern "sysv64" fn XrmQPutResource(
     _representation: XrmRepresentation,
     value: *mut XrmValue,
 ) {
-    if database.is_null() || bindings.is_null() || quarks.is_null() || value.is_null() {
-        return;
-    }
-    if (*database).is_null() {
-        unsafe { *database = Box::into_raw(Box::new(XrmDatabaseRec::default())) };
-    }
-    let mut q_vec = Vec::new();
-    let mut b_vec = Vec::new();
-    let mut i = 0;
     unsafe {
-        while *quarks.add(i) != NULLQUARK && i < 63 {
-            b_vec.push(*bindings.add(i));
-            q_vec.push(*quarks.add(i));
-            i += 1;
+        if database.is_null() || bindings.is_null() || quarks.is_null() || value.is_null() {
+            return;
         }
-    }
-    let val_cstr = if unsafe { (*value).size > 0 && !(*value).addr.is_null() } {
-        unsafe { CStr::from_ptr((*value).addr) }.to_owned()
-    } else {
-        CString::default()
-    };
-    if !q_vec.is_empty() {
-        let entry = ResourceEntry {
-            bindings: b_vec,
-            quarks: q_vec,
-            representation: "String".to_string(),
-            value: val_cstr,
+        if (*database).is_null() {
+            {
+                *database = Box::into_raw(Box::new(XrmDatabaseRec::default()))
+            };
+        }
+        let mut q_vec = Vec::new();
+        let mut b_vec = Vec::new();
+        let mut i = 0;
+        {
+            while *quarks.add(i) != NULLQUARK && i < 63 {
+                b_vec.push(*bindings.add(i));
+                q_vec.push(*quarks.add(i));
+                i += 1;
+            }
+        }
+        let val_cstr = if (*value).size > 0 && !(*value).addr.is_null() {
+            CStr::from_ptr((*value).addr).to_owned()
+        } else {
+            CString::default()
         };
-        unsafe { (**database).entries.push(entry) };
+        if !q_vec.is_empty() {
+            let entry = ResourceEntry {
+                bindings: b_vec,
+                quarks: q_vec,
+                representation: "String".to_string(),
+                value: val_cstr,
+            };
+            {
+                (**database).entries.push(entry)
+            };
+        }
     }
 }
 

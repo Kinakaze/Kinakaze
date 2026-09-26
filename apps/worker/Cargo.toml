@@ -15,6 +15,7 @@ path = "src/main.rs"
 kinakaze-v2-abi.workspace = true
 kinakaze-v2-protocol.workspace = true
 kinakaze-v2-host-win.workspace = true
+kinakaze-v2-rootfs.workspace = true
 kinakaze-v2-bridge.workspace = true
 serde_json.workspace = true
 

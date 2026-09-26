@@ -10,6 +10,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+from guest_installation import java_home, minecraft_version
 
 
 def allowed(rules, features):
@@ -88,13 +89,15 @@ def main():
     parser.add_argument('--root', type=Path, default=workspace / 'artifacts/guest-root')
     parser.add_argument('--dist', type=Path, default=workspace / 'dist')
     parser.add_argument('--worker', type=Path, default=workspace / 'target/debug/worker.exe')
-    parser.add_argument('--version', default='26.2')
-    parser.add_argument('--java', default='/usr/lib/jvm/jdk-25.0.4.1+1-jre/bin/java')
+    parser.add_argument('--version', help='installed version; auto-detected when unique')
+    parser.add_argument('--java', help='absolute guest Java path; auto-detected when unique')
     parser.add_argument('--memory', default='2G')
     parser.add_argument('--width', type=int, default=960)
     parser.add_argument('--height', type=int, default=600)
     parser.add_argument('--print-command', action='store_true')
     args = parser.parse_args()
+    args.version = args.version or minecraft_version(args.root)
+    args.java = args.java or '/' + java_home(args.root) + '/bin/java'
     invocation = command(args)
     if args.print_command:
         print(json.dumps(invocation, ensure_ascii=False, indent=2))

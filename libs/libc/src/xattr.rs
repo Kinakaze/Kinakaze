@@ -8,9 +8,7 @@ use core::ffi::{CStr, c_char, c_int, c_void};
 use core::ptr;
 use kinakaze_vfs::fs::{self, Stat};
 use kinakaze_vfs::xattr::{Attributes, ENODATA, XATTR_CREATE, XATTR_REPLACE, XATTR_SIZE_MAX};
-use kinakaze_vfs::{
-    EACCES, EFAULT, EINVAL, ELOOP, ENAMETOOLONG, ENOENT, EOPNOTSUPP, EPERM, ERANGE,
-};
+use kinakaze_vfs::{EACCES, EFAULT, EINVAL, ENAMETOOLONG, ENOENT, EOPNOTSUPP, EPERM, ERANGE};
 
 struct Credentials {
     uid: u32,

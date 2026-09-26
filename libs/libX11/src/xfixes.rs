@@ -58,7 +58,7 @@ fn error(minor: u8, code: u8, id: u32) -> ProtocolError {
         resource: id as usize,
     }
 }
-pub fn window_region(display: *mut Display, window: usize) -> Option<RegionRec> {
+pub(crate) fn window_region(display: *mut Display, window: usize) -> Option<RegionRec> {
     let mut a = unsafe { core::mem::zeroed::<crate::XWindowAttributes>() };
     if unsafe { crate::XGetWindowAttributes(display, window, &mut a) } == 0 {
         return None;
@@ -75,7 +75,7 @@ pub fn window_region(display: *mut Display, window: usize) -> Option<RegionRec> 
     crate::region::update_extents(&mut region);
     Some(region)
 }
-pub fn dispatch(
+pub(crate) fn dispatch(
     display: *mut Display,
     minor: u8,
     b: &[u8],

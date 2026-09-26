@@ -1494,7 +1494,7 @@ fn initialize_guest_thread_tls() {
 #[unsafe(export_name = "kinakaze_engine_libpipewire_pw_loop_new")]
 pub unsafe extern "sysv64" fn pw_loop_new(properties: *const SpaDict) -> *mut c_void {
     let audio = unsafe { pw_thread_loop_new(ptr::null(), properties) };
-    let public = pw_thread_loop_get_loop(audio);
+    let public = unsafe { pw_thread_loop_get_loop(audio) };
     if public.is_null() {
         unsafe { pw_thread_loop_destroy(audio) };
     }
@@ -1660,7 +1660,7 @@ pub unsafe extern "sysv64" fn pw_thread_loop_new(
 #[unsafe(export_name = "kinakaze_engine_libpipewire_pw_thread_loop_destroy")]
 pub unsafe extern "sysv64" fn pw_thread_loop_destroy(loop_: *mut pw_thread_loop) {
     if !loop_.is_null() {
-        pw_thread_loop_stop(loop_);
+        unsafe { pw_thread_loop_stop(loop_) };
         let native = unsafe { (*loop_).native_loop.swap(0, Ordering::AcqRel) };
         if native != 0 {
             drop(unsafe { Box::from_raw(native as *mut main_loop::HostLoop) });
@@ -1669,8 +1669,10 @@ pub unsafe extern "sysv64" fn pw_thread_loop_destroy(loop_: *mut pw_thread_loop)
     }
 }
 
+/// # Safety
+/// loop_ must refer to a live thread loop for the duration of the call.
 #[unsafe(export_name = "kinakaze_engine_libpipewire_pw_thread_loop_get_loop")]
-pub extern "sysv64" fn pw_thread_loop_get_loop(loop_: *mut pw_thread_loop) -> *mut c_void {
+pub unsafe extern "sysv64" fn pw_thread_loop_get_loop(loop_: *mut pw_thread_loop) -> *mut c_void {
     let Some(audio) = (unsafe { loop_.as_ref() }) else {
         return ptr::null_mut();
     };
@@ -1709,7 +1711,7 @@ pub unsafe extern "sysv64" fn pw_thread_loop_start(loop_: *mut pw_thread_loop) -
     if worker.is_some() {
         return 0;
     }
-    let native = pw_thread_loop_get_loop(loop_);
+    let native = unsafe { pw_thread_loop_get_loop(loop_) };
     if native.is_null() {
         return -kinakaze_tls::errno();
     }
@@ -1737,8 +1739,10 @@ pub unsafe extern "sysv64" fn pw_thread_loop_start(loop_: *mut pw_thread_loop) -
     }
 }
 
+/// # Safety
+/// loop_ must refer to a live thread loop for the duration of the call.
 #[unsafe(export_name = "kinakaze_engine_libpipewire_pw_thread_loop_stop")]
-pub extern "sysv64" fn pw_thread_loop_stop(loop_: *mut pw_thread_loop) {
+pub unsafe extern "sysv64" fn pw_thread_loop_stop(loop_: *mut pw_thread_loop) {
     if let Some(audio) = unsafe { loop_.as_ref() } {
         audio.stopped.store(true, Ordering::Release);
         audio.sync.wake();
@@ -1754,28 +1758,41 @@ pub extern "sysv64" fn pw_thread_loop_stop(loop_: *mut pw_thread_loop) {
     }
 }
 
+/// # Safety
+/// loop_ must refer to a live thread loop for the duration of the call.
 #[unsafe(export_name = "kinakaze_engine_libpipewire_pw_thread_loop_lock")]
-pub extern "sysv64" fn pw_thread_loop_lock(loop_: *mut pw_thread_loop) {
+pub unsafe extern "sysv64" fn pw_thread_loop_lock(loop_: *mut pw_thread_loop) {
     unsafe { (*loop_).sync.lock() };
 }
 
+/// # Safety
+/// loop_ must refer to a live thread loop for the duration of the call.
 #[unsafe(export_name = "kinakaze_engine_libpipewire_pw_thread_loop_unlock")]
-pub extern "sysv64" fn pw_thread_loop_unlock(loop_: *mut pw_thread_loop) {
+pub unsafe extern "sysv64" fn pw_thread_loop_unlock(loop_: *mut pw_thread_loop) {
     unsafe { (*loop_).sync.unlock() };
 }
 
+/// # Safety
+/// loop_ must refer to a live thread loop for the duration of the call.
 #[unsafe(export_name = "kinakaze_engine_libpipewire_pw_thread_loop_wait")]
-pub extern "sysv64" fn pw_thread_loop_wait(loop_: *mut pw_thread_loop) {
+pub unsafe extern "sysv64" fn pw_thread_loop_wait(loop_: *mut pw_thread_loop) {
     unsafe { (*loop_).sync.wait() };
 }
 
+/// # Safety
+/// loop_ must refer to a live thread loop for the duration of the call.
 #[unsafe(export_name = "kinakaze_engine_libpipewire_pw_thread_loop_signal")]
-pub extern "sysv64" fn pw_thread_loop_signal(loop_: *mut pw_thread_loop, wait_for_accept: bool) {
+pub unsafe extern "sysv64" fn pw_thread_loop_signal(
+    loop_: *mut pw_thread_loop,
+    wait_for_accept: bool,
+) {
     unsafe { (*loop_).sync.signal(wait_for_accept) };
 }
 
+/// # Safety
+/// loop_ must refer to a live thread loop for the duration of the call.
 #[unsafe(export_name = "kinakaze_engine_libpipewire_pw_thread_loop_accept")]
-pub extern "sysv64" fn pw_thread_loop_accept(loop_: *mut pw_thread_loop) {
+pub unsafe extern "sysv64" fn pw_thread_loop_accept(loop_: *mut pw_thread_loop) {
     unsafe { (*loop_).sync.accept(true) };
 }
 

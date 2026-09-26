@@ -75,7 +75,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_getprotobyname_r(
     capacity: usize,
     result: *mut *mut Protoent,
 ) -> c_int {
-    use kinakaze_vfs::{EINVAL, ERANGE};
+    use kinakaze_vfs::EINVAL;
     if result.is_null() {
         return EINVAL;
     }

@@ -56,8 +56,8 @@ use std::sync::{Mutex, OnceLock};
 
 use kinakaze_vfs::fs::{self, SEEK_CUR, SEEK_END, SEEK_SET};
 use kinakaze_vfs::{
-    EAGAIN, EBADF, EFAULT, EINVAL, EIO, ENOMEM, ENOSYS, ENOTDIR, EPERM, ESPIPE, FdEntry, FdFlags,
-    FdKind, errno_from_win32,
+    EBADF, EFAULT, EINVAL, EIO, ENOMEM, ENOSYS, EPERM, ESPIPE, FdEntry, FdFlags, FdKind,
+    errno_from_win32,
 };
 use windows_sys::Win32::Networking::WinSock::{
     POLLERR as WSA_POLLERR, POLLHUP as WSA_POLLHUP, POLLIN as WSA_POLLIN, POLLNVAL as WSA_POLLNVAL,
@@ -65,7 +65,7 @@ use windows_sys::Win32::Networking::WinSock::{
 };
 
 use crate::set_errno;
-use crate::stdio::{EOF, File};
+use crate::stdio::File;
 
 mod file_origin;
 pub(crate) mod verity;
@@ -79,9 +79,6 @@ const EEXIST: i32 = 17;
 /// `posix_fallocate64` and `mmap64` both need it: it is what Linux reports when a
 /// requested size or offset cannot be represented in the file's length.
 const EOVERFLOW: i32 = 75;
-
-/// `EFBIG`, reported when an allocation would exceed the maximum file size.
-const EFBIG: i32 = 27;
 
 /// `ENODEV`, reported by `mmap` for a descriptor that cannot be mapped.
 const ENODEV: i32 = 19;
@@ -151,13 +148,7 @@ unsafe extern "system" {
     fn GetSystemTimeAsFileTime(time: *mut FileTime);
     /// `GetFileSizeEx`: an open file's length in bytes.
     fn GetFileSizeEx(file: *mut c_void, size: *mut i64) -> i32;
-    /// `SetFileInformationByHandle`: writes one class of file information.
-    fn SetFileInformationByHandle(
-        file: *mut c_void,
-        class: i32,
-        information: *const c_void,
-        size: u32,
-    ) -> i32;
+    #[cfg(test)]
     /// `SetFilePointerEx`: moves a synchronous handle's file pointer.
     fn SetFilePointerEx(
         file: *mut c_void,
@@ -261,6 +252,7 @@ struct FileTime {
     high: u32,
 }
 
+#[cfg(test)]
 /// `OVERLAPPED`, used here only to carry an offset and a completion event.
 ///
 /// The offset pair is expressed as two `u32`s rather than a union, which is what
@@ -275,6 +267,7 @@ struct Overlapped {
     event: *mut c_void,
 }
 
+#[cfg(test)]
 impl Overlapped {
     /// An `OVERLAPPED` addressing `offset`, with no completion event.
     fn at(offset: u64) -> Self {
@@ -366,8 +359,9 @@ const FILE_SHARE_DELETE: u32 = 0x0000_0004;
 const OPEN_EXISTING: u32 = 3;
 const FILE_FLAG_BACKUP_SEMANTICS: u32 = 0x0200_0000;
 const FILE_FLAG_OPEN_REPARSE_POINT: u32 = 0x0020_0000;
-const ERROR_IO_PENDING: u32 = 997;
+#[cfg(test)]
 const FILE_BEGIN: u32 = 0;
+#[cfg(test)]
 const FILE_CURRENT: u32 = 1;
 
 // Access rights read out of `FILE_ACCESS_INFORMATION`.
@@ -397,7 +391,6 @@ const FILE_MAP_READ: u32 = 0x0000_0004;
 /// Region states as `VirtualQuery` reports them.
 const MEM_COMMIT_STATE: u32 = 0x0000_1000;
 const MEM_RESERVE_STATE: u32 = 0x0000_2000;
-const MEM_FREE_STATE: u32 = 0x0001_0000;
 const MEM_PRIVATE_TYPE: u32 = 0x0002_0000;
 const MEM_MAPPED_TYPE: u32 = 0x0004_0000;
 
@@ -465,28 +458,6 @@ unsafe fn borrow_path(path: *const c_char) -> Result<&'static str, i32> {
     // Guest paths are byte strings; a non-UTF-8 name is rejected rather than
     // losing bytes on the way to the wide-character API.
     raw.to_str().map_err(|_| EINVAL)
-}
-
-/// Joins a relative guest path onto the current directory.
-///
-/// The VFS keeps its own `absolute_linux` private, so the rule is repeated here.
-/// Both spellings consult the one `getcwd` the VFS owns, so they cannot disagree
-/// about where the guest currently is.
-fn absolute_linux(path: &str) -> String {
-    if path.starts_with('/') {
-        return path.to_string();
-    }
-    let cwd = fs::getcwd();
-    if cwd == "/" {
-        format!("/{path}")
-    } else {
-        format!("{cwd}/{path}")
-    }
-}
-
-/// Translates a guest path into the Windows path that backs it.
-fn resolve(path: &str) -> Result<PathBuf, i32> {
-    kinakaze_vfs::resolve_linux_path(&absolute_linux(path)).map_err(|_| EINVAL)
 }
 
 /// Translates a Windows path back into the guest's namespace.
@@ -3263,7 +3234,6 @@ const MADV_SEQUENTIAL: c_int = 2;
 const MADV_WILLNEED: c_int = 3;
 const MADV_DONTNEED: c_int = 4;
 const MADV_FREE: c_int = 8;
-const MADV_HUGEPAGE: c_int = 14;
 const MADV_NOHUGEPAGE: c_int = 15;
 
 /// Validates that one interval is wholly covered by mappings known to the Linux
@@ -3510,7 +3480,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_brk(addr: *mut c_void) -> c_int {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn brk(addr: *mut c_void) -> c_int {
-    kinakaze_abi_brk(addr)
+    unsafe { kinakaze_abi_brk(addr) }
 }
 
 #[unsafe(no_mangle)]
@@ -3521,7 +3491,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_sbrk(_increment: isize) -> *mut c_voi
 
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn sbrk(increment: isize) -> *mut c_void {
-    kinakaze_abi_sbrk(increment)
+    unsafe { kinakaze_abi_sbrk(increment) }
 }
 
 #[unsafe(no_mangle)]
@@ -3603,7 +3573,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_dup3(oldfd: c_int, newfd: c_int, flag
         set_errno(EINVAL);
         return -1;
     }
-    let result = unsafe { crate::fdio::kinakaze_abi_dup2(oldfd, newfd) };
+    let result = crate::fdio::kinakaze_abi_dup2(oldfd, newfd);
     if result >= 0 && flags & O_CLOEXEC != 0 {
         let _ = kinakaze_vfs::set_close_on_exec(newfd, true);
     }
@@ -7140,6 +7110,7 @@ unsafe fn read_synthetic_at(
     Err(EBADF)
 }
 
+#[cfg(test)]
 /// One attempt with a caller-owned native pin; never dispatches guest signals.
 unsafe fn read_pinned_at(
     entry: FdEntry,
@@ -7468,21 +7439,26 @@ fn open_for_times(path: &str, follow: bool) -> Result<TimeHandle, i32> {
     if handle.is_null() || handle == INVALID_HANDLE_VALUE {
         return Err(last_errno());
     }
-    Ok(TimeHandle(handle, Some(resolved), None))
+    Ok(TimeHandle {
+        raw: handle,
+        _write_path: Some(resolved),
+        metadata: None,
+    })
 }
 
 /// A handle opened only to stamp a file, closed on every path out.
-struct TimeHandle(
-    *mut c_void,
-    Option<kinakaze_vfs::mount::overlay::WritePath>,
-    Option<kinakaze_vfs::mount::overlay::MetadataHandle>,
-);
+struct TimeHandle {
+    raw: *mut c_void,
+    // Keep overlay write ownership alive until the timestamp handle closes.
+    _write_path: Option<kinakaze_vfs::mount::overlay::WritePath>,
+    metadata: Option<kinakaze_vfs::mount::overlay::MetadataHandle>,
+}
 
 impl Drop for TimeHandle {
     fn drop(&mut self) {
         // SAFETY: this type owns the handle it was given.
-        if self.2.is_none() {
-            unsafe { CloseHandle(self.0) };
+        if self.metadata.is_none() {
+            unsafe { CloseHandle(self.raw) };
         }
     }
 }
@@ -7500,7 +7476,11 @@ fn open_descriptor_for_times(fd: c_int, allow_path: bool) -> Result<TimeHandle, 
     }
     if let Some(handle) = kinakaze_vfs::mount::overlay::metadata_handle(fd, true, allow_path)? {
         use std::os::windows::io::AsRawHandle;
-        return Ok(TimeHandle(handle.as_raw_handle(), None, Some(handle)));
+        return Ok(TimeHandle {
+            raw: handle.as_raw_handle(),
+            _write_path: None,
+            metadata: Some(handle),
+        });
     }
     // A synthetic /proc file has no host file to stamp. Reporting success would
     // claim a timestamp was written somewhere it cannot be.
@@ -7526,7 +7506,11 @@ fn open_descriptor_for_times(fd: c_int, allow_path: bool) -> Result<TimeHandle, 
     if handle.is_null() || handle == INVALID_HANDLE_VALUE {
         return Err(last_errno());
     }
-    Ok(TimeHandle(handle, None, None))
+    Ok(TimeHandle {
+        raw: handle,
+        _write_path: None,
+        metadata: None,
+    })
 }
 
 /// `utimensat`.
@@ -7653,14 +7637,14 @@ unsafe fn stamp_timespec(handle: TimeHandle, times: *const TimeSpec) -> Result<(
     // SAFETY: the caller supplies two readable timespecs or NULL.
     let (access, modification) = unsafe { read_timespec_pair(times) }?;
     // SAFETY: the owned handle stays live throughout the write.
-    unsafe { write_times(handle.0, access, modification) }
+    unsafe { write_times(handle.raw, access, modification) }
 }
 
 /// Stamps a path.
 fn stamp_path(path: &str, follow: bool, access: Stamp, modification: Stamp) -> Result<(), i32> {
     let handle = open_for_times(path, follow)?;
     // SAFETY: the handle is live until the guard drops.
-    unsafe { write_times(handle.0, access, modification) }
+    unsafe { write_times(handle.raw, access, modification) }
 }
 
 /// Reads the two-element `struct timespec` array `utimensat` takes.
@@ -7845,6 +7829,8 @@ pub unsafe extern "sysv64" fn kinakaze_abi_lutimes(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::stdio::EOF;
+    use kinakaze_vfs::{EAGAIN, ENOTDIR};
 
     /// A file in the host temporary directory, removed when the test ends.
     ///

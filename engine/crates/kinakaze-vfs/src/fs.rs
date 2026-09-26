@@ -652,7 +652,7 @@ fn reopen_local_fd(fd: i32, flags: i32) -> Result<i32, i32> {
     let actual = overlay_object
         .as_ref()
         .map_or(pinned.handle, |(object, _)| object.raw());
-    let reopened = unsafe { object::Object::reopen(actual, access)? };
+    let reopened = object::Object::reopen(actual, access)?;
     let handle = reopened.raw();
     if !directory && !path_only && flags & O_ACCMODE != O_RDONLY {
         // ensure_writable obtains its own metadata-capable query handle; a
@@ -1693,7 +1693,7 @@ impl Ownership {
     }
 }
 fn set_ownership_handle(handle: HANDLE, owner: &Ownership) -> Result<(), i32> {
-    let query = unsafe {
+    let query = {
         object::Object::reopen(
             handle,
             FILE_READ_ATTRIBUTES
@@ -1798,8 +1798,7 @@ pub(crate) fn set_mode_handle(handle: HANDLE, mode: u32) -> Result<(), i32> {
     use windows_sys::Win32::Storage::FileSystem::{
         FILE_BASIC_INFO, FileBasicInfo, GetFileInformationByHandleEx,
     };
-    let object =
-        unsafe { object::Object::reopen(handle, FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES)? };
+    let object = object::Object::reopen(handle, FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES)?;
     let _lock = crate::xattr::InodeLock::acquire(object.raw())?;
     let mut basic: FILE_BASIC_INFO = unsafe { std::mem::zeroed() };
     if unsafe {
@@ -2021,7 +2020,7 @@ pub fn create_device(path: &str, mode: u32, device: u64) -> Result<(), i32> {
 
 /// Collects file information from an open handle.
 pub(crate) fn stat_handle(handle: HANDLE, symlink: bool) -> Result<Stat, i32> {
-    let query = unsafe { object::Object::reopen(handle, FILE_READ_ATTRIBUTES | FILE_READ_EA)? };
+    let query = object::Object::reopen(handle, FILE_READ_ATTRIBUTES | FILE_READ_EA)?;
     stat_with_query(handle, &query, symlink)
 }
 
@@ -3603,7 +3602,7 @@ fn truncate_handle(handle: HANDLE, length: i64) -> Result<(), i32> {
     // The writer also excludes a concurrent verity enable through native share
     // access. O_TRUNC may request this temporary right on an O_RDONLY open;
     // ftruncate validates the original descriptor's write rights above.
-    let writer = unsafe { object::Object::reopen(handle, FILE_WRITE_DATA | FILE_READ_ATTRIBUTES)? };
+    let writer = object::Object::reopen(handle, FILE_WRITE_DATA | FILE_READ_ATTRIBUTES)?;
     verity::ensure_writable(writer.raw())?;
     writer.set_length(length as u64)
 }

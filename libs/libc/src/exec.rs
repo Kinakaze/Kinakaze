@@ -38,8 +38,6 @@ use core::arch::naked_asm;
 use core::ffi::{CStr, c_char, c_int, c_void};
 use core::ptr;
 use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle, RawHandle};
-use std::os::windows::process::CommandExt;
-use std::process::{Child, Command, Stdio};
 
 use windows_sys::Win32::Foundation::{CloseHandle, GetLastError};
 use windows_sys::Win32::System::Threading::{CREATE_NO_WINDOW, ResumeThread};
@@ -77,10 +75,7 @@ fn process_entries() -> ProcessEntries {
 }
 
 #[link(name = "ntdll")]
-unsafe extern "system" {
-    fn NtResumeProcess(process: windows_sys::Win32::Foundation::HANDLE) -> i32;
-    fn RtlNtStatusToDosError(status: i32) -> u32;
-}
+unsafe extern "system" {}
 
 fn trace_spawn_phase(started: &std::time::Instant, operation: &str, phase: &str) {
     if spawn_trace_enabled() {
@@ -292,16 +287,6 @@ fn exec_standard_handle(
     }
 }
 
-fn spawn_suspended(command: &mut Command) -> std::io::Result<Child> {
-    command.creation_flags(CREATE_SUSPENDED | CREATE_NO_WINDOW);
-    // posix_spawn is fork followed by exec: every descriptor without
-    // FD_CLOEXEC must reach the new loader so its VFS handoff can reconstruct
-    // the same Linux fd table. Filtering the complete table here left only
-    // Win32 stdin/stdout/stderr alive, so helpers such as OpenJDK's
-    // jspawnhelper received valid fd numbers in argv but EBADF for the pipes.
-    kinakaze_vfs::with_execve_handle_filter(|| command.spawn())?
-}
-
 fn spawn_suspended_exec(
     loader: &std::path::Path,
     cmd_args: &[String],
@@ -391,22 +376,6 @@ fn spawn_suspended_exec(
         thread: pi.hThread,
         pid: pi.dwProcessId,
     })
-}
-
-/// Resumes a process created with `CREATE_SUSPENDED` through the process handle
-/// already owned by `Child`. This avoids taking a system-wide thread snapshot
-/// merely to rediscover the primary thread that `CreateProcessW` just created.
-fn resume_suspended_process(child: &Child) -> Result<(), c_int> {
-    // SAFETY: `Child` owns a live process handle with the access granted by
-    // CreateProcessW, and this call does not take ownership of that handle.
-    let status = unsafe { NtResumeProcess(child.as_raw_handle().cast()) };
-    if status >= 0 {
-        return Ok(());
-    }
-
-    // SAFETY: `status` is the failing NTSTATUS returned immediately above.
-    let win32_error = unsafe { RtlNtStatusToDosError(status) };
-    Err(kinakaze_vfs::errno_from_win32(win32_error))
 }
 
 /// Finds the process-wide wait coordinator exported by the hosting ELF loader.
@@ -621,31 +590,6 @@ fn exec_host_path(path: &str) -> Result<std::path::PathBuf, c_int> {
         }
     }
     Err(kinakaze_vfs::ENOENT)
-}
-
-fn command_stdio(fd: c_int) -> Result<Stdio, c_int> {
-    let entry = kinakaze_vfs::get(fd)?;
-    if entry.raw == 0 {
-        return Err(kinakaze_vfs::EBADF);
-    }
-    unsafe {
-        let current_process = windows_sys::Win32::System::Threading::GetCurrentProcess();
-        let mut target_handle: windows_sys::Win32::Foundation::HANDLE = ptr::null_mut();
-        let ok = windows_sys::Win32::Foundation::DuplicateHandle(
-            current_process,
-            entry.raw as windows_sys::Win32::Foundation::HANDLE,
-            current_process,
-            &mut target_handle,
-            0,
-            1, // bInheritHandle = TRUE so CreateProcess inherits standard stdio handles
-            windows_sys::Win32::Foundation::DUPLICATE_SAME_ACCESS,
-        );
-        if ok == 0 {
-            return Err(kinakaze_vfs::EBADF);
-        }
-        let owned = std::os::windows::io::OwnedHandle::from_raw_handle(target_handle as RawHandle);
-        Ok(Stdio::from(owned))
-    }
 }
 
 /// Replaces the guest image while preserving the manager's logical process.

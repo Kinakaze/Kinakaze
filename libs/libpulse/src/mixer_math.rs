@@ -292,6 +292,10 @@ pub unsafe extern "sysv64" fn pa_cvolume_get_fade(
 ) -> f32 {
     unsafe { balance(v, m, rear, front) }
 }
+#[allow(
+    non_snake_case,
+    reason = "The exported name is part of the PulseAudio ABI."
+)]
 #[unsafe(export_name = "kinakaze_engine_libpulse_pa_sw_volume_to_dB")]
 pub extern "sysv64" fn pa_sw_volume_to_dB(v: u32) -> f64 {
     if v == 0 {
@@ -300,6 +304,10 @@ pub extern "sysv64" fn pa_sw_volume_to_dB(v: u32) -> f64 {
         60. * (v.min(MAX) as f64 / NORM as f64).log10()
     }
 }
+#[allow(
+    non_snake_case,
+    reason = "The exported name is part of the PulseAudio ABI."
+)]
 #[unsafe(export_name = "kinakaze_engine_libpulse_pa_sw_volume_from_dB")]
 pub extern "sysv64" fn pa_sw_volume_from_dB(db: f64) -> u32 {
     (10f64.powf(db / 60.) * NORM as f64)

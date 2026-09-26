@@ -32,7 +32,7 @@ fn error(minor: u8, code: u8, resource: usize) -> ProtocolError {
         resource,
     }
 }
-pub fn dispatch(
+pub(crate) fn dispatch(
     display: *mut Display,
     minor: u8,
     req: &[u8],

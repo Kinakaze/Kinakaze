@@ -24,7 +24,7 @@ fn context_map() -> &'static Mutex<HashMap<ContextKey, usize>> {
 
 #[unsafe(export_name = "kinakaze_engine_libX11_XUniqueContext")]
 pub unsafe extern "sysv64" fn XUniqueContext() -> XContext {
-    crate::xrm::XrmUniqueQuark()
+    unsafe { crate::xrm::XrmUniqueQuark() }
 }
 
 #[unsafe(export_name = "kinakaze_engine_libX11_XSaveContext")]

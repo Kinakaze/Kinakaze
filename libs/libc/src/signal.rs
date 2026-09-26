@@ -586,7 +586,7 @@ mod tests {
         unsafe extern "sysv64" fn dummy_handler(_sig: c_int) {}
 
         let act = SigAction {
-            sa_handler: dummy_handler as usize,
+            sa_handler: dummy_handler as *const () as usize,
             sa_mask: SigSet { bits: [0; 16] },
             sa_flags: kinakaze_vfs::signal::SA_RESTART,
             _padding: 0,
@@ -603,7 +603,7 @@ mod tests {
             unsafe { kinakaze_abi_sigaction(10, ptr::null(), &mut cur_act) },
             0
         );
-        assert_eq!(cur_act.sa_handler, dummy_handler as usize);
+        assert_eq!(cur_act.sa_handler, dummy_handler as *const () as usize);
         assert_eq!(cur_act.sa_flags, kinakaze_vfs::signal::SA_RESTART);
         assert_eq!(cur_act.sa_restorer, 0x1234_5678);
 

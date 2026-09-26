@@ -53,20 +53,6 @@ pub(crate) fn update<T>(action: impl FnOnce(&mut State) -> T) -> T {
     action(&mut current().lock().unwrap_or_else(|p| p.into_inner()))
 }
 
-/// An operation may walk a retained directory in another filesystem view.
-/// This replaces only the calling thread's temporary view, never CLONE_FS
-/// peers or the process's published root. Guest handlers must be deferred by
-/// the caller until this guard has restored the original view.
-pub(crate) struct Scope(Option<Shared>);
-impl Drop for Scope {
-    fn drop(&mut self) {
-        CURRENT.with(|slot| *slot.borrow_mut() = self.0.take());
-    }
-}
-pub(crate) fn scoped(state: State) -> Scope {
-    let state = Arc::new(Mutex::new(state));
-    Scope(CURRENT.with(|slot| slot.borrow_mut().replace(state)))
-}
 pub fn unshare() {
     let copy = read(Clone::clone);
     CURRENT.with(|slot| *slot.borrow_mut() = Some(Arc::new(Mutex::new(copy))));

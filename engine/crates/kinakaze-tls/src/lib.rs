@@ -1742,7 +1742,7 @@ mod tests {
         assert_eq!(self_ptr, tp);
 
         // Stack canary is placed at offset 0x28 (%fs:0x28)
-        let canary_ptr = unsafe { (tp + 0x28) as *const u64 };
+        let canary_ptr = (tp + 0x28) as *const u64;
         let canary = unsafe { *canary_ptr };
         assert_eq!(canary, block.canary());
     }

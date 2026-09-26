@@ -60,6 +60,7 @@ unsafe fn mask_of(set: *const SigSet) -> Option<u64> {
     Some(unsafe { (*set).bits[0] })
 }
 
+#[cfg(test)]
 /// Returns the mask bit for a signal number, or `None` if out of range.
 fn bit(signal_number: c_int) -> Option<u64> {
     if signal_number <= 0 || signal_number as usize >= NSIG {
@@ -265,10 +266,12 @@ pub struct SigInfo {
     pub padding: [u8; 116],
 }
 
+#[cfg(test)]
 /// `SI_USER`: sent by `kill`, `raise` or `sigqueue` from user space.
 const SI_USER: c_int = 0;
 
 impl SigInfo {
+    #[cfg(test)]
     /// Describes a signal this layer accepted.
     ///
     /// `SI_USER` is the truthful code: every signal in this implementation
@@ -1071,6 +1074,7 @@ mod tests {
 
 pub use kinakaze_vfs::signal::SignalStack as Stack;
 
+#[cfg(test)]
 /// `SS_DISABLE`: flag indicating the alternate stack is disabled.
 const SS_DISABLE: c_int = kinakaze_vfs::signal::SS_DISABLE;
 

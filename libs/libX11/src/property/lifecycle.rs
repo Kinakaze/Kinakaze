@@ -298,7 +298,7 @@ mod tests {
             masks: Default::default(),
         };
         store.properties.insert(
-            (1, 69),
+            (1, 39), // WM_NAME is a predefined atom, independent of shared server state.
             Property {
                 kind: 31,
                 format: 8,
@@ -310,7 +310,7 @@ mod tests {
         for end in 0..bytes.len() {
             assert!(decode(&bytes[..end]).is_err());
         }
-        store.properties.get_mut(&(1, 69)).unwrap().format = 32;
+        store.properties.get_mut(&(1, 39)).unwrap().format = 32;
         assert!(decode(&encode(&store).unwrap()).is_err());
     }
 }

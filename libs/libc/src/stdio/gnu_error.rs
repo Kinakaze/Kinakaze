@@ -227,7 +227,7 @@ unsafe fn report(
         };
     }
     if errnum != 0 {
-        let s = unsafe { crate::string::strerror(errnum) };
+        let s = crate::string::strerror(errnum);
         let colon = b": \0".as_ptr().cast();
         let _ = unsafe { super::fputs(colon, err_stream) };
         let _ = unsafe { super::fputs(s, err_stream) };

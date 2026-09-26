@@ -565,20 +565,6 @@ pub(crate) fn close_display(display: *mut Display) {
     s.queued.retain(|(d, _)| *d != display as usize);
     s.last.retain(|_, (d, _)| *d != display as usize);
 }
-pub(crate) fn close() {
-    kinakaze_libdisplay::ui::interaction::capture(0, false);
-    super::device_events::reset_buttons();
-    let previous = core::mem::take(&mut *state());
-    for (device, grab) in previous.active {
-        if device == 2 {
-            kinakaze_libdisplay::ui::pointer_grab::changed(grab.window, false);
-        }
-        if device == 3 {
-            kinakaze_libdisplay::ui::pointer_grab::keyboard_changed(grab.window, false);
-        }
-        kinakaze_libdisplay::ui::desktop::grab_changed(grab.window, device, false);
-    }
-}
 /// Grabs end with their window, as on the server; the native capture that
 /// backed an active pointer grab on it is released the same way.
 pub(crate) fn window_destroyed(window: Window) {
@@ -596,5 +582,21 @@ pub(crate) fn window_destroyed(window: Window) {
     }
     if released_pointer {
         kinakaze_libdisplay::ui::interaction::capture(0, false);
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn close() {
+    kinakaze_libdisplay::ui::interaction::capture(0, false);
+    super::device_events::reset_buttons();
+    let previous = core::mem::take(&mut *state());
+    for (device, grab) in previous.active {
+        if device == 2 {
+            kinakaze_libdisplay::ui::pointer_grab::changed(grab.window, false);
+        }
+        if device == 3 {
+            kinakaze_libdisplay::ui::pointer_grab::keyboard_changed(grab.window, false);
+        }
+        kinakaze_libdisplay::ui::desktop::grab_changed(grab.window, device, false);
     }
 }

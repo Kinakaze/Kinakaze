@@ -339,7 +339,7 @@ pub(super) unsafe fn install(
         source[..2].copy_from_slice(&[0x0f, 0x0b]);
     }
     Ok(InstructionTrampoline {
-        address,
+        #[cfg(test)]
         trampoline,
         overwritten: length,
     })

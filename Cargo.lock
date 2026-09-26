@@ -314,6 +314,7 @@ dependencies = [
  "kinakaze-v2-host-win",
  "kinakaze-v2-manager",
  "kinakaze-v2-protocol",
+ "kinakaze-v2-rootfs",
  "serde",
  "serde_json",
 ]
@@ -570,6 +571,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "kinakaze-v2-rootfs"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "kinakaze-v2-runtime"
 version = "0.1.0"
 dependencies = [
@@ -591,6 +601,7 @@ dependencies = [
  "kinakaze-v2-bridge",
  "kinakaze-v2-host-win",
  "kinakaze-v2-protocol",
+ "kinakaze-v2-rootfs",
  "serde_json",
 ]
 

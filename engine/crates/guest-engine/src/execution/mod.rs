@@ -20,6 +20,23 @@ pub enum ExecutionError {
     Elf(kinakaze_elf::ElfError),
 }
 
+impl std::fmt::Display for ExecutionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::AddressOverflow => f.write_str("guest address overflow"),
+            Self::MappingFailed { object, len } => write!(f, "cannot map {len} bytes for {object}"),
+            Self::ProtectionFailed { object } => {
+                write!(f, "cannot change memory protection for {object}")
+            }
+            Self::InvalidTls { object } => write!(f, "invalid TLS metadata in {object}"),
+            Self::InstructionPatch { address, detail } => {
+                write!(f, "cannot patch instruction at {address:#x}: {detail}")
+            }
+            Self::Elf(error) => write!(f, "invalid ELF image: {error:?}"),
+        }
+    }
+}
+
 impl From<kinakaze_elf::ElfError> for ExecutionError {
     fn from(value: kinakaze_elf::ElfError) -> Self {
         Self::Elf(value)
@@ -70,7 +87,7 @@ pub unsafe extern "C" fn prepare(
     match unsafe { prepare_image(view, config, output) } {
         Ok(()) => 0,
         Err(error) => {
-            let message = format!("{error:?}");
+            let message = error.to_string();
             let length = message.len().min(output.error.len() - 1);
             output.error[..length].copy_from_slice(&message.as_bytes()[..length]);
             8

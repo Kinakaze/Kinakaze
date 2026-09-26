@@ -229,6 +229,7 @@ impl FileOriginRef {
         self.owner().shared
     }
 
+    #[cfg(test)]
     pub(super) fn initial_protection(&self) -> c_int {
         self.owner().initial_protection
     }

@@ -862,7 +862,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_truncate64(path: *const c_char, lengt
     let value = borrowed.and_then(|p| {
         let fd = fs::open(p, 0x0002, 0)?; // O_RDWR
         let res = fs::ftruncate(fd, length);
-        let _ = unsafe { crate::kinakaze_close(fd) };
+        let _ = crate::kinakaze_close(fd);
         res
     });
     match value {
@@ -1880,16 +1880,21 @@ pub extern "sysv64" fn fdopendir(fd: c_int) -> *mut Dir {
 }
 
 /// `dirfd` under its bare Linux name.
+/// # Safety
+/// A non-null directory must point to a live stream owned by opendir/fdopendir.
 #[unsafe(no_mangle)]
-pub extern "sysv64" fn dirfd(directory: *mut Dir) -> c_int {
-    kinakaze_abi_dirfd(directory)
+pub unsafe extern "sysv64" fn dirfd(directory: *mut Dir) -> c_int {
+    // SAFETY: The caller supplies the live directory stream required by dirfd.
+    unsafe { kinakaze_abi_dirfd(directory) }
 }
 
 /// `dirfd`: the descriptor behind a stream.
 ///
 /// Both opendir and fdopendir keep their single owned descriptor in the stream.
+/// # Safety
+/// A non-null directory must point to a live stream owned by opendir/fdopendir.
 #[unsafe(no_mangle)]
-pub extern "sysv64" fn kinakaze_abi_dirfd(directory: *mut Dir) -> c_int {
+pub unsafe extern "sysv64" fn kinakaze_abi_dirfd(directory: *mut Dir) -> c_int {
     if directory.is_null() {
         set_errno(EINVAL);
         return -1;
@@ -4264,7 +4269,7 @@ mod tests {
         let stream = kinakaze_abi_fdopendir(fd);
         assert!(!stream.is_null(), "fdopendir on a directory descriptor");
         assert_eq!(
-            kinakaze_abi_dirfd(stream),
+            unsafe { kinakaze_abi_dirfd(stream) },
             fd,
             "dirfd should report the adopted descriptor"
         );
@@ -4294,13 +4299,13 @@ mod tests {
         }
         // `opendir` opens a descriptor of its own for the listing, so this is a
         // real one rather than the `EINVAL` an implementation without one owes.
-        let fd = kinakaze_abi_dirfd(stream);
+        let fd = unsafe { kinakaze_abi_dirfd(stream) };
         assert!(fd >= 0, "opendir's stream should carry a descriptor");
         assert!(kinakaze_vfs::get(fd).is_ok(), "and it should be open");
         // SAFETY: the stream came from opendir and is not used again.
         unsafe { crate::dirent::kinakaze_abi_closedir(stream) };
 
-        assert_eq!(kinakaze_abi_dirfd(ptr::null_mut()), -1);
+        assert_eq!(unsafe { kinakaze_abi_dirfd(ptr::null_mut()) }, -1);
         assert_eq!(crate::kinakaze_errno(), EINVAL);
     }
 
@@ -4559,10 +4564,10 @@ pub unsafe extern "sysv64" fn kinakaze_abi_fmemopen(
     size: usize,
     _mode: *const c_char,
 ) -> *mut crate::stdio::File {
-    let stream = unsafe { crate::stdio::exports::kinakaze_abi_tmpfile() };
+    let stream = crate::stdio::exports::kinakaze_abi_tmpfile();
     if !stream.is_null() && !buf.is_null() && size > 0 {
         let _ = unsafe { crate::stdio::fwrite(buf, 1, size, stream) };
-        let _ = unsafe { crate::stdio::fseek(stream, 0, 0) };
+        let _ = crate::stdio::fseek(stream, 0, 0);
     }
     stream
 }

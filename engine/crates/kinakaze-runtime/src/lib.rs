@@ -205,7 +205,6 @@ pub struct ForkParticipant {
 unsafe impl Send for ForkParticipant {}
 unsafe impl Sync for ForkParticipant {}
 
-const MAX_MODULES: usize = 32;
 const MAX_CHILDREN: usize = 64;
 
 /// Number of guest-visible threads in this hosted process.
@@ -271,7 +270,7 @@ struct ProcessThreadExports {
     child_activity_event: Option<ProcessUsizeExport>,
     participant_owner: Option<ProcessParticipantOwnerExport>,
     register_handle_slot: Option<handle_slots::RegistrationExport>,
-    unregister_handle_slot: Option<handle_slots::RegistrationExport>,
+    unregister_handle_slot: Option<handle_slots::UnregistrationExport>,
 }
 
 #[cfg(windows)]
@@ -822,6 +821,7 @@ struct MappingRegistry {
 }
 
 impl MappingRegistry {
+    #[cfg(test)]
     fn clear(&mut self) {
         self.entries.clear();
         self.modules.clear();
@@ -843,10 +843,6 @@ impl MappingRegistry {
             self.entries.push(mapping);
         }
         true
-    }
-
-    fn remove_mapping(&mut self, base: usize) {
-        self.entries.retain(|m| m.base != base);
     }
 
     fn insert_module(&mut self, module: usize) -> bool {
@@ -5444,7 +5440,7 @@ mod windows {
     use windows_sys::Win32::System::Environment::GetCommandLineW;
     use windows_sys::Win32::System::LibraryLoader::{
         GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-        GetModuleFileNameW, GetModuleHandleExW, GetModuleHandleW, LoadLibraryW,
+        GetModuleFileNameW, GetModuleHandleExW, GetModuleHandleW,
     };
     use windows_sys::Win32::System::Memory::{
         CreateFileMappingW, FILE_MAP_READ, FILE_MAP_WRITE, MEM_COMMIT, MEM_FREE,
@@ -5480,7 +5476,6 @@ mod windows {
     const WAIT_EVENT_EXITED: i32 = 1;
     const WAIT_EVENT_STOPPED: i32 = 2;
     const WAIT_EVENT_CONTINUED: i32 = 4;
-    const STILL_ACTIVE: u32 = 259;
 
     #[derive(Clone, Copy)]
     struct WaitCandidate {

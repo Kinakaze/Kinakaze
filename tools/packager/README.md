@@ -7,8 +7,14 @@
 The packager reads standard PE exports and COFF import libraries. The import
 library supplies each module's native filename. Original DLL bytes are copied
 unchanged to `rootfs/lib/<name>.so`; required toolchain DLLs retain their original
-names in the same directory. The distribution has three top-level entries:
-`init.exe`, `worker.exe`, and `rootfs/`. Entry executables link Rust's standard
+names in the same directory. The distribution contains `init.exe`, `worker.exe`,
+`rootfs/`, and `rootfs.manifest.json`. The manifest configures directories and
+default guest files on first launch; it is not a native module catalog.
+Existing manifests are preserved when updating native binaries. Release staging
+adds verified `rootfs-seed/` payloads using `tools/prepare-release-rootfs.py`,
+including every native provider, shared runtime dependency, base configuration,
+and the locked guest package closure. A new root is a complete installation.
+Entry executables link Rust's standard
 library statically; native modules retain their shared standard-library DLL.
 There is no module catalog, image patching, heap redirection or runtime ELF facade.
 

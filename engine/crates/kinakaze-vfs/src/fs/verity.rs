@@ -49,7 +49,7 @@ pub fn lock(handle: HANDLE) -> Result<Guard, i32> {
     // access on behalf of the caller.
     let query;
     let identity = if Object::granted_access(handle)? & FILE_READ_ATTRIBUTES == 0 {
-        query = unsafe { Object::reopen(handle, QUERY_ACCESS)? };
+        query = Object::reopen(handle, QUERY_ACCESS)?;
         query.raw()
     } else {
         handle
@@ -215,7 +215,7 @@ fn recover_with(
 /// an interrupted enable is not represented as a successful verity file.
 /// The caller keeps `handle` live through this call.
 pub fn descriptor(handle: HANDLE) -> Result<Option<Descriptor>, i32> {
-    let object = unsafe { Object::reopen(handle, QUERY_ACCESS)? };
+    let object = Object::reopen(handle, QUERY_ACCESS)?;
     Ok(read_record(&object)?
         .filter(|record| record.state == ENABLED)
         .map(|record| record.descriptor))
@@ -224,14 +224,14 @@ pub fn descriptor(handle: HANDLE) -> Result<Option<Descriptor>, i32> {
 /// Includes PREPARING: unpublished tree bytes must never change guest st_size.
 /// The caller keeps `handle` live through this call.
 pub fn logical_size(handle: HANDLE) -> Result<Option<u64>, i32> {
-    let object = unsafe { Object::reopen(handle, QUERY_ACCESS)? };
+    let object = Object::reopen(handle, QUERY_ACCESS)?;
     Ok(read_record(&object)?.map(|record| record.descriptor.data_size()))
 }
 
 /// Atomic logical-size query for a regular file, including ordinary files that
 /// may begin an enable transaction concurrently with this query.
 pub fn authoritative_size(handle: HANDLE) -> Result<u64, i32> {
-    let object = unsafe { Object::reopen(handle, QUERY_ACCESS)? };
+    let object = Object::reopen(handle, QUERY_ACCESS)?;
     authoritative_size_object(&object)
 }
 
@@ -250,7 +250,7 @@ pub(crate) fn authoritative_size_object(object: &Object) -> Result<u64, i32> {
 /// share reservation. An orphan PREPARING transaction is recovered under the
 /// same cross-process inode mutex used by enable; no process liveness guesses.
 pub fn ensure_writable(handle: HANDLE) -> Result<(), i32> {
-    let query = unsafe { Object::reopen(handle, QUERY_ACCESS)? };
+    let query = Object::reopen(handle, QUERY_ACCESS)?;
     let Some(record) = read_record(&query)? else {
         return Ok(());
     };
@@ -264,7 +264,7 @@ pub fn ensure_writable(handle: HANDLE) -> Result<(), i32> {
     if record.state == ENABLED {
         return Err(EPERM);
     }
-    let writer = unsafe { Object::reopen(handle, QUERY_ACCESS | GENERIC_WRITE | FILE_WRITE_EA)? };
+    let writer = Object::reopen(handle, QUERY_ACCESS | GENERIC_WRITE | FILE_WRITE_EA)?;
     recover(&writer, &record)
 }
 
@@ -299,12 +299,10 @@ impl Opened {
         })?;
         let noatime = entry.flags.contains(FdFlags::NOATIME);
         let object = if overlay.is_some() || noatime {
-            let object = unsafe {
-                Object::reopen(
-                    object.raw(),
-                    Object::granted_access(object.raw())? | FILE_WRITE_ATTRIBUTES,
-                )?
-            };
+            let object = Object::reopen(
+                object.raw(),
+                Object::granted_access(object.raw())? | FILE_WRITE_ATTRIBUTES,
+            )?;
             object.suppress_atime()?;
             object
         } else {
@@ -428,7 +426,7 @@ pub fn verified_read(handle: HANDLE, offset: u64, bytes: &mut [u8]) -> Result<Op
     if Object::granted_access(handle)? & FILE_READ_DATA == 0 {
         return Err(EBADF);
     }
-    let object = unsafe { Object::reopen(handle, GENERIC_READ | QUERY_ACCESS)? };
+    let object = Object::reopen(handle, GENERIC_READ | QUERY_ACCESS)?;
     read_object(&object, offset, bytes)
 }
 
@@ -443,8 +441,7 @@ pub(crate) fn verified_read_preserving_atime(
     if Object::granted_access(handle)? & FILE_READ_DATA == 0 {
         return Err(EBADF);
     }
-    let object =
-        unsafe { Object::reopen(handle, GENERIC_READ | QUERY_ACCESS | FILE_WRITE_ATTRIBUTES)? };
+    let object = Object::reopen(handle, GENERIC_READ | QUERY_ACCESS | FILE_WRITE_ATTRIBUTES)?;
     object.suppress_atime()?;
     read_object(&object, offset, bytes)
 }
@@ -478,7 +475,7 @@ pub(crate) fn read_object(
 /// native inode and serialized transaction identity. No process-local owner is
 /// required. A stale identity is ESTALE; PREPARING is EBUSY, never a fake root.
 pub fn staged_descriptor(handle: HANDLE, transaction: TransactionId) -> Result<Descriptor, i32> {
-    let object = unsafe { Object::reopen(handle, QUERY_ACCESS)? };
+    let object = Object::reopen(handle, QUERY_ACCESS)?;
     let _lock = crate::xattr::InodeLock::acquire(object.raw())?;
     Ok(staged_record(&object, transaction)?.descriptor)
 }
@@ -508,8 +505,7 @@ pub fn staged_verified_read(
     if Object::granted_access(handle)? & FILE_READ_DATA == 0 {
         return Err(EBADF);
     }
-    let object =
-        unsafe { Object::reopen(handle, GENERIC_READ | QUERY_ACCESS | FILE_WRITE_ATTRIBUTES)? };
+    let object = Object::reopen(handle, GENERIC_READ | QUERY_ACCESS | FILE_WRITE_ATTRIBUTES)?;
     object.suppress_atime()?;
     let _lock = crate::xattr::InodeLock::acquire(object.raw())?;
     let record = staged_record(&object, transaction)?;
@@ -572,7 +568,7 @@ fn read_metadata_object(
     bytes: &mut [u8],
 ) -> Result<usize, i32> {
     offset.checked_add(bytes.len() as u64).ok_or(EINVAL)?;
-    let object = unsafe { Object::reopen(pin.raw(), GENERIC_READ | QUERY_ACCESS)? };
+    let object = Object::reopen(pin.raw(), GENERIC_READ | QUERY_ACCESS)?;
     let record = read_record(&object)?
         .filter(|record| record.state == ENABLED)
         .ok_or(ENODATA)?;

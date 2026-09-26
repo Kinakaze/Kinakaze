@@ -26,7 +26,7 @@ const MAX_SNAPSHOT: usize = 64;
 
 #[derive(Clone, Copy, Debug)]
 pub struct InstructionTrampoline {
-    pub address: usize,
+    #[cfg(test)]
     pub trampoline: usize,
     pub overwritten: usize,
 }
@@ -149,6 +149,7 @@ fn syscall_continuations() -> &'static Mutex<HashMap<usize, usize>> {
     CONTINUATIONS.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
+#[cfg(test)]
 /// Translates the architectural address immediately following a raw `syscall`
 /// to the relocated copy of any instructions consumed by its five-byte detour.
 /// Returns-twice operations such as `clone` resume through this address, while
@@ -160,6 +161,7 @@ pub fn translated_syscall_continuation(logical: usize) -> Option<usize> {
         .and_then(|continuations| continuations.get(&logical).copied())
 }
 
+#[cfg(test)]
 /// Installs a permanent trampoline at an FS-relative instruction.
 ///
 /// # Safety
@@ -332,7 +334,7 @@ unsafe fn install_impl(
     }
 
     Ok(InstructionTrampoline {
-        address,
+        #[cfg(test)]
         trampoline,
         overwritten,
     })
@@ -455,6 +457,7 @@ fn emit_load_gpr_from_gs(
     Ok(())
 }
 
+#[cfg(test)]
 /// Installs a permanent trampoline for a raw Linux `syscall` instruction.
 ///
 /// Overwrites the 2-byte `syscall` plus any necessary trailing instructions up to >= 5 bytes
@@ -656,12 +659,13 @@ unsafe fn install_syscall_impl(
         .insert(address + first.len(), relocated_continuation);
 
     Ok(InstructionTrampoline {
-        address,
+        #[cfg(test)]
         trampoline,
         overwritten,
     })
 }
 
+#[cfg(test)]
 #[cfg(not(all(windows, target_arch = "x86_64")))]
 pub unsafe fn install_syscall(
     _: usize,
@@ -1021,24 +1025,6 @@ fn emit_load_transition_field(code: &mut Vec<u8>, teb_offset: u32, field: u32) {
 fn emit_store_rcx_to_transition(code: &mut Vec<u8>, teb_offset: u32) {
     emit_load_host_transition(code, teb_offset);
     code.extend_from_slice(&[0x49, 0x89, 0x8b]); // mov [r11+field],rcx
-}
-
-fn emit_restore_fs(
-    code: &mut Vec<u8>,
-    teb_offset: usize,
-    scratch_teb_offset: usize,
-) -> Result<(), ExecutionError> {
-    let teb_offset = u32::try_from(teb_offset).map_err(|_| ExecutionError::AddressOverflow)?;
-    let scratch_teb_offset =
-        u32::try_from(scratch_teb_offset).map_err(|_| ExecutionError::AddressOverflow)?;
-    code.extend_from_slice(&[0x65, 0x4c, 0x89, 0x1c, 0x25]); // mov gs:[scratch],r11
-    code.extend_from_slice(&scratch_teb_offset.to_le_bytes());
-    code.extend_from_slice(&[0x65, 0x4c, 0x8b, 0x1c, 0x25]); // mov r11,gs:[disp32]
-    code.extend_from_slice(&teb_offset.to_le_bytes());
-    code.extend_from_slice(&[0xf3, 0x49, 0x0f, 0xae, 0xd3]); // wrfsbase r11
-    code.extend_from_slice(&[0x65, 0x4c, 0x8b, 0x1c, 0x25]); // mov r11,gs:[scratch]
-    code.extend_from_slice(&scratch_teb_offset.to_le_bytes());
-    Ok(())
 }
 
 fn emit_absolute_jump(code: &mut Vec<u8>, target: usize) {

@@ -100,7 +100,7 @@ fn decode(bytes: &[u8]) -> Result<Option<Target>, i32> {
 }
 
 pub(super) fn read(file: HANDLE) -> Result<Option<Target>, i32> {
-    let query = unsafe { Object::reopen(file, FILE_READ_ATTRIBUTES)? };
+    let query = Object::reopen(file, FILE_READ_ATTRIBUTES)?;
     let mut buffer = vec![0u64; 16_384 / 8];
     let mut io = NativeIoStatus::default();
     let status = unsafe {

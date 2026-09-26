@@ -506,7 +506,7 @@ fn classify(path: &str) -> Option<Node> {
                     return Some(Node::SysNetIpv6Dir);
                 };
                 if fifth == "conf" {
-                    let Some(sixth) = parts.next() else {
+                    let Some(_) = parts.next() else {
                         return Some(Node::SysNetIpv6ConfDir);
                     };
                     let Some(_seventh) = parts.next() else {
@@ -972,6 +972,7 @@ pub fn write_file(path: &str, bytes: &[u8], offset: u64) -> Result<usize, i32> {
     }
 }
 
+#[cfg(test)]
 /// Shared process rows store the cgroup mount path; procfs exposes the path
 /// relative to that hierarchy. An empty freshly registered row means root.
 fn cgroup_relative_path(path: &str) -> Result<&str, i32> {

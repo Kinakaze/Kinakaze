@@ -53,20 +53,6 @@ const CANARY_DISPLACEMENT: u32 = 0x28;
 #[derive(Clone, Copy, Debug)]
 pub struct PatchedSite {
     pub address: usize,
-    pub original_displacement: u32,
-    pub new_displacement: u32,
-}
-
-/// The recovery actions VEH can take for an FS-relative instruction.
-#[derive(Clone, Copy, Debug)]
-pub enum HealedThreadPointerSite {
-    /// A late/generated TCB self-pointer read was permanently rewritten.
-    Patched(PatchedSite),
-    /// A register-relative or otherwise non-local FS access now uses a permanent
-    /// out-of-line trampoline.
-    Trampoline(crate::execution::instruction_trampoline::InstructionTrampoline),
-    /// The instruction was safely emulated in-place in the VEH context.
-    Emulated,
 }
 
 /// What a scan found and changed.
@@ -83,6 +69,7 @@ pub struct PatchReport {
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum AotSyscallPolicy {
     /// Preserve instruction length and execution flow without entering Windows.
+    #[cfg(test)]
     Nop,
     /// Replace the site with `ud2`, producing an immediate attributable trap.
     #[default]
@@ -99,7 +86,7 @@ pub enum AotSyscallPolicy {
 /// Only the exact encodings this understands are touched, and anything else is left
 /// alone and reported: silently mis-patching an instruction would corrupt code in a
 /// way that surfaces arbitrarily far away.
-pub fn retarget_thread_pointer_reads(
+pub(super) fn retarget_thread_pointer_reads(
     object: &Image<'_>,
     canary_slot_offset: usize,
     thread_pointer_teb_offset: Option<usize>,
@@ -315,11 +302,7 @@ fn patch_code(
             continue;
         }
 
-        let site = PatchedSite {
-            address,
-            original_displacement: instruction.memory_displacement64() as u32,
-            new_displacement: instruction.memory_displacement64() as u32,
-        };
+        let site = PatchedSite { address };
         // A short FS instruction may consume following whole instructions to
         // make room for E9. Safety against independent entries is checked after
         // every target and syscall address in this segment has been collected.
@@ -364,6 +347,7 @@ fn patch_code(
             trampoline: use_trampoline,
         });
         match syscall_policy {
+            #[cfg(test)]
             AotSyscallPolicy::Nop => {
                 let bytes = &mut code[instruction_offset..instruction_offset + length];
                 bytes.fill(0x90);
@@ -882,463 +866,6 @@ pub(crate) fn apply_patch(bytes: &mut [u8], patch: InstructionPatch) {
     bytes[patch.prefix_offset] = PREFIX_GS;
 }
 
-/// VEH fallback for code that was generated or made executable after AOT linking.
-///
-#[cfg(windows)]
-unsafe fn get_reg_val(
-    ctx: &windows_sys::Win32::System::Diagnostics::Debug::CONTEXT,
-    reg: Register,
-) -> u64 {
-    match reg {
-        Register::RAX => ctx.Rax,
-        Register::RBX => ctx.Rbx,
-        Register::RCX => ctx.Rcx,
-        Register::RDX => ctx.Rdx,
-        Register::RSI => ctx.Rsi,
-        Register::RDI => ctx.Rdi,
-        Register::RBP => ctx.Rbp,
-        Register::RSP => ctx.Rsp,
-        Register::R8 => ctx.R8,
-        Register::R9 => ctx.R9,
-        Register::R10 => ctx.R10,
-        Register::R11 => ctx.R11,
-        Register::R12 => ctx.R12,
-        Register::R13 => ctx.R13,
-        Register::R14 => ctx.R14,
-        Register::R15 => ctx.R15,
-        Register::EAX => ctx.Rax as u32 as u64,
-        Register::EBX => ctx.Rbx as u32 as u64,
-        Register::ECX => ctx.Rcx as u32 as u64,
-        Register::EDX => ctx.Rdx as u32 as u64,
-        Register::ESI => ctx.Rsi as u32 as u64,
-        Register::EDI => ctx.Rdi as u32 as u64,
-        Register::EBP => ctx.Rbp as u32 as u64,
-        Register::ESP => ctx.Rsp as u32 as u64,
-        Register::R8D => ctx.R8 as u32 as u64,
-        Register::R9D => ctx.R9 as u32 as u64,
-        Register::R10D => ctx.R10 as u32 as u64,
-        Register::R11D => ctx.R11 as u32 as u64,
-        Register::R12D => ctx.R12 as u32 as u64,
-        Register::R13D => ctx.R13 as u32 as u64,
-        Register::R14D => ctx.R14 as u32 as u64,
-        Register::R15D => ctx.R15 as u32 as u64,
-        Register::AX => ctx.Rax as u16 as u64,
-        Register::BX => ctx.Rbx as u16 as u64,
-        Register::CX => ctx.Rcx as u16 as u64,
-        Register::DX => ctx.Rdx as u16 as u64,
-        Register::SI => ctx.Rsi as u16 as u64,
-        Register::DI => ctx.Rdi as u16 as u64,
-        Register::BP => ctx.Rbp as u16 as u64,
-        Register::SP => ctx.Rsp as u16 as u64,
-        Register::R8W => ctx.R8 as u16 as u64,
-        Register::R9W => ctx.R9 as u16 as u64,
-        Register::R10W => ctx.R10 as u16 as u64,
-        Register::R11W => ctx.R11 as u16 as u64,
-        Register::R12W => ctx.R12 as u16 as u64,
-        Register::R13W => ctx.R13 as u16 as u64,
-        Register::R14W => ctx.R14 as u16 as u64,
-        Register::R15W => ctx.R15 as u16 as u64,
-        Register::AL => ctx.Rax as u8 as u64,
-        Register::BL => ctx.Rbx as u8 as u64,
-        Register::CL => ctx.Rcx as u8 as u64,
-        Register::DL => ctx.Rdx as u8 as u64,
-        Register::SIL => ctx.Rsi as u8 as u64,
-        Register::DIL => ctx.Rdi as u8 as u64,
-        Register::BPL => ctx.Rbp as u8 as u64,
-        Register::SPL => ctx.Rsp as u8 as u64,
-        Register::R8L => ctx.R8 as u8 as u64,
-        Register::R9L => ctx.R9 as u8 as u64,
-        Register::R10L => ctx.R10 as u8 as u64,
-        Register::R11L => ctx.R11 as u8 as u64,
-        Register::R12L => ctx.R12 as u8 as u64,
-        Register::R13L => ctx.R13 as u8 as u64,
-        Register::R14L => ctx.R14 as u8 as u64,
-        Register::R15L => ctx.R15 as u8 as u64,
-        _ => 0,
-    }
-}
-
-#[cfg(windows)]
-unsafe fn set_reg_val(
-    ctx: &mut windows_sys::Win32::System::Diagnostics::Debug::CONTEXT,
-    reg: Register,
-    val: u64,
-) {
-    match reg {
-        Register::RAX => ctx.Rax = val,
-        Register::RBX => ctx.Rbx = val,
-        Register::RCX => ctx.Rcx = val,
-        Register::RDX => ctx.Rdx = val,
-        Register::RSI => ctx.Rsi = val,
-        Register::RDI => ctx.Rdi = val,
-        Register::RBP => ctx.Rbp = val,
-        Register::RSP => ctx.Rsp = val,
-        Register::R8 => ctx.R8 = val,
-        Register::R9 => ctx.R9 = val,
-        Register::R10 => ctx.R10 = val,
-        Register::R11 => ctx.R11 = val,
-        Register::R12 => ctx.R12 = val,
-        Register::R13 => ctx.R13 = val,
-        Register::R14 => ctx.R14 = val,
-        Register::R15 => ctx.R15 = val,
-        Register::EAX => ctx.Rax = val as u32 as u64,
-        Register::EBX => ctx.Rbx = val as u32 as u64,
-        Register::ECX => ctx.Rcx = val as u32 as u64,
-        Register::EDX => ctx.Rdx = val as u32 as u64,
-        Register::ESI => ctx.Rsi = val as u32 as u64,
-        Register::EDI => ctx.Rdi = val as u32 as u64,
-        Register::EBP => ctx.Rbp = val as u32 as u64,
-        Register::ESP => ctx.Rsp = val as u32 as u64,
-        Register::R8D => ctx.R8 = val as u32 as u64,
-        Register::R9D => ctx.R9 = val as u32 as u64,
-        Register::R10D => ctx.R10 = val as u32 as u64,
-        Register::R11D => ctx.R11 = val as u32 as u64,
-        Register::R12D => ctx.R12 = val as u32 as u64,
-        Register::R13D => ctx.R13 = val as u32 as u64,
-        Register::R14D => ctx.R14 = val as u32 as u64,
-        Register::R15D => ctx.R15 = val as u32 as u64,
-        Register::AX => ctx.Rax = (ctx.Rax & !0xffff) | (val & 0xffff),
-        Register::BX => ctx.Rbx = (ctx.Rbx & !0xffff) | (val & 0xffff),
-        Register::CX => ctx.Rcx = (ctx.Rcx & !0xffff) | (val & 0xffff),
-        Register::DX => ctx.Rdx = (ctx.Rdx & !0xffff) | (val & 0xffff),
-        Register::SI => ctx.Rsi = (ctx.Rsi & !0xffff) | (val & 0xffff),
-        Register::DI => ctx.Rdi = (ctx.Rdi & !0xffff) | (val & 0xffff),
-        Register::BP => ctx.Rbp = (ctx.Rbp & !0xffff) | (val & 0xffff),
-        Register::SP => ctx.Rsp = (ctx.Rsp & !0xffff) | (val & 0xffff),
-        Register::R8W => ctx.R8 = (ctx.R8 & !0xffff) | (val & 0xffff),
-        Register::R9W => ctx.R9 = (ctx.R9 & !0xffff) | (val & 0xffff),
-        Register::R10W => ctx.R10 = (ctx.R10 & !0xffff) | (val & 0xffff),
-        Register::R11W => ctx.R11 = (ctx.R11 & !0xffff) | (val & 0xffff),
-        Register::R12W => ctx.R12 = (ctx.R12 & !0xffff) | (val & 0xffff),
-        Register::R13W => ctx.R13 = (ctx.R13 & !0xffff) | (val & 0xffff),
-        Register::R14W => ctx.R14 = (ctx.R14 & !0xffff) | (val & 0xffff),
-        Register::R15W => ctx.R15 = (ctx.R15 & !0xffff) | (val & 0xffff),
-        Register::AL => ctx.Rax = (ctx.Rax & !0xff) | (val & 0xff),
-        Register::BL => ctx.Rbx = (ctx.Rbx & !0xff) | (val & 0xff),
-        Register::CL => ctx.Rcx = (ctx.Rcx & !0xff) | (val & 0xff),
-        Register::DL => ctx.Rdx = (ctx.Rdx & !0xff) | (val & 0xff),
-        Register::SIL => ctx.Rsi = (ctx.Rsi & !0xff) | (val & 0xff),
-        Register::DIL => ctx.Rdi = (ctx.Rdi & !0xff) | (val & 0xff),
-        Register::BPL => ctx.Rbp = (ctx.Rbp & !0xff) | (val & 0xff),
-        Register::SPL => ctx.Rsp = (ctx.Rsp & !0xff) | (val & 0xff),
-        Register::R8L => ctx.R8 = (ctx.R8 & !0xff) | (val & 0xff),
-        Register::R9L => ctx.R9 = (ctx.R9 & !0xff) | (val & 0xff),
-        Register::R10L => ctx.R10 = (ctx.R10 & !0xff) | (val & 0xff),
-        Register::R11L => ctx.R11 = (ctx.R11 & !0xff) | (val & 0xff),
-        Register::R12L => ctx.R12 = (ctx.R12 & !0xff) | (val & 0xff),
-        Register::R13L => ctx.R13 = (ctx.R13 & !0xff) | (val & 0xff),
-        Register::R14L => ctx.R14 = (ctx.R14 & !0xff) | (val & 0xff),
-        Register::R15L => ctx.R15 = (ctx.R15 & !0xff) | (val & 0xff),
-        _ => {}
-    }
-}
-
-#[cfg(windows)]
-unsafe fn emulate_fs_instruction(
-    ctx: *mut windows_sys::Win32::System::Diagnostics::Debug::CONTEXT,
-    instruction: &Instruction,
-    thread_pointer_teb_offset: usize,
-) -> bool {
-    let ctx_ref = unsafe { &mut *ctx };
-    let mut linux_tp: usize = 0;
-    unsafe {
-        let teb_ptr: usize;
-        std::arch::asm!("mov {0}, gs:[0x30]", out(reg) teb_ptr);
-        if teb_ptr != 0 {
-            linux_tp = *((teb_ptr + thread_pointer_teb_offset) as *const usize);
-        }
-    }
-    if linux_tp == 0 {
-        return false;
-    }
-
-    let raw_disp = instruction.memory_displacement64();
-    let disp: i64 = if instruction.memory_displ_size() <= 4 || raw_disp <= 0xffff_ffff {
-        (raw_disp as u32 as i32) as i64
-    } else {
-        raw_disp as i64
-    };
-    let base_val = if instruction.memory_base() != Register::None {
-        unsafe { get_reg_val(ctx_ref, instruction.memory_base()) }
-    } else {
-        0
-    };
-    let index_val = if instruction.memory_index() != Register::None {
-        unsafe { get_reg_val(ctx_ref, instruction.memory_index()) }
-            .wrapping_mul(instruction.memory_index_scale() as u64)
-    } else {
-        0
-    };
-    let target_addr = (linux_tp as u64)
-        .wrapping_add(disp as u64)
-        .wrapping_add(base_val)
-        .wrapping_add(index_val) as usize;
-
-    if std::env::var_os("KINAKAZE_REPORT_TRAPS").is_some() {
-        eprintln!(
-            "kinakaze: [EMULATE_FS] rip={:#x} tp={:#x} disp={:#x} ({}) target={:#x} mnem={:?} op0={:?} op1={:?}",
-            ctx_ref.Rip,
-            linux_tp,
-            raw_disp,
-            disp,
-            target_addr,
-            instruction.mnemonic(),
-            instruction.op0_kind(),
-            instruction.op1_kind()
-        );
-    }
-
-    match instruction.mnemonic() {
-        Mnemonic::Mov => {
-            if instruction.op0_kind() == iced_x86::OpKind::Register {
-                let val = match instruction.op0_register().size() {
-                    1 => unsafe { *(target_addr as *const u8) as u64 },
-                    2 => unsafe { *(target_addr as *const u16) as u64 },
-                    4 => unsafe { *(target_addr as *const u32) as u64 },
-                    8 => unsafe { *(target_addr as *const u64) },
-                    _ => return false,
-                };
-                unsafe { set_reg_val(ctx_ref, instruction.op0_register(), val) };
-            } else if instruction.op1_kind() == iced_x86::OpKind::Register {
-                let val = unsafe { get_reg_val(ctx_ref, instruction.op1_register()) };
-                match instruction.op1_register().size() {
-                    1 => unsafe { *(target_addr as *mut u8) = val as u8 },
-                    2 => unsafe { *(target_addr as *mut u16) = val as u16 },
-                    4 => unsafe { *(target_addr as *mut u32) = val as u32 },
-                    8 => unsafe { *(target_addr as *mut u64) = val },
-                    _ => return false,
-                }
-            } else if matches!(
-                instruction.op1_kind(),
-                iced_x86::OpKind::Immediate8
-                    | iced_x86::OpKind::Immediate16
-                    | iced_x86::OpKind::Immediate32
-                    | iced_x86::OpKind::Immediate64
-                    | iced_x86::OpKind::Immediate8to16
-                    | iced_x86::OpKind::Immediate8to32
-                    | iced_x86::OpKind::Immediate8to64
-                    | iced_x86::OpKind::Immediate32to64
-            ) {
-                let imm = instruction.immediate64();
-                match instruction.memory_size().size() {
-                    1 => unsafe { *(target_addr as *mut u8) = imm as u8 },
-                    2 => unsafe { *(target_addr as *mut u16) = imm as u16 },
-                    4 => unsafe { *(target_addr as *mut u32) = imm as u32 },
-                    8 => unsafe { *(target_addr as *mut u64) = imm },
-                    _ => return false,
-                }
-            } else {
-                return false;
-            }
-        }
-        Mnemonic::Lea => {
-            unsafe { set_reg_val(ctx_ref, instruction.op0_register(), target_addr as u64) };
-        }
-        Mnemonic::Cmp => {
-            let mem_val = match instruction.memory_size().size() {
-                1 => unsafe { *(target_addr as *const u8) as u64 },
-                2 => unsafe { *(target_addr as *const u16) as u64 },
-                4 => unsafe { *(target_addr as *const u32) as u64 },
-                8 => unsafe { *(target_addr as *const u64) },
-                _ => return false,
-            };
-            let other_val = if instruction.op0_kind() == iced_x86::OpKind::Register {
-                unsafe { get_reg_val(ctx_ref, instruction.op0_register()) }
-            } else if instruction.op1_kind() == iced_x86::OpKind::Register {
-                unsafe { get_reg_val(ctx_ref, instruction.op1_register()) }
-            } else {
-                instruction.immediate64()
-            };
-            let (res, overflow) = (other_val as i64).overflowing_sub(mem_val as i64);
-            let mut eflags = ctx_ref.EFlags;
-            if res == 0 {
-                eflags |= 0x40;
-            } else {
-                eflags &= !0x40;
-            }
-            if res < 0 {
-                eflags |= 0x80;
-            } else {
-                eflags &= !0x80;
-            }
-            if overflow {
-                eflags |= 0x800;
-            } else {
-                eflags &= !0x800;
-            }
-            if other_val < mem_val {
-                eflags |= 0x1;
-            } else {
-                eflags &= !0x1;
-            }
-            ctx_ref.EFlags = eflags;
-        }
-        Mnemonic::And => {
-            if instruction.op0_kind() == iced_x86::OpKind::Register {
-                let mem_val = match instruction.memory_size().size() {
-                    1 => unsafe { *(target_addr as *const u8) as u64 },
-                    2 => unsafe { *(target_addr as *const u16) as u64 },
-                    4 => unsafe { *(target_addr as *const u32) as u64 },
-                    8 => unsafe { *(target_addr as *const u64) },
-                    _ => return false,
-                };
-                let reg_val = unsafe { get_reg_val(ctx_ref, instruction.op0_register()) };
-                let res = reg_val & mem_val;
-                unsafe { set_reg_val(ctx_ref, instruction.op0_register(), res) };
-            } else {
-                let imm = if instruction.op1_kind() == iced_x86::OpKind::Register {
-                    unsafe { get_reg_val(ctx_ref, instruction.op1_register()) }
-                } else {
-                    instruction.immediate64()
-                };
-                match instruction.memory_size().size() {
-                    1 => unsafe { *(target_addr as *mut u8) &= imm as u8 },
-                    2 => unsafe { *(target_addr as *mut u16) &= imm as u16 },
-                    4 => unsafe { *(target_addr as *mut u32) &= imm as u32 },
-                    8 => unsafe { *(target_addr as *mut u64) &= imm },
-                    _ => return false,
-                }
-            }
-        }
-        Mnemonic::Or => {
-            if instruction.op0_kind() == iced_x86::OpKind::Register {
-                let mem_val = match instruction.memory_size().size() {
-                    1 => unsafe { *(target_addr as *const u8) as u64 },
-                    2 => unsafe { *(target_addr as *const u16) as u64 },
-                    4 => unsafe { *(target_addr as *const u32) as u64 },
-                    8 => unsafe { *(target_addr as *const u64) },
-                    _ => return false,
-                };
-                let reg_val = unsafe { get_reg_val(ctx_ref, instruction.op0_register()) };
-                let res = reg_val | mem_val;
-                unsafe { set_reg_val(ctx_ref, instruction.op0_register(), res) };
-            } else {
-                let imm = if instruction.op1_kind() == iced_x86::OpKind::Register {
-                    unsafe { get_reg_val(ctx_ref, instruction.op1_register()) }
-                } else {
-                    instruction.immediate64()
-                };
-                match instruction.memory_size().size() {
-                    1 => unsafe { *(target_addr as *mut u8) |= imm as u8 },
-                    2 => unsafe { *(target_addr as *mut u16) |= imm as u16 },
-                    4 => unsafe { *(target_addr as *mut u32) |= imm as u32 },
-                    8 => unsafe { *(target_addr as *mut u64) |= imm },
-                    _ => return false,
-                }
-            }
-        }
-        Mnemonic::Xor => {
-            if instruction.op0_kind() == iced_x86::OpKind::Register {
-                let mem_val = match instruction.memory_size().size() {
-                    1 => unsafe { *(target_addr as *const u8) as u64 },
-                    2 => unsafe { *(target_addr as *const u16) as u64 },
-                    4 => unsafe { *(target_addr as *const u32) as u64 },
-                    8 => unsafe { *(target_addr as *const u64) },
-                    _ => return false,
-                };
-                let reg_val = unsafe { get_reg_val(ctx_ref, instruction.op0_register()) };
-                let res = reg_val ^ mem_val;
-                unsafe { set_reg_val(ctx_ref, instruction.op0_register(), res) };
-            } else {
-                let imm = if instruction.op1_kind() == iced_x86::OpKind::Register {
-                    unsafe { get_reg_val(ctx_ref, instruction.op1_register()) }
-                } else {
-                    instruction.immediate64()
-                };
-                match instruction.memory_size().size() {
-                    1 => unsafe { *(target_addr as *mut u8) ^= imm as u8 },
-                    2 => unsafe { *(target_addr as *mut u16) ^= imm as u16 },
-                    4 => unsafe { *(target_addr as *mut u32) ^= imm as u32 },
-                    8 => unsafe { *(target_addr as *mut u64) ^= imm },
-                    _ => return false,
-                }
-            }
-        }
-        Mnemonic::Add => {
-            if instruction.op0_kind() == iced_x86::OpKind::Register {
-                let mem_val = match instruction.memory_size().size() {
-                    1 => unsafe { *(target_addr as *const u8) as u64 },
-                    2 => unsafe { *(target_addr as *const u16) as u64 },
-                    4 => unsafe { *(target_addr as *const u32) as u64 },
-                    8 => unsafe { *(target_addr as *const u64) },
-                    _ => return false,
-                };
-                let reg_val = unsafe { get_reg_val(ctx_ref, instruction.op0_register()) };
-                let res = reg_val.wrapping_add(mem_val);
-                unsafe { set_reg_val(ctx_ref, instruction.op0_register(), res) };
-            } else {
-                let imm = if instruction.op1_kind() == iced_x86::OpKind::Register {
-                    unsafe { get_reg_val(ctx_ref, instruction.op1_register()) }
-                } else {
-                    instruction.immediate64()
-                };
-                match instruction.memory_size().size() {
-                    1 => unsafe {
-                        *(target_addr as *mut u8) =
-                            (*(target_addr as *const u8)).wrapping_add(imm as u8)
-                    },
-                    2 => unsafe {
-                        *(target_addr as *mut u16) =
-                            (*(target_addr as *const u16)).wrapping_add(imm as u16)
-                    },
-                    4 => unsafe {
-                        *(target_addr as *mut u32) =
-                            (*(target_addr as *const u32)).wrapping_add(imm as u32)
-                    },
-                    8 => unsafe {
-                        *(target_addr as *mut u64) =
-                            (*(target_addr as *const u64)).wrapping_add(imm)
-                    },
-                    _ => return false,
-                }
-            }
-        }
-        Mnemonic::Sub => {
-            if instruction.op0_kind() == iced_x86::OpKind::Register {
-                let mem_val = match instruction.memory_size().size() {
-                    1 => unsafe { *(target_addr as *const u8) as u64 },
-                    2 => unsafe { *(target_addr as *const u16) as u64 },
-                    4 => unsafe { *(target_addr as *const u32) as u64 },
-                    8 => unsafe { *(target_addr as *const u64) },
-                    _ => return false,
-                };
-                let reg_val = unsafe { get_reg_val(ctx_ref, instruction.op0_register()) };
-                let res = reg_val.wrapping_sub(mem_val);
-                unsafe { set_reg_val(ctx_ref, instruction.op0_register(), res) };
-            } else {
-                let imm = if instruction.op1_kind() == iced_x86::OpKind::Register {
-                    unsafe { get_reg_val(ctx_ref, instruction.op1_register()) }
-                } else {
-                    instruction.immediate64()
-                };
-                match instruction.memory_size().size() {
-                    1 => unsafe {
-                        *(target_addr as *mut u8) =
-                            (*(target_addr as *const u8)).wrapping_sub(imm as u8)
-                    },
-                    2 => unsafe {
-                        *(target_addr as *mut u16) =
-                            (*(target_addr as *const u16)).wrapping_sub(imm as u16)
-                    },
-                    4 => unsafe {
-                        *(target_addr as *mut u32) =
-                            (*(target_addr as *const u32)).wrapping_sub(imm as u32)
-                    },
-                    8 => unsafe {
-                        *(target_addr as *mut u64) =
-                            (*(target_addr as *const u64)).wrapping_sub(imm)
-                    },
-                    _ => return false,
-                }
-            }
-        }
-        _ => return false,
-    }
-
-    ctx_ref.Rip += instruction.len() as u64;
-    true
-}
-
 /// Returns the healed site when the faulting instruction was a supported absolute
 /// FS access. The caller should return EXCEPTION_CONTINUE_EXECUTION so the CPU
 /// retries the now-patched instruction at the same RIP.
@@ -1350,111 +877,6 @@ unsafe fn emulate_fs_instruction(
 pub fn warmup_decoder() {
     let mut decoder = Decoder::with_ip(64, &[0x90], 0, DecoderOptions::NONE);
     let _ = decoder.decode();
-}
-
-pub unsafe fn heal_thread_pointer_instruction(
-    ctx: *mut windows_sys::Win32::System::Diagnostics::Debug::CONTEXT,
-    canary_slot_offset: usize,
-    thread_pointer_teb_offset: usize,
-    scratch_teb_offset: usize,
-) -> Option<HealedThreadPointerSite> {
-    use kinakaze_runtime::memory_protection::protect_preserving_copy_on_write as VirtualProtect;
-    use windows_sys::Win32::System::Diagnostics::Debug::{
-        FlushInstructionCache, ReadProcessMemory,
-    };
-    use windows_sys::Win32::System::Memory::PAGE_EXECUTE_READWRITE;
-    use windows_sys::Win32::System::Threading::GetCurrentProcess;
-
-    if ctx.is_null() {
-        return None;
-    }
-    let address = unsafe { (*ctx).Rip as usize };
-    let process = unsafe { GetCurrentProcess() };
-    let mut snapshot = [0u8; 15];
-    let mut read = 0usize;
-    if unsafe {
-        ReadProcessMemory(
-            process,
-            address as *const core::ffi::c_void,
-            snapshot.as_mut_ptr().cast(),
-            snapshot.len(),
-            &raw mut read,
-        )
-    } == 0
-        || read == 0
-    {
-        return None;
-    }
-
-    let mut decoder = Decoder::with_ip(64, &snapshot[..read], address as u64, DecoderOptions::NONE);
-    let instruction = decoder.decode();
-    if instruction.is_invalid() || instruction.segment_prefix() != Register::FS {
-        return None;
-    }
-    let offsets = safe_get_constant_offsets(&decoder, &instruction)?;
-    let length = instruction.len();
-    let patch = plan_patch(
-        &instruction,
-        offsets,
-        &snapshot[..length],
-        u32::try_from(canary_slot_offset).ok()?,
-        Some(u32::try_from(thread_pointer_teb_offset).ok()?),
-    );
-
-    if patch.is_none() {
-        let site = unsafe {
-            crate::execution::instruction_trampoline::install(
-                address,
-                thread_pointer_teb_offset,
-                scratch_teb_offset,
-            )
-        };
-        if let Ok(site) = site {
-            return Some(HealedThreadPointerSite::Trampoline(site));
-        }
-        if unsafe { emulate_fs_instruction(ctx, &instruction, thread_pointer_teb_offset) } {
-            return Some(HealedThreadPointerSite::Emulated);
-        }
-        return None;
-    }
-    let patch = patch?;
-
-    let mut old_protection = 0u32;
-    if unsafe {
-        VirtualProtect(
-            address as *const core::ffi::c_void,
-            length,
-            PAGE_EXECUTE_READWRITE,
-            &raw mut old_protection,
-        )
-    } == 0
-    {
-        return None;
-    }
-
-    // SAFETY: VirtualProtect made precisely this instruction writable.
-    let live = unsafe { core::slice::from_raw_parts_mut(address as *mut u8, length) };
-    apply_patch(live, patch);
-    unsafe { FlushInstructionCache(process, address as *const core::ffi::c_void, length) };
-
-    let mut ignored = 0u32;
-    let restored = unsafe {
-        VirtualProtect(
-            address as *const core::ffi::c_void,
-            length,
-            old_protection,
-            &raw mut ignored,
-        )
-    };
-    if restored == 0 {
-        return None;
-    }
-
-    Some(HealedThreadPointerSite::Patched(PatchedSite {
-        address,
-        original_displacement: patch.original_displacement as u32,
-        new_displacement: patch.new_displacement as u32,
-    }))
 }
 
 /// The TEB offset for a `TlsAlloc` index.
@@ -1549,7 +971,8 @@ mod tests {
             None,
             None,
             &mut report,
-        );
+        )
+        .expect("instruction patch should succeed");
 
         assert_eq!(code[0], PREFIX_FS);
         assert_eq!(&code[1..5], &[0x48, 0x8b, 0x04, 0x25]);
@@ -1606,7 +1029,8 @@ mod tests {
             None,
             None,
             &mut report,
-        );
+        )
+        .expect("instruction patch should succeed");
 
         assert_eq!(code, original);
         assert_eq!(report.canary_sites, 0);
@@ -1817,7 +1241,8 @@ mod tests {
                 None,
                 None,
                 &mut report,
-            );
+            )
+            .expect("instruction patch should succeed");
             assert_eq!(&code[5..7], &expected);
             assert_eq!(report.syscall_sites, vec![0x2005]);
         }
@@ -1839,7 +1264,8 @@ mod tests {
             None,
             None,
             &mut report,
-        );
+        )
+        .expect("instruction patch should succeed");
         assert_eq!(code, original);
         assert!(report.syscall_sites.is_empty());
     }
@@ -1914,30 +1340,21 @@ mod tests {
 
     #[test]
     #[cfg(windows)]
-    fn emulate_fs_instruction_handles_negative_displacement_and_alu() {
+    fn fs_instruction_decodes_negative_displacement() {
         use iced_x86::{Decoder, DecoderOptions};
-        use windows_sys::Win32::System::Diagnostics::Debug::CONTEXT;
 
         // Allocate a dummy TLS buffer representing static TLS below thread pointer
         let mut tls_buf = [0u8; 64];
         let tp_ptr = (&mut tls_buf[32]) as *mut u8 as usize;
         // Target -8 is at index 24 (32 - 8)
         let target_slot = (&mut tls_buf[24]) as *mut u8 as *mut u64;
-        unsafe { *target_slot = 0x1234_5678_9abc_def0 };
-
-        // Set up CONTEXT with Rip and RAX
-        let mut ctx: CONTEXT = unsafe { core::mem::zeroed() };
-        ctx.Rax = 0;
-        ctx.Rip = 0x1000;
 
         // 1. movq %fs:-8, %rax (64 48 8b 04 25 f8 ff ff ff)
         let bytes_mov_read = [0x64, 0x48, 0x8b, 0x04, 0x25, 0xf8, 0xff, 0xff, 0xff];
         let mut decoder = Decoder::with_ip(64, &bytes_mov_read, 0x1000, DecoderOptions::NONE);
         let inst_mov_read = decoder.decode();
 
-        // Pass thread_pointer directly (0 offset means tp is read from the slot if mock or pointer)
-        // Since get_thread_pointer reads from TEB offset, in test we test emulation target addr calculation
-        // Let's verify decode and emulation against mock memory:
+        // Check sign extension before adding the displacement to the TLS base.
         let raw_disp = inst_mov_read.memory_displacement64();
         assert_eq!(raw_disp, 0xffff_ffff_ffff_fff8);
         let disp = (raw_disp as u32 as i32) as i64;

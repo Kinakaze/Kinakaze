@@ -6,10 +6,11 @@ import json
 from pathlib import Path
 import shutil
 import sys
-import tomllib
 import zipfile
 
 WORKSPACE = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(Path(__file__).parent))
+from guest_installation import java_home as discover_java_home, minecraft_version
 sys.path.insert(0, str(Path(__file__).with_name('guest-deps')))
 from guest_deps import PackageCache, atomic_write, elf_info, linux_x86_64_member, relative_path
 
@@ -128,7 +129,8 @@ class RootPlan:
                     directory = Path(path) if Path(path).is_absolute() else origin.parent / path
                 candidates.append(directory / dependency)
             candidates += [directory / dependency for directory in self.search]
-            candidates += list((self.source / self.java_home).rglob(dependency))
+            if self.java_home:
+                candidates += list((self.source / self.java_home).rglob(dependency))
         for path in candidates:
             if not path.is_file():
                 continue
@@ -226,8 +228,8 @@ def main():
     parser.add_argument('--busybox-applet', action='append', default=[], metavar='NAME',
                         help='install an explicit BusyBox command alias in /bin (repeatable)')
     parser.add_argument('--minecraft', action='store_true')
-    parser.add_argument('--java-home', default='usr/lib/jvm/jdk-25.0.4.1+1-jre')
-    parser.add_argument('--minecraft-version', default='26.2')
+    parser.add_argument('--java-home', help='JRE directory relative to source; auto-detected when unique')
+    parser.add_argument('--minecraft-version', help='installed version; auto-detected when unique')
     parser.add_argument('--deps-lock', type=Path, default=WORKSPACE / 'tools/guest-deps/dependencies.lock.json')
     parser.add_argument('--deps-cache', type=Path, default=WORKSPACE / 'artifacts/guest-deps')
     parser.add_argument('--offline', action='store_true', help='require the verified package cache; never download')
@@ -240,9 +242,9 @@ def main():
         raise ValueError('destination and source must be separate, non-overlapping directories')
     if cache_directory == source or source in cache_directory.parents:
         raise ValueError('dependency cache must not modify the source runtime')
-    java_home = relative_path(args.java_home)
-    version = relative_path(args.minecraft_version)
-    if '/' in version:
+    java_home = relative_path(args.java_home) if args.java_home else (discover_java_home(source) if args.java or args.minecraft else None)
+    version = relative_path(args.minecraft_version) if args.minecraft_version else (minecraft_version(source) if args.minecraft else None)
+    if version and '/' in version:
         raise ValueError('Minecraft version must be one directory name')
     from native_image import modules
     provided = set(modules(args.dist))

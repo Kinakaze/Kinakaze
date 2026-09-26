@@ -557,16 +557,14 @@ impl CompiledPattern {
             return None;
         }
 
-        // Try greedy from longest match down to min
-        for k in (min..=count).rev() {
-            if k == 0 {
-                return Some(pos);
-            }
-            let (_, end_pos, ref snap) = matches[k - 1];
+        // Repetition alone chooses the longest match. Sequence matching owns
+        // any subsequent backtracking; this branch has no continuation to try.
+        if let Some((_, end_pos, snap)) = matches.last() {
             captures.copy_from_slice(snap);
-            return Some(end_pos);
+            Some(*end_pos)
+        } else {
+            Some(pos)
         }
-        None
     }
 }
 
@@ -822,7 +820,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_re_set_syntax(syntax: reg_syntax_t) -
 
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn re_set_syntax(syntax: reg_syntax_t) -> reg_syntax_t {
-    kinakaze_abi_re_set_syntax(syntax)
+    unsafe { kinakaze_abi_re_set_syntax(syntax) }
 }
 
 /// GNU `re_compile_fastmap`.
@@ -835,7 +833,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_re_compile_fastmap(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn re_compile_fastmap(buffer: *mut re_pattern_buffer) -> c_int {
-    kinakaze_abi_re_compile_fastmap(buffer)
+    unsafe { kinakaze_abi_re_compile_fastmap(buffer) }
 }
 
 /// GNU `re_match`.
@@ -847,7 +845,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_re_match(
     start: c_int,
     regs: *mut re_registers,
 ) -> c_int {
-    kinakaze_abi_re_search(buffer, string, length, start, 0, regs)
+    unsafe { kinakaze_abi_re_search(buffer, string, length, start, 0, regs) }
 }
 
 #[unsafe(no_mangle)]
@@ -858,7 +856,7 @@ pub unsafe extern "sysv64" fn re_match(
     start: c_int,
     regs: *mut re_registers,
 ) -> c_int {
-    kinakaze_abi_re_match(buffer, string, length, start, regs)
+    unsafe { kinakaze_abi_re_match(buffer, string, length, start, regs) }
 }
 
 /// GNU `re_set_registers`.

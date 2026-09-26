@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "directories": ["bin", "sbin", "usr/bin", "usr/sbin", "usr/lib", "etc", "root", "home", "tmp", "var/tmp", "var/log", "var/cache", "run", "dev/shm", "proc", "sys"],
+  "files": [
+    {"path": "etc/passwd", "content": "root:x:0:0:root:/root:/bin/sh\n"},
+    {"path": "etc/group", "content": "root:x:0:\n"},
+    {"path": "etc/hosts", "content": "127.0.0.1 localhost\n::1 localhost\n"},
+    {"path": "etc/hostname", "content": "kinakaze\n"},
+    {"path": "etc/nsswitch.conf", "content": "passwd: files\ngroup: files\nhosts: files dns\n"},
+    {"path": "etc/profile", "content": "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\nexport HOME=/root\nexport TMPDIR=/tmp\n"},
+    {"path": "etc/os-release", "content": "NAME=Kinakaze\nID=kinakaze\nPRETTY_NAME=Kinakaze\n"}
+  ]
+}

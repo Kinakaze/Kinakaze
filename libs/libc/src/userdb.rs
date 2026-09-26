@@ -226,8 +226,6 @@ mod identity_handoff {
 // buffer length in `WCHAR`s including the terminator.
 #[link(name = "kernel32")]
 unsafe extern "system" {
-    /// `GetComputerNameW`: the NetBIOS name of this machine.
-    fn GetComputerNameW(buffer: *mut u16, size: *mut u32) -> i32;
     /// `GetSystemInfo`: page size and processor count.
     fn GetSystemInfo(info: *mut SystemInfo);
     /// `GetTickCount64`: milliseconds since boot.
@@ -350,29 +348,6 @@ impl Default for OsVersionInfoW {
     }
 }
 
-/// Calls a Win32 name query that writes a UTF-16 buffer and a written length.
-///
-/// Calls `GetComputerNameW`, trimming at the first NUL rather than relying on
-/// whether the reported count includes the terminator.
-fn query_wide_name(call: unsafe extern "system" fn(*mut u16, *mut u32) -> i32) -> Option<String> {
-    // Both names are bounded well below this by Windows itself: an account name
-    // is at most 256 characters and a NetBIOS name at most 15.
-    let mut buffer = [0u16; 256];
-    let mut length = buffer.len() as u32;
-    // SAFETY: `buffer` is writable for `length` WCHARs and `length` is a
-    // writable local, which is the documented contract for both callees.
-    if unsafe { call(buffer.as_mut_ptr(), &raw mut length) } == 0 {
-        return None;
-    }
-    let end = buffer
-        .iter()
-        .position(|unit| *unit == 0)
-        .unwrap_or(buffer.len());
-    let name = String::from_utf16_lossy(&buffer[..end]);
-    // A successful call that produced nothing is still no answer.
-    (!name.is_empty()).then_some(name)
-}
-
 /// The login name in the guest identity namespace.
 ///
 /// Host token ownership is an implementation detail, not a Linux account.  In
@@ -387,6 +362,7 @@ fn computer_name() -> String {
     String::from_utf8_lossy(&kinakaze_vfs::namespaces::uts(false).unwrap_or_default()).into_owned()
 }
 
+#[cfg(test)]
 /// The home directory reported as `pw_dir`.
 ///
 /// The hosted identity starts as uid 0, so its home is the guest's `/root`.
@@ -1189,78 +1165,6 @@ impl Packer {
     }
 }
 
-/// The one account, and the storage its strings live in.
-///
-/// The non-reentrant getters return a pointer into this, which is the documented
-/// glibc contract: the result is valid until the next call on the same database.
-/// Here it is stronger than that, because the entry is built once and never
-/// rewritten, so a returned pointer stays valid for the life of the process.
-struct Database {
-    name: CString,
-    /// `x`, the `/etc/passwd` convention for "the hash is in the shadow file".
-    /// An empty field here would mean "no password required", which is a
-    /// materially different and untrue claim.
-    password: CString,
-    /// Empty. There is no real-name field on a Windows account that maps to
-    /// GECOS, and inventing one would put fiction in `finger` output.
-    gecos: CString,
-    directory: CString,
-    shell: CString,
-    /// `root`, the conventional name for gid 0.
-    group_name: CString,
-}
-
-/// The process-wide database, built on first use.
-static DATABASE: OnceLock<Database> = OnceLock::new();
-
-fn database() -> &'static Database {
-    DATABASE.get_or_init(|| Database {
-        name: CString::from(c"root"),
-        password: CString::from(c"x"),
-        gecos: CString::new("").unwrap_or_default(),
-        directory: CString::new(home_directory()).unwrap_or_else(|_| CString::from(c"/root")),
-        // The shell a guest can actually exec through this layer.
-        shell: CString::from(c"/bin/sh"),
-        group_name: CString::from(c"root"),
-    })
-}
-
-/// A `struct passwd` or `struct group` pointer published to the guest.
-///
-/// The pointer targets `static` storage and is only ever handed out, so it is
-/// safe to share; the wrapper exists because a raw pointer is not `Sync`.
-struct Published<T>(T);
-
-// SAFETY: the wrapped value is written once during initialization and is
-// thereafter read-only. The pointers inside address `OnceLock` storage that
-// lives for the rest of the process.
-unsafe impl<T> Sync for Published<T> {}
-// SAFETY: as above; the value is immutable once published.
-unsafe impl<T> Send for Published<T> {}
-
-/// The member list for the one group: a null-terminated array of one name.
-static GROUP_MEMBERS: OnceLock<Published<[*mut c_char; 2]>> = OnceLock::new();
-
-/// The static `struct group` the non-reentrant getters return.
-static GROUP_ENTRY: OnceLock<Published<Group>> = OnceLock::new();
-
-fn group_entry() -> *mut Group {
-    let published = GROUP_ENTRY.get_or_init(|| {
-        let database = database();
-        let members = GROUP_MEMBERS
-            .get_or_init(|| Published([database.name.as_ptr().cast_mut(), ptr::null_mut()]));
-        Published(Group {
-            gr_name: database.group_name.as_ptr().cast_mut(),
-            gr_passwd: database.password.as_ptr().cast_mut(),
-            gr_gid: ROOT_ID,
-            // The account is the group's sole member, which is true given that
-            // there is one account.
-            gr_mem: members.0.as_ptr().cast_mut(),
-        })
-    });
-    (&raw const published.0).cast_mut()
-}
-
 /// Reads a null-terminated argument as a `str`, or `None` if it is unusable.
 ///
 /// # Safety
@@ -1368,12 +1272,13 @@ fn find_user_by_uid(uid: u32) -> Option<UserAccount> {
     load_user_accounts().into_iter().find(|a| a.uid == uid)
 }
 
+// Owns backing allocations for the raw pointers in the published C record.
 struct StaticPasswdStorage {
-    name: CString,
-    password: CString,
-    gecos: CString,
-    dir: CString,
-    shell: CString,
+    _name: CString,
+    _password: CString,
+    _gecos: CString,
+    _dir: CString,
+    _shell: CString,
     passwd: Passwd,
 }
 
@@ -1401,11 +1306,11 @@ fn passwd_entry_for(account: &UserAccount) -> *mut Passwd {
             pw_dir: dir.as_ptr().cast_mut(),
             pw_shell: shell.as_ptr().cast_mut(),
         },
-        name,
-        password,
-        gecos,
-        dir,
-        shell,
+        _name: name,
+        _password: password,
+        _gecos: gecos,
+        _dir: dir,
+        _shell: shell,
     });
     let ptr = &mut storage.passwd as *mut Passwd;
     *storage_guard = Some(storage);
@@ -1483,11 +1388,12 @@ fn find_group_by_gid(gid: u32) -> Option<GroupAccount> {
     load_group_accounts().into_iter().find(|g| g.gid == gid)
 }
 
+// Owns backing allocations for the raw pointers in the published C record.
 struct StaticGroupStorage {
-    name: CString,
-    password: CString,
-    members: Vec<CString>,
-    member_ptrs: Vec<*mut c_char>,
+    _name: CString,
+    _password: CString,
+    _members: Vec<CString>,
+    _member_ptrs: Vec<*mut c_char>,
     group: Group,
 }
 
@@ -1517,19 +1423,14 @@ fn group_entry_for(account: &GroupAccount) -> *mut Group {
             gr_gid: account.gid,
             gr_mem: member_ptrs.as_mut_ptr(),
         },
-        name,
-        password,
-        members,
-        member_ptrs,
+        _name: name,
+        _password: password,
+        _members: members,
+        _member_ptrs: member_ptrs,
     });
     let ptr = &mut storage.group as *mut Group;
     *storage_guard = Some(storage);
     ptr
-}
-
-/// Whether `name` names a known group.
-fn is_known_group(name: &str) -> bool {
-    find_group_by_name(name).is_some() || database().name.to_str() == Ok(name)
 }
 
 /// `getpwnam`.
@@ -1705,22 +1606,6 @@ unsafe fn fill_group_for(
         };
     }
     Ok(())
-}
-
-/// Fills a caller-owned `struct group` whose strings live in `buffer`.
-///
-/// # Safety
-///
-/// `entry` must be writable and `buffer` must name `length` writable bytes.
-unsafe fn fill_group(entry: *mut Group, buffer: *mut c_char, length: usize) -> Result<(), c_int> {
-    let root = GroupAccount {
-        name: "root".to_string(),
-        password: "x".to_string(),
-        gid: 0,
-        members: vec!["root".to_string()],
-    };
-    // SAFETY: forwarded from this function's contract.
-    unsafe { fill_group_for(&root, entry, buffer, length) }
 }
 
 /// Completes an `_r` call, applying the POSIX result convention.
@@ -2139,9 +2024,10 @@ pub struct Spwd {
     pub sp_flag: u64,
 }
 
+// Owns backing allocations for the raw pointers in the published C record.
 struct StaticSpwdStorage {
-    name: CString,
-    password: CString,
+    _name: CString,
+    _password: CString,
     spwd: Spwd,
 }
 
@@ -2187,8 +2073,8 @@ fn spwd_entry_for(account: &UserAccount) -> *mut Spwd {
             sp_expire: -1,
             sp_flag: 0,
         },
-        name,
-        password,
+        _name: name,
+        _password: password,
     });
     let ptr = &mut storage.spwd as *mut Spwd;
     *storage_guard = Some(storage);

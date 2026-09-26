@@ -143,8 +143,7 @@ fn native_ads_lifecycle_probe() {
                 unsafe { Object::stream(base.raw(), OsStr::new(STREAM), GENERIC_READ) },
                 &id,
             );
-            let reopen =
-                unsafe { Object::reopen(base.raw(), GENERIC_READ | QUERY_ACCESS) }.unwrap();
+            let reopen = Object::reopen(base.raw(), GENERIC_READ | QUERY_ACCESS).unwrap();
             assert_eq!(identity(&reopen).FileId.Identifier, id.FileId.Identifier);
             stream_result(
                 "late ADS via empty-name reopened base",
@@ -186,7 +185,7 @@ fn native_ads_lifecycle_probe() {
                 eprintln!("retained ADS direct read: {count} bytes");
                 stream_result(
                     "empty-name reopen of retained ADS",
-                    unsafe { Object::reopen(stream.raw(), GENERIC_READ) },
+                    Object::reopen(stream.raw(), GENERIC_READ),
                     &id,
                 );
             }
@@ -219,7 +218,7 @@ fn ads_transferred_handle_helper() {
     let mut input = String::new();
     std::io::stdin().read_to_string(&mut input).unwrap();
     let raw = input.trim().parse::<usize>().unwrap() as HANDLE;
-    let stream = unsafe { Object::reopen(raw, GENERIC_READ) }.unwrap();
+    let stream = Object::reopen(raw, GENERIC_READ).unwrap();
     unsafe { CloseHandle(raw) };
     let mut data = [0; 100];
     let count = stream.read_at(0, &mut data).unwrap();

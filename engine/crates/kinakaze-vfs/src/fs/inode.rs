@@ -118,7 +118,7 @@ pub(super) fn read_object(object: &Object) -> Result<Record, i32> {
 /// The caller keeps the borrowed inode live. An independent open owns each
 /// native query, so cancellation cannot cancel another fd's data operation.
 pub(crate) fn read(handle: HANDLE) -> Result<Record, i32> {
-    let object = unsafe { Object::reopen(handle, FILE_READ_ATTRIBUTES | FILE_READ_EA)? };
+    let object = Object::reopen(handle, FILE_READ_ATTRIBUTES | FILE_READ_EA)?;
     read_object(&object)
 }
 
@@ -135,8 +135,7 @@ pub(crate) fn update(
     handle: HANDLE,
     change: impl FnOnce(&mut Record) -> Result<(), i32>,
 ) -> Result<(), i32> {
-    let object =
-        unsafe { Object::reopen(handle, FILE_READ_ATTRIBUTES | FILE_READ_EA | FILE_WRITE_EA)? };
+    let object = Object::reopen(handle, FILE_READ_ATTRIBUTES | FILE_READ_EA | FILE_WRITE_EA)?;
     let _lock = crate::xattr::InodeLock::acquire(object.raw())?;
     let mut record = read_object(&object)?;
     change(&mut record)?;
@@ -145,7 +144,7 @@ pub(crate) fn update(
 
 /// Whole-record copy for an unpublished inode; does not copy guest xattrs.
 pub(crate) fn replace(handle: HANDLE, record: &Record) -> Result<(), i32> {
-    let object = unsafe { Object::reopen(handle, FILE_READ_ATTRIBUTES | FILE_WRITE_EA)? };
+    let object = Object::reopen(handle, FILE_READ_ATTRIBUTES | FILE_WRITE_EA)?;
     ea::write(&object, EA_NAME, &record.encode()?)
 }
 

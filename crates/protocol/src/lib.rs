@@ -44,6 +44,8 @@ pub struct RuntimeOpenConfig {
 pub enum ClientRole {
     Worker,
     Controller,
+    /// A reconnectable host client, authenticated with a separate launch credential.
+    Launcher,
     /// Native infrastructure with no Linux PID and no management privileges.
     Helper,
 }
@@ -153,6 +155,12 @@ pub enum Request {
     },
     ActivatePoolWorker {
         pid: u32,
+        launch: PoolLaunch,
+    },
+    /// Insert a fresh process under a live process in this init's tree.
+    ActivatePoolWorkerUnderParent {
+        pid: u32,
+        parent_pid: u32,
         launch: PoolLaunch,
     },
     Stats,

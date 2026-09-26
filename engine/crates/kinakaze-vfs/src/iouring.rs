@@ -345,12 +345,10 @@ fn prepare(entry: &SubmissionEntry) -> Result<Request, i32> {
     };
     // Independent FileObject: cancellation cannot affect unrelated operations.
     // Its write access excludes ENABLE for the entire native request lifetime.
-    let file = unsafe {
-        Object::reopen(
-            pinned.raw(),
-            data_access | (original_access & FILE_READ_ATTRIBUTES),
-        )
-    }?;
+    let file = Object::reopen(
+        pinned.raw(),
+        data_access | (original_access & FILE_READ_ATTRIBUTES),
+    )?;
     let targets = memory::segments(entry)?;
     let length = targets.iter().map(|segment| segment.length).sum();
     let mut buffer = Vec::new();

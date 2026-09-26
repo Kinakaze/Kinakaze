@@ -1,5 +1,4 @@
 //! Exception delivery, syscall traps and per-thread execution state.
-use kinakaze_link::process as loader;
 use std::cell::Cell;
 use std::ptr;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};

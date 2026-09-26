@@ -1,7 +1,7 @@
 //! Read normal PE names and exports. There is no module descriptor or sidecar.
 use crate::{Export, ExportKind, Module, ModuleLifecycle, ModuleSet, Result, invalid};
 use kinakaze_v2_host_win::{Library, ReadOnlyFile};
-use std::{collections::BTreeMap, fs, io::Read, path::Path, sync::Arc};
+use std::{collections::BTreeMap, fs, path::Path, sync::Arc};
 
 pub struct NativeExport {
     pub name: String,

@@ -8,15 +8,6 @@ static DEFAULT_SYSTEM_ROOT: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::
 thread_local! {
     static OPERATION_BASE: std::cell::RefCell<Option<PathBuf>> = const { std::cell::RefCell::new(None) };
 }
-pub(crate) struct BaseScope(Option<PathBuf>);
-impl Drop for BaseScope {
-    fn drop(&mut self) {
-        OPERATION_BASE.with(|slot| *slot.borrow_mut() = self.0.take());
-    }
-}
-pub(crate) fn scoped_base(base: PathBuf) -> BaseScope {
-    BaseScope(OPERATION_BASE.with(|slot| slot.borrow_mut().replace(base)))
-}
 #[derive(Clone, PartialEq, Eq)]
 pub(crate) struct OverlayRoot {
     pub namespace_path: String,

@@ -12,7 +12,7 @@
 
 use core::ffi::{CStr, c_char, c_int, c_uint, c_ulonglong, c_void};
 use core::ptr;
-use std::sync::{Mutex, OnceLock};
+use std::sync::Mutex;
 
 use kinakaze_vfs::{EFAULT, EINVAL, ENAMETOOLONG};
 

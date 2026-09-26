@@ -117,7 +117,8 @@ pub unsafe extern "sysv64" fn kinakaze_abi_mbstowcs(
     mut input: *const c_char,
     count: usize,
 ) -> usize {
-    unsafe { kinakaze_abi_mbsrtowcs(out, &mut input, count, &mut MbState::ZERO) }
+    let mut state = MbState::ZERO;
+    unsafe { kinakaze_abi_mbsrtowcs(out, &mut input, count, &mut state) }
 }
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn kinakaze_abi_wcstombs(
@@ -125,7 +126,8 @@ pub unsafe extern "sysv64" fn kinakaze_abi_wcstombs(
     mut input: *const i32,
     count: usize,
 ) -> usize {
-    unsafe { kinakaze_abi_wcsrtombs(out, &mut input, count, &mut MbState::ZERO) }
+    let mut state = MbState::ZERO;
+    unsafe { kinakaze_abi_wcsrtombs(out, &mut input, count, &mut state) }
 }
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn kinakaze_abi_mbtowc(
@@ -138,7 +140,8 @@ pub unsafe extern "sysv64" fn kinakaze_abi_mbtowc(
     if input.is_null() {
         return 0;
     }
-    let result = unsafe { mbrtowc(out, input, count, &mut MbState::ZERO) };
+    let mut state = MbState::ZERO;
+    let result = unsafe { mbrtowc(out, input, count, &mut state) };
     if result >= INCOMPLETE {
         illegal();
         -1
@@ -155,7 +158,8 @@ pub unsafe extern "sysv64" fn kinakaze_abi_wctomb(out: *mut c_char, scalar: i32)
     if out.is_null() {
         return 0;
     }
-    let result = unsafe { encode(out, scalar as u32, &mut MbState::ZERO) };
+    let mut state = MbState::ZERO;
+    let result = unsafe { encode(out, scalar as u32, &mut state) };
     if result == INVALID {
         -1
     } else {

@@ -81,7 +81,8 @@ unsafe fn select_mode(
         if let Some(waiter) = &waiter {
             waiter.drain();
         }
-        crate::drain_native_events(display);
+        // SAFETY: The caller owns the selected live display for this dispatch.
+        unsafe { crate::drain_native_events(display) };
         {
             let mut state = crate::state()
                 .lock()

@@ -44,7 +44,7 @@ pub unsafe extern "sysv64" fn XSetWindowColormap(
         if parent == 0 || window == 1 {
             return unsafe { crate::errors::report(d, 8, 2, 0, window) };
         }
-        unsafe { window_map(d, parent) }
+        window_map(d, parent)
     } else {
         map
     };

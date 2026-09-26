@@ -58,12 +58,12 @@ pub(crate) fn mount_pins(source: &str) -> Result<Vec<Arc<Object>>, i32> {
     let instance = instance(source)?;
     let mut objects = Vec::new();
     for root in &instance.root.context.as_ref().ok_or(EIO)?.roots {
-        let object = unsafe { Object::reopen(root.object.raw(), ACCESS)? };
+        let object = Object::reopen(root.object.raw(), ACCESS)?;
         crate::platform::try_set_inheritable(object.raw() as usize, true)?;
         objects.push(Arc::new(object));
     }
     if let Some(work) = &instance.work {
-        let object = unsafe { Object::reopen(work.raw(), ACCESS)? };
+        let object = Object::reopen(work.raw(), ACCESS)?;
         crate::platform::try_set_inheritable(object.raw() as usize, true)?;
         objects.push(Arc::new(object));
     }
@@ -985,7 +985,7 @@ impl WritePath {
             return Ok(None);
         };
         let node = if self.anonymous {
-            let object = unsafe { Object::reopen(handle, ACCESS)? };
+            let object = Object::reopen(handle, ACCESS)?;
             let entry = Backing::from_object(object, location.instance.root.namespace, 0)?;
             let name = format!("#{}", entry.metadata.st_ino);
             location.guest.push('/');
@@ -1220,8 +1220,8 @@ impl SavedEntry {
         work: &Object,
         namespace: XattrNamespace,
     ) -> Result<Self, i32> {
-        let object = unsafe { Object::reopen(object.raw(), ACCESS | DELETE)? };
-        let parent = unsafe { Object::reopen(parent.raw(), ACCESS)? };
+        let object = Object::reopen(object.raw(), ACCESS | DELETE)?;
+        let parent = Object::reopen(parent.raw(), ACCESS)?;
         let backup = temporary(work)?;
         unsafe {
             fs::rename_host_handle(object.raw(), &backup, false)?;
@@ -1379,13 +1379,6 @@ fn prepare_mode(
     })
 }
 
-pub(crate) fn stat(path: &str, follow: bool) -> Result<Option<Stat>, i32> {
-    Ok(match stat_resolution(path, follow)? {
-        Some(StatResolution::Overlay(stat)) => Some(stat),
-        _ => None,
-    })
-}
-
 pub(crate) enum StatResolution {
     Overlay(Stat),
     Native(PathBuf),
@@ -1502,12 +1495,10 @@ impl Description {
             {
                 return Ok(());
             }
-            let writable = unsafe {
-                Object::reopen(
-                    object.raw(),
-                    windows_sys::Win32::Storage::FileSystem::FILE_WRITE_ATTRIBUTES,
-                )?
-            };
+            let writable = Object::reopen(
+                object.raw(),
+                windows_sys::Win32::Storage::FileSystem::FILE_WRITE_ATTRIBUTES,
+            )?;
             if unsafe {
                 windows_sys::Win32::Storage::FileSystem::SetFileTime(
                     writable.raw(),
@@ -1579,7 +1570,7 @@ pub fn check_execute(path: &str) -> Result<(), i32> {
 fn pin_node(node: &Node) -> Result<Node, i32> {
     let mut entries = Vec::with_capacity(node.entries.len());
     for entry in &node.entries {
-        let object = unsafe { Object::reopen(entry.object.raw(), ACCESS)? };
+        let object = Object::reopen(entry.object.raw(), ACCESS)?;
         crate::platform::try_set_inheritable(object.raw() as usize, true)?;
         let mut entry = entry.clone();
         entry.object = Arc::new(object);
@@ -1831,7 +1822,7 @@ pub(crate) fn reopen_object(
                 location.instance.work.as_ref().ok_or(EROFS)?,
                 false,
             )?;
-            let object = unsafe { Object::reopen(original.backing_object().raw(), ACCESS)? };
+            let object = Object::reopen(original.backing_object().raw(), ACCESS)?;
             Some(Node {
                 entries: vec![Backing::from_object(object, original.namespace, 0)?],
                 namespace: original.namespace,
@@ -1882,7 +1873,7 @@ pub(crate) fn reopen_object(
         .map(backing)
         .or_else(|| description.location.node.as_ref().map(backing))
         .unwrap_or(pinned);
-    let object = unsafe { Object::reopen(source, ACCESS)? };
+    let object = Object::reopen(source, ACCESS)?;
     if let Some(node) = node {
         description.location.node = Some(pin_node(&node)?);
     }
@@ -1944,7 +1935,7 @@ pub fn metadata_handle(
             } else {
                 0
             };
-        let object = unsafe { Object::reopen(pinned.as_raw_handle(), access)? };
+        let object = Object::reopen(pinned.as_raw_handle(), access)?;
         return Ok(Some(MetadataHandle {
             handle: unsafe {
                 std::os::windows::io::OwnedHandle::from_raw_handle(object.into_raw())
@@ -1961,7 +1952,7 @@ pub fn metadata_handle(
         } else {
             0
         };
-    let object = unsafe { Object::reopen(object.raw(), access)? };
+    let object = Object::reopen(object.raw(), access)?;
     Ok(Some(MetadataHandle {
         handle: unsafe { std::os::windows::io::OwnedHandle::from_raw_handle(object.into_raw()) },
         _writer: refreshed.writer,
@@ -2206,7 +2197,7 @@ pub fn sync_descriptor(fd: i32) -> Result<Option<()>, i32> {
         && description.location.instance.work.is_some()
         && (node.backing_layer() == 0 || node.entries[0].indexed)
     {
-        unsafe { Object::reopen(object.raw(), GENERIC_READ | GENERIC_WRITE)? }.flush()?;
+        Object::reopen(object.raw(), GENERIC_READ | GENERIC_WRITE)?.flush()?;
     }
     Ok(Some(()))
 }
@@ -2387,7 +2378,7 @@ pub(crate) fn restore(bytes: &[u8]) -> bool {
                 if layer >= instance.root.context.as_ref().ok_or(EIO)?.roots.len() {
                     return Err(EIO);
                 }
-                let object = unsafe { Object::reopen(raw as _, ACCESS)? };
+                let object = Object::reopen(raw as _, ACCESS)?;
                 crate::platform::try_set_inheritable(object.raw() as usize, true)?;
                 let mut entry = Backing::from_object(object, instance.root.namespace, layer)?;
                 entry.indexed = layer_flags & 0x8000_0000 != 0;
@@ -2568,7 +2559,7 @@ pub(crate) fn remove(path: &str, directory: bool) -> Result<Option<()>, i32> {
             if let Some(whiteout) = whiteout {
                 whiteout.publish_replacing(parent.backing_object(), name)?;
             } else {
-                let object = unsafe { Object::reopen(node.backing_object().raw(), DELETE)? };
+                let object = Object::reopen(node.backing_object().raw(), DELETE)?;
                 fs::unlink_inode(object.raw())?;
             }
         } else {
@@ -2597,10 +2588,6 @@ pub(crate) fn remove(path: &str, directory: bool) -> Result<Option<()>, i32> {
         index.adjust_links(&node, -1, work)?;
     }
     Ok(Some(()))
-}
-
-pub(crate) fn rename(from: &str, to: &str) -> Result<Option<()>, i32> {
-    rename_with_flags(from, to, 0)
 }
 
 pub fn rename_with_flags(from: &str, to: &str, flags: u32) -> Result<Option<()>, i32> {
@@ -2708,7 +2695,7 @@ pub fn rename_with_flags(from: &str, to: &str, flags: u32) -> Result<Option<()>,
         None
     };
     let source = rename_upper(&from)?;
-    let object = unsafe { Object::reopen(source.backing_object().raw(), ACCESS | DELETE)? };
+    let object = Object::reopen(source.backing_object().raw(), ACCESS | DELETE)?;
     let (from_parent, from_name) = from.parent()?;
     let (to_parent, to_name) = to.parent()?;
     let stored = crate::path::escape_component(to_name);
@@ -2802,7 +2789,7 @@ fn exchange(from: &Location, to: &Location) -> Result<Option<()>, i32> {
     let right_inode = to.metadata(&right)?.st_ino;
     let (left_parent, left_name) = from.parent()?;
     let (right_parent, right_name) = to.parent()?;
-    let left_object = unsafe { Object::reopen(left.backing_object().raw(), ACCESS | DELETE)? };
+    let left_object = Object::reopen(left.backing_object().raw(), ACCESS | DELETE)?;
     for (node, destination) in [(&left, to), (&right, from)] {
         if node.is_directory() && destination.lower_exists()? {
             unsafe { Attributes::from_handle(node.backing_object().raw(), true)? }.set(

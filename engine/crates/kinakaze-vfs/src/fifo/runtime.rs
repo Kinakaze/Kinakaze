@@ -236,7 +236,7 @@ pub(crate) fn reopen_pinned(pinned: &Pinned, flags: i32) -> Result<i32, i32> {
         use windows_sys::Win32::Storage::FileSystem::{
             FILE_READ_ATTRIBUTES, FILE_READ_EA, SYNCHRONIZE,
         };
-        let handle = unsafe {
+        let handle = {
             crate::fs::object::Object::reopen(
                 pinned.marker.0,
                 FILE_READ_ATTRIBUTES | FILE_READ_EA | SYNCHRONIZE,

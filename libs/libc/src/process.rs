@@ -22,7 +22,7 @@ pub extern "sysv64" fn kinakaze_abi_ptrace(
     -1
 }
 
-use core::ffi::{CStr, c_char, c_int, c_void};
+use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 #[cfg(test)]
 use std::sync::Mutex;
@@ -575,6 +575,7 @@ pub extern "sysv64" fn kinakaze_abi_usleep(microseconds: u32) -> c_int {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ffi::CStr;
 
     /// Serializes the handler tests.
     ///

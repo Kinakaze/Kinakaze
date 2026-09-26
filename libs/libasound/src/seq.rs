@@ -23,7 +23,7 @@ macro_rules! api {
 use api;
 macro_rules! get_client {
     ($seq:expr) => {
-        match unsafe { client($seq) } {
+        match client($seq) {
             Ok(value) => value,
             Err(error) => return error,
         }

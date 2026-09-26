@@ -1,6 +1,7 @@
 param(
     [switch]$Release,
     [string]$DistDirectory = 'dist',
+    [string]$TargetDirectory = 'target',
     [switch]$RefreshExports,
     [switch]$Development,
     [switch]$SkipFormat,
@@ -21,10 +22,12 @@ function Invoke-Checked {
 
 Push-Location -LiteralPath $workspacePath
 try {
+    $buildRoot = [System.IO.Path]::GetFullPath($TargetDirectory)
+    $targetArgs = @('--target-dir', $buildRoot)
     # Export checks inspect compiled DLLs. Keep the feature graph identical to
     # the final build so un-hashed DLL names cannot mix incompatible Rust ABIs.
-    Invoke-Checked 'cargo' (@('build', '--workspace', '--lib', '--locked', '--features', 'kinakaze-v2-runtime/guest-engine') + $profileArgs)
-    $exportArgs = @('tools/native-exports/generate.py', '--image-dir', "target/$profileName")
+    Invoke-Checked 'cargo' (@('build', '--workspace', '--lib', '--locked', '--features', 'kinakaze-v2-runtime/guest-engine') + $profileArgs + $targetArgs)
+    $exportArgs = @('tools/native-exports/generate.py', '--image-dir', (Join-Path $buildRoot $profileName))
     if ($RefreshExports) {
         Invoke-Checked 'python' $exportArgs
     }
@@ -32,13 +35,13 @@ try {
     if (-not $SkipFormat) {
         Invoke-Checked 'cargo' @('fmt', '--all', '--', '--check')
     }
-    Invoke-Checked 'cargo' (@('build', '--workspace', '--locked', '--features', 'kinakaze-v2-runtime/guest-engine') + $profileArgs)
+    Invoke-Checked 'cargo' (@('build', '--workspace', '--locked', '--features', 'kinakaze-v2-runtime/guest-engine') + $profileArgs + $targetArgs)
     # Entry executables have only rlib dependencies. Link their own standard
     # library so Windows can start them before rootfs/lib has been opened.
     Invoke-Checked 'cargo' (@('--config', "build.rustflags=['-C','prefer-dynamic=no']",
-        'build', '--locked', '--target-dir', 'target/entry', '-p', 'kinakaze-v2-init', '-p', 'kinakaze-v2-worker') + $profileArgs)
-    $binaryDir = Join-Path $workspacePath "target/$profileName"
-    $entryDir = Join-Path $workspacePath "target/entry/$profileName"
+        'build', '--locked', '--target-dir', (Join-Path $buildRoot 'entry'), '-p', 'kinakaze-v2-init', '-p', 'kinakaze-v2-worker') + $profileArgs)
+    $binaryDir = Join-Path $buildRoot $profileName
+    $entryDir = Join-Path $buildRoot "entry/$profileName"
     foreach ($entry in @('init.exe', 'worker.exe')) {
         Copy-Item -LiteralPath (Join-Path $entryDir $entry) -Destination $binaryDir -Force
     }
@@ -58,7 +61,7 @@ try {
         Invoke-Checked 'python' @('-m', 'unittest', 'discover', '-s', 'tools/guest-deps')
         # Tests have their own Cargo feature graph and Rust dylib ABI. Package
         # the DLLs linked by that graph, not the normal worker build above.
-        $testArgs = @('test', '--workspace', '--locked', '--features', 'kinakaze-v2-runtime/guest-engine') + $profileArgs
+        $testArgs = @('test', '--workspace', '--locked', '--features', 'kinakaze-v2-runtime/guest-engine') + $profileArgs + $targetArgs
         Invoke-Checked 'cargo' ($testArgs + @('--no-run'))
         $testBinaryDir = Join-Path $binaryDir 'deps'
         $testDistDir = Join-Path $binaryDir 'test-dist'

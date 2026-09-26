@@ -191,7 +191,7 @@ pub(crate) unsafe fn wait(
     if result == WAIT_OBJECT_0 && !interrupt.is_null() {
         return Ok(Outcome::Interrupted);
     }
-    if result >= WAIT_OBJECT_0 && result < WAIT_OBJECT_0 + handles.len() as u32 {
+    if result < WAIT_OBJECT_0 + handles.len() as u32 {
         return Ok(Outcome::Ready);
     }
     Err(crate::errno_from_win32(unsafe { GetLastError() }))

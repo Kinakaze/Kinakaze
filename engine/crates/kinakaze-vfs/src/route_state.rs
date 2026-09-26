@@ -3,7 +3,9 @@
 //! Root and nested namespaces use the same shared publication and lifetime.
 //! Namespace references retain the state across fork/exec; a root directory is
 //! never a kernel identity or a persistence location for links and routes.
-use crate::{EINVAL, EIO, ENOSPC};
+#[cfg(test)]
+use crate::ENOSPC;
+use crate::{EINVAL, EIO};
 const EFBIG: i32 = 27;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -138,6 +140,7 @@ impl Network {
         }
     }
 
+    #[cfg(test)]
     pub fn allocate_index(&mut self) -> Result<u32, i32> {
         let start = self.next_index.max(1);
         let mut candidate = start;

@@ -115,8 +115,6 @@ unsafe extern "system" {
     fn FlushProcessWriteBuffers();
     /// `GetSystemTimeAsFileTime`: wall-clock time, 100 ns ticks since 1601.
     fn GetSystemTimeAsFileTime(time: *mut FileTime);
-    /// `QueryPerformanceCounter`: a monotonic tick count.
-    fn QueryPerformanceCounter(count: *mut i64) -> i32;
     /// `GetProcessTimes`: cumulative kernel and user time for this process.
     fn GetProcessTimes(
         process: *mut c_void,
@@ -3307,9 +3305,8 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
             to_kernel(res as i64)
         }
         SYS_LSEEK => {
-            let res = unsafe {
-                crate::fs::lseek(argument1 as c_int, argument2 as i64, argument3 as c_int)
-            };
+            let res =
+                { crate::fs::lseek(argument1 as c_int, argument2 as i64, argument3 as c_int) };
             to_kernel(res)
         }
         SYS_MMAP => {
@@ -3514,7 +3511,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
             }
         }
         SYS_SHMGET => {
-            let res = unsafe {
+            let res = {
                 crate::sysvipc::kinakaze_abi_shmget(
                     argument1 as i32,
                     argument2 as usize,
@@ -3552,12 +3549,11 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
             to_kernel(res as i64)
         }
         SYS_DUP => {
-            let res = unsafe { crate::fdio::kinakaze_abi_dup(argument1 as c_int) };
+            let res = crate::fdio::kinakaze_abi_dup(argument1 as c_int);
             to_kernel(res as i64)
         }
         SYS_DUP2 => {
-            let res =
-                unsafe { crate::fdio::kinakaze_abi_dup2(argument1 as c_int, argument2 as c_int) };
+            let res = crate::fdio::kinakaze_abi_dup2(argument1 as c_int, argument2 as c_int);
             to_kernel(res as i64)
         }
         SYS_NANOSLEEP => {
@@ -3601,7 +3597,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
             to_kernel(res as i64)
         }
         SYS_SOCKET => {
-            let res = unsafe {
+            let res = {
                 crate::net::kinakaze_abi_socket(
                     argument1 as c_int,
                     argument2 as c_int,
@@ -3694,9 +3690,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
             )
         } as i64),
         SYS_SHUTDOWN => {
-            let res = unsafe {
-                crate::net::kinakaze_abi_shutdown(argument1 as c_int, argument2 as c_int)
-            };
+            let res = { crate::net::kinakaze_abi_shutdown(argument1 as c_int, argument2 as c_int) };
             to_kernel(res as i64)
         }
         SYS_BIND => {
@@ -3710,8 +3704,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
             to_kernel(res as i64)
         }
         SYS_LISTEN => {
-            let res =
-                unsafe { crate::net::kinakaze_abi_listen(argument1 as c_int, argument2 as c_int) };
+            let res = crate::net::kinakaze_abi_listen(argument1 as c_int, argument2 as c_int);
             to_kernel(res as i64)
         }
         SYS_GETSOCKNAME => {
@@ -3798,8 +3791,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
             crate::process::kinakaze_abi__exit(argument1 as i32);
         }
         SYS_KILL => {
-            let res =
-                unsafe { crate::signal::kinakaze_abi_kill(argument1 as c_int, argument2 as c_int) };
+            let res = crate::signal::kinakaze_abi_kill(argument1 as c_int, argument2 as c_int);
             to_kernel(res as i64)
         }
         SYS_UNAME => {
@@ -3827,7 +3819,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
             to_kernel(res as i64)
         }
         SYS_SEMGET => {
-            let res = unsafe {
+            let res = {
                 crate::sysvipc::kinakaze_abi_semget(
                     argument1 as i32,
                     argument2 as c_int,
@@ -3868,9 +3860,8 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
             to_kernel(res as i64)
         }
         SYS_FLOCK => {
-            let res = unsafe {
-                crate::fsextra::kinakaze_abi_flock(argument1 as c_int, argument2 as c_int)
-            };
+            let res =
+                { crate::fsextra::kinakaze_abi_flock(argument1 as c_int, argument2 as c_int) };
             to_kernel(res as i64)
         }
         149 => to_kernel(
@@ -3906,11 +3897,11 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
             argument4 as u32,
         ) as i64),
         SYS_FSYNC => {
-            let res = unsafe { crate::fsextra::kinakaze_abi_fsync(argument1 as c_int) };
+            let res = crate::fsextra::kinakaze_abi_fsync(argument1 as c_int);
             to_kernel(res as i64)
         }
         SYS_FDATASYNC => {
-            let res = unsafe { crate::fsextra::kinakaze_abi_fdatasync(argument1 as c_int) };
+            let res = crate::fsextra::kinakaze_abi_fdatasync(argument1 as c_int);
             to_kernel(res as i64)
         }
         SYS_TRUNCATE => {
@@ -3920,7 +3911,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
             to_kernel(res as i64)
         }
         SYS_FTRUNCATE => {
-            let res = unsafe { crate::fs::ftruncate(argument1 as c_int, argument2 as i64) };
+            let res = crate::fs::ftruncate(argument1 as c_int, argument2 as i64);
             to_kernel(res as i64)
         }
         SYS_GETDENTS => {
@@ -3954,7 +3945,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
             to_kernel(res as i64)
         }
         SYS_FCHDIR => {
-            let res = unsafe { crate::fdio::kinakaze_abi_fchdir(argument1 as c_int) };
+            let res = crate::fdio::kinakaze_abi_fchdir(argument1 as c_int);
             to_kernel(res as i64)
         }
         SYS_RENAME => {
@@ -4581,7 +4572,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
             to_kernel(res as i64)
         }
         SYS_EPOLL_CREATE1 => {
-            let res = unsafe { crate::net::kinakaze_abi_epoll_create1(argument1 as c_int) };
+            let res = crate::net::kinakaze_abi_epoll_create1(argument1 as c_int);
             to_kernel(res as i64)
         }
         SYS_DUP3 => {
@@ -6922,7 +6913,7 @@ mod tests {
         const CANARY: u64 = 0xfeed_face_cafe_beef;
 
         let requested = KernelSigAction {
-            sa_handler: handler as usize,
+            sa_handler: handler as *const () as usize,
             sa_flags: kinakaze_vfs::signal::SA_RESTART as u64,
             sa_restorer: RESTORER,
             sa_mask: 1 << (SIGNAL - 1),
@@ -6973,7 +6964,7 @@ mod tests {
             0
         );
         assert_eq!(queried.canary, CANARY);
-        assert_eq!(queried.action.sa_handler, handler as usize);
+        assert_eq!(queried.action.sa_handler, handler as *const () as usize);
         assert_eq!(queried.action.sa_flags, requested.sa_flags);
         assert_eq!(queried.action.sa_restorer, RESTORER);
         assert_eq!(queried.action.sa_mask, requested.sa_mask);

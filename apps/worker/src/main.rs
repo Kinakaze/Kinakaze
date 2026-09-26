@@ -59,9 +59,13 @@ fn run() -> Result<()> {
         let status = launch::dispatch(&mode, args.collect())?;
         std::process::exit(status);
     }
+    if mode == "--version" {
+        println!("Kinakaze {}", env!("CARGO_PKG_VERSION"));
+        return Ok(());
+    }
     if mode == "--help" || mode == "-h" {
         println!(
-            "Usage: worker run [--root ROOT] [--dist DIST] [--cwd /] [--web 127.0.0.1:PORT] -- /linux/program [args...]\n       worker smoke [--dist DIST]\nInternal parent/child modes use the inherited V2 session environment."
+            "Usage: worker run [--root ROOT] [--dist DIST] [--cwd /] [--rootfs-manifest FILE] [--web 127.0.0.1:PORT] -- /linux/program [args...]\n       worker smoke [--dist DIST]\nInternal parent/child modes use the inherited V2 session environment."
         );
         return Ok(());
     }

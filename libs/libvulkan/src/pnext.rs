@@ -55,6 +55,10 @@ impl RawNode {
         }
     }
 
+    #[expect(
+        clippy::not_unsafe_ptr_arg_deref,
+        reason = "stores an opaque pointer value in owned storage without dereferencing it"
+    )]
     pub fn set_p_next(&mut self, p_next: *const c_void) {
         unsafe {
             self.storage

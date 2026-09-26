@@ -164,12 +164,10 @@ impl Staged {
             &origin,
             0,
         )?;
-        let object = unsafe {
-            Object::reopen(
-                staged.handle.0,
-                FILE_READ_ATTRIBUTES | windows_sys::Win32::Storage::FileSystem::FILE_READ_EA,
-            )?
-        };
+        let object = Object::reopen(
+            staged.handle.0,
+            FILE_READ_ATTRIBUTES | windows_sys::Win32::Storage::FileSystem::FILE_READ_EA,
+        )?;
         crate::fs::unlink_inode(staged.handle.0)?;
         staged.published = true;
         Ok(object)
@@ -320,8 +318,7 @@ impl Staged {
         let data_object = source.data_object();
         let data_size = crate::fs::stat_handle(data_object.raw(), false)?.st_size;
         if kind == S_IFREG && !truncate && !metadata_only && data_size > 0 {
-            let file =
-                unsafe { Object::reopen(data_object.raw(), GENERIC_READ | FILE_WRITE_ATTRIBUTES)? };
+            let file = Object::reopen(data_object.raw(), GENERIC_READ | FILE_WRITE_ATTRIBUTES)?;
             // Reads used for copy-up must not change lower atime. Windows lets
             // this independent handle suppress automatic access-time updates.
             file.suppress_atime()?;
@@ -364,8 +361,7 @@ impl Staged {
     /// must re-lookup the winning upper inode; its file is never overwritten.
     pub(crate) fn publish(self, upper_parent: &Object, name: &str) -> Result<(), i32> {
         let parent = Handle(
-            unsafe { Object::reopen(upper_parent.raw(), FILE_READ_ATTRIBUTES | FILE_TRAVERSE)? }
-                .into_raw(),
+            Object::reopen(upper_parent.raw(), FILE_READ_ATTRIBUTES | FILE_TRAVERSE)?.into_raw(),
         );
         self.publish_to(&parent, name)
     }
@@ -473,20 +469,16 @@ pub(crate) fn ensure_upper_mode(
                 .as_ref()
                 .and_then(|context| context.index.as_ref())
             {
-                let upper = unsafe {
-                    Object::reopen(
-                        staged.handle.0,
-                        FILE_READ_ATTRIBUTES
-                            | windows_sys::Win32::Storage::FileSystem::FILE_READ_EA,
-                    )?
-                };
+                let upper = Object::reopen(
+                    staged.handle.0,
+                    FILE_READ_ATTRIBUTES | windows_sys::Win32::Storage::FileSystem::FILE_READ_EA,
+                )?;
                 Some(index.install(&source.origin()?, &upper, metadata.st_nlink)?)
             } else {
                 None
             };
             if source.flags() & super::features::FSYNC_STRICT != 0 {
-                unsafe { Object::reopen(staged.handle.0, GENERIC_READ | GENERIC_WRITE)? }
-                    .flush()?;
+                Object::reopen(staged.handle.0, GENERIC_READ | GENERIC_WRITE)?.flush()?;
                 if let Some(installation) = &installation {
                     installation.flush()?;
                 }
@@ -499,12 +491,10 @@ pub(crate) fn ensure_upper_mode(
                 }
             }
             let handle = Handle(
-                unsafe {
-                    Object::reopen(
-                        parent.backing_object().raw(),
-                        FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | FILE_TRAVERSE,
-                    )?
-                }
+                Object::reopen(
+                    parent.backing_object().raw(),
+                    FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | FILE_TRAVERSE,
+                )?
                 .into_raw(),
             );
             let _guard = DirectoryLock::acquire(&handle)?;
@@ -521,8 +511,7 @@ pub(crate) fn ensure_upper_mode(
                         eprintln!("kinakaze: copy-up parent timestamp restore: errno={error}");
                     }
                     if source.flags() & super::features::FSYNC_STRICT != 0 {
-                        unsafe { Object::reopen(handle.0, GENERIC_READ | GENERIC_WRITE)? }
-                            .flush()?;
+                        Object::reopen(handle.0, GENERIC_READ | GENERIC_WRITE)?.flush()?;
                     }
                 }
                 Err(crate::EEXIST) => {
@@ -560,8 +549,7 @@ pub(super) fn complete_metacopy(source: &Node, work: &Object, truncate: bool) ->
         return Ok(());
     }
     let staged = Staged::prepare(source, work, truncate)?;
-    let target =
-        unsafe { Object::reopen(source.backing_object().raw(), GENERIC_READ | GENERIC_WRITE)? };
+    let target = Object::reopen(source.backing_object().raw(), GENERIC_READ | GENERIC_WRITE)?;
     let metadata = crate::fs::stat_handle(target.raw(), false)?;
     let length = crate::fs::stat_handle(staged.handle.0, false)?.st_size as u64;
     target.set_length(0)?;
@@ -1511,8 +1499,7 @@ mod tests {
         std::fs::write(f.path("lower/a/b/file"), b"replacement lower").unwrap();
         let copied = ensure_upper(&root, &work, &["a", "b", "file"], false).unwrap();
         let mut data = [0u8; 32];
-        let reader =
-            unsafe { Object::reopen(copied.backing_object().raw(), GENERIC_READ) }.unwrap();
+        let reader = Object::reopen(copied.backing_object().raw(), GENERIC_READ).unwrap();
         let count = reader.read_at(0, &mut data).unwrap();
         assert_eq!(&data[..count], b"pinned lower");
         assert_eq!(
@@ -1689,7 +1676,7 @@ mod tests {
                     let _ = object.path().unwrap();
                 }
                 5 => {
-                    let _ = unsafe { Object::reopen(object.raw(), FILE_READ_ATTRIBUTES) }.unwrap();
+                    let _ = Object::reopen(object.raw(), FILE_READ_ATTRIBUTES).unwrap();
                 }
                 6 => {
                     let _ = Node::root([f.path("upper")], XattrNamespace::Trusted).unwrap();

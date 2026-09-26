@@ -37,7 +37,9 @@ fn open_clipboard_retry() -> bool {
     false
 }
 
-pub fn get_text(buffer: *mut c_char, max_len: usize) -> isize {
+/// # Safety
+/// When non-null, buffer must be writable for max_len bytes.
+pub unsafe fn get_text(buffer: *mut c_char, max_len: usize) -> isize {
     let _guard = CLIPBOARD_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     if !open_clipboard_retry() {
         return -1;
@@ -75,7 +77,9 @@ pub fn get_text(buffer: *mut c_char, max_len: usize) -> isize {
     bytes.len() as isize
 }
 
-pub fn set_text(text: *const c_char) -> c_int {
+/// # Safety
+/// When non-null, text must point to a readable NUL-terminated string.
+pub unsafe fn set_text(text: *const c_char) -> c_int {
     let _guard = CLIPBOARD_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     if text.is_null() {
         return -1;

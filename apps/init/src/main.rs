@@ -1,4 +1,5 @@
 //! Session-scoped common process manager. No guest code runs in this process.
+mod client;
 mod pool;
 mod web;
 use kinakaze_v2_host_win::{Job, PipeConnection, PipeListener, ProcessHandle, random_token};
@@ -22,6 +23,7 @@ struct Service {
     connections: AtomicUsize,
     endpoint: String,
     token: String,
+    launch_token: Option<String>,
     controller: PeerIdentity,
     job: Job,
     prewarm_process: Option<ProcessHandle>,
@@ -63,7 +65,7 @@ fn reject(pipe: &mut PipeConnection, id: u64, code: ErrorCode, message: &str) ->
 
 fn serve(mut pipe: PipeConnection, service: Arc<Service>, _slot: ConnectionSlot) -> io::Result<()> {
     let first: WireRequest = read_frame(&mut pipe)?;
-    let Request::Hello(hello) = first.request else {
+    let Request::Hello(mut hello) = first.request else {
         return reject(
             &mut pipe,
             first.id,
@@ -87,7 +89,13 @@ fn serve(mut pipe: PipeConnection, service: Arc<Service>, _slot: ConnectionSlot)
             "unsupported protocol version",
         );
     }
-    if hello.token != service.token {
+    let is_launcher = hello.role == ClientRole::Launcher;
+    let expected_token = if is_launcher {
+        service.launch_token.as_deref()
+    } else {
+        Some(service.token.as_str())
+    };
+    if expected_token != Some(hello.token.as_str()) {
         return reject(
             &mut pipe,
             first.id,
@@ -113,6 +121,7 @@ fn serve(mut pipe: PipeConnection, service: Arc<Service>, _slot: ConnectionSlot)
         );
     }
     if !is_managed
+        && !is_launcher
         && (peer.host_pid != service.controller.host_pid || peer.birth != service.controller.birth)
     {
         return reject(
@@ -127,6 +136,8 @@ fn serve(mut pipe: PipeConnection, service: Arc<Service>, _slot: ConnectionSlot)
     if is_managed {
         service.job.assign(&process)?;
     }
+    // The manager never exposes the separate native-worker credential to launchers.
+    hello.token.clone_from(&service.token);
     let connected = service.manager.lock().unwrap().connect(hello, peer);
     let (client, reply) = match connected {
         Ok(connected) => connected,
@@ -210,6 +221,7 @@ fn serve(mut pipe: PipeConnection, service: Arc<Service>, _slot: ConnectionSlot)
                             | Request::ReservePoolWorker
                             | Request::ReleasePoolWorker { .. }
                             | Request::ActivatePoolWorker { .. }
+                            | Request::ActivatePoolWorkerUnderParent { .. }
                             | Request::MarkPoolReady
                             | Request::AwaitPoolActivation
                     ) {
@@ -229,7 +241,8 @@ fn serve(mut pipe: PipeConnection, service: Arc<Service>, _slot: ConnectionSlot)
                     }
                     let result = manager.handle(client, wire.request.clone());
                     if result.is_ok()
-                        && let Request::ActivatePoolWorker { pid, .. } = &wire.request
+                        && let Request::ActivatePoolWorker { pid, .. }
+                        | Request::ActivatePoolWorkerUnderParent { pid, .. } = &wire.request
                         && let Some(pool) = &service.pool
                         && let Some(peer) = manager.process_peer(*pid)
                     {
@@ -304,6 +317,8 @@ fn serve(mut pipe: PipeConnection, service: Arc<Service>, _slot: ConnectionSlot)
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = std::env::args().skip(1);
     let mut endpoint = None;
+    let mut session_file = None;
+    let mut rootfs_manifest = None;
     let mut controller_pid = None;
     let mut web_address = None;
     let (mut prewarm_root, mut prewarm_dist) = (None, None);
@@ -311,23 +326,64 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut pool_size = None;
     while let Some(argument) = args.next() {
         match argument.as_str() {
-            "--pipe" => endpoint = args.next(),
+            "--pipe" => endpoint = Some(args.next().ok_or("missing pipe endpoint")?),
+            "--session-file" => session_file = Some(std::path::PathBuf::from(args.next().ok_or("missing session file")?)),
+            "--rootfs-manifest" => rootfs_manifest = Some(std::path::PathBuf::from(args.next().ok_or("missing rootfs manifest")?)),
             "--web" => web_address = Some(args.next().ok_or("missing --web address")?),
-            "--prewarm-root" => prewarm_root = Some(args.next().ok_or("missing prewarm root")?),
-            "--prewarm-dist" => prewarm_dist = Some(args.next().ok_or("missing prewarm distribution")?),
+            "--root" | "--prewarm-root" => prewarm_root = Some(args.next().ok_or("missing prewarm root")?),
+            "--dist" | "--prewarm-dist" => prewarm_dist = Some(args.next().ok_or("missing prewarm distribution")?),
             "--prewarm-pool" => pool_size = Some(args.next().ok_or("missing pool size")?.parse::<usize>()?),
             "--" => { prewarm_command.extend(args); break; }
             "--controller-pid" => controller_pid = Some(args.next().ok_or("missing controller PID")?.parse::<u32>()?),
             _ => return Err("usage: init --pipe ENDPOINT --controller-pid PID [--web 127.0.0.1:PORT] (KINAKAZE_V2_TOKEN required)".into()),
         }
     }
-    let endpoint = endpoint.ok_or("missing --pipe")?;
-    let token = std::env::var("KINAKAZE_V2_TOKEN")?;
+    if session_file.is_some() {
+        let dist = prewarm_dist.get_or_insert(
+            std::env::current_exe()?
+                .parent()
+                .ok_or("init has no parent directory")?
+                .to_string_lossy()
+                .into_owned(),
+        );
+        prewarm_root.get_or_insert(
+            std::path::Path::new(dist)
+                .join("rootfs")
+                .to_string_lossy()
+                .into_owned(),
+        );
+        pool_size.get_or_insert(1);
+    }
+    let endpoint = match endpoint {
+        Some(endpoint) => endpoint,
+        None if session_file.is_some() => format!(r"\\.\pipe\kinakaze-v2-{}", random_token()?),
+        None => return Err("missing --pipe".into()),
+    };
+    let token = if session_file.is_some() {
+        random_token()?
+    } else {
+        std::env::var("KINAKAZE_V2_TOKEN")?
+    };
+    let launch_token = session_file.as_ref().map(|_| random_token()).transpose()?;
+    if let (Some(root), Some(dist)) = (&prewarm_root, &prewarm_dist) {
+        kinakaze_v2_rootfs::prepare(
+            std::path::Path::new(root),
+            std::path::Path::new(dist),
+            rootfs_manifest.as_deref(),
+        )?;
+    } else if rootfs_manifest.is_some() {
+        return Err("rootfs manifest requires root and distribution".into());
+    }
     if !(32..=512).contains(&token.len()) {
         return Err("session credential must have 32..=512 bytes".into());
     }
-    let controller = ProcessHandle::open(controller_pid.ok_or("missing --controller-pid")?)?;
-    if controller.pid() == std::process::id() {
+    let standalone = controller_pid.is_none() && session_file.is_some();
+    let controller = ProcessHandle::open(
+        controller_pid
+            .or_else(|| standalone.then(std::process::id))
+            .ok_or("missing --controller-pid")?,
+    )?;
+    if !standalone && controller.pid() == std::process::id() {
         return Err("controller must be a separate native process".into());
     }
     let mut listener = PipeListener::bind(&endpoint)?;
@@ -412,6 +468,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         connections: AtomicUsize::new(0),
         endpoint,
         token,
+        launch_token,
         controller: PeerIdentity {
             host_pid: controller.pid(),
             birth: controller.birth(),
@@ -424,12 +481,14 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .map(|address| web::Server::start(&address, Arc::clone(&service)))
         .transpose()?;
     let watcher = Arc::clone(&service);
-    std::thread::Builder::new()
-        .name("controller-exit".into())
-        .spawn(move || {
-            let _ = controller.wait();
-            watcher.stop();
-        })?;
+    if !standalone {
+        std::thread::Builder::new()
+            .name("controller-exit".into())
+            .spawn(move || {
+                let _ = controller.wait();
+                watcher.stop();
+            })?;
+    }
     if let Some(child) = &_prewarm_child {
         let process = ProcessHandle::open(child.id())?;
         let watcher = Arc::clone(&service);
@@ -445,6 +504,15 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     if service.pool.is_some() {
         pool::start(Arc::clone(&service))?;
     }
+    let _session_file = session_file
+        .map(|path| {
+            client::SessionFile::create(
+                path,
+                &service.endpoint,
+                service.launch_token.as_deref().unwrap(),
+            )
+        })
+        .transpose()?;
     println!("READY");
     io::stdout().flush()?;
     while !service.stopping.load(Ordering::Acquire) {
@@ -479,6 +547,26 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn main() {
+    match std::env::args().nth(1).as_deref() {
+        Some("--version") => {
+            println!("Kinakaze {}", env!("CARGO_PKG_VERSION"));
+            return;
+        }
+        Some("--help" | "-h") => {
+            println!(
+                "Usage: init --session-file FILE [--root ROOT] [--dist DIST] [--rootfs-manifest FILE] [--prewarm-pool N] [--web 127.0.0.1:PORT]\n       init launch --session-file FILE [--parent PID] [--wait] [--cwd /] [--env NAME=VALUE] -- /program [args...]\n       init --pipe ENDPOINT --controller-pid PID (internal session)"
+            );
+            return;
+        }
+        Some("launch") => match client::launch() {
+            Ok(status) => std::process::exit(status),
+            Err(error) => {
+                eprintln!("init launch: {error}");
+                std::process::exit(1);
+            }
+        },
+        _ => {}
+    }
     if let Err(error) = run() {
         eprintln!("init: {error}");
         std::process::exit(1);

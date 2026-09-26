@@ -772,7 +772,8 @@ fn drain_xcb_events() {
     // subscribers. Converting here must not steal another connection's paint
     // or input events (CEF uses Xlib beside Qt's XCB reader).
     x11::connection::drain();
-    x11::drain_native_events(x11::connection::xcb_display());
+    // SAFETY: The caller owns the selected live display for this dispatch.
+    unsafe { x11::drain_native_events(x11::connection::xcb_display()) };
     selection::drain_shared_events();
 }
 
@@ -787,7 +788,8 @@ pub unsafe extern "sysv64" fn xcb_poll_for_event(
     }
     // Route wire events to their subscribing displays before consuming this
     // frontend's queue. A Qt reader must not steal a CEF/Xlib timestamp reply.
-    x11::xext::protocol::drain_events(x11::connection::xcb_display());
+    // SAFETY: The caller owns the selected live display for this dispatch.
+    unsafe { x11::xext::protocol::drain_events(x11::connection::xcb_display()) };
     drain_xcb_events();
     if let Ok(mut s) = xcb_state().lock() {
         if let Some(ev) = s.pending_events.pop_front() {
@@ -1427,6 +1429,8 @@ mod tests {
     fn window_mapping_input_resize_close_and_destroy_roundtrip() {
         let connection = unsafe { xcb_connect(core::ptr::null(), core::ptr::null_mut()) };
         let wid = unsafe { xcb_generate_id(connection) };
+        // ConfigureNotify is delivered only to StructureNotify subscribers.
+        let event_mask: u32 = 1 << 17;
         unsafe {
             xcb_create_window(
                 connection,
@@ -1440,8 +1444,8 @@ mod tests {
                 0,
                 1,
                 1,
-                0,
-                core::ptr::null(),
+                1 << 11,
+                (&raw const event_mask).cast(),
             )
         };
 
@@ -1569,6 +1573,7 @@ mod tests {
         unsafe { xcb_destroy_window(connection, wid) };
         assert!(get_native_hwnd(wid).is_none());
         assert!(kinakaze_libdisplay::window::native_handle(logical).is_none());
+        unsafe { xcb_disconnect(connection) };
     }
 }
 

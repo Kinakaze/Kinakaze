@@ -10,6 +10,7 @@
 use crate::fs::object::Object;
 use std::collections::HashSet;
 use std::ffi::OsStr;
+#[cfg(test)]
 use std::path::PathBuf;
 use std::sync::Arc;
 use windows_sys::Win32::Storage::FileSystem::{FILE_READ_ATTRIBUTES, FILE_READ_EA};
@@ -75,6 +76,7 @@ struct Backing {
 }
 
 impl Backing {
+    #[cfg(test)]
     fn open(path: PathBuf, namespace: XattrNamespace, layer: usize) -> Result<Self, i32> {
         Self::from_object(
             Object::open(&path, FILE_READ_ATTRIBUTES | FILE_READ_EA)?,
@@ -162,6 +164,7 @@ impl Node {
             context: None,
         })
     }
+    #[cfg(test)]
     /// Assemble the mount root from already resolved, ordered layer roots.
     /// Unlike a looked-up subdirectory, the overlay root merges all configured
     /// roots even if a root itself carries an opaque xattr (ovl_get_root).
@@ -251,8 +254,7 @@ impl Node {
         }
         let mut entries = Vec::new();
         for entry in &self.entries {
-            let object =
-                unsafe { Object::reopen(entry.object.raw(), FILE_READ_ATTRIBUTES | FILE_READ_EA)? };
+            let object = Object::reopen(entry.object.raw(), FILE_READ_ATTRIBUTES | FILE_READ_EA)?;
             let mut fresh = Backing::from_object(object, self.namespace, entry.layer)?;
             fresh.indexed = entry.indexed;
             let last = fresh.metacopy.is_none();
@@ -426,6 +428,7 @@ mod tests {
                 .set(name.as_bytes(), bytes, 0)
                 .unwrap();
         }
+        #[cfg(test)]
         fn root(&self, namespace: XattrNamespace) -> Node {
             Node::root(
                 [self.path("upper"), self.path("middle"), self.path("lower")],

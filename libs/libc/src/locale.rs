@@ -322,6 +322,10 @@ pub extern "sysv64" fn kinakaze_abi___ctype_get_mb_cur_max() -> usize {
 }
 
 macro_rules! alias {
+    (safe $name:ident,$target:ident,($($arg:ident:$ty:ty),*)->$ret:ty) => {
+        #[unsafe(no_mangle)]
+        pub extern "sysv64" fn $name($($arg:$ty),*)->$ret { $target($($arg),*) }
+    };
     ($name:ident,$target:ident,($($arg:ident:$ty:ty),*)->$ret:ty) => {
         #[unsafe(no_mangle)]
         pub unsafe extern "sysv64" fn $name($($arg:$ty),*)->$ret { unsafe { $target($($arg),*) } }

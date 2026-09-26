@@ -21,6 +21,7 @@ jobs:
     env:
       CARGO_TERM_COLOR: always
       PYTHONUTF8: '1'
+      RUSTFLAGS: '-C prefer-dynamic -D warnings'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -59,7 +60,7 @@ jobs:
       - name: Check all targets
         run: cargo check --workspace --all-targets --locked
       - name: Test core libraries
-        run: cargo test --locked -p kinakaze-v2-abi -p kinakaze-v2-protocol -p kinakaze-v2-manager --lib
+        run: cargo test --locked -p kinakaze-v2-abi -p kinakaze-v2-protocol -p kinakaze-v2-manager -p kinakaze-v2-rootfs
       - name: Test export tooling
         run: python -m unittest discover -s tools/native-exports
       - name: Test guest dependency tooling

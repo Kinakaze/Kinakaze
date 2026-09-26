@@ -362,6 +362,7 @@ impl Stream {
     }
 }
 
+#[allow(non_snake_case, reason = "Field names match the glibc _IO_FILE ABI.")]
 /// A `FILE` as the guest sees it, matching glibc's `_IO_FILE` ABI layout on x86_64.
 ///
 /// Python and glibc inline buffer checks (`_IO_read_ptr < _IO_read_end`) expect
@@ -398,7 +399,7 @@ pub struct File {
     pub _pad5: usize,
     pub _mode: core::sync::atomic::AtomicI32,
     pub _unused2: [c_char; 20],
-    pub stream: Mutex<Stream>,
+    stream: Mutex<Stream>,
 }
 
 // File contains raw pointers to match glibc layout, but accesses to the inner stream
@@ -417,7 +418,7 @@ impl File {
         );
     }
 
-    pub const fn new_static(fileno: c_int, stream: Stream) -> Self {
+    const fn new_static(fileno: c_int, stream: Stream) -> Self {
         Self {
             _flags: core::sync::atomic::AtomicI32::new(stream.access_flags()),
             _IO_read_ptr: ptr::null_mut(),
@@ -501,12 +502,6 @@ pub(crate) fn trace_event(arguments: std::fmt::Arguments<'_>) {
 pub(crate) fn trace_enabled() -> bool {
     static ENABLED: OnceLock<bool> = OnceLock::new();
     *ENABLED.get_or_init(|| std::env::var_os("KINAKAZE_STDIO_TRACE").is_some())
-}
-
-pub(crate) fn is_published(file: *mut File) -> bool {
-    open_streams()
-        .lock()
-        .is_ok_and(|streams| streams.contains(&(file as usize)))
 }
 
 /// Leaks a stream and returns the pointer the guest will hold.
@@ -1565,7 +1560,7 @@ pub mod exports {
 
     #[unsafe(no_mangle)]
     pub unsafe extern "sysv64" fn puts(text: *const c_char) -> c_int {
-        kinakaze_abi_puts(text)
+        unsafe { kinakaze_abi_puts(text) }
     }
 
     #[unsafe(no_mangle)]
@@ -1623,7 +1618,7 @@ pub mod exports {
 
     #[unsafe(no_mangle)]
     pub unsafe extern "sysv64" fn remove(path: *const c_char) -> c_int {
-        kinakaze_abi_remove(path)
+        unsafe { kinakaze_abi_remove(path) }
     }
 
     /// `putc` — alias for `fputc`.
@@ -1726,13 +1721,13 @@ pub mod exports {
 
     #[unsafe(no_mangle)]
     pub unsafe extern "sysv64" fn mkstemp(pattern: *mut c_char) -> c_int {
-        kinakaze_abi_mkstemp(pattern)
+        unsafe { kinakaze_abi_mkstemp(pattern) }
     }
 
     /// `__fpending` — returns pending buffered bytes.
     #[unsafe(no_mangle)]
     pub unsafe extern "sysv64" fn __fpending(file: *mut File) -> usize {
-        kinakaze_abi___fpending(file)
+        unsafe { kinakaze_abi___fpending(file) }
     }
 
     #[unsafe(no_mangle)]
@@ -1822,12 +1817,12 @@ pub mod exports {
     /// `fflush_unlocked`
     #[unsafe(no_mangle)]
     pub unsafe extern "sysv64" fn fflush_unlocked(file: *mut File) -> c_int {
-        super::fflush(file)
+        unsafe { super::fflush(file) }
     }
 
     #[unsafe(no_mangle)]
     pub unsafe extern "sysv64" fn kinakaze_abi_fflush_unlocked(file: *mut File) -> c_int {
-        super::fflush(file)
+        unsafe { super::fflush(file) }
     }
 
     /// `__overflow`

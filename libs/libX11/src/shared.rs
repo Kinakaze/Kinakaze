@@ -614,7 +614,7 @@ pub(crate) fn damage_from_child(window: usize, rect: crate::XRectangle, width: u
         }
     }
 }
-pub fn send_xevent(
+pub(crate) fn send_xevent(
     display: *mut crate::Display,
     recipient: usize,
     event: &mut crate::XEvent,

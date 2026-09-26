@@ -1,7 +1,6 @@
 //! On-demand guest text databases. Lookup retains one line, never the whole file.
 pub(super) mod cursor;
 pub(super) mod returned;
-use core::ffi::c_char;
 use std::ffi::CString;
 use std::io::{BufRead, Read};
 
@@ -63,7 +62,6 @@ pub(super) struct Names {
     pub name: CString,
     // CString allocations stay fixed when this owner moves.
     _aliases: Vec<CString>,
-    pub pointers: Vec<*mut c_char>,
 }
 
 impl Names {
@@ -76,15 +74,9 @@ impl Names {
             .filter(|alias| !alias.is_empty())
             .map(|alias| CString::new(alias).unwrap())
             .collect();
-        let pointers = aliases
-            .iter()
-            .map(|alias| alias.as_ptr().cast_mut())
-            .chain(std::iter::once(core::ptr::null_mut()))
-            .collect();
         Self {
             name,
             _aliases: aliases,
-            pointers,
         }
     }
 
@@ -233,8 +225,8 @@ mod tests {
         assert_eq!(value, 3);
         assert_eq!(names.name.as_bytes(), b"first");
         assert_eq!(names._aliases[1].as_bytes(), b"\xff");
-        assert_eq!(names.pointers.len(), 3);
-        assert!(names.pointers[2].is_null());
+        assert_eq!(names.aliases().count(), 2);
+        assert_eq!(names.aliases().next().unwrap().as_bytes(), b"ALIAS");
         let (value, _) = find(&mut input, number, |r| r.matches(b"last", false))
             .unwrap()
             .unwrap();

@@ -84,7 +84,7 @@ fn convert(object: &Object, apply: bool, report: &mut Report) -> Result<(), i32>
     }
     report.legacy += 1;
     if apply {
-        let writer = unsafe { Object::reopen(object.raw(), FILE_READ_ATTRIBUTES | FILE_WRITE_EA)? };
+        let writer = Object::reopen(object.raw(), FILE_READ_ATTRIBUTES | FILE_WRITE_EA)?;
         ea::write(&writer, EA_NAME, &record.encode()?)?;
         if super::read_object(object)? != record {
             return Err(EIO);

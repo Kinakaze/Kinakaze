@@ -4547,7 +4547,7 @@ mod tests {
 
         unsafe extern "sysv64" fn thread_body(_arg: *mut c_void) -> *mut c_void {
             let k = TEST_KEY.load(std::sync::atomic::Ordering::SeqCst);
-            unsafe {
+            {
                 pthread_setspecific(k, 0xdeadbeef as *mut c_void);
             }
             core::ptr::null_mut()
@@ -4568,13 +4568,13 @@ mod tests {
         assert_eq!(unsafe { pthread_join(thread, core::ptr::null_mut()) }, 0);
 
         // Clean up key
-        assert_eq!(unsafe { pthread_key_delete(key) }, 0);
+        assert_eq!(pthread_key_delete(key), 0);
     }
 
     #[test]
     fn pthread_mutex_normal_vs_errorcheck_vs_recursive_contracts() {
         // Recursive mutex: multiple nested locks
-        let mut rec_attr = mutexattr_of(PTHREAD_MUTEX_RECURSIVE);
+        let rec_attr = mutexattr_of(PTHREAD_MUTEX_RECURSIVE);
         let mut rec_mutex: usize = 0;
         assert_eq!(
             unsafe { pthread_mutex_init(&raw mut rec_mutex, &raw const rec_attr) },
@@ -4593,10 +4593,10 @@ mod tests {
         assert_eq!(unsafe { pthread_mutex_unlock(&raw mut rec_mutex) }, 0);
         assert_eq!(unsafe { pthread_mutex_unlock(&raw mut rec_mutex) }, 0);
         assert_eq!(unsafe { pthread_mutex_unlock(&raw mut rec_mutex) }, 0);
-        assert_eq!(unsafe { pthread_mutex_destroy(&raw mut rec_mutex) }, 0);
+        assert_eq!(pthread_mutex_destroy(&raw mut rec_mutex), 0);
 
         // Errorcheck mutex: self-lock is EDEADLK, unowned unlock is EPERM
-        let mut err_attr = mutexattr_of(PTHREAD_MUTEX_ERRORCHECK);
+        let err_attr = mutexattr_of(PTHREAD_MUTEX_ERRORCHECK);
         let mut err_mutex: usize = 0;
         assert_eq!(
             unsafe { pthread_mutex_init(&raw mut err_mutex, &raw const err_attr) },
@@ -4611,7 +4611,7 @@ mod tests {
         assert_eq!(unlocker.join().unwrap(), EPERM);
 
         assert_eq!(unsafe { pthread_mutex_unlock(&raw mut err_mutex) }, 0);
-        assert_eq!(unsafe { pthread_mutex_destroy(&raw mut err_mutex) }, 0);
+        assert_eq!(pthread_mutex_destroy(&raw mut err_mutex), 0);
     }
 
     #[test]
@@ -4674,8 +4674,8 @@ mod tests {
             done_count.load(std::sync::atomic::Ordering::SeqCst),
             WAITERS
         );
-        assert_eq!(unsafe { pthread_cond_destroy(&raw mut cond) }, 0);
-        assert_eq!(unsafe { pthread_mutex_destroy(&raw mut mutex) }, 0);
+        assert_eq!(pthread_cond_destroy(&raw mut cond), 0);
+        assert_eq!(pthread_mutex_destroy(&raw mut mutex), 0);
     }
 
     #[test]
@@ -4966,9 +4966,9 @@ mod tests {
         assert_eq!(unsafe { pthread_mutex_unlock(&raw mut mutex) }, 0);
         handle.join().unwrap();
 
-        assert_eq!(unsafe { pthread_cond_destroy(&raw mut cond) }, 0);
-        assert_eq!(unsafe { pthread_cond_destroy(&raw mut realtime_cond) }, 0);
-        assert_eq!(unsafe { pthread_mutex_destroy(&raw mut mutex) }, 0);
+        assert_eq!(pthread_cond_destroy(&raw mut cond), 0);
+        assert_eq!(pthread_cond_destroy(&raw mut realtime_cond), 0);
+        assert_eq!(pthread_mutex_destroy(&raw mut mutex), 0);
     }
 
     #[test]
@@ -5034,8 +5034,8 @@ mod tests {
         assert_eq!(res, ETIMEDOUT);
         assert_eq!(unsafe { pthread_mutex_unlock(&raw mut mutex) }, 0);
 
-        assert_eq!(unsafe { pthread_cond_destroy(&raw mut cond) }, 0);
-        assert_eq!(unsafe { pthread_mutex_destroy(&raw mut mutex) }, 0);
+        assert_eq!(pthread_cond_destroy(&raw mut cond), 0);
+        assert_eq!(pthread_mutex_destroy(&raw mut mutex), 0);
     }
 
     #[test]

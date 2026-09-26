@@ -50,6 +50,152 @@ fn reserve(manager: &mut StateManager, controller: ClientId) -> u32 {
 }
 
 #[test]
+fn reconnectable_launcher_inserts_a_child_and_does_not_own_its_lifetime() {
+    let (mut manager, controller, first, second) = setup();
+    let parent = reserve(&mut manager, controller);
+    manager
+        .handle(
+            controller,
+            Request::ActivatePoolWorker {
+                pid: parent,
+                launch: launch("/bin/parent"),
+            },
+        )
+        .unwrap();
+    let launcher = connect(&mut manager, ClientRole::Launcher, 40);
+    let child = reserve(&mut manager, launcher);
+    let request = Request::ActivatePoolWorkerUnderParent {
+        pid: child,
+        parent_pid: parent,
+        launch: launch("/bin/child"),
+    };
+    assert_eq!(
+        manager.handle(launcher, request.clone()).unwrap(),
+        Reply::Ok
+    );
+    assert_eq!(
+        manager.handle(launcher, request.clone()).unwrap(),
+        Reply::Ok
+    );
+    let other = connect(&mut manager, ClientRole::Launcher, 50);
+    assert_eq!(
+        manager.handle(other, request).unwrap_err().code,
+        ErrorCode::Conflict
+    );
+    manager.disconnect(launcher);
+    let Reply::Identity(identity) = manager.handle(second, Request::Identity).unwrap() else {
+        panic!()
+    };
+    assert_eq!(identity.parent_pid, parent);
+    assert_eq!(identity.pid, child);
+    assert!(matches!(
+        manager
+            .handle(second, Request::AwaitPoolActivation)
+            .unwrap(),
+        Reply::PoolLaunch(_)
+    ));
+    assert_eq!(
+        manager
+            .handle(other, Request::AwaitExit { pid: child })
+            .unwrap_err()
+            .code,
+        ErrorCode::NotReady
+    );
+    for request in [
+        Request::Shutdown,
+        Request::ProcessMemoryTarget {
+            pid: parent,
+            write: true,
+        },
+        Request::PrepareFork { request_key: 1 },
+    ] {
+        assert_eq!(
+            manager.handle(other, request).unwrap_err().code,
+            ErrorCode::Unauthorized
+        );
+    }
+    // Existing workers cannot switch to the reconnectable launcher role.
+    assert!(
+        manager
+            .connect(
+                Hello {
+                    version: PROTOCOL_VERSION,
+                    token: "pool-secret".into(),
+                    role: ClientRole::Launcher,
+                    adoption_ticket: None
+                },
+                PeerIdentity {
+                    host_pid: 20,
+                    birth: 200
+                }
+            )
+            .is_err()
+    );
+    manager.process_exited_with_status(
+        PeerIdentity {
+            host_pid: 30,
+            birth: 300,
+        },
+        23,
+    );
+    assert_eq!(
+        manager
+            .handle(other, Request::AwaitExit { pid: child })
+            .unwrap(),
+        Reply::Exit { status: 23 }
+    );
+    assert!(manager.handle(first, Request::Identity).is_ok());
+}
+
+#[test]
+fn missing_dead_standby_and_self_parents_leave_the_reservation_usable() {
+    let (mut manager, controller, _, _) = setup();
+    let child = reserve(&mut manager, controller);
+    for (parent_pid, expected) in [
+        (999, ErrorCode::NotFound),
+        (child, ErrorCode::InvalidRequest),
+        (2, ErrorCode::Conflict),
+    ] {
+        let request = Request::ActivatePoolWorkerUnderParent {
+            pid: child,
+            parent_pid,
+            launch: launch("/bin/child"),
+        };
+        assert_eq!(
+            manager.handle(controller, request).unwrap_err().code,
+            expected
+        );
+    }
+    manager.process_exited(PeerIdentity {
+        host_pid: 30,
+        birth: 300,
+    });
+    assert_eq!(
+        manager
+            .handle(
+                controller,
+                Request::ActivatePoolWorkerUnderParent {
+                    pid: child,
+                    parent_pid: 2,
+                    launch: launch("/bin/child")
+                }
+            )
+            .unwrap_err()
+            .code,
+        ErrorCode::NotFound
+    );
+    manager
+        .handle(
+            controller,
+            Request::ActivatePoolWorker {
+                pid: child,
+                launch: launch("/bin/child"),
+            },
+        )
+        .unwrap();
+}
+
+#[test]
 fn reservations_are_exclusive_and_eof_only_returns_unused_workers() {
     let (mut manager, controller, first, _) = setup();
     let other = connect(&mut manager, ClientRole::Controller, 10);

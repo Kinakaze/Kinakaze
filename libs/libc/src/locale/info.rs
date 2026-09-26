@@ -88,7 +88,7 @@ pub extern "sysv64" fn kinakaze_abi_nl_langinfo_l(
 pub extern "sysv64" fn kinakaze_abi_nl_langinfo(item: c_int) -> *const c_char {
     kinakaze_abi_nl_langinfo_l(item, kinakaze_tls::locale() as _)
 }
-alias!(kinakaze_abi___nl_langinfo_l,kinakaze_abi_nl_langinfo_l,(item:c_int,locale:*mut c_void)->*const c_char);
+alias!(safe kinakaze_abi___nl_langinfo_l,kinakaze_abi_nl_langinfo_l,(item:c_int,locale:*mut c_void)->*const c_char);
 
 #[repr(C)]
 pub struct Lconv {

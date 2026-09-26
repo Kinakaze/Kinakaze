@@ -1115,7 +1115,7 @@ struct FilePipeLocalInformation {
 const FILE_PIPE_LOCAL_INFORMATION_CLASS: u32 = 24;
 
 // Values of `named_pipe_state`.
-const FILE_PIPE_LISTENING_STATE: u32 = 2;
+#[cfg(test)]
 const FILE_PIPE_CONNECTED_STATE: u32 = 3;
 const FILE_PIPE_CLOSING_STATE: u32 = 4;
 

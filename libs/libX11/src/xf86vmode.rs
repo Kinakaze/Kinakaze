@@ -1,7 +1,7 @@
 //! `xf86vmode.rs`: XF86VidMode extension stubs.
 
 use crate::{Bool, Display};
-use core::ffi::{c_char, c_int, c_void};
+use core::ffi::c_int;
 
 #[unsafe(export_name = "kinakaze_engine_libX11_XF86VidModeQueryExtension")]
 pub unsafe extern "sysv64" fn XF86VidModeQueryExtension(

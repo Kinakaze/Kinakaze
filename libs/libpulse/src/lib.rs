@@ -54,7 +54,6 @@ const WAVE_FORMAT_IEEE_FLOAT: u16 = 3;
 static SINK_NAME: &[u8] = b"kinakaze.output\0";
 static SINK_DESCRIPTION: &[u8] = b"Kinakaze PulseAudio Output\0";
 static SOURCE_NAME: &[u8] = b"kinakaze.input\0";
-static SOURCE_DESCRIPTION: &[u8] = b"Kinakaze PulseAudio Input\0";
 static SERVER_NAME: &[u8] = b"kinakaze-pulse\0";
 static SERVER_VERSION: &[u8] = b"17.0-kinakaze\0";
 static USER_NAME: &[u8] = b"kinakaze\0";
@@ -627,16 +626,6 @@ fn sink_info_value() -> pa_sink_info {
     }
 }
 
-fn source_info_value() -> pa_source_info {
-    pa_source_info {
-        name: SOURCE_NAME.as_ptr().cast(),
-        index: 0,
-        description: SOURCE_DESCRIPTION.as_ptr().cast(),
-        sample_spec: default_spec(),
-        channel_map: default_map(2),
-    }
-}
-
 unsafe fn notify_sink(
     context: *mut pa_context,
     callback: Option<SinkInfoNotify>,
@@ -850,7 +839,9 @@ pub unsafe extern "sysv64" fn pa_context_get_server_info(
                     cookie: 0x4352_5953,
                     channel_map: default_map(2),
                 };
-                unsafe { callback(context, &raw const info, userdata) };
+                {
+                    callback(context, &raw const info, userdata)
+                };
             }
         })
     }

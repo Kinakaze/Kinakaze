@@ -12,7 +12,7 @@
     dead_code
 )]
 
-use core::ffi::{c_char, c_int, c_short, c_uchar, c_uint, c_ushort, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void};
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Mutex, OnceLock};
 
@@ -594,7 +594,7 @@ const EXPOSURE: u32 = 1 << 15;
 impl InternalState {
     /// Queues an event stamped with the serial of the last request, which is
     /// what a client compares against `NextRequest` to order it.
-    fn push(&mut self, dpy: *mut Display, mut event: XEvent) {
+    fn push(&mut self, dpy: *mut Display, event: XEvent) {
         let recipients = connection::event_recipients(&event);
         if !recipients.is_empty() {
             for recipient in recipients {
@@ -1483,7 +1483,9 @@ fn root_position(window: Window, x: c_int, y: c_int) -> (c_int, c_int) {
 
 /// Dispatch native events to each subscribing display, regardless of which
 /// frontend happens to pump first. XCB then consumes only its display's queue.
-pub fn drain_native_events(dpy: *mut Display) {
+/// # Safety
+/// dpy must be a live display owned by the caller while events are dispatched.
+pub unsafe fn drain_native_events(dpy: *mut Display) {
     // Consume the wake before inspecting producer state. A counter update
     // arriving during the extension poll must leave the connection readable
     // for the next iteration, rather than having its wake erased afterward.
@@ -1493,7 +1495,7 @@ pub fn drain_native_events(dpy: *mut Display) {
     }
     xext::protocol::poll(dpy, false);
     if !xcb_owner {
-        xext::protocol::drain_events(dpy);
+        unsafe { xext::protocol::drain_events(dpy) };
     }
     let mut modifiers = Option::None;
     while let Some(ev) = kinakaze_libdisplay::event::queue()
@@ -1828,7 +1830,7 @@ fn queue_scroll_events(dpy: *mut Display, source: &kinakaze_libdisplay::event::E
 pub unsafe extern "sysv64" fn XPending(dpy: *mut Display) -> c_int {
     unsafe { xext::protocol::flush(dpy) };
     graphics::flush_all();
-    drain_native_events(dpy);
+    unsafe { drain_native_events(dpy) };
     if let Ok(s) = state().lock() {
         let len = s.count_for(dpy);
         set_display_queue_len(dpy, len);
@@ -2181,7 +2183,7 @@ pub unsafe extern "sysv64" fn XGetWindowAttributes(
     attr.height = (rect.bottom - rect.top).max(1);
     attr.border_width = 0;
     attr.depth = 24;
-    attr.visual = unsafe { &raw mut GLOBAL_VISUAL };
+    attr.visual = &raw mut GLOBAL_VISUAL;
     attr.root = 1;
     attr.class = if kinakaze_libdisplay::ui::input_only::is_input_only(w) {
         2
@@ -2479,12 +2481,12 @@ mod tests {
 
     #[test]
     fn xstore_name_preserves_utf8_titles() {
-        let window = kinakaze_libdisplay::ui::create(160, 120, "initial").expect("window");
+        let display = unsafe { XOpenDisplay(core::ptr::null()) };
+        assert!(!display.is_null());
+        let window = unsafe { XCreateSimpleWindow(display, 1, 0, 0, 160, 120, 0, 0, 0) };
+        assert_ne!(window, 0);
         let title = std::ffi::CString::new("Minecraft - 单人游戏").unwrap();
-        assert_eq!(
-            unsafe { XStoreName(core::ptr::null_mut(), window, title.as_ptr()) },
-            1
-        );
+        assert_eq!(unsafe { XStoreName(display, window, title.as_ptr()) }, 1);
         let mut text = [0_u16; 128];
         let length =
             unsafe { GetWindowTextW(window as HWND, text.as_mut_ptr(), text.len() as i32) };
@@ -2493,7 +2495,10 @@ mod tests {
             String::from_utf16_lossy(&text[..length as usize]),
             "Minecraft - 单人游戏"
         );
-        assert!(kinakaze_libdisplay::ui::destroy(window));
+        unsafe {
+            XDestroyWindow(display, window);
+            XCloseDisplay(display);
+        }
     }
 
     #[test]
@@ -2559,7 +2564,7 @@ mod tests {
     }
 
     #[test]
-    fn render_is_advertised_only_with_real_formats_and_shape_stays_absent() {
+    fn advertised_extensions_match_implemented_formats_and_opcodes() {
         let mut event_base = -1;
         let mut error_base = -1;
         assert_eq!(
@@ -2587,10 +2592,14 @@ mod tests {
                 .is_null()
         );
 
-        assert!(
-            unsafe { crate::xext::XInitExtension(core::ptr::null_mut(), c"SHAPE".as_ptr()) }
-                .is_null()
+        let shape =
+            unsafe { crate::xext::XInitExtension(core::ptr::null_mut(), c"SHAPE".as_ptr()) };
+        assert!(!shape.is_null());
+        assert_eq!(
+            unsafe { (*shape).major_opcode },
+            crate::shape::OPCODE as i32
         );
+        unsafe { drop(Box::from_raw(shape)) };
 
         let xinput = unsafe {
             crate::xext::XInitExtension(core::ptr::null_mut(), c"XInputExtension".as_ptr())

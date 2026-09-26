@@ -48,7 +48,9 @@ const OFN_PATHMUSTEXIST: u32 = 0x00000800;
 const OFN_OVERWRITEPROMPT: u32 = 0x00000002;
 const OFN_NOCHANGEDIR: u32 = 0x00000008;
 
-pub fn open_file(
+/// # Safety
+/// When non-null, buffer must be writable for max_len bytes.
+pub unsafe fn open_file(
     title: Option<&str>,
     filter: Option<&str>,
     buffer: *mut c_char,
@@ -124,7 +126,9 @@ pub fn open_file(
     bytes.len() as isize
 }
 
-pub fn save_file(
+/// # Safety
+/// When non-null, buffer must be writable for max_len bytes.
+pub unsafe fn save_file(
     title: Option<&str>,
     filter: Option<&str>,
     default_name: Option<&str>,

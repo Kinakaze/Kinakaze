@@ -75,7 +75,9 @@ pub fn try_next_event() -> Result<Option<[u8; 32]>, i32> {
         .pop_front()
         .map(|event| event.wire))
 }
-pub fn drain_events(display: *mut Display) {
+/// # Safety
+/// display must remain a live display during event conversion and delivery.
+pub unsafe fn drain_events(display: *mut Display) {
     loop {
         let Some(queued) = EVENTS.lock().unwrap_or_else(|e| e.into_inner()).pop_front() else {
             break;
@@ -121,7 +123,10 @@ pub fn close(display: *mut Display) {
     crate::damage::close(display);
     crate::shape::close(display);
 }
-pub fn dispatch(display: *mut Display, req: &[u8]) -> Result<Option<Vec<u8>>, ProtocolError> {
+pub(crate) fn dispatch(
+    display: *mut Display,
+    req: &[u8],
+) -> Result<Option<Vec<u8>>, ProtocolError> {
     if req.len() < 4 {
         return Err(ProtocolError {
             code: 16,

@@ -2,6 +2,7 @@
 use super::*;
 use kinakaze_libdisplay::event::*;
 static BUTTONS: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+#[cfg(test)]
 pub(super) fn reset_buttons() {
     BUTTONS.store(0, std::sync::atomic::Ordering::Relaxed);
 }

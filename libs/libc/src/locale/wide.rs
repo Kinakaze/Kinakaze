@@ -235,9 +235,9 @@ pub unsafe extern "sysv64" fn kinakaze_abi_wcsxfrm_l(
 }
 
 alias!(kinakaze_abi___wctype_l,kinakaze_abi_wctype_l,(name:*const c_char,locale:*mut c_void)->usize);
-alias!(kinakaze_abi___iswctype_l,kinakaze_abi_iswctype_l,(scalar:u32,descriptor:usize,locale:*mut c_void)->c_int);
-alias!(kinakaze_abi___towupper_l,kinakaze_abi_towupper_l,(scalar:u32,locale:*mut c_void)->u32);
-alias!(kinakaze_abi___towlower_l,kinakaze_abi_towlower_l,(scalar:u32,locale:*mut c_void)->u32);
+alias!(safe kinakaze_abi___iswctype_l,kinakaze_abi_iswctype_l,(scalar:u32,descriptor:usize,locale:*mut c_void)->c_int);
+alias!(safe kinakaze_abi___towupper_l,kinakaze_abi_towupper_l,(scalar:u32,locale:*mut c_void)->u32);
+alias!(safe kinakaze_abi___towlower_l,kinakaze_abi_towlower_l,(scalar:u32,locale:*mut c_void)->u32);
 alias!(kinakaze_abi___strcoll_l,kinakaze_abi_strcoll_l,(a:*const c_char,b:*const c_char,locale:*mut c_void)->c_int);
 alias!(kinakaze_abi___strxfrm_l,kinakaze_abi_strxfrm_l,(dst:*mut c_char,src:*const c_char,n:usize,locale:*mut c_void)->usize);
 alias!(kinakaze_abi___wcscoll_l,kinakaze_abi_wcscoll_l,(a:*const i32,b:*const i32,locale:*mut c_void)->c_int);

@@ -510,6 +510,7 @@ impl FdTable {
         }
     }
 
+    #[cfg(test)]
     /// Returns the lowest unused descriptor at or above `floor`.
     ///
     /// Callers hold the table's write lock while both selecting and installing
@@ -4808,7 +4809,7 @@ mod tests {
 
         #[test]
         fn udp_datagram_loopback() {
-            use crate::socket::{SO_REUSEADDR, SOCK_DGRAM};
+            use crate::socket::SOCK_DGRAM;
 
             let s1 = socket::socket(AF_INET, SOCK_DGRAM, 0).unwrap();
             let s2 = socket::socket(AF_INET, SOCK_DGRAM, 0).unwrap();
