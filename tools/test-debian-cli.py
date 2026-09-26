@@ -90,6 +90,67 @@ grep -A1 '^ftxt$' /tmp/open-files | grep -q '^n/bin/bash$'
 grep -A1 '^f3$' /tmp/open-files | grep -q '^n/etc/passwd$'
 exec 3<&-
 ''',
+            'lsof reports cross-process anonymous pipes and sockets with matching inodes': '''
+python3 - <<'PY'
+import array, json, os, socket, subprocess
+pipe = os.pipe()
+pair = socket.socketpair()
+sockets = [*pair, socket.socket(socket.AF_INET, socket.SOCK_STREAM),
+           socket.socket(socket.AF_INET6, socket.SOCK_DGRAM),
+           socket.socket(socket.AF_NETLINK, socket.SOCK_RAW, 0)]
+fds = [*pipe, *(s.fileno() for s in sockets)]
+result = subprocess.run(['lsof', '-a', '-p', str(os.getpid()), '-d', ','.join(map(str, fds)), '-Fftin'],
+                        text=True, capture_output=True, check=True)
+assert 'stat:' not in result.stdout + result.stderr, result
+records = {}
+for line in result.stdout.splitlines():
+    if line.startswith('f'):
+        current = int(line[1:]); records[current] = {}
+    elif line[:1] in ('t', 'i', 'n'):
+        records[current][line[0]] = line[1:]
+for fd in fds:
+    assert fd in records and int(records[fd]['i']) == os.fstat(fd).st_ino, (fd, records)
+for fd in pipe:
+    assert records[fd]['t'] == 'FIFO', records
+for s in sockets:
+    s.close()
+for fd in pipe:
+    os.close(fd)
+
+# The escrow must preserve the inode even after the creating process exits.
+def stat_fields(fd):
+    value = os.fstat(fd)
+    return [value.st_dev, value.st_ino, value.st_mode, value.st_uid, value.st_gid,
+            value.st_nlink, value.st_rdev, value.st_size, value.st_blksize,
+            value.st_blocks, value.st_atime_ns, value.st_mtime_ns, value.st_ctime_ns]
+
+for family in (None, socket.AF_UNIX, socket.AF_INET, socket.AF_INET6):
+    receiver, sender = socket.socketpair()
+    pid = os.fork()
+    if pid == 0:
+        receiver.close()
+        if family is None:
+            read_end, descriptor = os.pipe()
+            os.close(read_end)
+        else:
+            endpoint = socket.socket(family, socket.SOCK_DGRAM)
+            descriptor = endpoint.fileno()
+        os.fchmod(descriptor, 0o640)
+        os.fchown(descriptor, 1234, 2345)
+        payload = json.dumps(stat_fields(descriptor)).encode()
+        assert sender.sendmsg([payload], [(socket.SOL_SOCKET, socket.SCM_RIGHTS, array.array('i', [descriptor]))]) == len(payload)
+        sender.close()
+        os._exit(0)
+    sender.close()
+    assert os.waitpid(pid, 0) == (pid, 0)
+    payload, controls, flags, _ = receiver.recvmsg(4096, socket.CMSG_SPACE(4))
+    assert not flags & socket.MSG_CTRUNC and len(controls) == 1
+    descriptor, = array.array('i', controls[0][2])
+    assert stat_fields(descriptor) == json.loads(payload), (stat_fields(descriptor), payload)
+    os.close(descriptor)
+    receiver.close()
+PY
+''',
             'archive round trips, file identification and package accounting': '''
 printf archive-data > /tmp/plain
 gzip -c /tmp/plain | gzip -d > /tmp/restored; cmp /tmp/plain /tmp/restored

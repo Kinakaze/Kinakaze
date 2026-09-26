@@ -361,7 +361,7 @@ pub fn socket(socket_type: i32, protocol: i32) -> Result<i32, i32> {
         crate::get(fd)?.description_id,
         std::sync::atomic::Ordering::Release,
     );
-    Ok(fd)
+    crate::pipe_inode::finish_created(fd)
 }
 
 pub(crate) fn filter_boundary(fd: i32) -> Result<(), i32> {

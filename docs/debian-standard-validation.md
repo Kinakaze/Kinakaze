@@ -21,23 +21,29 @@
 ## 可复现验证
 
 ```powershell
-./tools/build.ps1 -Release -DistDirectory artifacts/debian-standard-release -Offline
-python tools/test-debian-cli.py --dist artifacts/debian-standard-release
-python tools/test-first-run.py --dist artifacts/debian-standard-release --network
-python tools/test-release-runtime.py --dist artifacts/debian-standard-release
-python tests/guest/run-daily-tools.py --dist artifacts/debian-standard-release --worker artifacts/debian-standard-release/worker.exe --link-dir target/release/elf-imports
-python tests/guest/run-standard-abi.py --dist artifacts/debian-standard-release --worker artifacts/debian-standard-release/worker.exe --link-dir target/release/elf-imports
+./tools/build.ps1 -Release -DistDirectory artifacts/debian-standard-proc-stat -Offline
+python tools/test-debian-cli.py --dist artifacts/debian-standard-proc-stat
+python tools/test-first-run.py --dist artifacts/debian-standard-proc-stat --network
+python tools/test-release-runtime.py --dist artifacts/debian-standard-proc-stat
+python tests/guest/run-daily-tools.py --dist artifacts/debian-standard-proc-stat --worker artifacts/debian-standard-proc-stat/worker.exe --link-dir target/release/elf-imports
+python tests/guest/run-standard-abi.py --dist artifacts/debian-standard-proc-stat --worker artifacts/debian-standard-proc-stat/worker.exe --link-dir target/release/elf-imports
 ```
 
 ABI 探针检查多线程竞争、4 字节自旋锁边界、账户与网络数据库、ERANGE 重试、fork、COPY 数据、SysV GP/SSE/栈参数、文件描述符错误、清零及余数和商。CLI 和安装验收使用新临时 rootfs，并清空宿主 PATH。打包校验以各次报告中的文件哈希为准。
 
-2026-09-26 的最终预览构建通过了 10 项命令行验收、6 项首次安装与 APT 验收（含 HTTPS 签名索引、安装并运行 hello、卸载），以及 8 项初始化与进程树验收。DailyTools、StandardAbi、NetworkDb、ServicesDb、ProcnetRoute 五组真实 ELF 探针全部通过；`ip -j addr` 返回接口和地址且标准错误为空。三个目标命令的 303 项版本化导入要求无缺失。
+2026-09-26 的最终预览构建通过了 11 项命令行验收、6 项首次安装与 APT 验收（含 HTTPS 签名索引、安装并运行 hello、卸载），以及 8 项初始化与进程树验收。DailyTools、StandardAbi、NetworkDb、ServicesDb、ProcnetRoute、ProcFdStat 六组真实 ELF 探针全部通过；`ip -j addr` 返回接口和地址且标准错误为空。三个目标命令的 303 项版本化导入要求无缺失。
 
 构建还通过了 workspace 全目标检查、格式检查、13 项 rootfs 测试和 43 项 Python 工具测试。最终清单包含 16,054 个文件及 3,120 个客体符号链接；离线安装数据和 201 个上游源码包一同纳入预览包。验收报告合并到 `artifacts/bootstrap-metadata/standard-validation.json`，记录被测镜像的 SHA-256，打包时再次核对。
 
+匿名管道和套接字使用共享 inode 元数据：本进程 `fstat`、跨进程 `/proc/<pid>/fd` 的 `stat` 与 `readlink` 使用同一身份，包含设备号、类型、权限、所有者、链接数、大小、块信息和纳秒时间戳。管道 IO 更新访问/修改时间，chmod/chown 更新变更时间；不把队列字节数当成文件大小。匿名管道两端共享 inode，socketpair 两端分别拥有 inode。
+
+ProcFdStat 探针覆盖子进程在 fork 后新建对象、父进程比较完整 144 字节 stat、TCP accept、Unix/IPv4/IPv6/netlink、dup、fork、chmod/chown、fd 关闭与复用。真实 `lsof` 检查 inode 和 FIFO 类型，额外的 SCM_RIGHTS 检查创建进程退出后管道及 Unix/IPv4/IPv6 套接字的元数据仍然完整。8 项相关 VFS 单元测试和原有 UnixRightsProbe 也通过。
+
+该行为依据 [proc_pid_fd(5)](https://www.man7.org/linux/man-pages/man5/proc_pid_fd.5.html) 的 magic-link 与 inode 约定；设备号和时间戳属于客体匿名文件系统元数据。
+
 ## 当前边界
 
-预装文件不代表所有命令已兼容。`lsof` 的 cwd/root/exe 和普通文件链接已补齐；跨进程匿名管道/套接字的完整 stat 信息仍有缺口，不能把它等同于完整 Linux procfs。系统服务、设备和完整 Linux 内核行为仍需继续补齐。完整 ELF 扫描包含尚不支持的 GLIBC_PRIVATE 和旧 RPC 接口，不能据此宣称全 Debian ABI 完成。
+预装文件不代表所有命令已兼容。`lsof` 的 cwd/root/exe、普通文件以及匿名管道/套接字 stat 查询已验证；这仍不等同于完整 Linux procfs。系统服务、设备和完整 Linux 内核行为仍需继续补齐。完整 ELF 扫描包含尚不支持的 GLIBC_PRIVATE 和旧 RPC 接口，不能据此宣称全 Debian ABI 完成。
 
 时区数据已预装，当前运行时解析 POSIX TZ 规则，尚不解析 IANA TZif 文件。默认登录设置 `TZ=UTC0`；自定义时区可提供 POSIX TZ 字符串。预装包以适配包 `kinakaze-base` 统一登记，上游维护脚本未整体执行；后续新增 APT 包正常执行维护脚本，`policy-rc.d` 阻止自动启动服务。详见 [首次安装说明](first-run.md)。
 

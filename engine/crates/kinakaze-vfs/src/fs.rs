@@ -2142,6 +2142,11 @@ fn stat_procfs(path: &str, follow_symlinks: bool) -> Result<Stat, i32> {
         if pid == crate::job::process_id() {
             return fstat(fd);
         }
+        if let Some(target) = metadata.target.as_deref()
+            && let Some(stat) = crate::pipe_inode::target_metadata(target)?
+        {
+            return Ok(stat);
+        }
     }
     // Following a symlink means reporting the target instead.
     if follow_symlinks && metadata.kind == ProcKind::Symlink {
@@ -2512,12 +2517,7 @@ pub fn fstat(fd: i32) -> Result<Stat, i32> {
             ..Stat::default()
         }),
         FdKind::Fifo => crate::fifo::metadata(fd, entry),
-        FdKind::Pipe => Ok(crate::pipe_inode::metadata(fd)?.unwrap_or(Stat {
-            st_mode: S_IFIFO | 0o600,
-            st_blksize: 4096,
-            st_nlink: 1,
-            ..Stat::default()
-        })),
+        FdKind::Pipe => crate::pipe_inode::metadata(fd)?.ok_or(EIO),
         // Both ends of a pty are character devices, at the numbers Linux uses:
         // 5:2 for the multiplexer, 136:N for a UNIX98 slave. Falling through to
         // `stat_handle` would report the readiness event's file information and
@@ -2543,12 +2543,9 @@ pub fn fstat(fd: i32) -> Result<Stat, i32> {
                 ..Stat::default()
             })
         }
-        FdKind::Socket | FdKind::UnixSocket | FdKind::NetlinkSocket => Ok(Stat {
-            st_mode: S_IFSOCK | 0o600,
-            st_blksize: 4096,
-            st_nlink: 1,
-            ..Stat::default()
-        }),
+        FdKind::Socket | FdKind::UnixSocket | FdKind::NetlinkSocket => {
+            crate::pipe_inode::metadata(fd)?.ok_or(EIO)
+        }
         FdKind::BpfProgram => Ok(Stat {
             // Linux exposes BPF objects as anonymous inodes through procfs.
             st_mode: S_IFREG | 0o600,

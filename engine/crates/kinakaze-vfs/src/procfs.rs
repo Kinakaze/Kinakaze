@@ -2707,17 +2707,11 @@ pub(crate) fn local_fd_link_target(fd: i32) -> Result<String, i32> {
         crate::FdKind::Zero => Ok(String::from("/dev/zero")),
         crate::FdKind::Random => Ok(String::from("/dev/urandom")),
         crate::FdKind::Full => Ok(String::from("/dev/full")),
-        crate::FdKind::Pipe => Ok(format!("pipe:[{}]", entry.raw)),
+        crate::FdKind::Pipe => Ok(format!("pipe:[{}]", crate::fs::fstat(fd)?.st_ino)),
         crate::FdKind::Fifo => crate::fifo::link_target(fd, entry),
-        crate::FdKind::UnixSocket => Ok(format!("socket:[{}]", crate::unix::procnet::inode(fd)?)),
-        crate::FdKind::Socket | crate::FdKind::NetlinkSocket => Ok(format!(
-            "socket:[{}]",
-            if entry.raw == 0 {
-                entry.generation as usize
-            } else {
-                entry.raw
-            }
-        )),
+        crate::FdKind::UnixSocket | crate::FdKind::Socket | crate::FdKind::NetlinkSocket => {
+            Ok(format!("socket:[{}]", crate::fs::fstat(fd)?.st_ino))
+        }
         crate::FdKind::Event => Ok(String::from("anon_inode:[eventpoll]")),
         crate::FdKind::IoRing => Ok(String::from("anon_inode:[io_uring]")),
         crate::FdKind::TimerFd => Ok(String::from("anon_inode:[timerfd]")),

@@ -1305,6 +1305,7 @@ pub fn socket(socket_type: i32, protocol: i32) -> Result<i32, i32> {
             .insert(fd, UnixSocket::new(base_type, crate::usernet::current()?)?);
         Ok(())
     })
+    .and_then(crate::pipe_inode::finish_created)
 }
 
 /// `bind`.
@@ -1507,7 +1508,7 @@ pub unsafe fn accept(fd: i32, address: *mut u8, length: *mut i32, flags: i32) ->
             let _ = crate::close(accepted);
             return Err(error);
         }
-        return Ok(accepted);
+        return crate::pipe_inode::finish_created(accepted);
     }
     Err(EIO)
 }
@@ -2645,6 +2646,14 @@ pub fn socketpair(socket_type: i32) -> Result<(i32, i32), i32> {
         socket.record.publish(&socket)?;
         // A socketpair has no name at either end.
         table.insert(fd, socket);
+    }
+    drop(table);
+    if let Err(error) =
+        crate::pipe_inode::publish(first).and_then(|_| crate::pipe_inode::publish(second))
+    {
+        let _ = crate::close(first);
+        let _ = crate::close(second);
+        return Err(error);
     }
     Ok((first, second))
 }

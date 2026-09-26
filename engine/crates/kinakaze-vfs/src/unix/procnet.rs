@@ -124,8 +124,18 @@ impl Record {
     }
 }
 
+#[cfg(test)]
 pub(crate) fn inode(fd: i32) -> Result<u64, i32> {
     Ok(super::snapshot(fd)?.record.id())
+}
+/// The caller already pins the descriptor under the fd-table guard.
+pub(crate) fn inode_locked(fd: i32) -> Result<u64, i32> {
+    super::sockets()
+        .lock()
+        .map_err(|_| EIO)?
+        .get(&fd)
+        .map(|socket| socket.record.id())
+        .ok_or(crate::EBADF)
 }
 
 pub(crate) fn snapshot(network: u64) -> Result<String, i32> {

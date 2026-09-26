@@ -3811,6 +3811,38 @@ pub mod job {
         .ok_or(FdLinkError::RegistryUnavailable)?
     }
 
+    /// Update one live fd without replacing another thread's descriptor view.
+    /// The caller serializes this with its own descriptor installation/removal.
+    pub fn set_fd_link(pid: u32, fd: i32, target: Option<&str>) -> Result<(), FdLinkError> {
+        if fd < 0 {
+            return Err(FdLinkError::InvalidDescriptor);
+        }
+        if target.is_some_and(|s| s.len() > FD_LINK_TARGET_CAPACITY) {
+            return Err(FdLinkError::TargetTooLong);
+        }
+        with_table(|base| {
+            if unsafe { find(base, pid) }.is_none() {
+                return Err(FdLinkError::ProcessNotFound);
+            }
+            match target {
+                Some(target) => {
+                    if !unsafe { write_fd_link(base, pid, fd as u32, target.as_bytes()) } {
+                        return Err(FdLinkError::CapacityExhausted);
+                    }
+                }
+                None => {
+                    if let Some(record) = unsafe { find_fd_link(base, pid, fd as u32) } {
+                        unsafe {
+                            store32(record, FD_LINK_STATE, FD_LINK_TOMBSTONE);
+                        }
+                    }
+                }
+            }
+            Ok(())
+        })
+        .ok_or(FdLinkError::RegistryUnavailable)?
+    }
+
     /// Returns the exact published magic-link target for one foreign fd.
     pub fn fd_link(namespace_pid: u32, fd: i32) -> Result<Option<String>, FdLinkError> {
         if fd < 0 {

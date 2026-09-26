@@ -229,6 +229,7 @@ struct Descriptor {
     flags: u32,
     shared: u64,
     metadata: Vec<u8>,
+    anonymous: Vec<u8>,
 }
 impl Descriptor {
     fn read(r: &mut crate::state_codec::Reader) -> Result<Self, i32> {
@@ -238,6 +239,7 @@ impl Descriptor {
             flags: r.word()? as u32,
             shared: r.word()?,
             metadata: r.bytes()?.to_vec(),
+            anonymous: r.bytes()?.to_vec(),
         })
     }
     fn write(&self, bytes: &mut impl Extend<u8>) {
@@ -245,6 +247,7 @@ impl Descriptor {
             crate::state_codec::word(bytes, w);
         }
         crate::state_codec::bytes(bytes, &self.metadata);
+        crate::state_codec::bytes(bytes, &self.anonymous);
     }
 }
 #[derive(Default)]
@@ -645,6 +648,11 @@ fn supported(kind: FdKind) -> bool {
 }
 fn activate(fd: i32, descriptor: &Descriptor, process: HANDLE) -> Result<(), i32> {
     let kind = FdKind::from_fork_code(descriptor.kind);
+    if !descriptor.anonymous.is_empty() {
+        crate::pipe_inode::import_rights(crate::get(fd)?, &descriptor.anonymous, |raw| {
+            duplicate(process, raw, unsafe { GetCurrentProcess() })
+        })?;
+    }
     crate::ofd::attach(crate::get(fd)?, descriptor.shared)?;
     if kind == FdKind::BpfProgram {
         let mut input = crate::state_codec::Reader(&descriptor.metadata);
@@ -714,6 +722,9 @@ fn activate(fd: i32, descriptor: &Descriptor, process: HANDLE) -> Result<(), i32
             crate::usernet::import_rights(crate::get(fd)?, id, token)?;
         }
         _ => {}
+    }
+    if crate::pipe_inode::supports(kind) {
+        crate::pipe_inode::publish(fd)?;
     }
     Ok(())
 }
@@ -935,6 +946,13 @@ fn export(socket: &UnixSocket, rights: &[i32]) -> Result<Record, i32> {
                 flags,
                 shared: shared.as_ref().map_or(0, |s| s.id()),
                 metadata,
+                anonymous: if matches!(entry.kind, FdKind::Socket | FdKind::UnixSocket) {
+                    crate::pipe_inode::export_rights(pipe.clone(), |raw| {
+                        duplicate_raw(unsafe { GetCurrentProcess() }, raw, child.as_raw_handle())
+                    })?
+                } else {
+                    Vec::new()
+                },
             };
             descriptor.write(&mut bytes);
             if entry.kind == FdKind::Socket {
@@ -1044,6 +1062,11 @@ pub(crate) fn run_keeper() -> Result<(), i32> {
             socket.into_raw();
         }
         let activation = if kind == FdKind::Socket && flags.contains(FdFlags::PACKET_SOCKET) {
+            crate::pipe_inode::import_rights(crate::get(fd)?, &descriptor.anonymous, |raw| {
+                duplicate(unsafe { GetCurrentProcess() }, raw, unsafe {
+                    GetCurrentProcess()
+                })
+            })?;
             // The keeper can be a different PE module than the guest libc.
             // Retain native sections without interpreting its Rust protocol
             // layout; the actual recipient performs the full checked import.
@@ -2053,6 +2076,7 @@ mod tests {
                     }
                     let metadata: Vec<_> = (0..metadata_len).map(|n| (n * 17) as u8).collect();
                     crate::state_codec::bytes(&mut expected, &metadata);
+                    crate::state_codec::bytes(&mut expected, &[3; 16]);
                 }
                 for word in [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 7, 19] {
                     crate::state_codec::word(&mut expected, word);

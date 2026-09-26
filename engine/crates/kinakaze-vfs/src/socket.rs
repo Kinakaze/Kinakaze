@@ -974,7 +974,7 @@ pub fn socket(family: i32, socket_type: i32, protocol: i32) -> Result<i32, i32> 
     if socket_trace_enabled() {
         eprintln!("kinakaze socket: winsock result={result:?}");
     }
-    result
+    result.and_then(crate::pipe_inode::finish_created)
 }
 
 /// `bind`.
@@ -1115,7 +1115,7 @@ pub unsafe fn accept(fd: i32, address: *mut u8, length: *mut i32, flags: i32) ->
         let _ = crate::close(child);
         return Err(e);
     }
-    Ok(child)
+    crate::pipe_inode::finish_created(child)
 }
 
 /// `connect`.

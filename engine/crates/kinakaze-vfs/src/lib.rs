@@ -2707,6 +2707,11 @@ pub fn create_pipe(common_flags: FdFlags, capacity: u32) -> Result<(i32, i32), i
             return Err(error);
         }
     };
+    if let Err(error) = pipe_inode::publish(read_fd).and_then(|_| pipe_inode::publish(write_fd)) {
+        let _ = close(read_fd);
+        let _ = close(write_fd);
+        return Err(error);
+    }
     Ok((read_fd, write_fd))
 }
 
@@ -2848,6 +2853,8 @@ fn publish_duplicate_state(source: FdEntry, fd: i32, entry: FdEntry) -> Result<(
     if entry.kind == FdKind::Fifo {
         fifo::duplicate_descriptor(source, fd, entry)?;
     }
+    #[cfg(windows)]
+    pipe_inode::publish_entry(fd, entry)?;
     Ok(())
 }
 
@@ -3142,6 +3149,8 @@ fn read_inner(fd: i32, buffer: &mut [u8]) -> Result<usize, i32> {
         );
     }
     let read = result?;
+    #[cfg(windows)]
+    pipe_inode::transferred(entry, read, false);
     advance_offset(fd, entry.generation, read);
     Ok(read)
 }
@@ -3285,6 +3294,8 @@ fn write_inner(fd: i32, buffer: &[u8]) -> Result<usize, i32> {
         );
     }
     let written = result?;
+    #[cfg(windows)]
+    pipe_inode::transferred(entry, written, true);
     if entry.flags.contains(FdFlags::APPEND) {
         // The kernel placed this write at the end of file, so the resulting
         // position is the new file size rather than the previous offset plus
@@ -3349,6 +3360,10 @@ pub fn close(fd: i32) -> Result<(), i32> {
             }
         }
         let entry = table.slots.remove(fd as usize).ok_or(EBADF)?;
+        #[cfg(windows)]
+        if let Some(pid) = kinakaze_runtime::job::namespace_pid(std::process::id()) {
+            let _ = kinakaze_runtime::job::set_fd_link(pid, fd, None);
+        }
         #[cfg(windows)]
         if entry.kind == FdKind::UnixSocket {
             detached = unix::detach(fd);

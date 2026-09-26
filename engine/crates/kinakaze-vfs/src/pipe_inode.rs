@@ -1,10 +1,11 @@
-//! Shared metadata for the two endpoints of an anonymous pipe. The section
-//! lives exactly as long as its open descriptions, including dup/fork/exec.
+//! Shared anonymous pipe/socket inodes. Named metadata sections let procfs
+//! observers query the same inode as fstat without treating its display name
+//! as a pathname. Handles retain ownership across dup/fork/exec/SCM_RIGHTS.
 use crate::{
     EBADF, EIO, FdEntry, FdKind,
     fs::{self, object::Object},
 };
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicI64, AtomicU32, Ordering};
 use std::{
     collections::HashMap,
     ptr,
@@ -15,13 +16,13 @@ use windows_sys::Win32::Foundation::{
 };
 use windows_sys::Win32::System::Memory::{
     CreateFileMappingW, FILE_MAP_ALL_ACCESS, MEMORY_MAPPED_VIEW_ADDRESS, MapViewOfFile,
-    PAGE_READWRITE, UnmapViewOfFile,
+    OpenFileMappingW, PAGE_READWRITE, UnmapViewOfFile,
 };
 use windows_sys::Win32::System::Threading::{
     CreateMutexW, INFINITE, ReleaseMutex, WaitForSingleObject,
 };
 
-const MAGIC: u64 = u64::from_le_bytes(*b"CYPIPIN1");
+const MAGIC: u64 = u64::from_le_bytes(*b"CYANON02");
 #[repr(C)]
 struct Header {
     magic: u64,
@@ -29,6 +30,12 @@ struct Header {
     uid: AtomicU32,
     gid: AtomicU32,
     mode: AtomicU32,
+    accessed: AtomicI64,
+    accessed_nsec: AtomicI64,
+    modified: AtomicI64,
+    modified_nsec: AtomicI64,
+    changed: AtomicI64,
+    changed_nsec: AtomicI64,
 }
 pub(crate) struct Inode {
     section: Arc<Object>,
@@ -56,6 +63,26 @@ fn records() -> &'static Mutex<HashMap<u64, Arc<Inode>>> {
     static RECORDS: OnceLock<Mutex<HashMap<u64, Arc<Inode>>>> = OnceLock::new();
     RECORDS.get_or_init(Default::default)
 }
+pub(crate) fn supports(kind: FdKind) -> bool {
+    matches!(
+        kind,
+        FdKind::Pipe | FdKind::Socket | FdKind::UnixSocket | FdKind::NetlinkSocket
+    )
+}
+fn timestamp() -> (i64, i64) {
+    let value = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default();
+    (value.as_secs() as i64, i64::from(value.subsec_nanos()))
+}
+fn name(kind: u32, inode: u64, suffix: &str) -> Vec<u16> {
+    format!(
+        "Local\\kinakaze.anon.v2.{:016x}.{kind:x}.{inode:016x}.{suffix}\0",
+        kinakaze_runtime::authority::domain_id()
+    )
+    .encode_utf16()
+    .collect()
+}
 impl Inode {
     fn header(&self) -> &Header {
         unsafe { &*self.view.Value.cast::<Header>() }
@@ -78,6 +105,23 @@ impl Inode {
         }))
     }
     pub(crate) fn new() -> Result<Arc<Self>, i32> {
+        Self::new_kind(fs::S_IFIFO, None)
+    }
+    fn new_kind(kind: u32, inode: Option<u64>) -> Result<Arc<Self>, i32> {
+        #[link(name = "bcrypt")]
+        unsafe extern "system" {
+            fn BCryptGenRandom(a: *mut core::ffi::c_void, b: *mut u8, n: u32, flags: u32) -> i32;
+        }
+        let inode = match inode {
+            Some(inode) => inode,
+            None => {
+                let mut id = [0u8; 8];
+                if unsafe { BCryptGenRandom(ptr::null_mut(), id.as_mut_ptr(), 8, 2) } < 0 {
+                    return Err(EIO);
+                }
+                u64::from_le_bytes(id).max(1)
+            }
+        };
         let section = Object::owned(unsafe {
             CreateFileMappingW(
                 INVALID_HANDLE_VALUE,
@@ -85,46 +129,77 @@ impl Inode {
                 PAGE_READWRITE,
                 0,
                 4096,
-                ptr::null(),
+                name(kind, inode, "data").as_ptr(),
             )
         })?;
-        let mutex = Object::owned(unsafe { CreateMutexW(ptr::null(), 0, ptr::null()) })?;
+        let mutex = Object::owned(unsafe {
+            CreateMutexW(ptr::null(), 0, name(kind, inode, "lock").as_ptr())
+        })?;
         let result = Self::map(section, mutex)?;
-        #[link(name = "bcrypt")]
-        unsafe extern "system" {
-            fn BCryptGenRandom(a: *mut core::ffi::c_void, b: *mut u8, n: u32, flags: u32) -> i32;
+        let guard = result.locked()?;
+        // A transferred Unix socket may already own this named inode.
+        if result.header().magic == MAGIC {
+            if result.header().inode != inode || result.stat().st_mode & fs::S_IFMT != kind {
+                return Err(EIO);
+            }
+            drop(guard);
+            return Ok(result);
         }
-        let mut id = [0u8; 8];
-        if unsafe { BCryptGenRandom(ptr::null_mut(), id.as_mut_ptr(), 8, 2) } < 0 {
+        if result.header().magic != 0 {
             return Err(EIO);
         }
         let caller = crate::credentials::filesystem();
+        let (seconds, nanos) = timestamp();
         unsafe {
             result.view.Value.cast::<Header>().write(Header {
                 magic: MAGIC,
-                inode: u64::from_le_bytes(id).max(1),
+                inode,
                 uid: AtomicU32::new(caller.uid),
                 gid: AtomicU32::new(caller.gid),
-                mode: AtomicU32::new(fs::S_IFIFO | 0o600),
+                mode: AtomicU32::new(kind | if kind == fs::S_IFSOCK { 0o777 } else { 0o600 }),
+                accessed: AtomicI64::new(seconds),
+                accessed_nsec: AtomicI64::new(nanos),
+                modified: AtomicI64::new(seconds),
+                modified_nsec: AtomicI64::new(nanos),
+                changed: AtomicI64::new(seconds),
+                changed_nsec: AtomicI64::new(nanos),
             });
         }
+        drop(guard);
         Ok(result)
     }
     fn stat(&self) -> fs::Stat {
         let h = self.header();
         fs::Stat {
+            // Synthetic pipefs/sockfs devices; distinct from procfs and files.
+            st_dev: if h.mode.load(Ordering::Relaxed) & fs::S_IFMT == fs::S_IFIFO {
+                16
+            } else {
+                17
+            },
             st_ino: h.inode,
             st_mode: h.mode.load(Ordering::Relaxed),
             st_uid: h.uid.load(Ordering::Relaxed),
             st_gid: h.gid.load(Ordering::Relaxed),
             st_nlink: 1,
             st_blksize: 4096,
+            st_atime: h.accessed.load(Ordering::Relaxed),
+            st_atime_nsec: h.accessed_nsec.load(Ordering::Relaxed),
+            st_mtime: h.modified.load(Ordering::Relaxed),
+            st_mtime_nsec: h.modified_nsec.load(Ordering::Relaxed),
+            st_ctime: h.changed.load(Ordering::Relaxed),
+            st_ctime_nsec: h.changed_nsec.load(Ordering::Relaxed),
             ..fs::Stat::default()
         }
     }
+    fn changed(&self) {
+        let (seconds, nanos) = timestamp();
+        self.header().changed.store(seconds, Ordering::Relaxed);
+        self.header().changed_nsec.store(nanos, Ordering::Relaxed);
+    }
 }
 pub(crate) fn register(entry: FdEntry, inode: Arc<Inode>) -> Result<(), i32> {
-    if entry.kind != FdKind::Pipe {
+    if !supports(entry.kind) {
         return Err(EBADF);
     }
     crate::platform::try_set_inheritable(inode.section.raw() as usize, true)?;
@@ -136,7 +211,7 @@ pub(crate) fn register(entry: FdEntry, inode: Arc<Inode>) -> Result<(), i32> {
     Ok(())
 }
 pub(crate) fn reference(entry: FdEntry) -> Result<Option<Arc<Inode>>, i32> {
-    if entry.kind != FdKind::Pipe {
+    if !supports(entry.kind) {
         return Ok(None);
     }
     Ok(records()
@@ -179,13 +254,33 @@ fn pin(fd: i32, deny_path: bool) -> Result<Option<Arc<Inode>>, i32> {
         .get(usize::try_from(fd).map_err(|_| EBADF)?)
         .and_then(|e| *e)
         .ok_or(EBADF)?;
-    if entry.kind != FdKind::Pipe {
+    if !supports(entry.kind) {
         return Ok(None);
     }
     if deny_path && entry.flags.contains(crate::FdFlags::PATH_ONLY) {
         return Err(EBADF);
     }
-    reference(entry)
+    let mut records = records().lock().map_err(|_| EIO)?;
+    if let Some(inode) = records.get(&entry.description_id) {
+        return Ok(Some(inode.clone()));
+    }
+    let ino = if entry.kind == FdKind::UnixSocket {
+        Some(crate::unix::procnet::inode_locked(fd)?)
+    } else {
+        None
+    };
+    let inode = Inode::new_kind(
+        if entry.kind == FdKind::Pipe {
+            fs::S_IFIFO
+        } else {
+            fs::S_IFSOCK
+        },
+        ino,
+    )?;
+    crate::platform::try_set_inheritable(inode.section.raw() as usize, true)?;
+    crate::platform::try_set_inheritable(inode.mutex.raw() as usize, true)?;
+    records.insert(entry.description_id, inode.clone());
+    Ok(Some(inode))
 }
 pub(crate) fn metadata(fd: i32) -> Result<Option<fs::Stat>, i32> {
     let Some(inode) = pin(fd, false)? else {
@@ -193,6 +288,88 @@ pub(crate) fn metadata(fd: i32) -> Result<Option<fs::Stat>, i32> {
     };
     let _guard = inode.locked()?;
     Ok(Some(inode.stat()))
+}
+/// Successful pipe IO changes the shared inode, not a descriptor-local copy.
+pub(crate) fn transferred(entry: FdEntry, count: usize, write: bool) {
+    if entry.kind != FdKind::Pipe || count == 0 {
+        return;
+    }
+    let Ok(Some(inode)) = reference(entry) else {
+        return;
+    };
+    let Ok(_guard) = inode.locked() else {
+        return;
+    };
+    let (seconds, nanos) = timestamp();
+    let h = inode.header();
+    if write {
+        h.modified.store(seconds, Ordering::Relaxed);
+        h.modified_nsec.store(nanos, Ordering::Relaxed);
+        inode.changed();
+    } else {
+        h.accessed.store(seconds, Ordering::Relaxed);
+        h.accessed_nsec.store(nanos, Ordering::Relaxed);
+    }
+}
+/// Publish only after the descriptor's protocol-specific state is installed.
+pub(crate) fn publish(fd: i32) -> Result<(), i32> {
+    crate::job::ensure_registered();
+    let _ = metadata(fd)?;
+    let table = crate::table().read().map_err(|_| EIO)?;
+    let entry = table.slots.get(fd as usize).and_then(|e| *e).ok_or(EBADF)?;
+    publish_entry(fd, entry)
+}
+pub(crate) fn finish_created(fd: i32) -> Result<i32, i32> {
+    if let Err(error) = publish(fd) {
+        let _ = crate::close(fd);
+        return Err(error);
+    }
+    Ok(fd)
+}
+/// Caller holds the fd table, preventing close/reuse during publication.
+pub(crate) fn publish_entry(fd: i32, entry: FdEntry) -> Result<(), i32> {
+    let Some(inode) = reference(entry)? else {
+        return Ok(());
+    };
+    let _guard = inode.locked()?;
+    let stat = inode.stat();
+    let label = if stat.st_mode & fs::S_IFMT == fs::S_IFIFO {
+        "pipe"
+    } else {
+        "socket"
+    };
+    // Escrow helpers own metadata handles without a guest PID.
+    let Some(pid) = kinakaze_runtime::job::namespace_pid(std::process::id()) else {
+        return Ok(());
+    };
+    kinakaze_runtime::job::set_fd_link(pid, fd, Some(&format!("{label}:[{}]", stat.st_ino)))
+        .map_err(crate::procfs::fd_link_error)
+}
+/// Resolve a foreign magic-link display name to a live, shared inode.
+pub(crate) fn target_metadata(target: &str) -> Result<Option<fs::Stat>, i32> {
+    let (kind, number) = if let Some(number) = target.strip_prefix("pipe:[") {
+        (fs::S_IFIFO, number)
+    } else if let Some(number) = target.strip_prefix("socket:[") {
+        (fs::S_IFSOCK, number)
+    } else {
+        return Ok(None);
+    };
+    let inode: u64 = number
+        .strip_suffix(']')
+        .and_then(|n| n.parse().ok())
+        .ok_or(EIO)?;
+    let section = Object::owned(unsafe {
+        OpenFileMappingW(FILE_MAP_ALL_ACCESS, 0, name(kind, inode, "data").as_ptr())
+    })?;
+    let mutex =
+        Object::owned(unsafe { CreateMutexW(ptr::null(), 0, name(kind, inode, "lock").as_ptr()) })?;
+    let pin = Inode::map(section, mutex)?;
+    let _guard = pin.locked()?;
+    let stat = pin.stat();
+    if pin.header().magic != MAGIC || stat.st_ino != inode || stat.st_mode & fs::S_IFMT != kind {
+        return Err(EIO);
+    }
+    Ok(Some(stat))
 }
 pub(crate) fn chown(fd: i32, allow_path: bool, owner: &fs::Ownership) -> Result<bool, i32> {
     let Some(inode) = pin(fd, !allow_path)? else {
@@ -206,6 +383,7 @@ pub(crate) fn chown(fd: i32, allow_path: bool, owner: &fs::Ownership) -> Result<
     if owner.gid != u32::MAX {
         inode.header().gid.store(owner.gid, Ordering::Relaxed);
     }
+    inode.changed();
     Ok(true)
 }
 pub fn chmod(fd: i32, mode: u32) -> Result<bool, i32> {
@@ -220,10 +398,11 @@ pub(crate) fn chmod_descriptor(fd: i32, mode: u32, allow_path: bool) -> Result<b
     if uid != 0 && uid != inode.stat().st_uid {
         return Err(crate::EPERM);
     }
-    inode
-        .header()
-        .mode
-        .store(fs::S_IFIFO | (mode & 0o7777), Ordering::Relaxed);
+    inode.header().mode.store(
+        inode.stat().st_mode & fs::S_IFMT | (mode & 0o7777),
+        Ordering::Relaxed,
+    );
+    inode.changed();
     Ok(true)
 }
 pub(crate) fn closed(id: u64) {
@@ -253,7 +432,7 @@ pub(crate) fn serialize(retain: impl Fn(i32) -> bool) -> Result<Vec<u8>, i32> {
         .enumerated()
         .filter_map(|(fd, entry)| {
             entry
-                .filter(|e| e.kind == FdKind::Pipe && retain(fd as i32))
+                .filter(|e| supports(e.kind) && retain(fd as i32))
                 .map(|e| e.description_id)
         })
         .collect();
