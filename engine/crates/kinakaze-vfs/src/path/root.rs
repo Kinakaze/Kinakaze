@@ -128,6 +128,8 @@ fn set_root(new_root: PathBuf, overlay: Option<OverlayRoot>) {
         s.overlay = overlay;
         s.confined = true;
     });
+    #[cfg(windows)]
+    crate::procfs::publish_fs_paths();
 }
 
 /// Root state is restored before mounts, cwd and descriptor attachments. The

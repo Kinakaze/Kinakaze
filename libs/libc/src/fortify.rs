@@ -831,6 +831,34 @@ pub unsafe extern "sysv64" fn kinakaze_dprintf_chk_impl(
     length
 }
 
+/// GNU checked va_list entry, sharing the descriptor writer with __dprintf_chk.
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi___vdprintf_chk(
+    fd: c_int,
+    flag: c_int,
+    format: *const c_char,
+    arguments: *mut VaList,
+) -> c_int {
+    unsafe { kinakaze_dprintf_chk_impl(fd, flag, format, arguments) }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_vdprintf(
+    fd: c_int,
+    format: *const c_char,
+    arguments: *mut VaList,
+) -> c_int {
+    unsafe { kinakaze_dprintf_chk_impl(fd, 0, format, arguments) }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_vprintf(
+    format: *const c_char,
+    arguments: *mut VaList,
+) -> c_int {
+    unsafe { kinakaze_abi___vprintf_chk(0, format, arguments) }
+}
+
 /// Implementation behind the `__sprintf_chk` thunk.
 ///
 /// # Safety
@@ -917,6 +945,13 @@ pub unsafe extern "sysv64" fn kinakaze_asprintf_chk_impl(
 }
 
 #[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_explicit_bzero(buffer: *mut c_void, length: usize) {
+    for index in 0..length {
+        unsafe { buffer.cast::<u8>().add(index).write_volatile(0) };
+    }
+}
+
+#[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn kinakaze_abi___explicit_bzero_chk(
     buffer: *mut c_void,
     length: usize,
@@ -925,8 +960,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi___explicit_bzero_chk(
     check(length, buflen);
     if !buffer.is_null() && length > 0 {
         unsafe {
-            core::ptr::write_bytes(buffer as *mut u8, 0, length);
-            core::sync::atomic::compiler_fence(core::sync::atomic::Ordering::SeqCst);
+            kinakaze_abi_explicit_bzero(buffer, length);
         }
     }
 }
@@ -1147,6 +1181,15 @@ __fprintf_chk:
     KINAKAZE_CHK_VA_FRAME 24
     mov     rcx, rax
     call    kinakaze_fprintf_chk_impl
+    leave
+    ret
+
+// dprintf(fd, format, ...) shares vdprintf's descriptor writer.
+.globl kinakaze_abi_dprintf
+kinakaze_abi_dprintf:
+    KINAKAZE_CHK_VA_FRAME 16
+    mov     rdx, rax
+    call    kinakaze_abi_vdprintf
     leave
     ret
 

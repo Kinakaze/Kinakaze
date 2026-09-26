@@ -283,6 +283,7 @@ EXPORTS
   "floorf@GLIBC_2.2.5"=kinakaze_engine_libm_floorf PRIVATE
   kinakaze_engine_libm_floorl
   "floorl"=kinakaze_engine_libm_floorl PRIVATE
+  "floorl@GLIBC_2.2.5"=kinakaze_engine_libm_floorl PRIVATE
   kinakaze_engine_libm_fma
   "fma"=kinakaze_engine_libm_fma PRIVATE
   "fma@GLIBC_2.2.5"=kinakaze_engine_libm_fma PRIVATE
@@ -339,6 +340,7 @@ EXPORTS
   "hypotf@GLIBC_2.35"=kinakaze_engine_libm_hypotf PRIVATE
   kinakaze_engine_libm_ilogb
   "ilogb"=kinakaze_engine_libm_ilogb PRIVATE
+  "ilogb@GLIBC_2.2.5"=kinakaze_engine_libm_ilogb PRIVATE
   kinakaze_engine_libm_ilogbf
   "ilogbf"=kinakaze_engine_libm_ilogbf PRIVATE
   "ilogbf@GLIBC_2.2.5"=kinakaze_engine_libm_ilogbf PRIVATE
@@ -495,6 +497,11 @@ EXPORTS
   "remainder@GLIBC_2.2.5"=kinakaze_engine_libm_remainder PRIVATE
   kinakaze_engine_libm_remainderf
   "remainderf"=kinakaze_engine_libm_remainderf PRIVATE
+  kinakaze_engine_libm_remquo
+  "remquo"=kinakaze_engine_libm_remquo PRIVATE
+  "remquo@GLIBC_2.2.5"=kinakaze_engine_libm_remquo PRIVATE
+  kinakaze_engine_libm_remquof
+  "remquof"=kinakaze_engine_libm_remquof PRIVATE
   kinakaze_engine_libm_rint
   "rint"=kinakaze_engine_libm_rint PRIVATE
   "rint@GLIBC_2.2.5"=kinakaze_engine_libm_rint PRIVATE

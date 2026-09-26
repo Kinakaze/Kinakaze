@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import time
 from pathlib import Path
 import urllib.request
 
@@ -29,8 +30,15 @@ def main():
             data = cached.read_bytes()
         else:
             print(f'Fetching source metadata: {filename}', flush=True)
-            with urllib.request.urlopen(f'{directory}/{filename}', timeout=45) as response:
-                data = response.read()
+            for attempt in range(4):
+                try:
+                    with urllib.request.urlopen(f'{directory}/{filename}', timeout=45) as response:
+                        data = response.read()
+                    break
+                except OSError:
+                    if attempt == 3:
+                        raise
+                    time.sleep(attempt + 1)
             cached.write_bytes(data)
         files = [dict(filename=filename, url=f'{directory}/{filename}', size=len(data), sha256=hashlib.sha256(data).hexdigest())]
         in_checksums = False

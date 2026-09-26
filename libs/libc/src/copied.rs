@@ -288,6 +288,10 @@ pub unsafe extern "C" fn kinakaze_copied_redirect(
     };
 
     match name {
+        "_nl_msg_cat_cntr" => {
+            unsafe { crate::locale::kinakaze_abi__nl_msg_cat_cntr.redirect(target.cast()) };
+            1
+        }
         "__libc_stack_end" => {
             unsafe { crate::startup::kinakaze_abi___libc_stack_end.redirect(target.cast()) };
             1

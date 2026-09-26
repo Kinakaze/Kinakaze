@@ -15,6 +15,7 @@ pub unsafe extern "C" fn kinakaze_module_object_v1(name: *const u8, length: usiz
         b"__tzname" => (8u64 << 32) | 16,
         b"_environ" => (8u64 << 32) | 8,
         b"_libc_intl_domainname" => (1u64 << 32) | 5,
+        b"_nl_msg_cat_cntr" => (4u64 << 32) | 4,
         b"argp_err_exit_status" => (4u64 << 32) | 4,
         b"argp_program_bug_address" => (8u64 << 32) | 8,
         b"argp_program_version" => (8u64 << 32) | 8,

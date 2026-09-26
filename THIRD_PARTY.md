@@ -17,4 +17,6 @@
 
 [`tools/guest-deps/dependencies.lock.json`](tools/guest-deps/dependencies.lock.json) 记录选定软件包的来源、哈希和版权材料，处理方式见 [客体依赖说明](tools/guest-deps/README.md)。下载缓存、客体文件树、JRE、游戏资源和 SDK 均不属于源码发布包。
 
+默认 Debian 标准预装集合由 [`config/debian-standard.lock.json`](config/debian-standard.lock.json) 锁定。运行包保留上游 `usr/share/doc` 版权材料，并根据 [`config/release-sources.lock.json`](config/release-sources.lock.json) 携带相应的 Debian 源码归档和校验值；这些软件继续适用各自的许可证。
+
 MSVC/Windows SDK、LLVM、Rust 运行库及下载的第三方程序各自适用其许可。再分发二进制或预装客体环境前，应核对实际包含的文件及对应许可；源码仓库的许可证不替代这些许可。

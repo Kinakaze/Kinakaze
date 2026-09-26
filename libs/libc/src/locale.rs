@@ -36,6 +36,10 @@ const CATEGORY_NAMES: [&CStr; CATEGORIES] = [
 static GLOBAL_FLAGS: AtomicU32 = AtomicU32::new(0);
 static UTF8_DATA: AtomicUsize = AtomicUsize::new(0);
 static MUTATION: Mutex<()> = Mutex::new(());
+/// GNU gettext clients invalidate cached message pointers when this changes.
+#[unsafe(no_mangle)]
+pub static kinakaze_abi__nl_msg_cat_cntr: crate::copied::CopiedValue<c_int> =
+    crate::copied::CopiedValue::new(0);
 
 /// glibc exposes this prefix through locale_t and its ctype macros.
 #[repr(C)]
@@ -312,6 +316,9 @@ pub unsafe extern "sysv64" fn kinakaze_abi_setlocale(
             Err(e) => return error(e).cast(),
         };
         GLOBAL_FLAGS.store(flags, Ordering::Release);
+        unsafe {
+            kinakaze_abi__nl_msg_cat_cntr.set(kinakaze_abi__nl_msg_cat_cntr.get().wrapping_add(1));
+        }
     }
     query(flags, category as usize)
 }

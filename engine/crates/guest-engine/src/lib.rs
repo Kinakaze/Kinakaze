@@ -322,7 +322,6 @@ fn hosted_main() -> i32 {
     } else {
         config.arguments.clone()
     };
-    let original_path = path.clone();
     // Both execve and posix_spawn publish a PID-scoped handoff. The private
     // `--kinakaze-exec` argument distinguishes execve's argv layout, not whether
     // a handoff exists; probing the mapping is the authoritative test and also
@@ -344,6 +343,24 @@ fn hosted_main() -> i32 {
         }
         trace_spawn_loader_phase("libc-handoff-consumed");
     }
+    // A direct launch has not passed through guest execve's path walk. Resolve
+    // the guest inode links before reading its shebang/ELF (e.g. /bin/sh -> dash).
+    // A handoff already pins its image and may outlive unlink/rename, so keep it.
+    let path = if shared_launch.is_none() {
+        let guest_path = kinakaze_vfs::to_guest_path(&path);
+        match kinakaze_vfs::resolve_linux_path(&guest_path) {
+            Ok(path) => path,
+            Err(error) => {
+                report_loader_error(format_args!(
+                    "cannot resolve guest executable {guest_path}: {error}"
+                ));
+                return 1;
+            }
+        }
+    } else {
+        path
+    };
+    let original_path = path.clone();
     let (path, guest_arguments) = {
         let mut shebang_buf = [0u8; 1024];
         let first_bytes =

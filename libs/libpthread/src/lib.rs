@@ -2801,11 +2801,11 @@ pub unsafe extern "sysv64" fn pthread_barrier_wait(barrier: *mut usize) -> i32 {
 // Spin locks
 // ---------------------------------------------------------------------------
 
-/// The spin lock's unlocked state, and the zero value a static initializer gives.
+/// Linux pthread_spinlock_t is a four-byte int; one means unlocked.
 #[cfg(all(windows, target_arch = "x86_64"))]
-const SPIN_UNLOCKED: usize = 0;
+const SPIN_UNLOCKED: u32 = 1;
 #[cfg(all(windows, target_arch = "x86_64"))]
-const SPIN_LOCKED: usize = 1;
+const SPIN_LOCKED: u32 = 0;
 
 #[cfg(all(windows, target_arch = "x86_64"))]
 #[unsafe(no_mangle)]
@@ -2818,12 +2818,12 @@ const SPIN_LOCKED: usize = 1;
 /// # Safety
 ///
 /// `lock` must point to writable, suitably aligned pthread spin lock storage.
-pub unsafe extern "sysv64" fn pthread_spin_init(lock: *mut usize, pshared: i32) -> i32 {
+pub unsafe extern "sysv64" fn pthread_spin_init(lock: *mut u32, pshared: i32) -> i32 {
     if lock.is_null() || !matches!(pshared, PTHREAD_PROCESS_PRIVATE | PTHREAD_PROCESS_SHARED) {
         return EINVAL;
     }
     // SAFETY: the caller supplied writable spin lock storage.
-    unsafe { AtomicUsize::from_ptr(lock) }.store(SPIN_UNLOCKED, Ordering::Release);
+    unsafe { AtomicU32::from_ptr(lock) }.store(SPIN_UNLOCKED, Ordering::Release);
     0
 }
 
@@ -2834,12 +2834,12 @@ pub unsafe extern "sysv64" fn pthread_spin_init(lock: *mut usize, pshared: i32) 
 /// # Safety
 ///
 /// `lock` must point to a live initialized, unlocked pthread spin lock.
-pub unsafe extern "sysv64" fn pthread_spin_destroy(lock: *mut usize) -> i32 {
+pub unsafe extern "sysv64" fn pthread_spin_destroy(lock: *mut u32) -> i32 {
     if lock.is_null() {
         return EINVAL;
     }
     // SAFETY: the caller supplied a live spin lock.
-    if unsafe { AtomicUsize::from_ptr(lock) }.load(Ordering::Acquire) == SPIN_LOCKED {
+    if unsafe { AtomicU32::from_ptr(lock) }.load(Ordering::Acquire) == SPIN_LOCKED {
         return EBUSY;
     }
     0
@@ -2855,12 +2855,12 @@ pub unsafe extern "sysv64" fn pthread_spin_destroy(lock: *mut usize) -> i32 {
 /// # Safety
 ///
 /// `lock` must point to a live initialized pthread spin lock.
-pub unsafe extern "sysv64" fn pthread_spin_lock(lock: *mut usize) -> i32 {
+pub unsafe extern "sysv64" fn pthread_spin_lock(lock: *mut u32) -> i32 {
     if lock.is_null() {
         return EINVAL;
     }
     // SAFETY: the caller supplied a live spin lock.
-    let state = unsafe { AtomicUsize::from_ptr(lock) };
+    let state = unsafe { AtomicU32::from_ptr(lock) };
     loop {
         if state
             .compare_exchange_weak(
@@ -2888,12 +2888,12 @@ pub unsafe extern "sysv64" fn pthread_spin_lock(lock: *mut usize) -> i32 {
 /// # Safety
 ///
 /// `lock` must point to a live initialized pthread spin lock.
-pub unsafe extern "sysv64" fn pthread_spin_trylock(lock: *mut usize) -> i32 {
+pub unsafe extern "sysv64" fn pthread_spin_trylock(lock: *mut u32) -> i32 {
     if lock.is_null() {
         return EINVAL;
     }
     // SAFETY: the caller supplied a live spin lock.
-    let state = unsafe { AtomicUsize::from_ptr(lock) };
+    let state = unsafe { AtomicU32::from_ptr(lock) };
     if state
         .compare_exchange(
             SPIN_UNLOCKED,
@@ -2916,12 +2916,12 @@ pub unsafe extern "sysv64" fn pthread_spin_trylock(lock: *mut usize) -> i32 {
 /// # Safety
 ///
 /// `lock` must point to a live initialized spin lock held by the caller.
-pub unsafe extern "sysv64" fn pthread_spin_unlock(lock: *mut usize) -> i32 {
+pub unsafe extern "sysv64" fn pthread_spin_unlock(lock: *mut u32) -> i32 {
     if lock.is_null() {
         return EINVAL;
     }
     // SAFETY: the caller supplied a live spin lock it holds.
-    unsafe { AtomicUsize::from_ptr(lock) }.store(SPIN_UNLOCKED, Ordering::Release);
+    unsafe { AtomicU32::from_ptr(lock) }.store(SPIN_UNLOCKED, Ordering::Release);
     0
 }
 
@@ -4262,20 +4262,22 @@ mod tests {
 
     #[test]
     fn spinlock_excludes_a_second_holder() {
-        let mut lock: usize = 0;
+        let mut lock: u32 = 0;
         assert_eq!(
             unsafe { pthread_spin_init(&raw mut lock, PTHREAD_PROCESS_PRIVATE) },
             0
         );
         assert_eq!(unsafe { pthread_spin_lock(&raw mut lock) }, 0);
 
-        let shared = Shared::of(&raw mut lock);
-        let contender = std::thread::spawn(move || unsafe { pthread_spin_trylock(shared.ptr()) });
+        let shared = Shared::of((&raw mut lock).cast());
+        let contender =
+            std::thread::spawn(move || unsafe { pthread_spin_trylock(shared.ptr().cast()) });
         assert_eq!(contender.join().expect("contender finished"), EBUSY);
         assert_eq!(unsafe { pthread_spin_destroy(&raw mut lock) }, EBUSY);
 
         assert_eq!(unsafe { pthread_spin_unlock(&raw mut lock) }, 0);
-        let taker = std::thread::spawn(move || unsafe { pthread_spin_trylock(shared.ptr()) });
+        let taker =
+            std::thread::spawn(move || unsafe { pthread_spin_trylock(shared.ptr().cast()) });
         assert_eq!(taker.join().expect("taker finished"), 0);
         assert_eq!(unsafe { pthread_spin_unlock(&raw mut lock) }, 0);
         assert_eq!(unsafe { pthread_spin_destroy(&raw mut lock) }, 0);
@@ -4713,7 +4715,7 @@ mod tests {
 
     #[test]
     fn pthread_spin_lock_trylock_and_destroy_contention() {
-        let mut lock: usize = 0;
+        let mut lock: u32 = 0;
         assert_eq!(
             unsafe { pthread_spin_init(&raw mut lock, PTHREAD_PROCESS_PRIVATE) },
             0
@@ -4726,8 +4728,9 @@ mod tests {
         assert_eq!(unsafe { pthread_spin_destroy(&raw mut lock) }, EBUSY);
 
         // Trylock on held lock from another thread returns EBUSY
-        let shared = Shared::of(&raw mut lock);
-        let racer = std::thread::spawn(move || unsafe { pthread_spin_trylock(shared.ptr()) });
+        let shared = Shared::of((&raw mut lock).cast());
+        let racer =
+            std::thread::spawn(move || unsafe { pthread_spin_trylock(shared.ptr().cast()) });
         assert_eq!(racer.join().unwrap(), EBUSY);
 
         assert_eq!(unsafe { pthread_spin_unlock(&raw mut lock) }, 0);
@@ -4740,17 +4743,17 @@ mod tests {
 
         let workers: Vec<_> = (0..THREADS)
             .map(|_| {
-                let s_lock = Shared::of(&raw mut lock);
+                let s_lock = Shared::of((&raw mut lock).cast());
                 let c = Arc::clone(&counter);
                 let b = Arc::clone(&barrier);
                 std::thread::spawn(move || {
                     b.wait();
                     for _ in 0..ITERS {
                         unsafe {
-                            pthread_spin_lock(s_lock.ptr());
+                            pthread_spin_lock(s_lock.ptr().cast());
                             let val = c.load(std::sync::atomic::Ordering::Relaxed);
                             c.store(val + 1, std::sync::atomic::Ordering::Relaxed);
-                            pthread_spin_unlock(s_lock.ptr());
+                            pthread_spin_unlock(s_lock.ptr().cast());
                         }
                     }
                 })

@@ -103,6 +103,7 @@ pub fn fchdir(fd: i32) -> Result<(), i32> {
         s.cwd = Some(display);
         s.cwd_object = Some(directory);
     });
+    crate::procfs::publish_fs_paths();
     Ok(())
 }
 
@@ -147,5 +148,6 @@ pub(crate) fn restore(bytes: &[u8]) -> Result<bool, i32> {
         s.cwd = Some(display);
         s.cwd_object = Some(directory);
     });
+    crate::procfs::publish_fs_paths();
     Ok(true)
 }

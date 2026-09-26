@@ -1203,8 +1203,10 @@ fn load_user_accounts() -> Vec<UserAccount> {
                 if parts.len() >= 7 {
                     let name = parts[0].to_string();
                     let password = parts[1].to_string();
-                    let uid = parts[2].parse::<u32>().unwrap_or(0);
-                    let gid = parts[3].parse::<u32>().unwrap_or(0);
+                    let (Ok(uid), Ok(gid)) = (parts[2].parse::<u32>(), parts[3].parse::<u32>())
+                    else {
+                        continue;
+                    };
                     let gecos = parts[4].to_string();
                     let dir = parts[5].to_string();
                     let shell = parts[6].to_string();
@@ -1219,6 +1221,8 @@ fn load_user_accounts() -> Vec<UserAccount> {
                     });
                 }
             }
+            // A present guest database is authoritative; do not inject accounts.
+            return accounts;
         }
     }
 
@@ -1339,7 +1343,9 @@ fn load_group_accounts() -> Vec<GroupAccount> {
                 if parts.len() >= 3 {
                     let name = parts[0].to_string();
                     let password = parts[1].to_string();
-                    let gid = parts[2].parse::<u32>().unwrap_or(0);
+                    let Ok(gid) = parts[2].parse::<u32>() else {
+                        continue;
+                    };
                     let members = if parts.len() > 3 && !parts[3].trim().is_empty() {
                         parts[3].split(',').map(|s| s.trim().to_string()).collect()
                     } else {
@@ -1353,6 +1359,8 @@ fn load_group_accounts() -> Vec<GroupAccount> {
                     });
                 }
             }
+            // A present guest database is authoritative; do not inject accounts.
+            return groups;
         }
     }
 
@@ -1504,6 +1512,66 @@ pub extern "sysv64" fn kinakaze_abi_getgrgid(gid: Gid) -> *mut Group {
 /// Independent enumeration cursors for the passwd and group databases.
 static PASSWD_CURSOR: AtomicUsize = AtomicUsize::new(0);
 static GROUP_CURSOR: AtomicUsize = AtomicUsize::new(0);
+
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_getpwent_r(
+    entry: *mut Passwd,
+    buffer: *mut c_char,
+    length: usize,
+    result: *mut *mut Passwd,
+) -> c_int {
+    if result.is_null() || entry.is_null() || buffer.is_null() {
+        return kinakaze_vfs::EINVAL;
+    }
+    unsafe { *result = ptr::null_mut() };
+    let accounts = load_user_accounts();
+    loop {
+        let index = PASSWD_CURSOR.load(Ordering::SeqCst);
+        let Some(account) = accounts.get(index) else {
+            return kinakaze_vfs::ENOENT;
+        };
+        if let Err(error) = unsafe { fill_passwd_for(account, entry, buffer, length) } {
+            return error;
+        }
+        if PASSWD_CURSOR
+            .compare_exchange(index, index + 1, Ordering::SeqCst, Ordering::SeqCst)
+            .is_ok()
+        {
+            unsafe { *result = entry };
+            return 0;
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_getgrent_r(
+    entry: *mut Group,
+    buffer: *mut c_char,
+    length: usize,
+    result: *mut *mut Group,
+) -> c_int {
+    if result.is_null() || entry.is_null() || buffer.is_null() {
+        return kinakaze_vfs::EINVAL;
+    }
+    unsafe { *result = ptr::null_mut() };
+    let accounts = load_group_accounts();
+    loop {
+        let index = GROUP_CURSOR.load(Ordering::SeqCst);
+        let Some(account) = accounts.get(index) else {
+            return kinakaze_vfs::ENOENT;
+        };
+        if let Err(error) = unsafe { fill_group_for(account, entry, buffer, length) } {
+            return error;
+        }
+        if GROUP_CURSOR
+            .compare_exchange(index, index + 1, Ordering::SeqCst, Ordering::SeqCst)
+            .is_ok()
+        {
+            unsafe { *result = entry };
+            return 0;
+        }
+    }
+}
 
 /// `getpwent`, returning the next guest passwd entry.
 #[unsafe(no_mangle)]

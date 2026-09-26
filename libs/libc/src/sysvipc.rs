@@ -96,6 +96,35 @@ pub unsafe extern "sysv64" fn kinakaze_abi_msgctl(
     -1
 }
 
+// Expose the message-queue entry points with the same explicit unsupported
+// result as msgctl. Perl can load; callers still receive ENOSYS for this backend.
+#[unsafe(no_mangle)]
+pub extern "sysv64" fn kinakaze_abi_msgget(_key: Key, _flags: c_int) -> c_int {
+    set_errno(ENOSYS);
+    -1
+}
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_msgsnd(
+    _id: c_int,
+    _message: *const c_void,
+    _size: usize,
+    _flags: c_int,
+) -> c_int {
+    set_errno(ENOSYS);
+    -1
+}
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_msgrcv(
+    _id: c_int,
+    _message: *mut c_void,
+    _size: usize,
+    _kind: i64,
+    _flags: c_int,
+) -> isize {
+    set_errno(ENOSYS);
+    -1
+}
+
 // `semctl` commands beyond the three shared ones.
 pub const GETPID: c_int = 11;
 pub const GETVAL: c_int = 12;

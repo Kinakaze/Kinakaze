@@ -3,8 +3,8 @@
 use super::*;
 use core::cell::RefCell;
 use std::sync::MutexGuard;
-const FRAME: usize = 32;
-const KEY: u64 = u64::from_le_bytes(*b"CYLOCF01");
+const FRAME: usize = 48;
+const KEY: u64 = u64::from_le_bytes(*b"CYLOCF02");
 thread_local! {
     static FROZEN: RefCell<Option<MutexGuard<'static,()>>> = const { RefCell::new(None) };
 }
@@ -32,6 +32,8 @@ unsafe extern "system" fn snapshot(output: *mut u8, capacity: usize) -> isize {
         GLOBAL_FLAGS.load(Ordering::Acquire) as u64,
         UTF8_DATA.load(Ordering::Acquire) as u64,
         kinakaze_tls::locale() as u64,
+        unsafe { kinakaze_abi__nl_msg_cat_cntr.get() } as u32 as u64,
+        kinakaze_abi__nl_msg_cat_cntr.target() as u64,
     ];
     for (index, word) in fields.into_iter().enumerate() {
         unsafe {
@@ -50,12 +52,15 @@ unsafe extern "system" fn child(input: *const u8, length: usize) -> i32 {
         return EINVAL;
     }
     let bytes = unsafe { core::slice::from_raw_parts(input, length) };
-    let fields: [u64; 4] =
+    let fields: [u64; 6] =
         core::array::from_fn(|i| u64::from_le_bytes(bytes[i * 8..i * 8 + 8].try_into().unwrap()));
     if fields[0] != KEY
         || fields[1] & !(MASK as u64) != 0
         || !valid(fields[3] as usize)
         || (fields[2] != 0 && !guest::contains(fields[2] as usize))
+        || fields[4] > u32::MAX as u64
+        // COPY targets live in ELF image mappings, outside the guest heap.
+        || fields[5] % core::mem::align_of::<c_int>() as u64 != 0
     {
         return EINVAL;
     }
@@ -90,6 +95,10 @@ unsafe extern "system" fn child(input: *const u8, length: usize) -> i32 {
     GLOBAL_FLAGS.store(fields[1] as u32, Ordering::Release);
     UTF8_DATA.store(fields[2] as usize, Ordering::Release);
     kinakaze_tls::set_locale(fields[3] as usize);
+    unsafe {
+        kinakaze_abi__nl_msg_cat_cntr.redirect(fields[5] as *mut c_int);
+        kinakaze_abi__nl_msg_cat_cntr.set(fields[4] as c_int);
+    }
     0
 }
 extern "C" fn register() {

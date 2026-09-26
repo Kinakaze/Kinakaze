@@ -1,5 +1,14 @@
 {
   "schema": 1,
+  "debian_standard_lock": "debian-standard.lock.json",
+  "alternatives": {
+    "editor": {"link": "/usr/bin/editor", "choices": {"/bin/nano": 40, "/usr/bin/vim.tiny": 15}},
+    "pager": {"link": "/usr/bin/pager", "choices": {"/usr/bin/less": 77, "/bin/more": 50}},
+    "awk": {"link": "/usr/bin/awk", "choices": {"/usr/bin/mawk": 5}},
+    "vi": {"link": "/usr/bin/vi", "choices": {"/usr/bin/vim.tiny": 15}},
+    "nc": {"link": "/bin/nc", "choices": {"/bin/nc.traditional": 10}},
+    "telnet": {"link": "/usr/bin/telnet", "choices": {"/usr/bin/inetutils-telnet": 100}}
+  },
   "packages": [
     "busybox", "netbase", "apt", "dpkg", "gpgv", "debian-archive-keyring",
     "ca-certificates", "openssl", "debianutils", "coreutils", "tar", "gzip",

@@ -26,6 +26,10 @@ mod handle_slots;
 pub mod immutable;
 #[cfg(windows)]
 pub mod memory_protection;
+#[cfg(windows)]
+mod process_creation;
+#[cfg(windows)]
+pub use process_creation::child_creation_flags;
 pub mod services;
 pub use handle_slots::{register_fork_handle_slot, unregister_fork_handle_slot};
 
@@ -2268,11 +2272,11 @@ pub mod job {
     /// Identifies a compatible layout. Bump the trailing digits whenever a field
     /// moves: a process built against the old shape must refuse the section
     /// rather than misread a neighbour's slot.
-    const MAGIC: u64 = 0x4352_5950_4944_3135; // "CRYPID15"
+    const MAGIC: u64 = 0x4352_5950_4944_3136; // "CRYPID16"
 
     /// Slots in the table. Each is one hosted process.
     const CAPACITY: usize = 512;
-    const SLOT_SIZE: usize = 1872;
+    const SLOT_SIZE: usize = 1872 + 8 + 2 * FS_PATH_CAPACITY;
     const HEADER_SIZE: usize = 64;
     const INDEX_CAPACITY: usize = 1024;
     const INDEX_ENTRY_SIZE: usize = 4;
@@ -2357,6 +2361,11 @@ pub mod job {
     const SLOT_MQUEUE_HARD: usize = 1832;
     const SLOT_FSIZE_SOFT: usize = 1840;
     const SLOT_NPROC_SOFT: usize = 1856;
+    const FS_PATH_CAPACITY: usize = 4096;
+    const SLOT_CWD_LENGTH: usize = 1872;
+    const SLOT_ROOT_LENGTH: usize = 1876;
+    const SLOT_CWD: usize = 1880;
+    const SLOT_ROOT: usize = SLOT_CWD + FS_PATH_CAPACITY;
     // Linux INIT_RLIMITS uses INR_OPEN_CUR and INR_OPEN_MAX. A privileged
     // service may raise the hard limit without allocating descriptor storage.
     const DEFAULT_NOFILE_SOFT: u64 = 1024;
@@ -2557,8 +2566,8 @@ pub mod job {
 
         let epoch = super::authority::get().map(|_| super::authority::domain_id());
         let guard_name = wide(&epoch.map_or_else(
-            || "Local\\kinakaze.pidns.lock.v13".to_owned(),
-            |epoch| format!("Local\\kinakaze.v2.pidns.{epoch:016x}.lock.v13"),
+            || "Local\\kinakaze.pidns.lock.v14".to_owned(),
+            |epoch| format!("Local\\kinakaze.v2.pidns.{epoch:016x}.lock.v14"),
         ));
         // SAFETY: a null attribute pointer requests the default descriptor and
         // the name is a live NUL-terminated buffer for the duration of the call.
@@ -2568,8 +2577,8 @@ pub mod job {
         }
 
         let section_name = wide(&epoch.map_or_else(
-            || "Local\\kinakaze.pidns.v13".to_owned(),
-            |epoch| format!("Local\\kinakaze.v2.pidns.{epoch:016x}.v13"),
+            || "Local\\kinakaze.pidns.v14".to_owned(),
+            |epoch| format!("Local\\kinakaze.v2.pidns.{epoch:016x}.v14"),
         ));
         // SAFETY: INVALID_HANDLE_VALUE requests a pagefile-backed section, and
         // the name buffer is live for the call.
@@ -2967,6 +2976,8 @@ pub mod job {
             store32(entry, SLOT_EXE_LENGTH, 0);
             store32(entry, SLOT_CMDLINE_LENGTH, 0);
             store32(entry, SLOT_CGROUP_LENGTH, 0);
+            store32(entry, SLOT_CWD_LENGTH, 0);
+            store32(entry, SLOT_ROOT_LENGTH, 0);
             store32(entry, SLOT_PDEATHSIG, 0);
             store32(entry, SLOT_PDEATH_DELIVERED, 0);
             store64(entry, SLOT_NOFILE_SOFT, 0);
@@ -3388,6 +3399,8 @@ pub mod job {
                         store32(candidate, SLOT_EXE_LENGTH, 0);
                         store32(candidate, SLOT_CMDLINE_LENGTH, 0);
                         store32(candidate, SLOT_CGROUP_LENGTH, 0);
+            store32(candidate, SLOT_CWD_LENGTH, 0);
+            store32(candidate, SLOT_ROOT_LENGTH, 0);
                         // Linux clears PR_SET_PDEATHSIG in a fork child.  A new
                         // process row is the exact point at which that rule is
                         // applied; exec reuses the existing row and preserves it.
@@ -3861,6 +3874,59 @@ pub mod job {
             }
         })
         .ok_or(FdLinkError::RegistryUnavailable)?
+    }
+
+    /// Publish complete namespace paths for procfs magic links. Never truncate.
+    pub fn set_fs_paths(pid: u32, cwd: &str, root: &str) -> bool {
+        if [cwd, root]
+            .iter()
+            .any(|s| !s.starts_with('/') || s.len() > FS_PATH_CAPACITY || s.contains('\0'))
+        {
+            return false;
+        }
+        with_table(|base| {
+            let Some(entry) = (unsafe { find(base, pid) }) else {
+                return false;
+            };
+            unsafe {
+                write_blob(
+                    entry,
+                    SLOT_CWD,
+                    FS_PATH_CAPACITY,
+                    SLOT_CWD_LENGTH,
+                    cwd.as_bytes(),
+                );
+                write_blob(
+                    entry,
+                    SLOT_ROOT,
+                    FS_PATH_CAPACITY,
+                    SLOT_ROOT_LENGTH,
+                    root.as_bytes(),
+                );
+            }
+            true
+        })
+        .unwrap_or(false)
+    }
+
+    pub fn fs_paths(pid: u32) -> Option<(String, String)> {
+        with_table(|base| {
+            let entry = unsafe { find(base, pid) }?;
+            let read = |offset, length| unsafe {
+                let length = load32(entry, length) as usize;
+                if length == 0 || length > FS_PATH_CAPACITY {
+                    return None;
+                }
+                std::str::from_utf8(core::slice::from_raw_parts(entry.add(offset), length))
+                    .ok()
+                    .map(str::to_owned)
+            };
+            Some((
+                read(SLOT_CWD, SLOT_CWD_LENGTH)?,
+                read(SLOT_ROOT, SLOT_ROOT_LENGTH)?,
+            ))
+        })
+        .flatten()
     }
 
     /// Updates the Linux-facing identity of one process.
@@ -4447,6 +4513,12 @@ pub mod job {
                     child.namespace_pid
                 );
             }
+            release_slot(child.namespace_pid);
+            return None;
+        }
+        if let Some((cwd, root)) = fs_paths(own)
+            && !set_fs_paths(child.namespace_pid, &cwd, &root)
+        {
             release_slot(child.namespace_pid);
             return None;
         }
@@ -5452,11 +5524,11 @@ mod windows {
     };
     use windows_sys::Win32::System::SystemInformation::{GetSystemInfo, SYSTEM_INFO};
     use windows_sys::Win32::System::Threading::{
-        CREATE_NO_WINDOW, CreateEventW, CreateProcessW, ExitProcess, GetCurrentProcess,
-        GetCurrentThreadId, GetExitCodeProcess, GetProcessTimes, GetThreadId, OpenProcess,
-        PROCESS_INFORMATION, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SYNCHRONIZE, ResumeThread,
-        STARTUPINFOW, SetEvent, SuspendThread, THREAD_QUERY_LIMITED_INFORMATION,
-        THREAD_SUSPEND_RESUME, TerminateProcess, WaitForMultipleObjects, WaitForSingleObject,
+        CreateEventW, CreateProcessW, ExitProcess, GetCurrentProcess, GetCurrentThreadId,
+        GetExitCodeProcess, GetProcessTimes, GetThreadId, OpenProcess, PROCESS_INFORMATION,
+        PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SYNCHRONIZE, ResumeThread, STARTUPINFOW,
+        SetEvent, SuspendThread, THREAD_QUERY_LIMITED_INFORMATION, THREAD_SUSPEND_RESUME,
+        TerminateProcess, WaitForMultipleObjects, WaitForSingleObject,
     };
 
     const CONTEXT_AMD64: u32 = 0x0010_0000;
@@ -6702,12 +6774,17 @@ mod windows {
 
         let mut startup: STARTUPINFOW = unsafe { zeroed() };
         startup.cb = size_of::<STARTUPINFOW>() as u32;
-        // CREATE_NO_WINDOW must retain redirected diagnostics and standard I/O.
+        // Both console policies retain redirected diagnostics and standard I/O.
         // Without USESTDHANDLES Windows can replace them with null handles.
         startup.dwFlags = windows_sys::Win32::System::Threading::STARTF_USESTDHANDLES;
         startup.hStdInput = unsafe { GetStdHandle(STD_INPUT_HANDLE) };
         startup.hStdOutput = unsafe { GetStdHandle(STD_OUTPUT_HANDLE) };
         startup.hStdError = unsafe { GetStdHandle(STD_ERROR_HANDLE) };
+        let creation_flags = super::child_creation_flags([
+            startup.hStdInput as usize,
+            startup.hStdOutput as usize,
+            startup.hStdError as usize,
+        ]);
         let mut process: PROCESS_INFORMATION = unsafe { zeroed() };
         let create_started = std::time::Instant::now();
         let created = unsafe {
@@ -6717,7 +6794,7 @@ mod windows {
                 ptr::null(),
                 ptr::null(),
                 1,
-                CREATE_NO_WINDOW,
+                creation_flags,
                 ptr::null(),
                 ptr::null(),
                 &startup,

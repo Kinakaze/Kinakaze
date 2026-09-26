@@ -53,6 +53,10 @@ def main():
         if hashlib.sha256(files[f'rootfs/{entry["path"]}']).hexdigest() != expected:
             raise ValueError(f'bundled root differs from first-install manifest: {entry["path"]}')
     planned = {f'rootfs/{entry["path"]}' for entry in manifest['files']}
+    for name in manifest.get('links', {}):
+        if not (dist / 'rootfs' / name).is_file():
+            raise ValueError(f'missing emulated guest link: {name}')
+        planned.add(f'rootfs/{name}')
     unexpected = {name for name in files if name.startswith('rootfs/')} - planned
     if unexpected:
         raise ValueError(f'root contains files absent from the install manifest: {sorted(unexpected)}')

@@ -1579,6 +1579,26 @@ pub unsafe fn recvfrom(
     Ok(received)
 }
 
+/// The actual urgent-data mark of an Internet socket (Linux sockatmark).
+pub fn at_mark(fd: i32) -> Result<bool, i32> {
+    if crate::unix::is_unix_socket(fd) || crate::netlink::is_netlink_socket(fd) {
+        return Err(EINVAL);
+    }
+    let (socket, _) = socket_of(fd)?;
+    let mut at_mark = 0;
+    if unsafe {
+        ioctlsocket(
+            socket,
+            windows_sys::Win32::Networking::WinSock::SIOCATMARK,
+            &mut at_mark,
+        )
+    } == SOCKET_ERROR
+    {
+        return Err(last_wsa_errno());
+    }
+    Ok(at_mark != 0)
+}
+
 /// `shutdown`.
 pub fn shutdown(fd: i32, how: i32) -> Result<(), i32> {
     if let Some(owner) = crate::usernet::packet::description(fd)? {

@@ -39,7 +39,7 @@ class ExportTests(unittest.TestCase):
                 generate.validate_literal_exports('libc', {'kinakaze_abi_error_at_line': 'T'})
 
     def test_compatibility_exports_share_existing_implementation_targets(self):
-        exports = {"libc": {name: {"runtime_export": "libc_" + name} for name in generate.PTHREAD_LIBC_FORWARDERS | {"__tls_get_addr", "__libc_stack_end", "_exit", "vfscanf", "vsscanf", "scanf", "vscanf", "clearerr", "__pread_chk", "stpcpy", "mempcpy", "dcgettext", "__strtod_l", "__strtof_l", "ftw", "nftw", "versionsort", "fgetpos", "fsetpos", "__fread_chk", "strndup", "__strftime_l"}},
+        exports = {"libc": {name: {"runtime_export": "libc_" + name} for name in generate.PTHREAD_LIBC_FORWARDERS | {"asprintf", "poll", "strcasecmp", "sbrk", "prlimit64", "__tls_get_addr", "__libc_stack_end", "_exit", "vfscanf", "vsscanf", "scanf", "vscanf", "clearerr", "__pread_chk", "stpcpy", "mempcpy", "dcgettext", "__strtod_l", "__strtof_l", "ftw", "nftw", "versionsort", "fgetpos", "fsetpos", "__fread_chk", "strndup", "__strftime_l"}},
                    "libpthread": {name: {"runtime_export": "pthread_" + name} for name in generate.LIBC_PTHREAD_FORWARDERS},
                    "libm": {name: {"runtime_export": "math_" + name} for name in generate.LIBC_LIBM_FORWARDERS | {'lrint', 'lrintf', 'remainder', 'lgamma', 'atan2', 'exp', 'fpclassifyf', 'fpclassify'}},
                    "librt": {name: {"runtime_export": "rt_" + name} for name in generate.LIBC_RT_FORWARDERS},

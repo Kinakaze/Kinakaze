@@ -23,6 +23,7 @@ fn parse(arguments: Vec<OsString>, pool: bool, prepare: bool) -> Result<Options>
     let mut root = None;
     let mut dist = None;
     let mut cwd = "/".to_owned();
+    let mut explicit_cwd = false;
     let mut guest = Vec::new();
     let mut web_address = None;
     let mut rootfs_manifest = None;
@@ -47,6 +48,7 @@ fn parse(arguments: Vec<OsString>, pool: bool, prepare: bool) -> Result<Options>
                 );
             }
             Some("--cwd") => {
+                explicit_cwd = true;
                 cwd = args
                     .next()
                     .ok_or("missing --cwd value")?
@@ -69,10 +71,8 @@ fn parse(arguments: Vec<OsString>, pool: bool, prepare: bool) -> Result<Options>
             }
         }
     }
-    if prepare && !pool && guest.is_empty() {
-        guest = vec!["/bin/sh".into(), "-l".into()];
-    }
-    if !(pool && guest.is_empty())
+    let login = prepare && !pool && guest.is_empty();
+    if !(login || pool && guest.is_empty())
         && !guest
             .first()
             .is_some_and(|program| program.starts_with('/'))
@@ -95,6 +95,28 @@ fn parse(arguments: Vec<OsString>, pool: bool, prepare: bool) -> Result<Options>
         kinakaze_v2_rootfs::prepare(&root, &dist, rootfs_manifest.as_deref())?;
     } else if rootfs_manifest.is_some() {
         return Err(failure("rootfs manifest is only accepted by worker run"));
+    }
+    if login {
+        let account = std::fs::read_to_string(root.join("etc/passwd")).unwrap_or_default();
+        let root_account = account
+            .lines()
+            .map(|line| line.split(':').collect::<Vec<_>>())
+            .find(|fields| fields.len() == 7 && fields[2] == "0");
+        let shell = root_account
+            .as_ref()
+            .map(|fields| fields[6])
+            .filter(|shell| shell.starts_with('/') && !shell.contains(['\0', '\\']))
+            .unwrap_or("/bin/sh");
+        if !explicit_cwd {
+            if let Some(home) = root_account
+                .as_ref()
+                .map(|fields| fields[5])
+                .filter(|home| home.starts_with('/') && !home.contains(['\0', '\\']))
+            {
+                cwd = home.to_owned();
+            }
+        }
+        guest = vec![shell.to_owned(), "-l".into()];
     }
     Ok(Options {
         root: root.canonicalize()?,

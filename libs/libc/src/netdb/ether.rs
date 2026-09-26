@@ -60,6 +60,88 @@ fn format(address: &[u8; 6], output: &mut [u8; 18]) -> usize {
     cursor + 1
 }
 
+fn lookup_ethers(matches: impl Fn(&[u8; 6], &[u8]) -> bool) -> Result<([u8; 6], Vec<u8>), i32> {
+    use std::io::BufRead;
+    let mut reader = super::records::Reader::open("/etc/ethers")?;
+    let mut line = Vec::new();
+    loop {
+        line.clear();
+        if reader
+            .read_until(b'\n', &mut line)
+            .map_err(|e| e.raw_os_error().unwrap_or(5))?
+            == 0
+        {
+            return Err(kinakaze_vfs::ENOENT);
+        }
+        let mut text = line.split(|b| *b == b'#').next().unwrap_or_default();
+        let Some(mac) = super::records::field(&mut text) else {
+            continue;
+        };
+        let Some(address) = parse(mac) else {
+            continue;
+        };
+        let Some(name) = super::records::field(&mut text) else {
+            continue;
+        };
+        if name.len() <= 255 && !name.contains(&0) && matches(&address, name) {
+            return Ok((address, name.to_vec()));
+        }
+    }
+}
+
+/// # Safety
+/// name is NUL-terminated; address is writable for six bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_ether_hostton(
+    name: *const c_char,
+    address: *mut u8,
+) -> i32 {
+    if name.is_null() || address.is_null() {
+        crate::set_errno(22);
+        return -1;
+    }
+    let name = unsafe { CStr::from_ptr(name) }.to_bytes();
+    match lookup_ethers(|_, candidate| candidate.eq_ignore_ascii_case(name)) {
+        Ok((bytes, _)) => {
+            unsafe {
+                ptr::copy_nonoverlapping(bytes.as_ptr(), address, 6);
+            }
+            0
+        }
+        Err(error) => {
+            crate::set_errno(error);
+            -1
+        }
+    }
+}
+
+/// # Safety
+/// address is readable for six bytes; name has room for the hostname and NUL.
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_ether_ntohost(
+    name: *mut c_char,
+    address: *const u8,
+) -> i32 {
+    if name.is_null() || address.is_null() {
+        crate::set_errno(22);
+        return -1;
+    }
+    let address = unsafe { &*address.cast::<[u8; 6]>() };
+    match lookup_ethers(|candidate, _| candidate == address) {
+        Ok((_, bytes)) => {
+            unsafe {
+                ptr::copy_nonoverlapping(bytes.as_ptr(), name.cast(), bytes.len());
+                name.add(bytes.len()).write(0);
+            }
+            0
+        }
+        Err(error) => {
+            crate::set_errno(error);
+            -1
+        }
+    }
+}
+
 super::records::returned::returned_record!(*b"CYETHR01");
 
 fn storage() -> Option<*mut u8> {

@@ -743,11 +743,12 @@ pub fn namespace_pid(host_pid: u32) -> Option<u32> {
 
 /// Publishes the identity shown by `/proc` and process-listing tools.
 pub fn set_process_identity(comm: &str, executable: &str, arguments: &[String]) -> bool {
-    if ensure_registered_with_identity(Some((comm, executable, arguments))) {
-        return true;
-    }
-    let cmdline = encode_cmdline(arguments);
-    table::set_process_identity(current_pid(), comm, executable, &cmdline)
+    let published = ensure_registered_with_identity(Some((comm, executable, arguments))) || {
+        let cmdline = encode_cmdline(arguments);
+        table::set_process_identity(current_pid(), comm, executable, &cmdline)
+    };
+    crate::procfs::publish_fs_paths();
+    published
 }
 
 fn encode_cmdline(arguments: &[String]) -> Vec<u8> {

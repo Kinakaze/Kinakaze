@@ -316,7 +316,10 @@ pub fn open(path: &str, flags: i32, mode: u32) -> Result<i32, i32> {
 }
 
 /// Serves a `/proc` path by materializing its text into a descriptor.
-fn open_procfs(path: &str, flags: i32) -> Result<i32, i32> {
+fn open_procfs(path: &str, flags: i32, mode: u32) -> Result<i32, i32> {
+    if let Some(target) = crate::procfs::directory_link(path, flags & O_NOFOLLOW == 0)? {
+        return open(&target, flags, mode);
+    }
     // O_PATH resolves an inode without opening it for data access. Linux ignores
     // the remaining status/access flags, including O_TRUNC and O_ACCMODE.
     let flags = if flags & O_PATH != 0 {
@@ -914,10 +917,10 @@ pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32>
         && dirfd != AT_FDCWD
         && crate::synthetic_directory_path(dirfd).is_ok_and(|p| p.starts_with("/proc/.mount/"))
     {
-        return crate::procfs::pinned(|| open_procfs(&absolute, flags));
+        return crate::procfs::pinned(|| open_procfs(&absolute, flags, mode));
     }
     if crate::mount::proc_location(&absolute)?.is_some() {
-        return open_procfs(&absolute, flags);
+        return open_procfs(&absolute, flags, mode);
     }
     if let Some(fd) = crate::tmpfs::open(&absolute, flags, mode)? {
         return Ok(fd);
@@ -931,9 +934,9 @@ pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32>
             && dirfd != AT_FDCWD
             && crate::synthetic_directory_path(dirfd).is_ok()
         {
-            return crate::procfs::pinned(|| open_procfs(&absolute, flags));
+            return crate::procfs::pinned(|| open_procfs(&absolute, flags, mode));
         }
-        return open_procfs(&absolute, flags);
+        return open_procfs(&absolute, flags, mode);
     }
     if crate::cgroup::owns(&absolute) {
         let metadata = crate::cgroup::metadata(&absolute)?;
@@ -2129,6 +2132,9 @@ pub fn read_link_fd(fd: i32) -> Result<String, i32> {
 /// Builds a `Stat` for a synthetic `/proc` path.
 fn stat_procfs(path: &str, follow_symlinks: bool) -> Result<Stat, i32> {
     use crate::procfs::ProcKind;
+    if let Some(target) = crate::procfs::directory_link(path, follow_symlinks)? {
+        return stat_path(&target, follow_symlinks);
+    }
     let (view_path, _scope) = crate::procfs::instance::enter(path)?;
     let path = view_path.as_str();
     let metadata = crate::procfs::metadata(path)?;
@@ -3303,6 +3309,7 @@ pub fn chdir(path: &str) -> Result<(), i32> {
         s.cwd = Some(target);
         s.cwd_object = None;
     });
+    crate::procfs::publish_fs_paths();
     Ok(())
 }
 

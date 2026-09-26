@@ -6,6 +6,10 @@ use core::{
 };
 
 super::records::returned::returned_record!(*b"CYPROT01");
+const PATH: &str = "/etc/protocols";
+mod cursor {
+    super::super::records::cursor::database_cursor!(*b"CYPROE01");
+}
 
 fn number(text: &[u8]) -> Option<u32> {
     let text = text.strip_prefix(b"+").unwrap_or(text);
@@ -17,7 +21,11 @@ fn number(text: &[u8]) -> Option<u32> {
 }
 
 fn lookup(matches: impl Fn(&records::Record<'_>) -> bool) -> *mut Protoent {
-    let (value, names) = match records::lookup("/etc/protocols", number, matches) {
+    publish(records::lookup(PATH, number, matches))
+}
+
+fn publish(outcome: Result<Option<(u32, records::Names)>, i32>) -> *mut Protoent {
+    let (value, names) = match outcome {
         Ok(Some(entry)) => entry,
         Ok(None) => return ptr::null_mut(),
         Err(error) => {
@@ -47,6 +55,55 @@ fn lookup(matches: impl Fn(&records::Record<'_>) -> bool) -> *mut Protoent {
     }
     RETURNED.with(|slot| *slot.borrow_mut() = Some(allocation));
     result
+}
+
+#[unsafe(no_mangle)]
+pub extern "sysv64" fn kinakaze_abi_setprotoent(_stayopen: c_int) {
+    if let Err(error) = cursor::rewind() {
+        crate::set_errno(error);
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "sysv64" fn kinakaze_abi_endprotoent() {
+    if let Err(error) = cursor::close() {
+        crate::set_errno(error);
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "sysv64" fn kinakaze_abi_getprotoent() -> *mut Protoent {
+    publish(cursor::next(|reader| {
+        records::find(reader, number, |_| true)
+    }))
+}
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_getprotoent_r(
+    output: *mut Protoent,
+    buffer: *mut c_char,
+    capacity: usize,
+    result: *mut *mut Protoent,
+) -> c_int {
+    if result.is_null() || output.is_null() {
+        return kinakaze_vfs::EINVAL;
+    }
+    unsafe { *result = ptr::null_mut() };
+    cursor::next(|reader| {
+        reader.retry_range(|reader| {
+            let Some((value, names)) = records::find(reader, number, |_| true)? else {
+                return Err(kinakaze_vfs::ENOENT);
+            };
+            let (name, aliases) = unsafe { records::copy_names(&names, buffer, capacity)? };
+            unsafe {
+                output.write(Protoent {
+                    p_name: name,
+                    p_aliases: aliases,
+                    p_proto: value as c_int,
+                });
+                *result = output;
+            }
+            Ok(())
+        })
+    })
+    .map_or_else(|error| error, |()| 0)
 }
 
 /// # Safety

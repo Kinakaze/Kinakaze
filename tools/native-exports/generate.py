@@ -25,6 +25,7 @@ INPUTS = load_inputs(ROOT)
 # CopiedInt/Pointer contain private relocation bookkeeping after this payload.
 # In6Addr has repr(C, align(4)), matching the Linux in6_addr union alignment.
 OBJECT_LAYOUTS = {
+    "_nl_msg_cat_cntr": (4, 4),
     "__libc_stack_end": (8, 8),
     "_libc_intl_domainname": (5, 1),
     "argp_err_exit_status": (4, 4),
@@ -65,7 +66,7 @@ PTHREAD_LIBC_FORWARDERS = {
     "fcntl", "flockfile", "funlockfile", "lseek", "nanosleep", "open", "open64",
     "raise", "read", "recv", "recvfrom", "send", "sendto", "write",
     "tss_create", "tss_delete", "tss_get", "tss_set",
-    "fsync", "lseek64", "msync", "pread64", "pwrite64", "recvmsg", "sendmsg",
+    "fsync", "lseek64", "msync", "pread", "pwrite", "pread64", "pwrite64", "recvmsg", "sendmsg",
     "pthread_getaffinity_np", "pthread_setaffinity_np", "sigaction", "waitpid",
     "sem_destroy", "sem_init", "sem_post", "sem_timedwait", "sem_trywait", "sem_wait",
 }
@@ -79,7 +80,9 @@ LIBC_PTHREAD_FORWARDERS = {"pthread_attr_getschedpolicy", "pthread_attr_getsched
                           "pthread_mutexattr_setrobust", "pthread_mutexattr_getrobust", "pthread_mutex_consistent",
                           "pthread_mutexattr_setprotocol", "pthread_mutexattr_getprotocol",
                           "pthread_attr_setaffinity_np", "pthread_attr_getaffinity_np",
-                          "pthread_setschedparam", "pthread_getschedparam", "pthread_setschedprio"}
+                          "pthread_setschedparam", "pthread_getschedparam", "pthread_setschedprio",
+                          "pthread_spin_init", "pthread_spin_destroy", "pthread_spin_lock",
+                          "pthread_spin_trylock", "pthread_spin_unlock"}
 LIBC_RT_FORWARDERS = {"timer_create", "timer_delete", "timer_settime", "timer_gettime", "timer_getoverrun"}
 LIBC_LIBM_FORWARDERS = {"copysign", "__isinf", "__isnan", "__isnanf", "isinf", "isnan", "isinff", "isnanf"}
 
@@ -106,7 +109,9 @@ def add_compatibility_exports(exports):
                             "__strndup": "strndup", "strftime_l": "__strftime_l",
                             "strtof_l": "__strtof_l", "ftw64": "ftw", "nftw64": "nftw",
                             "versionsort64": "versionsort", "fgetpos64": "fgetpos", "fsetpos64": "fsetpos",
-                            "__fread_unlocked_chk": "__fread_chk"}.items():
+                            "__fread_unlocked_chk": "__fread_chk", "__asprintf": "asprintf",
+                            "__poll": "poll", "__strcasecmp": "strcasecmp", "__sbrk": "sbrk",
+                            "prlimit": "prlimit64"}.items():
         if original not in exports["libc"]:
             raise ValueError(f"Compatibility export libc:{alias} has no libc implementation {original}")
         exports["libc"][alias] = dict(exports["libc"][original], name=alias)

@@ -29,7 +29,7 @@ Kinakaze 在用户态实现 Linux 程序所需的装载器、系统调用与基�
 
 v0.1.0 增加可选 rootfs 清单和可重新连接的 init 启动客户端。外部清单优先，仅在目标 rootfs 不存在或为空时初始化；已有非空 rootfs 保持原样。发行包内置经过哈希校验的基础 shell，启动方式及 `init launch --parent` 示例见 [v0.1.0 运行说明](docs/runtime-release-v0.1.0.md)。
 
-当前源码的默认构建进一步预装 APT、dpkg、软件源、签名密钥、证书和包数据库。执行生成目录中的 `kinakaze.cmd` 即可进入 shell；`kinakaze.cmd setup --root <目录>` 可离线初始化。详见 [首次安装与包管理](docs/first-run.md)。这部分改进尚未进入已发布的 v0.1.0 二进制。
+当前源码的默认构建预装 Debian bookworm 无桌面的基础与标准命令行环境，共锁定 302 个软件包，包含 Bash、补全、man、编辑器、Python、Perl、APT、dpkg、签名密钥和证书。执行生成目录中的 `kinakaze.cmd` 即可进入 shell；`kinakaze.cmd setup --root <目录>` 可离线初始化。详见 [首次安装与包管理](docs/first-run.md)。这部分改进尚未进入已发布的 v0.1.0 二进制。
 
 ### 构建环境
 

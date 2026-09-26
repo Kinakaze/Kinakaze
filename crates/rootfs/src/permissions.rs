@@ -3,8 +3,77 @@
 use std::{io, path::Path};
 
 #[cfg(windows)]
+pub(super) fn case_sensitive(path: &Path) -> io::Result<()> {
+    use std::os::windows::{fs::OpenOptionsExt, io::AsRawHandle};
+    use windows_sys::Win32::Storage::FileSystem::{
+        FILE_FLAG_BACKUP_SEMANTICS, FILE_WRITE_ATTRIBUTES, FileCaseSensitiveInfo,
+        SetFileInformationByHandle,
+    };
+    let file = std::fs::OpenOptions::new()
+        .access_mode(FILE_WRITE_ATTRIBUTES)
+        .custom_flags(FILE_FLAG_BACKUP_SEMANTICS)
+        .open(path)?;
+    let flags: u32 = 1;
+    if unsafe {
+        SetFileInformationByHandle(
+            file.as_raw_handle(),
+            FileCaseSensitiveInfo,
+            (&flags as *const u32).cast(),
+            4,
+        )
+    } == 0
+    {
+        return Err(io::Error::other(format!(
+            "rootfs requires filesystem support for case-sensitive directories: {}: {}",
+            path.display(),
+            io::Error::last_os_error()
+        )));
+    }
+    Ok(())
+}
+
+#[cfg(unix)]
+pub(super) fn case_sensitive(_path: &Path) -> io::Result<()> {
+    Ok(())
+}
+
+#[cfg(windows)]
 pub(super) fn initialize(path: &Path, mode: u32) -> io::Result<()> {
-    use kinakaze_v2_abi::inode::{EA_NAME, Record};
+    use kinakaze_v2_abi::inode::Record;
+    let kind = if path.is_dir() { 0o040000 } else { 0o100000 };
+    write_record(
+        path,
+        Record {
+            mode: Some(kind | mode),
+            uid: Some(0),
+            gid: Some(0),
+            ..Record::default()
+        },
+    )
+}
+
+#[cfg(windows)]
+pub(super) fn symlink(path: &Path, target: &str) -> io::Result<()> {
+    use kinakaze_v2_abi::inode::Record;
+    std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)?;
+    write_record(
+        path,
+        Record {
+            mode: Some(0o120777),
+            uid: Some(0),
+            gid: Some(0),
+            symlink: Some(target.to_owned()),
+            ..Record::default()
+        },
+    )
+}
+
+#[cfg(windows)]
+fn write_record(path: &Path, record: kinakaze_v2_abi::inode::Record) -> io::Result<()> {
+    use kinakaze_v2_abi::inode::EA_NAME;
     use std::{
         ffi::c_void,
         fs::OpenOptions,
@@ -27,13 +96,6 @@ pub(super) fn initialize(path: &Path, mode: u32) -> io::Result<()> {
         fn NtSetEaFile(file: HANDLE, io: *mut IoStatus, buffer: *const c_void, length: u32) -> i32;
         fn RtlNtStatusToDosError(status: i32) -> u32;
     }
-    let kind = if path.is_dir() { 0o040000 } else { 0o100000 };
-    let record = Record {
-        mode: Some(kind | mode),
-        uid: Some(0),
-        gid: Some(0),
-        ..Record::default()
-    };
     let value = record
         .encode()
         .map_err(|_| io::Error::other("invalid rootfs inode metadata"))?;
@@ -72,4 +134,9 @@ pub(super) fn initialize(path: &Path, mode: u32) -> io::Result<()> {
 pub(super) fn initialize(path: &Path, mode: u32) -> io::Result<()> {
     use std::os::unix::fs::PermissionsExt;
     std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode))
+}
+
+#[cfg(unix)]
+pub(super) fn symlink(path: &Path, target: &str) -> io::Result<()> {
+    std::os::unix::fs::symlink(target, path)
 }

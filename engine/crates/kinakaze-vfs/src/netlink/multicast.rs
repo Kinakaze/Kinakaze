@@ -245,7 +245,9 @@ fn refresh_journal_filtered(
         }
     }
     state.multicast_cursor = journal.sequence;
-    if state.queue.iter().map(|d| d.bytes.len()).sum::<usize>() > MAX_BYTES {
+    if state.queue.iter().map(|d| d.bytes.len()).sum::<usize>()
+        > (state.receive_buffer as usize).min(MAX_BYTES)
+    {
         state.queue.clear();
         state.multicast_overflow = true;
     }

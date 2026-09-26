@@ -1238,10 +1238,20 @@ fn parse_hosts_answers(text: &str, query: &str) -> Vec<HostsAnswer> {
 /// This preserves Linux's default `files dns` ordering and also keeps each
 /// guest root's resolver configuration isolated from the machine running it.
 fn hosts_answers(query: &str) -> Vec<HostsAnswer> {
-    let text = kinakaze_vfs::path::resolve_linux_path("/etc/hosts")
-        .ok()
-        .and_then(|path| std::fs::read_to_string(path).ok())
-        .unwrap_or_else(|| "127.0.0.1 localhost\n::1 localhost\n".to_owned());
+    if !nss::host_sources().0 {
+        return Vec::new();
+    }
+    use std::io::Read;
+    let mut text = String::new();
+    if records::Reader::open("/etc/hosts")
+        .and_then(|mut file| {
+            file.read_to_string(&mut text)
+                .map_err(|error| error.raw_os_error().unwrap_or(kinakaze_vfs::EIO))
+        })
+        .is_err()
+    {
+        return Vec::new();
+    }
     parse_hosts_answers(&text, query)
 }
 
@@ -1444,7 +1454,11 @@ pub unsafe extern "sysv64" fn kinakaze_abi_getaddrinfo(
     if hint_flags & AI_NUMERICHOST == 0
         && let Some(name) = node_text
     {
-        let file_answers = hosts_answers(name);
+        let file_answers = if nss::host_sources().0 {
+            hosts_answers(name)
+        } else {
+            Vec::new()
+        };
         if !file_answers.is_empty() {
             let mut head: *mut AddrInfo = ptr::null_mut();
             let mut tail: *mut AddrInfo = ptr::null_mut();
@@ -1508,6 +1522,11 @@ pub unsafe extern "sysv64" fn kinakaze_abi_getaddrinfo(
         }
     }
 
+    if node_text.is_some_and(|name| name.parse::<std::net::IpAddr>().is_err())
+        && !nss::host_sources().1
+    {
+        return EAI_NONAME;
+    }
     let mut windows_result: *mut AddrInfoW = ptr::null_mut();
     // SAFETY: both name pointers are null or NUL-terminated wide buffers that
     // outlive the call, the hints are a live local, and the out-pointer is local.
@@ -1663,12 +1682,29 @@ pub unsafe extern "sysv64" fn kinakaze_abi_freeaddrinfo(list: *mut AddrInfo) {
 // Shared lookup and iteration, with explicit open/reset/close lifetime.
 // ---------------------------------------------------------------------------
 
+mod aliases;
 mod ether;
+mod gshadow;
+mod hosts;
 mod networks;
+mod nss;
 mod protocols;
 mod records;
 mod reentrant;
+mod rpc;
 mod services;
+
+/// Query the urgent-data mark using the socket backend's Linux error mapping.
+#[unsafe(no_mangle)]
+pub extern "sysv64" fn kinakaze_abi_sockatmark(fd: c_int) -> c_int {
+    match kinakaze_vfs::socket::at_mark(fd) {
+        Ok(value) => i32::from(value),
+        Err(error) => {
+            set_errno(error);
+            -1
+        }
+    }
+}
 pub use ether::{
     kinakaze_abi_ether_aton, kinakaze_abi_ether_aton_r, kinakaze_abi_ether_ntoa,
     kinakaze_abi_ether_ntoa_r,
@@ -1742,6 +1778,40 @@ unsafe fn read_sockaddr(
 ///
 /// `address` must be readable for `length` bytes.
 unsafe fn reverse_resolve(address: *const c_void, length: c_int) -> Option<String> {
+    if nss::host_sources().0 && length >= 8 {
+        let bytes = unsafe { core::slice::from_raw_parts(address.cast::<u8>(), length as usize) };
+        let ip = match u16::from_ne_bytes([bytes[0], bytes[1]]) as i32 {
+            AF_INET => Some(std::net::IpAddr::V4(std::net::Ipv4Addr::new(
+                bytes[4], bytes[5], bytes[6], bytes[7],
+            ))),
+            AF_INET6 if bytes.len() >= 24 => Some(std::net::IpAddr::V6(std::net::Ipv6Addr::from(
+                <[u8; 16]>::try_from(&bytes[8..24]).unwrap(),
+            ))),
+            _ => None,
+        };
+        if let (Some(ip), Ok(reader)) = (ip, records::Reader::open("/etc/hosts")) {
+            use std::io::BufRead;
+            for line in reader.lines().map_while(Result::ok) {
+                let mut fields = line
+                    .split('#')
+                    .next()
+                    .unwrap_or_default()
+                    .split_whitespace();
+                if fields
+                    .next()
+                    .and_then(|s| s.parse::<std::net::IpAddr>().ok())
+                    == Some(ip)
+                {
+                    if let Some(name) = fields.next() {
+                        return Some(name.to_owned());
+                    }
+                }
+            }
+        }
+    }
+    if !nss::host_sources().1 {
+        return None;
+    }
     if !ensure_winsock() {
         return None;
     }
@@ -1938,6 +2008,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_getnameinfo(
 struct HostentStorage {
     entry: Hostent,
     name: CString,
+    _alias_names: Vec<CString>,
     aliases: Vec<*mut c_char>,
     addresses: Vec<Vec<u8>>,
     address_pointers: Vec<*mut c_char>,
@@ -1949,6 +2020,7 @@ thread_local! {
 
 #[unsafe(no_mangle)]
 pub extern "sysv64" fn kinakaze_abi_endhostent() {
+    hosts::close();
     // Hosts lookups close their source descriptor immediately; release the
     // thread's retained result storage as well when the caller ends its use.
     HOSTENT.with(|slot| {
@@ -1961,12 +2033,26 @@ pub extern "sysv64" fn kinakaze_abi_endhostent() {
 /// `addresses` must all be `length` bytes, which is what `h_length` promises the
 /// caller about every entry in `h_addr_list`.
 fn publish_hostent(name: &str, family: c_int, addresses: Vec<Vec<u8>>) -> *mut Hostent {
+    let Ok(name) = CString::new(name) else {
+        set_h_errno(NO_RECOVERY);
+        return ptr::null_mut();
+    };
+    publish_hostent_names(name, Vec::new(), family, addresses)
+}
+
+fn publish_hostent_names(
+    name: CString,
+    alias_names: Vec<CString>,
+    family: c_int,
+    addresses: Vec<Vec<u8>>,
+) -> *mut Hostent {
     let length = if family == AF_INET { 4 } else { 16 };
     HOSTENT.with(|slot| {
-        let Ok(name) = CString::new(name) else {
-            set_h_errno(NO_RECOVERY);
-            return ptr::null_mut();
-        };
+        let aliases = alias_names
+            .iter()
+            .map(|name| name.as_ptr().cast_mut())
+            .chain(core::iter::once(ptr::null_mut()))
+            .collect();
         let mut storage = Box::new(HostentStorage {
             entry: Hostent {
                 h_name: ptr::null_mut(),
@@ -1976,9 +2062,10 @@ fn publish_hostent(name: &str, family: c_int, addresses: Vec<Vec<u8>>) -> *mut H
                 h_addr_list: ptr::null_mut(),
             },
             name,
+            _alias_names: alias_names,
             // Always a valid empty array rather than null: callers walk
             // `h_aliases` unconditionally, and glibc never returns null here.
-            aliases: vec![ptr::null_mut()],
+            aliases,
             addresses,
             address_pointers: Vec::new(),
         });
@@ -2159,7 +2246,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_gethostbyaddr(
         let inet = SockaddrIn {
             sin_family: AF_INET as u16,
             sin_port: 0,
-            sin_addr: u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]),
+            sin_addr: u32::from_ne_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]),
             sin_zero: [0; 8],
         };
         // SAFETY: `storage` is larger than a sockaddr_in and is byte-aligned.
@@ -3187,6 +3274,14 @@ pub unsafe extern "sysv64" fn kinakaze_abi_recvmsg(
     let mut rights = Vec::new();
     let mut credentials = None;
     let mut ancillary_flags = 0;
+    // Netlink can report the complete datagram size without copying beyond the
+    // supplied buffer. This also sets msg_flags when only the copied size is
+    // requested, and supports iproute2's zero-length PEEK|TRUNC size probe.
+    let receive_flags = if kinakaze_vfs::netlink::is_netlink_socket(fd) {
+        flags | MSG_TRUNC
+    } else {
+        flags
+    };
     let result = if kinakaze_vfs::unix::is_unix_socket(fd) {
         unsafe {
             kinakaze_vfs::unix::recv_control(
@@ -3219,7 +3314,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_recvmsg(
                 fd,
                 scratch.as_mut_ptr(),
                 capacity,
-                flags,
+                receive_flags,
                 if name.is_null() {
                     ptr::null_mut()
                 } else {

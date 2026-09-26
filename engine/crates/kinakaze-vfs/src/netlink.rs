@@ -7,6 +7,7 @@
 //! unknown protocols, message types and mutations fail at their request
 //! boundary instead of being acknowledged and ignored.
 
+use crate::EDESTADDRREQ;
 use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
@@ -15,8 +16,8 @@ use windows_sys::Win32::Foundation::{CloseHandle, HANDLE};
 use windows_sys::Win32::System::Threading::{CreateEventW, ResetEvent, SetEvent};
 
 use crate::{
-    EADDRINUSE, EAGAIN, EDESTADDRREQ, EDOM, EEXIST, EFAULT, EINTR, EINVAL, EIO, EMSGSIZE, ENOBUFS,
-    ENODEV, ENOENT, ENOPROTOOPT, EOPNOTSUPP, EPROTONOSUPPORT, FdFlags, FdKind, interrupt, signal,
+    EADDRINUSE, EAGAIN, EDOM, EEXIST, EFAULT, EINTR, EINVAL, EIO, EMSGSIZE, ENOBUFS, ENODEV,
+    ENOENT, ENOPROTOOPT, EOPNOTSUPP, EPROTONOSUPPORT, FdFlags, FdKind, interrupt, signal,
 };
 
 pub(crate) mod multicast;
@@ -44,11 +45,13 @@ const SOCK_NONBLOCK: i32 = 0o4000;
 const SOCK_CLOEXEC: i32 = 0o2000000;
 
 const MSG_PEEK: i32 = 0x02;
+const MSG_TRUNC: i32 = 0x20;
 const MSG_DONTWAIT: i32 = 0x40;
 
 const SOL_SOCKET: i32 = 1;
 const SO_TYPE: i32 = 3;
 const SO_ERROR: i32 = 4;
+const SO_SNDBUF: i32 = 7;
 const SO_RCVBUF: i32 = 8;
 const SO_PASSCRED: i32 = 16;
 const SO_RCVTIMEO: i32 = 20;
@@ -117,6 +120,7 @@ const RTM_GETROUTE: u16 = 26;
 const IFLA_ADDRESS: u16 = 1;
 const IFLA_BROADCAST: u16 = 2;
 const IFLA_IFNAME: u16 = 3;
+const IFLA_TXQLEN: u16 = 13;
 const IFLA_MTU: u16 = 4;
 const IFLA_LINK: u16 = 5;
 const IFLA_MASTER: u16 = 10;
@@ -223,6 +227,7 @@ struct EndpointState {
     send_timeout_us: Option<u64>,
     pass_credentials: bool,
     receive_buffer: i32,
+    send_buffer: i32,
 }
 
 struct Endpoint {
@@ -266,6 +271,7 @@ impl Endpoint {
                 send_timeout_us: None,
                 pass_credentials: false,
                 receive_buffer: 212_992,
+                send_buffer: 212_992,
             }),
         })
     }
@@ -280,6 +286,12 @@ impl Endpoint {
                 return Ok(());
             };
             datagram.bytes.truncate(length);
+        }
+        let queued: usize = state.queue.iter().map(|d| d.bytes.len()).sum();
+        if queued.saturating_add(datagram.bytes.len()) > state.receive_buffer as usize {
+            state.multicast_overflow = true;
+            unsafe { SetEvent(self.event) };
+            return Err(crate::ENOBUFS);
         }
         state.queue.push_back(datagram);
         // SAFETY: `event` is live for this Endpoint's lifetime.
@@ -785,6 +797,9 @@ fn interface_reply(
     let mut name = link.name.as_bytes().to_vec();
     name.push(0);
     append_attribute(&mut payload, IFLA_IFNAME, &name)?;
+    // Host-backed interfaces have no Linux qdisc transmit queue. The host
+    // transport owns buffering; do not invent a hardware queue length.
+    append_attribute(&mut payload, IFLA_TXQLEN, &0u32.to_ne_bytes())?;
     append_attribute(&mut payload, IFLA_MTU, &link.mtu.to_ne_bytes())?;
     if !link.address.is_empty() {
         append_attribute(&mut payload, IFLA_ADDRESS, &link.address)?;
@@ -825,6 +840,7 @@ fn loopback_link_reply(
     payload.extend_from_slice(&loopback.flags.to_ne_bytes());
     payload.extend_from_slice(&0u32.to_ne_bytes());
     append_attribute(&mut payload, IFLA_IFNAME, b"lo\0")?;
+    append_attribute(&mut payload, IFLA_TXQLEN, &0u32.to_ne_bytes())?;
     append_attribute(&mut payload, IFLA_MTU, &loopback.mtu.to_ne_bytes())?;
     if !loopback.address.is_empty() {
         append_attribute(&mut payload, IFLA_ADDRESS, &loopback.address)?;
@@ -1247,7 +1263,10 @@ fn nft_object_reply(
 
 fn done_reply(sequence: u32, local_port: u32) -> Result<Vec<u8>, i32> {
     let mut reply = Vec::new();
-    append_header(&mut reply, NLMSG_DONE, NLM_F_MULTI, sequence, local_port, 0)?;
+    // rtnetlink multipart completion carries a signed result after nlmsghdr.
+    // Modern iproute2 rejects a header-only DONE as a truncated dump.
+    append_header(&mut reply, NLMSG_DONE, NLM_F_MULTI, sequence, local_port, 4)?;
+    reply.extend_from_slice(&0i32.to_ne_bytes());
     Ok(reply)
 }
 
@@ -2320,6 +2339,11 @@ fn dispatch(item: &Arc<Endpoint>, request: &[u8]) -> Result<(), i32> {
     }
     let mut cursor = 0usize;
     while cursor < request.len() {
+        // iproute2 sends its zero-initialized attribute capacity beyond
+        // nlmsg_len. It is padding after a valid message, not another request.
+        if cursor != 0 && request[cursor..].iter().all(|byte| *byte == 0) {
+            break;
+        }
         let header = parse_header(&request[cursor..])?;
         if trace_enabled() {
             eprintln!(
@@ -2387,12 +2411,23 @@ pub unsafe fn sendto(
         return Err(EFAULT);
     }
     let item = endpoint(fd)?;
+    // Requests are consumed synchronously; the send budget bounds each datagram.
+    if length
+        > item
+            .state
+            .lock()
+            .map_err(|_| EIO)?
+            .send_buffer
+            .saturating_sub(32) as usize
+    {
+        return Err(EMSGSIZE);
+    }
     let target = if address.is_null() {
         item.state
             .lock()
             .map_err(|_| EIO)?
             .peer
-            .ok_or(EDESTADDRREQ)?
+            .unwrap_or(NetlinkAddress { port: 0, groups: 0 })
     } else {
         // SAFETY: forwarded from this function's contract.
         unsafe { NetlinkAddress::read(address, address_length)? }
@@ -2520,8 +2555,8 @@ pub unsafe fn recvfrom(
             if copied != 0 {
                 unsafe { core::ptr::copy_nonoverlapping(datagram.bytes.as_ptr(), buffer, copied) };
             }
-            return if copied < datagram.bytes.len() {
-                Err(EMSGSIZE)
+            return if flags & MSG_TRUNC != 0 {
+                Ok(datagram.bytes.len())
             } else {
                 Ok(copied)
             };
@@ -2567,9 +2602,9 @@ pub unsafe fn setsockopt(
     if trace_enabled() {
         eprintln!("kinakaze netlink: setsockopt fd={fd} level={level} name={name}");
     }
-    if item.protocol == NETLINK_KOBJECT_UEVENT
-        && level == SOL_SOCKET
-        && matches!(name, SO_PASSCRED | SO_RCVBUF)
+    if level == SOL_SOCKET
+        && (matches!(name, SO_SNDBUF | SO_RCVBUF)
+            || name == SO_PASSCRED && item.protocol == NETLINK_KOBJECT_UEVENT)
     {
         if value.is_null() {
             return Err(EFAULT);
@@ -2581,9 +2616,11 @@ pub unsafe fn setsockopt(
         let mut state = item.state.lock().map_err(|_| EIO)?;
         if name == SO_PASSCRED {
             state.pass_credentials = setting != 0;
-        } else {
+        } else if name == SO_RCVBUF {
             // Linux reports twice the requested size for bookkeeping overhead.
             state.receive_buffer = setting.clamp(128, 16 * 1024 * 1024) * 2;
+        } else {
+            state.send_buffer = setting.clamp(2304, 16 * 1024 * 1024) * 2;
         }
         return Ok(());
     }
@@ -2640,9 +2677,8 @@ pub unsafe fn getsockopt(
         SO_PASSCRED if item.protocol == NETLINK_KOBJECT_UEVENT => Some(i32::from(
             item.state.lock().map_err(|_| EIO)?.pass_credentials,
         )),
-        SO_RCVBUF if item.protocol == NETLINK_KOBJECT_UEVENT => {
-            Some(item.state.lock().map_err(|_| EIO)?.receive_buffer)
-        }
+        SO_RCVBUF => Some(item.state.lock().map_err(|_| EIO)?.receive_buffer),
+        SO_SNDBUF => Some(item.state.lock().map_err(|_| EIO)?.send_buffer),
         _ => None,
     };
     if let Some(scalar) = scalar {
@@ -2736,6 +2772,7 @@ pub fn serialize_matching(mut keep: impl FnMut(i32) -> bool) -> Result<Vec<u8>, 
         payload.extend_from_slice(&u32::from(state.multicast_overflow).to_le_bytes());
         payload.extend_from_slice(&u32::from(state.pass_credentials).to_le_bytes());
         payload.extend_from_slice(&state.receive_buffer.to_le_bytes());
+        payload.extend_from_slice(&state.send_buffer.to_le_bytes());
         for datagram in &state.queue {
             payload.extend_from_slice(&datagram.source.port.to_le_bytes());
             payload.extend_from_slice(&datagram.source.groups.to_le_bytes());
@@ -2763,7 +2800,7 @@ pub fn restore(payload: &[u8]) -> bool {
     let mut cursor = 4usize;
     let mut restored = HashMap::new();
     for _ in 0..count {
-        let Some(header) = payload.get(cursor..cursor + 76) else {
+        let Some(header) = payload.get(cursor..cursor + 80) else {
             return false;
         };
         let read_i32 = |at| i32::from_le_bytes(header[at..at + 4].try_into().unwrap());
@@ -2783,8 +2820,11 @@ pub fn restore(payload: &[u8]) -> bool {
         let multicast_overflow = read_u32(64) != 0;
         let pass_credentials = read_u32(68) != 0;
         let receive_buffer = read_i32(72);
-        cursor += 76;
+        let send_buffer = read_i32(76);
+        cursor += 80;
         if restored.contains_key(&fd)
+            || !(256..=32 * 1024 * 1024).contains(&receive_buffer)
+            || !(4608..=32 * 1024 * 1024).contains(&send_buffer)
             || crate::get(fd).is_err()
             || crate::get(fd).is_ok_and(|entry| entry.kind != FdKind::NetlinkSocket)
             || !matches!(
@@ -2846,6 +2886,7 @@ pub fn restore(payload: &[u8]) -> bool {
             state.send_timeout_us = (send_timeout_us != 0).then_some(send_timeout_us);
             state.pass_credentials = pass_credentials;
             state.receive_buffer = receive_buffer;
+            state.send_buffer = send_buffer;
             state.queue = queue;
             if !state.queue.is_empty() && unsafe { SetEvent(item.event) } == 0 {
                 return false;

@@ -27,9 +27,9 @@ def main():
             if name.startswith('KINAKAZE_'):
                 del env[name]
 
-        def run(command, expected=0):
+        def run(command, expected=0, timeout=45):
             result = subprocess.run(command, cwd=temporary, env=env, capture_output=True, text=True,
-                                    encoding='utf-8', errors='replace', timeout=45,
+                                    encoding='utf-8', errors='replace', timeout=timeout,
                                     creationflags=subprocess.CREATE_NO_WINDOW)
             if result.returncode != expected:
                 raise AssertionError(f'exit {result.returncode}, expected {expected}: {result.stderr}')
@@ -37,12 +37,17 @@ def main():
 
         worker = [str(dist / 'worker.exe'), 'run', '--root', str(root), '--dist', str(dist), '--']
         bundled = temporary / 'bundled'
-        shutil.copytree(dist, bundled)
-        assert run([str(bundled / 'worker.exe'), 'run', '--', '/bin/echo', 'BUNDLED_ROOT_OK']).strip() == 'BUNDLED_ROOT_OK'
-        results.append('bundled root works directly without runtime initialization')
+        # Match the ZIP: copying an initialized root loses NTFS inode metadata
+        # and cannot preserve Debian's case-sensitive names on an ordinary dir.
+        bundled.mkdir()
+        for name in ('init.exe', 'worker.exe', 'kinakaze.cmd', 'rootfs.manifest.json'):
+            shutil.copyfile(dist / name, bundled / name)
+        shutil.copytree(dist / 'rootfs-seed', bundled / 'rootfs-seed')
+        assert run([str(bundled / 'worker.exe'), 'run', '--', '/bin/echo', 'BUNDLED_ROOT_OK'], timeout=180).strip() == 'BUNDLED_ROOT_OK'
+        results.append('portable seed installs the bundled default root before launch')
         # Two supervisors concurrently initialize the same entirely absent root.
         with ThreadPoolExecutor(max_workers=2) as pool:
-            outputs = list(pool.map(lambda _: run(worker + ['/bin/sh', '-c', 'printf FIRST_RUN_OK']), range(2)))
+            outputs = list(pool.map(lambda _: run(worker + ['/bin/sh', '-c', 'printf FIRST_RUN_OK'], timeout=180), range(2)))
         assert outputs == ['FIRST_RUN_OK', 'FIRST_RUN_OK'], outputs
         assert (root / '.kinakaze-rootfs.sha256').is_file()
         assert (root / 'etc/passwd').is_file()
@@ -57,7 +62,7 @@ def main():
             shutil.copyfile(dist / name, standalone / name)
         assert run([str(standalone / 'worker.exe'), 'run', '--dist', str(standalone),
                     '--rootfs-manifest', str(dist / 'rootfs.manifest.json'), '--',
-                    '/bin/sh', '-c', 'printf COMPLETE_ROOT_OK']) == 'COMPLETE_ROOT_OK'
+                    '/bin/sh', '-c', 'printf COMPLETE_ROOT_OK'], timeout=180) == 'COMPLETE_ROOT_OK'
         results.append('external manifest installs complete native and guest dependencies into an absent distribution root')
         (root / 'etc/hostname').write_text('user-host\n', encoding='utf-8')
         assert run(worker + ['/bin/cat', '/etc/hostname']) == 'user-host\n'

@@ -11,7 +11,7 @@ use std::{
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 mod permissions;
-const MAX_MANIFEST: u64 = 4 * 1024 * 1024;
+const MAX_MANIFEST: u64 = 32 * 1024 * 1024;
 const STATE: &str = ".kinakaze-rootfs.sha256";
 
 #[derive(Deserialize)]
@@ -22,6 +22,10 @@ struct Manifest {
     files: Vec<Entry>,
     #[serde(default)]
     permissions: BTreeMap<String, u32>,
+    #[serde(default)]
+    links: BTreeMap<String, String>,
+    #[serde(default)]
+    case_sensitive: bool,
 }
 
 #[derive(Deserialize)]
@@ -40,6 +44,46 @@ enum Payload {
 
 fn digest(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
+}
+
+// Bounded IO concurrency keeps a full offline image responsive on filesystems
+// that scan every opened file. All workers finish before publication or cleanup.
+fn parallel<T: Sync, U: Send>(
+    items: &[T],
+    operation: impl Fn(&T) -> Result<U> + Sync,
+) -> Result<Vec<U>> {
+    let chunk_size = items.len().div_ceil(8).max(1);
+    std::thread::scope(|scope| {
+        let workers: Vec<_> = items
+            .chunks(chunk_size)
+            .map(|chunk| {
+                let operation = &operation;
+                scope.spawn(move || {
+                    chunk
+                        .iter()
+                        .map(|item| operation(item).map_err(|e| e.to_string()))
+                        .collect::<std::result::Result<Vec<_>, String>>()
+                })
+            })
+            .collect();
+        let mut output = Vec::with_capacity(items.len());
+        let mut failure = None;
+        for worker in workers {
+            match worker.join() {
+                Ok(Ok(values)) => output.extend(values),
+                Ok(Err(error)) => {
+                    failure.get_or_insert(error);
+                }
+                Err(_) => {
+                    failure.get_or_insert("rootfs IO worker panicked".into());
+                }
+            }
+        }
+        match failure {
+            Some(error) => Err(error.into()),
+            None => Ok(output),
+        }
+    })
 }
 
 fn relative(value: &str) -> Result<()> {
@@ -121,7 +165,9 @@ fn checked_path(base: &Path, value: &str) -> Result<PathBuf> {
 }
 
 fn exclusive_lock(path: &Path) -> Result<File> {
-    let deadline = Instant::now() + Duration::from_secs(30);
+    // A complete distribution can contain tens of thousands of files. Wait
+    // for its transaction instead of failing a concurrent first launch early.
+    let deadline = Instant::now() + Duration::from_secs(300);
     loop {
         reject_redirect(path)?;
         let mut options = OpenOptions::new();
@@ -192,7 +238,7 @@ pub fn prepare(root: &Path, dist: &Path, explicit: Option<&Path>) -> Result<()> 
         .take(MAX_MANIFEST + 1)
         .read_to_end(&mut bytes)?;
     if bytes.len() as u64 > MAX_MANIFEST {
-        return Err("rootfs manifest exceeds 4 MiB".into());
+        return Err("rootfs manifest exceeds 32 MiB".into());
     }
     let manifest_hash = digest(&bytes);
     let absolute = std::path::absolute(root)?;
@@ -217,24 +263,38 @@ pub fn prepare(root: &Path, dist: &Path, explicit: Option<&Path>) -> Result<()> 
     if manifest.schema != 1 {
         return Err("unsupported rootfs manifest schema".into());
     }
+    let key = |name: &str| {
+        if manifest.case_sensitive {
+            name.to_owned()
+        } else {
+            name.to_ascii_lowercase()
+        }
+    };
     let source_base = manifest_path.canonicalize()?.parent().unwrap().to_owned();
     let mut paths = BTreeSet::new();
     let mut directories = Vec::new();
     let mut files = Vec::new();
     // Validate the complete plan and all source hashes before installing files.
     for name in &manifest.directories {
-        let path = checked_path(root, name)?;
-        if !paths.insert(name.to_ascii_lowercase()) || path.exists() && !path.is_dir() {
+        relative(name)?;
+        let path = root.join(name);
+        if !paths.insert(key(name)) {
             return Err(format!("duplicate or conflicting rootfs directory: {name}").into());
         }
         directories.push(path);
     }
     for entry in &manifest.files {
-        let path = checked_path(root, &entry.path)?;
-        if !paths.insert(entry.path.to_ascii_lowercase()) || path.exists() && !path.is_file() {
+        // Staging is newly owned and empty until validation finishes. Output
+        // names need lexical checks, not repeated probes of nonexistent parents.
+        relative(&entry.path)?;
+        let path = root.join(&entry.path);
+        if !paths.insert(key(&entry.path)) {
             return Err(format!("duplicate or conflicting rootfs file: {}", entry.path).into());
         }
-        let content = match &entry.payload {
+        files.push((path, &entry.payload));
+    }
+    let files = parallel(&files, |(path, payload)| {
+        let content = match payload {
             Payload::Text { content } => content.as_bytes().to_vec(),
             Payload::Copy { source, sha256 } => {
                 let source = checked_path(&source_base, source)?;
@@ -245,30 +305,63 @@ pub fn prepare(root: &Path, dist: &Path, explicit: Option<&Path>) -> Result<()> 
                 bytes
             }
         };
-        files.push((path, content));
+        Ok((path.clone(), content))
+    })?;
+    let mut links = Vec::new();
+    for (name, target) in &manifest.links {
+        relative(name)?;
+        let path = root.join(name);
+        if target.is_empty() || target.contains(['\0', '\\']) || !paths.insert(key(name)) {
+            return Err(format!("invalid or conflicting rootfs link: {name}").into());
+        }
+        links.push((path, target));
     }
     for entry in &manifest.files {
-        let prefix = format!("{}/", entry.path.to_ascii_lowercase());
-        if paths.iter().any(|path| path.starts_with(&prefix)) {
+        let prefix = format!("{}/", key(&entry.path));
+        if paths
+            .range(prefix.clone()..)
+            .next()
+            .is_some_and(|path| path.starts_with(&prefix))
+        {
             return Err(format!("rootfs file is also a parent directory: {}", entry.path).into());
+        }
+    }
+    for name in manifest.links.keys() {
+        let prefix = format!("{}/", key(name));
+        if paths
+            .range(prefix.clone()..)
+            .next()
+            .is_some_and(|path| path.starts_with(&prefix))
+        {
+            return Err(format!("rootfs link is also an install parent: {name}").into());
         }
     }
     let mut permissions = Vec::new();
     for (name, mode) in &manifest.permissions {
-        if mode & !0o7777 != 0 || name != "/" && !paths.contains(&name.to_ascii_lowercase()) {
+        if mode & !0o7777 != 0 || name != "/" && !paths.contains(&key(name)) {
             return Err(format!("invalid rootfs permission entry: {name}").into());
         }
         let path = if name == "/" {
             root.to_owned()
         } else {
-            checked_path(root, name)?
+            relative(name)?;
+            root.join(name)
         };
-        permissions.push((path, *mode));
+        if !manifest.links.contains_key(name) {
+            permissions.push((path, *mode));
+        }
     }
+    if manifest.case_sensitive {
+        permissions::case_sensitive(root)?;
+    }
+    directories.sort();
     for directory in directories {
-        fs::create_dir_all(directory)?;
+        fs::create_dir_all(&directory)?;
+        if manifest.case_sensitive {
+            permissions::case_sensitive(&directory)?;
+        }
     }
-    for (path, content) in files {
+    parallel(&files, |(path, content)| {
         fs::create_dir_all(path.parent().unwrap())?;
         // Every staged file is new. Let the filesystem reject aliases that its
         // case rules consider identical even beyond ASCII preflight checks.
@@ -276,12 +369,22 @@ pub fn prepare(root: &Path, dist: &Path, explicit: Option<&Path>) -> Result<()> 
             .write(true)
             .create_new(true)
             .open(&path)?;
-        file.write_all(&content)?;
-        file.sync_all()?;
-    }
-    for (path, mode) in permissions {
-        permissions::initialize(&path, mode)?;
-    }
+        file.write_all(content)?;
+        // Closing each file completes its writes. Atomic directory publication
+        // is the transaction boundary; flushing the whole volume per file would
+        // turn a standard image into thousands of serialized disk barriers.
+        Ok(())
+    })?;
+    parallel(&permissions, |(path, mode)| {
+        permissions::initialize(path, *mode)
+            .map_err(|e| format!("cannot set rootfs permissions on {}: {e}", path.display()))?;
+        Ok(())
+    })?;
+    parallel(&links, |(path, target)| {
+        fs::create_dir_all(path.parent().unwrap())?;
+        permissions::symlink(path, target)?;
+        Ok(())
+    })?;
     fs::write(root.join(STATE), manifest_hash.as_bytes())?;
     // Both paths are verified children of the caller-selected canonical parent.
     // Only an empty destination can be removed; never merge into an existing root.

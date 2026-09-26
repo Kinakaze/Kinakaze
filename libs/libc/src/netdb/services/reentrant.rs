@@ -22,7 +22,7 @@ unsafe fn store(
             n.checked_add(text.as_bytes_with_nul().len())
         })
         .ok_or(kinakaze_vfs::ERANGE)?;
-    if needed > capacity {
+    if needed > capacity || buffer.is_null() {
         return Err(kinakaze_vfs::ERANGE);
     }
     let aliases = unsafe { buffer.cast::<u8>().add(padding).cast::<*mut c_char>() };
@@ -54,6 +54,32 @@ unsafe fn store(
         result.write(output);
     }
     Ok(())
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_getservent_r(
+    output: *mut Servent,
+    buffer: *mut c_char,
+    capacity: usize,
+    result: *mut *mut Servent,
+) -> c_int {
+    if result.is_null() || output.is_null() {
+        return kinakaze_vfs::EINVAL;
+    }
+    unsafe { *result = ptr::null_mut() };
+    cursor::next(|reader| {
+        reader.retry_range(|reader| {
+            let Some(service) = next(reader, |_| true)? else {
+                return Err(kinakaze_vfs::ENOENT);
+            };
+            unsafe {
+                store(&service, output, buffer, capacity)?;
+                *result = output;
+            }
+            Ok(())
+        })
+    })
+    .map_or_else(|error| error, |()| 0)
 }
 
 unsafe fn lookup_into(

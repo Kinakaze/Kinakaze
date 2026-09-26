@@ -5,6 +5,10 @@
 - 默认清单预制 APT/dpkg、签名源、密钥、证书、基础命令和 dpkg 文件所有权；增加离线 setup、默认登录 shell 和 Windows 启动入口，原子初始化恢复 Linux 权限。
 - 补齐宽字符 printf 文件流和 checked/va_list 入口，修复 Debian hello 的 `__wprintf_chk@GLIBC_2.4` 装载缺口，增加真实 ELF Unicode、浮点与可变参数回归。
 
+- 默认预装 Debian bookworm 的 Essential/required/important/standard 软件及依赖和推荐，共 302 个锁定包；完整保留文件、链接、权限与大小写，支持 Bash 登录、补全、man、编辑器和 Python/Perl。
+- 补齐数据库枚举、可变参数输出、COPY 数据与 4 字节自旋锁 ABI，以及 getent 所需 NSS、aliases、gshadow、ethers 入口；修复 netlink 缓冲区选项和内核默认目的地址，补齐跨进程 cwd/root 链接。
+- 首次安装使用有界并发校验与写入，增加真实 Debian 命令行和 ELF 回归；当前构建作为 preview 验证。详见 [Debian 验证记录](docs/debian-standard-validation.md)。
+
 ## 0.1.0 — 2026-09-26
 
 - 增加可选 rootfs 清单，外部传入优先，仅初始化不存在或空的 rootfs；完整预检、源文件 SHA-256、并发锁与暂存目录提交避免留下半成品。

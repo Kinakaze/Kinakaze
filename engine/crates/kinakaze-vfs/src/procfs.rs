@@ -130,6 +130,8 @@ enum Node {
     ProcessRoot(u32),
     Maps,
     Exe(u32),
+    Cwd(u32),
+    RootLink(u32),
     Cmdline(u32),
     Environ,
     Stat(u32),
@@ -445,6 +447,8 @@ fn classify(path: &str) -> Option<Node> {
         return match third {
             "maps" if own => Some(Node::Maps),
             "exe" if !process.executable.is_empty() => Some(Node::Exe(process.entry.namespace_pid)),
+            "cwd" => Some(Node::Cwd(process.entry.namespace_pid)),
+            "root" => Some(Node::RootLink(process.entry.namespace_pid)),
             "cmdline" => Some(Node::Cmdline(process.entry.namespace_pid)),
             "environ" if own => Some(Node::Environ),
             "stat" => Some(Node::Stat(process.entry.namespace_pid)),
@@ -771,6 +775,7 @@ pub fn read_file(path: &str) -> Result<Vec<u8>, i32> {
         Node::SysFsInotifyWatches => Ok(b"1048576\n".to_vec()),
         Node::SysFsInotifyInstances => Ok(b"128\n".to_vec()),
         Node::Maps => Ok(maps().into_bytes()),
+        Node::Cwd(_) | Node::RootLink(_) => Err(crate::EISDIR),
         Node::Exe(pid) => {
             let info = process_info(pid)?;
             let path = crate::resolve_linux_path(&info.executable).map_err(|_| crate::ENOENT)?;
@@ -1107,6 +1112,8 @@ pub fn list_directory(path: &str) -> Result<Vec<String>, i32> {
                     "mountinfo",
                     "mountstats",
                     "cmdline",
+                    "cwd",
+                    "root",
                     "cgroup",
                     "uid_map",
                     "gid_map",
@@ -1270,8 +1277,13 @@ pub fn metadata(path: &str) -> Result<ProcMetadata, i32> {
             target: None,
         });
     }
-    if let Node::Exe(pid) = node {
-        let target = exe_link_target(pid)?;
+    if matches!(node, Node::Exe(_) | Node::Cwd(_) | Node::RootLink(_)) {
+        let target = match node {
+            Node::Exe(pid) => exe_link_target(pid)?,
+            Node::Cwd(pid) => fs_link_target(pid, false)?,
+            Node::RootLink(pid) => fs_link_target(pid, true)?,
+            _ => unreachable!(),
+        };
         return Ok(ProcMetadata {
             kind: ProcKind::Symlink,
             size: target.len() as u64,
@@ -2134,6 +2146,84 @@ fn exe_link_target(pid: u32) -> Result<String, i32> {
     let executable = std::env::current_exe()
         .map_err(|error| error.raw_os_error().map_or(crate::EIO, errno_from_io))?;
     Ok(crate::to_guest_path(&executable))
+}
+
+/// Publish after changing fs_context, outside its lock. Paths are relative to
+/// the common namespace base, so observers in a different chroot see the target.
+pub(crate) fn publish_fs_paths() {
+    let paths = (|| {
+        let root = crate::path::namespace_root_path()?.unwrap_or_else(|| "/".into());
+        let cwd = match crate::fs::cwd::namespace()? {
+            Some(cwd) => cwd,
+            None => format!(
+                "{}/{}",
+                root.trim_end_matches('/'),
+                crate::fs::getcwd().trim_start_matches('/')
+            ),
+        };
+        Ok::<_, i32>((cwd, root))
+    })();
+    if let Ok((cwd, root)) = paths {
+        kinakaze_runtime::job::set_fs_paths(kinakaze_runtime::job::current_pid(), &cwd, &root);
+    }
+}
+
+fn fs_link_target(pid: u32, root_link: bool) -> Result<String, i32> {
+    if pid == crate::job::process_id() {
+        return Ok(if root_link {
+            "/".into()
+        } else {
+            crate::fs::getcwd()
+        });
+    }
+    let (cwd, root) = kinakaze_runtime::job::fs_paths(pid).ok_or(crate::ENOENT)?;
+    let target = if root_link { root } else { cwd };
+    let observer = crate::path::namespace_root_path()?.unwrap_or_else(|| "/".into());
+    if observer == "/" {
+        return Ok(target);
+    }
+    if target == observer {
+        return Ok("/".into());
+    }
+    target
+        .strip_prefix(&observer)
+        .filter(|tail| tail.starts_with('/'))
+        .map(str::to_owned)
+        .ok_or(crate::EACCES)
+}
+
+/// Resolve directory magic links, including a remaining pathname component.
+/// The proc mount's PID view is retained while resolving the process identity.
+pub(crate) fn directory_magic_link(path: &str) -> bool {
+    matches!(classify(path), Some(Node::Cwd(_) | Node::RootLink(_)))
+}
+
+pub(crate) fn directory_link(path: &str, follow_final: bool) -> Result<Option<String>, i32> {
+    let (path, _scope) = instance::enter(path)?;
+    for (index, _) in path
+        .match_indices('/')
+        .chain(core::iter::once((path.len(), "")))
+    {
+        if index == 0 || index == path.len() && !follow_final {
+            continue;
+        }
+        let (prefix, rest) = path.split_at(index);
+        if !prefix.ends_with("/cwd") && !prefix.ends_with("/root") {
+            continue;
+        }
+        let (pid, root) = match classify(prefix) {
+            Some(Node::Cwd(pid)) => (pid, false),
+            Some(Node::RootLink(pid)) => (pid, true),
+            _ => continue,
+        };
+        let target = fs_link_target(pid, root)?;
+        return Ok(Some(if rest.is_empty() {
+            target
+        } else {
+            format!("{}{rest}", target.trim_end_matches('/'))
+        }));
+    }
+    Ok(None)
 }
 
 /// Builds `/proc/self/environ`: NUL-terminated `KEY=VALUE` pairs.

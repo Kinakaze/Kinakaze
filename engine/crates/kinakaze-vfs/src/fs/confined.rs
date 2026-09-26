@@ -47,7 +47,7 @@ fn child(parent: i32, name: &str, no_xdev: bool) -> Result<Descriptor, i32> {
         return Err(crate::EXDEV);
     }
     let flags = O_PATH | O_NOFOLLOW | O_CLOEXEC;
-    if !crossing && entry.kind == FdKind::Directory {
+    if !crossing && entry.kind == FdKind::Directory && !crate::procfs::owns(&guest) {
         let parent = object::Object::from_fd(parent)?;
         let stored = crate::path::escape_component(name);
         let object = parent.child(
@@ -243,6 +243,7 @@ pub(super) fn open(
                 && crate::procfs::descriptor_path(next.0).is_ok_and(|p| {
                     crate::procfs::pinned(|| {
                         crate::procfs::fd_magic_link(&p).is_some()
+                            || crate::procfs::directory_magic_link(&p)
                             || crate::procfs::namespace_target_inode(&p).is_some()
                     })
                 });
@@ -269,7 +270,7 @@ pub(super) fn open(
                 // Proc fd links select an open object, not their diagnostic
                 // readlink text (e.g. pipe:[123]). Preserve the pinned PID and
                 // proc view, and let its backend enforce access/open semantics.
-                let fd = crate::procfs::pinned(|| open_procfs(&pinned, open_flags))?;
+                let fd = crate::procfs::pinned(|| open_procfs(&pinned, open_flags, mode))?;
                 if final_part {
                     return Ok(fd);
                 }

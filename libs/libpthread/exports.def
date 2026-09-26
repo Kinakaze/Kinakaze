@@ -57,6 +57,8 @@ EXPORTS
   "open64@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_open64 PRIVATE
   "pause"=libc.so.6.kinakaze_abi_pause PRIVATE
   "pause@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_pause PRIVATE
+  "pread"=libc.so.6.kinakaze_abi_pread64 PRIVATE
+  "pread@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_pread64 PRIVATE
   "pread64"=libc.so.6.kinakaze_abi_pread64 PRIVATE
   "pread64@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_pread64 PRIVATE
   pthread_atfork
@@ -200,6 +202,7 @@ EXPORTS
   "pthread_mutex_clocklock"=pthread_mutex_clocklock
   pthread_mutex_consistent
   "pthread_mutex_consistent"=pthread_mutex_consistent
+  "pthread_mutex_consistent@GLIBC_2.12"=pthread_mutex_consistent PRIVATE
   pthread_mutex_destroy
   "pthread_mutex_destroy"=pthread_mutex_destroy
   "pthread_mutex_destroy@GLIBC_2.2.5"=pthread_mutex_destroy PRIVATE
@@ -236,6 +239,7 @@ EXPORTS
   "pthread_mutexattr_setpshared@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_pthread_mutexattr_setpshared PRIVATE
   pthread_mutexattr_setrobust
   "pthread_mutexattr_setrobust"=pthread_mutexattr_setrobust
+  "pthread_mutexattr_setrobust@GLIBC_2.12"=pthread_mutexattr_setrobust PRIVATE
   pthread_mutexattr_settype
   "pthread_mutexattr_settype"=pthread_mutexattr_settype
   "pthread_mutexattr_settype@GLIBC_2.2.5"=pthread_mutexattr_settype PRIVATE
@@ -314,6 +318,8 @@ EXPORTS
   pthread_tryjoin_np
   "pthread_tryjoin_np"=pthread_tryjoin_np
   "pthread_tryjoin_np@GLIBC_2.3.3"=pthread_tryjoin_np PRIVATE
+  "pwrite"=libc.so.6.kinakaze_abi_pwrite64 PRIVATE
+  "pwrite@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_pwrite64 PRIVATE
   "pwrite64"=libc.so.6.kinakaze_abi_pwrite64 PRIVATE
   "pwrite64@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_pwrite64 PRIVATE
   "raise"=libc.so.6.kinakaze_abi_raise PRIVATE

@@ -9,6 +9,51 @@ use std::{
 static NEXT: AtomicUsize = AtomicUsize::new(0);
 
 #[test]
+fn case_sensitive_images_keep_distinct_debian_names() {
+    let fixture = Fixture::new();
+    fixture.manifest(json!({"schema": 1, "case_sensitive": true,
+        "directories": ["Term", "term"], "files": [
+            {"path": "Term/Name", "content": "upper"},
+            {"path": "term/name", "content": "lower"}]}));
+    assert!(fixture.run());
+    assert_eq!(
+        fs::read_to_string(fixture.0.join("root/Term/Name")).unwrap(),
+        "upper"
+    );
+    assert_eq!(
+        fs::read_to_string(fixture.0.join("root/term/name")).unwrap(),
+        "lower"
+    );
+}
+
+#[test]
+fn links_cannot_redirect_install_writes_or_alias_existing_entries() {
+    for links in [
+        json!({"etc": "/outside"}),
+        json!({"etc/config": "/elsewhere"}),
+        json!({"other": "C:\\outside"}),
+        json!({"other": ""}),
+    ] {
+        let fixture = Fixture::new();
+        fixture.manifest(json!({"schema": 1, "directories": ["etc"],
+            "files": [{"path": "etc/config", "content": "content"}], "links": links}));
+        assert!(!fixture.run());
+        assert!(!fixture.0.join("root").exists());
+    }
+}
+
+#[test]
+fn relative_and_absolute_guest_links_are_installed_offline() {
+    let fixture = Fixture::new();
+    fixture.manifest(json!({"schema": 1, "directories": ["etc"],
+        "files": [{"path": "etc/config", "content": "content"}],
+        "links": {"relative": "etc/config", "absolute": "/etc/config"}}));
+    assert!(fixture.run());
+    assert!(fs::symlink_metadata(fixture.0.join("root/relative")).is_ok());
+    assert!(fs::symlink_metadata(fixture.0.join("root/absolute")).is_ok());
+}
+
+#[test]
 fn invalid_permissions_do_not_publish_files() {
     for permissions in [
         json!({"etc/config": 0o10000}),

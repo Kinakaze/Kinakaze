@@ -65,6 +65,12 @@ pub(super) struct Names {
 }
 
 impl Names {
+    pub(super) fn new(name: CString, aliases: Vec<CString>) -> Self {
+        Self {
+            name,
+            _aliases: aliases,
+        }
+    }
     pub fn from_record(record: &Record<'_>) -> Self {
         // parse() already rejected embedded NUL bytes.
         let name = CString::new(record.name).unwrap();
@@ -149,6 +155,64 @@ impl Reader {
         self.eof = false;
         Ok(())
     }
+
+    /// An undersized caller buffer must not consume an enumeration record.
+    pub fn retry_range<T>(
+        &mut self,
+        operation: impl FnOnce(&mut Self) -> Result<T, i32>,
+    ) -> Result<T, i32> {
+        let offset = i64::try_from(kinakaze_vfs::fs::lseek(
+            self.file.0,
+            0,
+            kinakaze_vfs::fs::SEEK_CUR,
+        )?)
+        .map_err(|_| kinakaze_vfs::EOVERFLOW)?;
+        let unread = self.unread().to_vec();
+        let eof = self.eof;
+        let result = operation(self);
+        if matches!(&result, Err(error) if *error == kinakaze_vfs::ERANGE) {
+            kinakaze_vfs::fs::lseek(self.file.0, offset, kinakaze_vfs::fs::SEEK_SET)?;
+            self.buffer[..unread.len()].copy_from_slice(&unread);
+            self.position = 0;
+            self.end = unread.len();
+            self.eof = eof;
+        }
+        result
+    }
+}
+
+/// Pack names and an aligned, terminated alias table into caller-owned bytes.
+pub(super) unsafe fn copy_names(
+    names: &Names,
+    buffer: *mut core::ffi::c_char,
+    capacity: usize,
+) -> Result<(*mut core::ffi::c_char, *mut *mut core::ffi::c_char), i32> {
+    use core::{ffi::c_char, ptr};
+    let padding = buffer.addr().wrapping_neg() & (core::mem::align_of::<*mut c_char>() - 1);
+    let table = (names.aliases().len() + 1)
+        .checked_mul(core::mem::size_of::<*mut c_char>())
+        .and_then(|n| n.checked_add(padding))
+        .ok_or(kinakaze_vfs::ERANGE)?;
+    let strings = std::iter::once(&names.name).chain(names.aliases());
+    let needed = strings
+        .clone()
+        .try_fold(table, |n, s| n.checked_add(s.as_bytes_with_nul().len()))
+        .ok_or(kinakaze_vfs::ERANGE)?;
+    if needed > capacity || buffer.is_null() {
+        return Err(kinakaze_vfs::ERANGE);
+    }
+    let aliases = unsafe { buffer.byte_add(padding).cast::<*mut c_char>() };
+    let mut at = table;
+    for (index, text) in strings.enumerate() {
+        let target = unsafe { buffer.byte_add(at) };
+        unsafe { ptr::copy_nonoverlapping(text.as_ptr(), target, text.as_bytes_with_nul().len()) };
+        if index > 0 {
+            unsafe { aliases.add(index - 1).write(target) };
+        }
+        at += text.as_bytes_with_nul().len();
+    }
+    unsafe { aliases.add(names.aliases().len()).write(ptr::null_mut()) };
+    Ok((unsafe { buffer.byte_add(table) }, aliases))
 }
 
 impl BufRead for Reader {

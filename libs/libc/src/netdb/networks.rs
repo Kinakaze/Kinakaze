@@ -139,6 +139,131 @@ pub extern "sysv64" fn kinakaze_abi_getnetbyaddr(network: u32, family: c_int) ->
     lookup(|entry| entry.value == network)
 }
 
+unsafe fn copy_network(
+    outcome: Result<Option<(u32, records::Names)>, i32>,
+    output: *mut Netent,
+    buffer: *mut c_char,
+    capacity: usize,
+    result: *mut *mut Netent,
+    h_error: *mut c_int,
+) -> Result<(), i32> {
+    if result.is_null() || output.is_null() {
+        return Err(kinakaze_vfs::EINVAL);
+    }
+    unsafe { *result = ptr::null_mut() };
+    let Some((value, names)) = outcome? else {
+        if !h_error.is_null() {
+            unsafe { *h_error = HOST_NOT_FOUND };
+        }
+        return Ok(());
+    };
+    let (name, aliases) = unsafe { records::copy_names(&names, buffer, capacity)? };
+    unsafe {
+        output.write(Netent {
+            n_name: name,
+            n_aliases: aliases,
+            n_addrtype: AF_INET,
+            n_net: value,
+        });
+        *result = output;
+        if !h_error.is_null() {
+            *h_error = 0;
+        }
+    }
+    Ok(())
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_getnetent_r(
+    output: *mut Netent,
+    buffer: *mut c_char,
+    capacity: usize,
+    result: *mut *mut Netent,
+    h_error: *mut c_int,
+) -> c_int {
+    if result.is_null() {
+        return kinakaze_vfs::EINVAL;
+    }
+    unsafe {
+        *result = ptr::null_mut();
+    }
+    if output.is_null() {
+        return kinakaze_vfs::EINVAL;
+    }
+    cursor::next(|reader| {
+        reader.retry_range(|reader| unsafe {
+            let record = records::find(reader, number, |_| true)?;
+            if record.is_none() {
+                if !h_error.is_null() {
+                    *h_error = HOST_NOT_FOUND;
+                }
+                return Err(kinakaze_vfs::ENOENT);
+            }
+            copy_network(Ok(record), output, buffer, capacity, result, h_error)
+        })
+    })
+    .map_or_else(
+        |error| {
+            if !h_error.is_null() && error != kinakaze_vfs::ENOENT {
+                unsafe {
+                    *h_error = if error == kinakaze_vfs::ERANGE {
+                        -1
+                    } else {
+                        NO_RECOVERY
+                    };
+                }
+            }
+            error
+        },
+        |()| 0,
+    )
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_getnetbyname_r(
+    name: *const c_char,
+    output: *mut Netent,
+    buffer: *mut c_char,
+    capacity: usize,
+    result: *mut *mut Netent,
+    h_error: *mut c_int,
+) -> c_int {
+    if name.is_null() {
+        return kinakaze_vfs::EINVAL;
+    }
+    let name = unsafe { CStr::from_ptr(name) }.to_bytes();
+    unsafe {
+        copy_network(
+            records::lookup(PATH, number, |r| r.matches(name, true)),
+            output,
+            buffer,
+            capacity,
+            result,
+            h_error,
+        )
+    }
+    .map_or_else(|error| error, |()| 0)
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_getnetbyaddr_r(
+    network: u32,
+    family: c_int,
+    output: *mut Netent,
+    buffer: *mut c_char,
+    capacity: usize,
+    result: *mut *mut Netent,
+    h_error: *mut c_int,
+) -> c_int {
+    let outcome = if family == AF_INET || family == AF_UNSPEC {
+        records::lookup(PATH, number, |r| r.value == network)
+    } else {
+        Ok(None)
+    };
+    unsafe { copy_network(outcome, output, buffer, capacity, result, h_error) }
+        .map_or_else(|error| error, |()| 0)
+}
+
 /// # Safety
 /// text must be null or a readable NUL-terminated string.
 #[unsafe(no_mangle)]

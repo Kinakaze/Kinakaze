@@ -541,6 +541,32 @@ pub extern "sysv64" fn remainderf(x: f32, y: f32) -> f32 {
     musl_libm::remainderf(x, y)
 }
 
+/// IEEE remainder and the signed low quotient bits, as required by C remquo.
+/// # Safety
+/// `quotient` must point to one writable Linux int.
+#[cfg(target_arch = "x86_64")]
+#[unsafe(export_name = "kinakaze_engine_libm_remquo")]
+pub unsafe extern "sysv64" fn remquo(x: f64, y: f64, quotient: *mut c_int) -> f64 {
+    let (remainder, bits) = musl_libm::remquo(x, y);
+    unsafe {
+        quotient.write(bits);
+    }
+    remainder
+}
+
+/// Single-precision counterpart of remquo.
+/// # Safety
+/// `quotient` must point to one writable Linux int.
+#[cfg(target_arch = "x86_64")]
+#[unsafe(export_name = "kinakaze_engine_libm_remquof")]
+pub unsafe extern "sysv64" fn remquof(x: f32, y: f32, quotient: *mut c_int) -> f32 {
+    let (remainder, bits) = musl_libm::remquof(x, y);
+    unsafe {
+        quotient.write(bits);
+    }
+    remainder
+}
+
 // ---------------------------------------------------------------------------
 // Classification
 //
