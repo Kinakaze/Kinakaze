@@ -8,6 +8,17 @@ pub mod windows {
     use core::ptr;
     pub use libc::netdb::ResState;
 
+    #[unsafe(export_name = "kinakaze_engine_libresolv_dn_comp")]
+    pub unsafe extern "sysv64" fn dn_comp(
+        name: *const c_char,
+        output: *mut u8,
+        capacity: c_int,
+        table: *mut *mut u8,
+        end: *mut *mut u8,
+    ) -> c_int {
+        unsafe { libc::netdb::kinakaze_abi_dn_comp(name, output, capacity, table, end) }
+    }
+
     fn fail(error: i32) -> i32 {
         unsafe {
             *libc::kinakaze_abi___errno_location() = error;

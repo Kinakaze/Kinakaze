@@ -1259,7 +1259,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_daemon(nochdir: c_int, noclose: c_int
     0
 }
 
-mod spawn;
+pub(crate) mod spawn;
 
 #[repr(C)]
 pub struct SigInfo {

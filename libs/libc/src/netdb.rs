@@ -30,7 +30,12 @@
 
 use core::ffi::{CStr, c_char, c_int, c_uint, c_void};
 use core::ptr;
+mod dns_name;
 mod netgroup;
+pub(crate) mod nss_dispatch;
+pub(crate) mod shadow_database;
+mod ttyent;
+pub use dns_name::kinakaze_abi_dn_comp;
 use std::cell::RefCell;
 use std::ffi::CString;
 use std::sync::OnceLock;
@@ -4356,4 +4361,12 @@ mod resolver_wire_tests {
             ]
         );
     }
+}
+
+pub(crate) unsafe fn innetgr_for_rhosts(
+    group: *const c_char,
+    host: *const c_char,
+    user: *const c_char,
+) -> c_int {
+    unsafe { netgroup::kinakaze_abi_innetgr(group, host, user, ptr::null()) }
 }

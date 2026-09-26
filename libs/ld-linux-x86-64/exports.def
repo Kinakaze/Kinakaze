@@ -4,6 +4,10 @@ EXPORTS
   "__libc_stack_end@GLIBC_2.2.5"=libc.so.6.kinakaze_abi___libc_stack_end DATA PRIVATE
   "__tls_get_addr"=libc.so.6.kinakaze_abi___tls_get_addr PRIVATE
   "__tls_get_addr@GLIBC_2.3"=libc.so.6.kinakaze_abi___tls_get_addr PRIVATE
+  "__tunable_get_val"=libc.so.6.kinakaze_abi___tunable_get_val PRIVATE
+  "__tunable_get_val@GLIBC_PRIVATE"=libc.so.6.kinakaze_abi___tunable_get_val PRIVATE
+  "_rtld_global_ro"=libc.so.6.kinakaze_abi__rtld_global_ro DATA PRIVATE
+  "_rtld_global_ro@GLIBC_PRIVATE"=libc.so.6.kinakaze_abi__rtld_global_ro DATA PRIVATE
   kinakaze_process_dl_iterate_phdr
   "dl_iterate_phdr"=kinakaze_process_dl_iterate_phdr PRIVATE
   kinakaze_process_dladdr

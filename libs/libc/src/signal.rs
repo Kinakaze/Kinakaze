@@ -215,7 +215,7 @@ fn terminate_from_signal(signal_number: i32) {
 
 /// Installs the default-action hook. Raw syscalls need it even when the guest
 /// never calls a libc signal wrapper or installs a handler.
-fn ensure_terminate_hook() {
+pub(crate) fn ensure_terminate_hook() {
     signal::set_terminate_hook(terminate_from_signal);
 }
 

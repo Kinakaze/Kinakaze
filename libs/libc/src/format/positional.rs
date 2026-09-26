@@ -95,6 +95,8 @@ pub(super) unsafe fn format<S: Sink>(
             let _ = unsafe { scan.next_integer::<u64>() };
         } else if matches!(kind & 0xff, 6 | 7) && kind & 0x100 == 0 {
             let _ = unsafe { scan.next_double() };
+        } else if kind == 0x107 {
+            let _ = unsafe { scan.next_extended() };
         } else {
             // A registered aggregate reader needs its own ABI description.
             return Err(EINVAL);

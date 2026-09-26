@@ -69,6 +69,8 @@ pub mod iconv;
 #[cfg(all(windows, target_arch = "x86_64"))]
 pub mod jump;
 #[cfg(all(windows, target_arch = "x86_64"))]
+mod legacy;
+#[cfg(all(windows, target_arch = "x86_64"))]
 pub mod locale;
 #[cfg(all(windows, target_arch = "x86_64"))]
 pub mod malloc_info;
@@ -96,7 +98,11 @@ pub mod random_state;
 #[cfg(all(windows, target_arch = "x86_64"))]
 pub mod regex;
 #[cfg(all(windows, target_arch = "x86_64"))]
+mod rpc;
+#[cfg(all(windows, target_arch = "x86_64"))]
 pub mod scan;
+#[cfg(all(windows, target_arch = "x86_64"))]
+mod scratch_buffer;
 #[cfg(all(windows, target_arch = "x86_64"))]
 pub mod search;
 #[cfg(all(windows, target_arch = "x86_64"))]
@@ -127,6 +133,8 @@ pub mod uchar;
 pub mod userdb;
 #[cfg(all(windows, target_arch = "x86_64"))]
 pub mod variadic;
+#[cfg(all(windows, target_arch = "x86_64"))]
+mod wordexp;
 #[cfg(all(windows, target_arch = "x86_64"))]
 pub mod xattr;
 
@@ -672,4 +680,6 @@ pub unsafe extern "system" fn kinakaze_thread_fs_release(packet: usize) {
     }
 }
 
+mod glibc_private;
+mod native_tls;
 mod object_layout;

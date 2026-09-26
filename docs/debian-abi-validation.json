@@ -1,0 +1,74 @@
+{
+  "rpc": {
+    "requests": [
+      -17
+    ],
+    "errors": []
+  },
+  "source_sha256": "a43875879a498df52e0305ddfdfa2079ecf8749d9575481345a76348e0544522",
+  "elf_sha256": "61a122a665dce38eebc834dfb02ee383c0b87ae00f622c2382eb93ab17832fd7",
+  "worker_sha256": "f20d6117cdde534c1e27ac2f155b56a3d1ab4926923f3616bef95676681933ed",
+  "manifest_sha256": "33b3146b7828af71227ad1982ee4f0989eb20178ea83620403b288c29e17971a",
+  "passed": true,
+  "probe": {
+    "exit_code": 0,
+    "timed_out": false,
+    "stdout": "format math ok\ndatabases ok\ndns ok\nwordexp ok\nsignals ok\nmqueue ok\nlegacy ok\nxdr ok\nNSS private ok\nRPC network ok\nnative TLS ok\ntransliteration ok\nprivate loader ok\nDEBIAN_ABI_OK\n",
+    "stderr": "",
+    "seconds": 2.264
+  },
+  "runtime_acceptance": {
+    "passed": true,
+    "checks": [
+      "portable seed installs the bundled default root before launch",
+      "concurrent first run, paths with spaces, empty PATH",
+      "external manifest installs complete native and guest dependencies into an absent distribution root",
+      "preserve user configuration and propagate guest exit status",
+      "new client inserts under live parent; guest PPID, cwd, env and exit 23",
+      "missing parent rejected, reservation remains reusable",
+      "launched process survives launcher disconnect",
+      "stale session is rejected after init exits"
+    ],
+    "images": {
+      "init.exe": "20b6dfeb0cd07746685cc6a3d597cfaace6fde4d57448738cf56d1685a5ae1ea",
+      "worker.exe": "f20d6117cdde534c1e27ac2f155b56a3d1ab4926923f3616bef95676681933ed",
+      "rootfs.manifest.json": "33b3146b7828af71227ad1982ee4f0989eb20178ea83620403b288c29e17971a",
+      "rootfs/lib/kinakaze_alloc.so": "b54e769517429f99daa4069e85903cbee32b2eea4e7c4938ef9ebb8a84bcf2a6",
+      "rootfs/lib/kinakaze_elf.so": "88aaa13b7ee21e98177779ac8a4288f55222a3035d73aaf6df2950a481b98662",
+      "rootfs/lib/kinakaze_guest_engine.so": "6e2f4cbcf1399e0caa24849708e66c8ad01aa10f919076d1afa486d0602498d4",
+      "rootfs/lib/kinakaze_kernel.so": "8c138fb506865922004a0f4f39513c59c0784fc6be35aabcbc4fa4ae246fcdef",
+      "rootfs/lib/kinakaze_tls.so": "18d9d753dd8a6dd7bef6ab643b0fd380f567ce931ce38a28443c0cdacad48143",
+      "rootfs/lib/kinakaze_vfs.so": "9721b80b4b8cca32333f9036343cdaedac64df68a67e440a8adf71df36e6b141",
+      "rootfs/lib/ld-linux-x86-64.so.2": "df449a74fb513945e7f387c713517e9fe2d632ca66e4f347cf33933f41eb002d",
+      "rootfs/lib/libasound.so.2": "7d2c09e3cf55662a91a947feea1ebb9f06db030271f9f1c425f607f15eba1ddb",
+      "rootfs/lib/libc.so.6": "9475699c6442262323ba980237b308c952cf38a4c4a57e3d03bfc59116d7f585",
+      "rootfs/lib/libcuda.so.1": "3676b371ef9c0e0974bf447773a5855abf37b4c4de935b06d97ec34628552424",
+      "rootfs/lib/libdisplay.so.1": "a6f94086da75a41466fae5dadc559174caf0e5100f2937decdeded247bcc36ab",
+      "rootfs/lib/libdl.so.2": "2c1c3fe07edf07af8790cb809e58e23b756e8b7ac3c3b8424203e0e8706ee682",
+      "rootfs/lib/libEGL.so.1": "df3982f620f18aa14dfc30ac25e6ae8247c48d50f85c7846e2b09132c8bcc1b9",
+      "rootfs/lib/libGL.so.1": "5b38047ac126880cceb70470543e6df52c28b2b4e5c5cf5a37275c635d635dc4",
+      "rootfs/lib/libGLESv2.so.2": "305e421cfc6c121869b1ba75da63f98eede1d2e9981f278fba1f3956702f9007",
+      "rootfs/lib/libGLX.so.0": "968c81ba13775475d9f1d51bac52f2782066f9e40e4fa01c231ffae1bf5fee3c",
+      "rootfs/lib/libkinakaze-runtime.so.1": "942c8f6b69a9af24ab949552f32e4cb2d6b8ecfcbd4e5802cf3abb74a3acac03",
+      "rootfs/lib/libm.so.6": "798e9ad7f853532b939eae655edeb76d1a52f6eef669a9630947e3deb1420102",
+      "rootfs/lib/libOpenGL.so.0": "4e460389d6ff3b5b89ab3f59fc7ee204fad24f104e75f778b356f78d71658947",
+      "rootfs/lib/libpipewire-0.3.so.0": "3ca06eb3041f1ea8c9b7fc06eb6691f6a058f4615548e09c742527726597f9c2",
+      "rootfs/lib/libpthread.so.0": "b08a4324fab02499f972504c82de9402f3466118f6de0fe5defeb03325315bb9",
+      "rootfs/lib/libpulse.so.0": "25e2e3431361dc9a35129fed2e3929ac8c1b33e7397fa553f35590d1c62a2014",
+      "rootfs/lib/libresolv.so.2": "f3e2803644135b049b6ad77ab03b1f46eb9de4cf2a8ec4994390e10a1e8f4705",
+      "rootfs/lib/librt.so.1": "be68de3320187169daf0e2bfbde3f085e89c1f5ac3a0004ace432795ad3c5e83",
+      "rootfs/lib/libvulkan.so.1": "e15993c2031bea681a86404492dbc056f81a4d2965fdc9c221e0b2c45cd55758",
+      "rootfs/lib/libX11-xcb.so.1": "f4a69c09cc0e95ba7944a122fb8f697b1399de6fa632cff464dd34cb7eabacd3",
+      "rootfs/lib/libX11.so.6": "edee159696f7665955cae6cf26fcd88d5013b87a1e27b79208e5a55655c68027",
+      "rootfs/lib/libxcb.so.1": "7cf7626dcee8c9ebf3ca4477ca1376e0e91da841fe81506c9fe1d6a3a59bbfd8",
+      "rootfs/lib/libXcursor.so.1": "d91de16e1dcb1321bd358329b594aa150db3e4e171645a536c323daf65488e29",
+      "rootfs/lib/libXext.so.6": "dd534f27681cbd294ccd4e1cfb4be098b4143f5fc3eb347cb3efc0d39ba5be44",
+      "rootfs/lib/libXi.so.6": "3d2a9197542e1d2147583cc80a2bbf094037737e2bad4d5c0239afc7cdd5e9e0",
+      "rootfs/lib/libXinerama.so.1": "40fb9d839208d0fd30862b43a384293257f9f74894ca1133e15aaf38b2cbd0df",
+      "rootfs/lib/libXrandr.so.2": "2b1dce905743083f8da167220e7ea0319d5a4757eaeaa01cd37a62ce2e95730c",
+      "rootfs/lib/libXrender.so.1": "4d6a10071deeb41ce5774bd3ed9a9f45b1cf73df3f30b7e87eea50d09f1142b9",
+      "rootfs/lib/libXxf86vm.so.1": "8441a64f45566a38e9ec62d3af7142cf20e41225d524a21104f030dd231be539",
+      "rootfs/lib/std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc"
+    }
+  }
+}

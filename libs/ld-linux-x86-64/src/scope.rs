@@ -132,9 +132,17 @@ impl DllProvider {
             .get(name)
             .and_then(|index| self.image.symbols().get(*index))
             .filter(|symbol| symbol.matches_version(version))
-            .map(|symbol| Resolution {
-                size: symbol.size,
-                ..Resolution::from_address(symbol.address)
+            .map(|symbol| {
+                let mut resolved = Resolution {
+                    size: symbol.size,
+                    ..Resolution::from_address(symbol.address)
+                };
+                if let crate::ProviderSymbolKind::Tls { module, offset } = symbol.kind {
+                    resolved.address = None;
+                    resolved.tls_module = Some(module);
+                    resolved.tls_offset = Some(offset);
+                }
+                resolved
             }))
     }
 

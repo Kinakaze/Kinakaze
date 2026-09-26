@@ -164,6 +164,25 @@ pub fn load(
                 kind: match export.kind {
                     ExportKind::Function => ProviderSymbolKind::Function,
                     ExportKind::Object => ProviderSymbolKind::Object,
+                    ExportKind::Tls => {
+                        type ResolveTls =
+                            unsafe extern "C" fn(*const u8, usize, *mut usize, *mut usize) -> bool;
+                        let resolve: ResolveTls =
+                            unsafe { mem::transmute(library.symbol(c"kinakaze_module_tls_v1")?) };
+                        let (mut module, mut offset) = (0, 0);
+                        if !unsafe {
+                            resolve(
+                                export.name.as_ptr(),
+                                export.name.len(),
+                                &mut module,
+                                &mut offset,
+                            )
+                        } || module == 0
+                        {
+                            return Err(format!("invalid native TLS symbol {}", export.name).into());
+                        }
+                        ProviderSymbolKind::Tls { module, offset }
+                    }
                 },
                 size: export.size,
                 versions: export.versions.clone(),

@@ -478,7 +478,7 @@ impl Default for Action {
 struct SignalState {
     actions: Vec<Action>,
     /// Threads that have blocked in an interruptible wait, by host thread ID.
-    waiting: HashMap<u32, ()>,
+    waiting: HashMap<u32, u64>,
     /// Signals directed by `tgkill` to one host thread rather than the process.
     thread_pending: HashMap<u32, u64>,
     thread_senders: HashMap<(u32, i32), SignalSender>,
@@ -493,10 +493,22 @@ struct TimerSignal {
     value: usize,
     overrun: i32,
     delivered_overrun: Arc<AtomicI32>,
+    queued: Option<crate::job::queued::Record>,
 }
 
 impl TimerSignal {
     fn fill(&self, info: &mut PendingSigInfo) {
+        if let Some(record) = self.queued {
+            info.code = -1; // SI_QUEUE
+            SignalSender {
+                pid: record.sender,
+                uid: record.uid,
+            }
+            .fill(info);
+            info.payload[12..20].copy_from_slice(&record.value.to_le_bytes());
+            crate::job::queued::complete(record.id);
+            return;
+        }
         info.code = -2; // SI_TIMER
         info.payload[4..8].copy_from_slice(&self.id.to_le_bytes());
         info.payload[8..12].copy_from_slice(&self.overrun.to_le_bytes());
@@ -533,7 +545,7 @@ pub fn queue_timer_signal(
     if let Some(pending) = state
         .timer_pending
         .iter_mut()
-        .find(|pending| pending.id == timer_id)
+        .find(|pending| pending.queued.is_none() && pending.id == timer_id)
     {
         pending.overrun = pending.overrun.saturating_add(overrun.saturating_add(1));
     } else {
@@ -544,6 +556,7 @@ pub fn queue_timer_signal(
             value,
             overrun,
             delivered_overrun,
+            queued: None,
         });
     }
     let waiters = if let Some(thread) = target {
@@ -561,6 +574,39 @@ pub fn queue_timer_signal(
 }
 
 static STATE: OnceLock<Mutex<SignalState>> = OnceLock::new();
+
+pub(crate) fn queue_value_signal(record: crate::job::queued::Record) -> Result<(), i32> {
+    let bit = bit(record.signal).ok_or(crate::EINVAL)?;
+    let mut state = state().lock().map_err(|_| crate::EIO)?;
+    let action = state.actions[record.signal as usize];
+    if matches!(action.disposition, Disposition::Ignore)
+        || (matches!(action.disposition, Disposition::Default) && default_is_ignore(record.signal))
+    {
+        drop(state);
+        crate::job::queued::complete(record.id);
+        return Ok(());
+    }
+    state.timer_pending.push_back(TimerSignal {
+        target: None,
+        signal: record.signal,
+        id: 0,
+        value: record.value,
+        overrun: 0,
+        delivered_overrun: Arc::new(AtomicI32::new(0)),
+        queued: Some(record),
+    });
+    PENDING.fetch_or(bit, Ordering::AcqRel);
+    let waiters: Vec<_> = state
+        .waiting
+        .iter()
+        .filter_map(|(&thread, &accepted)| (accepted & bit != 0).then_some(thread))
+        .collect();
+    drop(state);
+    for thread in waiters {
+        interrupt::interrupt_thread(thread);
+    }
+    Ok(())
+}
 
 /// Signals raised but not yet handled, as a bitmask indexed by signal number.
 static PENDING: AtomicU64 = AtomicU64::new(0);
@@ -808,8 +854,35 @@ pub fn sigaction(signal: i32, action: Option<Action>) -> Result<Action, i32> {
     }
     let mut state = state().lock().map_err(|_| crate::EIO)?;
     let previous = state.actions[signal as usize];
+    let mut discarded = Vec::new();
     if let Some(action) = action {
         state.actions[signal as usize] = action;
+        if matches!(action.disposition, Disposition::Ignore)
+            || (matches!(action.disposition, Disposition::Default) && default_is_ignore(signal))
+        {
+            let mask = bit(signal).unwrap();
+            PENDING.fetch_and(!mask, Ordering::AcqRel);
+            state.thread_pending.retain(|_, pending| {
+                *pending &= !mask;
+                *pending != 0
+            });
+            state
+                .thread_senders
+                .retain(|(_, number), _| *number != signal);
+            state.timer_pending.retain(|pending| {
+                if pending.signal != signal {
+                    return true;
+                }
+                if let Some(record) = pending.queued {
+                    discarded.push(record.id);
+                }
+                false
+            });
+        }
+    }
+    drop(state);
+    for id in discarded {
+        crate::job::queued::complete(id);
     }
     Ok(previous)
 }
@@ -1104,13 +1177,20 @@ pub fn raise_signal(signal: i32) -> Result<(), i32> {
 
 /// Registers the calling thread as interruptible for the duration of a wait.
 pub fn register_waiter() {
+    register_signal_waiter(0);
+}
+
+/// A synchronous signal wait also accepts its explicitly requested blocked set.
+pub fn register_signal_waiter(wanted: u64) {
     // A thread about to block is exactly the thread another process needs to be
     // able to wake, so this is the second place registration must have happened
     // by: a program that only ever reads still has to answer a `^C`.
     crate::job::ensure_registered();
     let thread = interrupt::current_thread_id();
     if let Ok(mut state) = state().lock() {
-        state.waiting.insert(thread, ());
+        state
+            .waiting
+            .insert(thread, !(BLOCKED.get() | IN_HANDLER.get()) | wanted);
     }
 }
 
@@ -1253,11 +1333,9 @@ pub fn deliver_pending() -> Delivery {
             // raw syscall boundary that has published those registers.
             if let Ok(mut state) = state().lock() {
                 if let Some(timer) = timer {
-                    if let Some(queued) = state
-                        .timer_pending
-                        .iter_mut()
-                        .find(|queued| queued.id == timer.id)
-                    {
+                    if let Some(queued) = state.timer_pending.iter_mut().find(|queued| {
+                        timer.queued.is_none() && queued.queued.is_none() && queued.id == timer.id
+                    }) {
                         queued.overrun = queued
                             .overrun
                             .saturating_add(timer.overrun.saturating_add(1));
@@ -1275,6 +1353,11 @@ pub fn deliver_pending() -> Delivery {
                 }
             }
             return outcome;
+        }
+        if !matches!(action.disposition, Disposition::Handle(_, _)) {
+            if let Some(record) = timer.as_ref().and_then(|timer| timer.queued) {
+                crate::job::queued::complete(record.id);
+            }
         }
         match action.disposition {
             Disposition::Ignore => continue,

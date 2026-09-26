@@ -1,0 +1,49 @@
+{
+  "total_entries": 758,
+  "file_entries": 653,
+  "alias_entries": 105,
+  "distinct_targets": 657,
+  "attempted_entries": 739,
+  "functional_attempted": 514,
+  "counts": {
+    "smoke": {
+      "passed": 565,
+      "usage_only": 147,
+      "failed": 18,
+      "not_tested": 28
+    },
+    "functional": {
+      "passed": 436,
+      "failed": 72,
+      "timeout": 6,
+      "not_tested": 244
+    }
+  },
+  "failure_categories": {
+    "smoke": {
+      "exit_or_assertion": 5,
+      "missing_package_or_configuration": 11,
+      "signal_exit": 1,
+      "environment_or_kernel": 1
+    },
+    "functional": {
+      "exit_or_assertion": 36,
+      "timeout": 6,
+      "environment_or_kernel": 25,
+      "missing_package_or_configuration": 5,
+      "signal_exit": 4,
+      "unimplemented": 2
+    }
+  },
+  "unresolved_symbols": {},
+  "images": {
+    "worker.exe": "f20d6117cdde534c1e27ac2f155b56a3d1ab4926923f3616bef95676681933ed",
+    "rootfs.manifest.json": "33b3146b7828af71227ad1982ee4f0989eb20178ea83620403b288c29e17971a"
+  },
+  "tested_distribution": "F:\\crysoacu2\\artifacts\\debian-abi-final",
+  "updated": {
+    "smoke": "20260926T185353",
+    "functional": "20260926T185939"
+  },
+  "notes": "Counts refer to command paths, including aliases; functional passes verify only their recorded scenario."
+}

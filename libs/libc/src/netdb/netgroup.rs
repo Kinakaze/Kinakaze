@@ -3,6 +3,7 @@ use core::ffi::{CStr, c_char, c_int};
 use std::{collections::HashSet, io::BufRead};
 
 mod enumeration;
+mod internal;
 
 fn definition(name: &[u8]) -> Result<Option<Vec<u8>>, i32> {
     let mut file = super::records::Reader::open("/etc/netgroup")?;

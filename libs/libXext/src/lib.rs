@@ -8,6 +8,7 @@ mod dbe;
 mod dpms;
 mod extension;
 mod object_layout;
+mod security;
 mod shape;
 mod shm;
 mod sync;

@@ -68,6 +68,8 @@ use crate::set_errno;
 use crate::stdio::File;
 
 mod file_origin;
+pub(crate) mod program_break;
+mod temporary;
 pub(crate) mod verity;
 pub use verity::kinakaze_abi_mapping_fault_signal;
 
@@ -3471,11 +3473,13 @@ pub(crate) fn madvise_impl(address: *mut c_void, length: usize, advice: c_int) -
 
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn kinakaze_abi_brk(addr: *mut c_void) -> c_int {
-    if addr.is_null() {
-        return 0;
-    }
-    set_errno(crate::ENOMEM);
-    -1
+    program_break::brk(addr as usize).map_or_else(
+        |e| {
+            set_errno(e);
+            -1
+        },
+        |()| 0,
+    )
 }
 
 #[unsafe(no_mangle)]
@@ -3484,9 +3488,14 @@ pub unsafe extern "sysv64" fn brk(addr: *mut c_void) -> c_int {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "sysv64" fn kinakaze_abi_sbrk(_increment: isize) -> *mut c_void {
-    set_errno(crate::ENOMEM);
-    (-1isize) as *mut c_void
+pub unsafe extern "sysv64" fn kinakaze_abi_sbrk(increment: isize) -> *mut c_void {
+    program_break::sbrk(increment).map_or_else(
+        |e| {
+            set_errno(e);
+            (-1isize) as *mut c_void
+        },
+        |pointer| pointer as *mut c_void,
+    )
 }
 
 #[unsafe(no_mangle)]

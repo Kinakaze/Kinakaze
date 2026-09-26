@@ -9,8 +9,9 @@ const E2BIG: i32 = 7;
 const EILSEQ: i32 = 84;
 const FAILED: usize = usize::MAX;
 const MAGIC: u32 = 0x4943_5631;
+mod gconv;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 enum Encoding {
     Ascii,
     Latin1,
@@ -24,6 +25,8 @@ struct Converter {
     magic: u32,
     from: Encoding,
     to: Encoding,
+    ignore: bool,
+    translit: bool,
 }
 
 fn error(value: i32) -> usize {
@@ -52,7 +55,7 @@ unsafe fn encoding(name: *const c_char) -> Result<Encoding, i32> {
     match normalized.as_str() {
         "UTF8" => Ok(Encoding::Utf8),
         "ASCII" | "USASCII" | "ANSIX3.41968" | "ANSIX3.41986" | "ISO646US" => Ok(Encoding::Ascii),
-        "ISO88591" | "LATIN1" => Ok(Encoding::Latin1),
+        "ISO88591" | "LATIN1" | "L1" => Ok(Encoding::Latin1),
         "UTF16LE" => Ok(Encoding::Utf16Le),
         "UTF16BE" => Ok(Encoding::Utf16Be),
         "UTF32LE" | "UCS4LE" | "WCHART" => Ok(Encoding::Utf32Le),
@@ -179,8 +182,12 @@ pub unsafe extern "sysv64" fn kinakaze_abi_iconv_open(
     from: *const c_char,
 ) -> *mut c_void {
     let result = (|| {
-        let from = unsafe { encoding(from) }?;
-        let to = unsafe { encoding(to) }?;
+        let (from, _, _) = unsafe { gconv::split(from) }?;
+        let (to, translit, ignore) = unsafe { gconv::split(to) }?;
+        let from = std::ffi::CString::new(from).map_err(|_| EINVAL)?;
+        let to = std::ffi::CString::new(to).map_err(|_| EINVAL)?;
+        let from = unsafe { encoding(from.as_ptr()) }?;
+        let to = unsafe { encoding(to.as_ptr()) }?;
         let descriptor = unsafe { guest::malloc(size_of::<Converter>()).cast::<Converter>() };
         if descriptor.is_null() {
             return Err(ENOMEM);
@@ -190,6 +197,8 @@ pub unsafe extern "sysv64" fn kinakaze_abi_iconv_open(
                 magic: MAGIC,
                 from,
                 to,
+                ignore,
+                translit,
             })
         };
         Ok(descriptor.cast())
@@ -218,15 +227,38 @@ pub unsafe extern "sysv64" fn kinakaze_abi_iconv(
     if input_left.is_null() || output_left.is_null() || output.is_null() {
         return error(EFAULT);
     }
+    let mut discarded = false;
+    let mut irreversible = 0;
     while unsafe { *input_left } != 0 {
         let bytes = unsafe { slice::from_raw_parts((*input).cast(), *input_left) };
         let (scalar, consumed) = match decode(converter.from, bytes) {
             Ok(v) => v,
+            Err(EILSEQ) if converter.ignore => {
+                unsafe {
+                    *input = (*input).add(1);
+                    *input_left -= 1;
+                }
+                discarded = true;
+                continue;
+            }
             Err(e) => return error(e),
         };
         let mut encoded = [0; 4];
+        let mut replaced = false;
         let produced = match encode(converter.to, scalar, &mut encoded) {
             Ok(n) => n,
+            Err(EILSEQ) if converter.translit => {
+                replaced = true;
+                encode(converter.to, '?', &mut encoded).unwrap()
+            }
+            Err(EILSEQ) if converter.ignore => {
+                unsafe {
+                    *input = (*input).add(consumed);
+                    *input_left -= consumed;
+                }
+                discarded = true;
+                continue;
+            }
             Err(e) => return error(e),
         };
         if unsafe { *output_left } < produced {
@@ -235,6 +267,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_iconv(
         if unsafe { (*output).is_null() } {
             return error(EFAULT);
         }
+        irreversible += usize::from(replaced);
         unsafe {
             ptr::copy_nonoverlapping(encoded.as_ptr(), (*output).cast(), produced);
             *input = (*input).add(consumed);
@@ -243,7 +276,11 @@ pub unsafe extern "sysv64" fn kinakaze_abi_iconv(
             *output_left -= produced;
         }
     }
-    0
+    if discarded {
+        error(EILSEQ)
+    } else {
+        irreversible
+    }
 }
 
 #[unsafe(no_mangle)]

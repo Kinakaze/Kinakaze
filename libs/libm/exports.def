@@ -472,6 +472,9 @@ EXPORTS
   kinakaze_engine_libm_nearbyintf
   "nearbyintf"=kinakaze_engine_libm_nearbyintf PRIVATE
   "nearbyintf@GLIBC_2.2.5"=kinakaze_engine_libm_nearbyintf PRIVATE
+  kinakaze_engine_libm_nearbyintl
+  "nearbyintl"=kinakaze_engine_libm_nearbyintl PRIVATE
+  "nearbyintl@GLIBC_2.2.5"=kinakaze_engine_libm_nearbyintl PRIVATE
   kinakaze_engine_libm_nextafter
   "nextafter"=kinakaze_engine_libm_nextafter PRIVATE
   "nextafter@GLIBC_2.2.5"=kinakaze_engine_libm_nextafter PRIVATE

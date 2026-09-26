@@ -55,15 +55,16 @@
 //!   namespace row and process identity, and only then resume its primary
 //!   thread. This preserves Linux-visible PID/group/session ordering even
 //!   though Windows still owns the underlying process objects.
-//! * **Signals do not queue.** The pending mask is a bitmask, so two `SIGINT`s
-//!   delivered before either is handled are one `SIGINT`. Standard signals
-//!   behave that way on Linux too; real-time signals do not, and they do not
-//!   here either.
+//! * **Ordinary kill notifications use a bitmask.** `sigqueue` additionally
+//!   retains sender credentials and values in a bounded shared store; its
+//!   real-time occurrences queue and its standard signals coalesce.
 //! * **`kill(-1, sig)` reaches hosted processes only.** A native Windows
 //!   process has no Linux disposition to run, so including it would mean either
 //!   lying or terminating it by a rule the guest did not ask for.
 
 use std::sync::Mutex;
+pub(crate) mod queued;
+pub use queued::send as sigqueue;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering};
 
@@ -378,6 +379,9 @@ fn claim_slot(identity: Option<(&str, &str, &[String])>) -> bool {
     // Published before the pump starts, because the pump immediately drains and
     // draining is a no-op for an unregistered process.
     REGISTERED_HOST.store(host_pid, Ordering::Release);
+    if queued::initialize().is_err() {
+        pump_failed("initialize queued signals");
+    }
     REGISTERED.store(true, Ordering::Release);
     let _ = crate::credentials::publish();
     start_pump();
@@ -497,6 +501,9 @@ pub fn drain_external() -> bool {
 }
 
 fn drain_external_notified(from_pump: bool) -> bool {
+    // Self-directed senders and the pump may drain concurrently. Preserve
+    // arrival order between claiming shared records and publishing local ones.
+    static DRAIN: Mutex<()> = Mutex::new(());
     if EXEC_RETIRED.load(Ordering::Acquire)
         || !REGISTERED.load(Ordering::Relaxed)
         || !crate::fork_handoff::is_owner()
@@ -510,10 +517,18 @@ fn drain_external_notified(from_pump: bool) -> bool {
     if wake.is_null() || (!from_pump && !table::notifications::has_pending(current_pid())) {
         return false;
     }
+    let _drain = DRAIN
+        .lock()
+        .unwrap_or_else(|_| pump_failed("lock signal drain"));
     let mut pending = table::notifications::take_pending(current_pid(), wake as usize)
         .unwrap_or_else(|_| pump_failed("drain pending"));
+    let queued = queued::drain().unwrap_or_else(|_| pump_failed("drain queued signals"));
+    let had_queued = !queued.is_empty();
+    for record in queued {
+        signal::queue_value_signal(record).unwrap_or_else(|_| pump_failed("enqueue queued signal"));
+    }
     if pending == 0 {
-        return false;
+        return had_queued;
     }
     // SIGCONT is taken first regardless of its bit position: a process that is
     // stopped has to resume before it can act on anything else.

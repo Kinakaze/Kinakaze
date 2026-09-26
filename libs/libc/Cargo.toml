@@ -24,6 +24,7 @@ kinakaze-alloc.workspace = true
 kinakaze-runtime.workspace = true
 kinakaze-tls.workspace = true
 kinakaze-vfs.workspace = true
+kinakaze-link = { path = "../ld-linux-x86-64" }
 libpthread = { path = "../libpthread", package = "kinakaze-v2-libpthread" }
 rustc_apfloat = "0.2.3"
 

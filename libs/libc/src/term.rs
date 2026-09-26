@@ -86,6 +86,26 @@ pub const TIOCSIG: u64 = 0x4004_5436;
 /// `_IO('T', 0x37)`: simulate a hangup on the terminal.
 pub const TIOCVHANGUP: u64 = 0x5437;
 
+/// Revoke access through the caller's controlling pseudoterminal.
+#[unsafe(no_mangle)]
+pub extern "sysv64" fn kinakaze_abi_vhangup() -> c_int {
+    if crate::userdb::effective_capabilities().unwrap_or(0) & (1 << 26) == 0 {
+        crate::set_errno(1);
+        return -1;
+    }
+    let fd = match tty::open_controlling(2 | 0x80000) {
+        Ok(fd) => fd,
+        Err(2) => return 0, // No controlling terminal to revoke.
+        Err(error) => {
+            crate::set_errno(error);
+            return -1;
+        }
+    };
+    let result = tty::vhangup(fd);
+    let _ = kinakaze_vfs::close(fd);
+    posix_unit(result)
+}
+
 fn posix_unit(result: Result<(), i32>) -> c_int {
     match result {
         Ok(()) => 0,

@@ -11,6 +11,8 @@ pub enum ExportKind {
     #[default]
     Function,
     Object,
+    /// Guest ELF TLS; the PE export is a descriptor, never shared storage.
+    Tls,
 }
 
 /// Stateless images need no injected management table or fork rebinding.
@@ -148,7 +150,9 @@ impl Module {
                         "function exports must use default size and alignment",
                     ));
                 }
-                ExportKind::Object if export.size == 0 || export.size > 64 * 1024 * 1024 => {
+                ExportKind::Object | ExportKind::Tls
+                    if export.size == 0 || export.size > 64 * 1024 * 1024 =>
+                {
                     return Err(invalid("object export size must be 1..=64 MiB"));
                 }
                 _ => {}

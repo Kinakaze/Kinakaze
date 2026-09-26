@@ -14,6 +14,42 @@ pub extern "sysv64" fn kinakaze_abi_getutent() -> *mut Utmpx {
     kinakaze_abi_getutxent()
 }
 
+/// Reentrant utmp enumeration. Copy under the cursor lock, never through the
+/// non-reentrant global return slot. EOF leaves errno alone and returns -1.
+/// # Safety
+/// Both pointers must designate writable objects of their declared types.
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_getutent_r(
+    output: *mut Utmpx,
+    result: *mut *mut Utmpx,
+) -> c_int {
+    if result.is_null() || output.is_null() {
+        crate::set_errno(EINVAL);
+        return -1;
+    }
+    unsafe {
+        result.write(ptr::null_mut());
+    }
+    let Ok(mut cursor) = utmp_cursor().lock() else {
+        crate::set_errno(EIO);
+        return -1;
+    };
+    if !cursor.opened {
+        cursor.records = read_records(&current_utmp_path());
+        cursor.position = 0;
+        cursor.opened = true;
+    }
+    let Some(record) = cursor.records.get(cursor.position).copied() else {
+        return -1;
+    };
+    cursor.position += 1;
+    unsafe {
+        output.write(record);
+        result.write(output);
+    }
+    0
+}
+
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn kinakaze_abi_getutline(wanted: *const Utmpx) -> *mut Utmpx {
     unsafe { kinakaze_abi_getutxline(wanted) }

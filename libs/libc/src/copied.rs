@@ -288,6 +288,18 @@ pub unsafe extern "C" fn kinakaze_copied_redirect(
     };
 
     match name {
+        "__curbrk" => {
+            unsafe {
+                crate::fdio::program_break::kinakaze_abi___curbrk.redirect(target.cast());
+            }
+            1
+        }
+        "__malloc_initialize_hook" => {
+            unsafe {
+                crate::glibc_private::kinakaze_abi___malloc_initialize_hook.redirect(target.cast());
+            }
+            1
+        }
         "_nl_msg_cat_cntr" => {
             unsafe { crate::locale::kinakaze_abi__nl_msg_cat_cntr.redirect(target.cast()) };
             1

@@ -9,7 +9,7 @@ struct State {
 }
 thread_local! { static ENUMERATION:RefCell<State>=RefCell::new(State::default()); }
 
-fn expand(
+pub(super) fn expand(
     group: &[u8],
     seen: &mut HashSet<Vec<u8>>,
     entries: &mut Vec<Triple>,

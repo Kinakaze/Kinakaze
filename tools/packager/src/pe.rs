@@ -389,7 +389,7 @@ impl<'a> Pe<'a> {
                 }
                 from_rva(self.bytes, &self.sections, rva, 1)?;
             }
-            ExportKind::Object => {
+            ExportKind::Object | ExportKind::Tls => {
                 if export.size == 0 || !export.alignment.is_power_of_two() {
                     return Err("PE object requires nonzero size and power-of-two alignment".into());
                 }

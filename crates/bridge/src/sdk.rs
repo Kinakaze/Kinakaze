@@ -3,8 +3,8 @@ use std::collections::HashMap;
 
 const PAGE: usize = 4096;
 const MAX_IMAGE: usize = 32 * 1024 * 1024;
-const PHNUM: usize = 5;
-const SHNUM: usize = 11;
+const PHNUM: usize = 6;
+const SHNUM: usize = 12;
 const THUNK_SIZE: usize = 16;
 
 #[derive(Debug, Clone)]
@@ -127,6 +127,7 @@ fn layout(module: &Module) -> Result<Layout> {
         ".gnu.version",
         ".gnu.version_d",
         ".data",
+        ".tdata",
     ]
     .into_iter()
     .map(|name| add_string(&mut shstr, name))
@@ -168,7 +169,26 @@ fn layout(module: &Module) -> Result<Layout> {
                 .ok_or_else(|| invalid("generated object storage exceeds size limit"))?;
         }
     }
-    let size = align(data_end, PAGE);
+    let tls_alignment = module
+        .exports
+        .iter()
+        .filter(|export| export.kind == ExportKind::Tls)
+        .map(|export| export.alignment as usize)
+        .max()
+        .unwrap_or(1);
+    let tls = align(data_end, tls_alignment);
+    let mut tls_end = tls;
+    for (index, export) in module.exports.iter().enumerate() {
+        if export.kind == ExportKind::Tls {
+            tls_end = align(tls_end, export.alignment as usize);
+            object_offsets[index] = tls_end - tls;
+            tls_end = tls_end
+                .checked_add(export.size as usize)
+                .filter(|end| *end <= MAX_IMAGE)
+                .ok_or_else(|| invalid("TLS storage exceeds size limit"))?;
+        }
+    }
+    let size = align(tls_end, PAGE);
     if size > MAX_IMAGE {
         return Err(invalid("generated import library exceeds size limit"));
     }
@@ -192,6 +212,13 @@ fn layout(module: &Module) -> Result<Layout> {
         (1, 5, text, text_size, PAGE),           // RX SysV thunks
         (1, 6, slots, size - slots, PAGE),       // RW binding slots
         (2, 4, dynamic_offset, dynamic_size, 8), // PT_DYNAMIC
+        (
+            if tls_end == tls { 0 } else { 7 },
+            4,
+            tls,
+            tls_end - tls,
+            tls_alignment,
+        ), // PT_TLS
         (0x6474_e551, 6, 0, 0, 16),              // PT_GNU_STACK, non-executable
     ];
     for (index, (kind, flags, offset, length, alignment)) in phdrs.into_iter().enumerate() {
@@ -215,6 +242,12 @@ fn layout(module: &Module) -> Result<Layout> {
                 u16_at(&mut bytes, at + 6, 1); // .text
                 u64_at(&mut bytes, at + 8, (text + index * THUNK_SIZE) as u64);
                 u64_at(&mut bytes, at + 16, 6);
+            }
+            ExportKind::Tls => {
+                bytes[at + 4] = 0x16; // STB_GLOBAL | STT_TLS
+                u16_at(&mut bytes, at + 6, 11); // .tdata
+                u64_at(&mut bytes, at + 8, object_offsets[index] as u64);
+                u64_at(&mut bytes, at + 16, module.exports[index].size);
             }
             ExportKind::Object => {
                 bytes[at + 4] = 0x11; // STB_GLOBAL | STT_OBJECT
@@ -293,6 +326,7 @@ fn layout(module: &Module) -> Result<Layout> {
             0,
         ),
         (1, 3, data, data_end - data, 0, 0, data_alignment as u64, 0),
+        (1, 0x403, tls, tls_end - tls, 0, 0, tls_alignment as u64, 0),
     ];
     for (index, (kind, flags, offset, length, link, info, alignment, entsize)) in
         sections.into_iter().enumerate()

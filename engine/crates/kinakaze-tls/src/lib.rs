@@ -334,7 +334,13 @@ fn with_pthread_values<R>(action: impl FnOnce(&mut KeyValues) -> R) -> Option<R>
 }
 
 fn modules() -> &'static RwLock<Vec<ModuleTemplate>> {
-    MODULES.get_or_init(|| RwLock::new(Vec::new()))
+    MODULES.get_or_init(|| {
+        RwLock::new(vec![ModuleTemplate {
+            image: vec![0; 4],
+            memory_size: 4,
+            align: 4,
+        }])
+    })
 }
 
 fn pthread_keys() -> &'static RwLock<Vec<KeyEntry>> {
@@ -345,6 +351,14 @@ static FALLBACK_GLOBAL_ERRNO: std::sync::atomic::AtomicI32 = std::sync::atomic::
 
 /// Returns a stable pointer to the calling host thread's errno cell.
 pub fn errno_location() -> *mut i32 {
+    // Module 1 is native libc's ELF-visible TLS. Both direct errno imports and
+    // __errno_location must address the same cell in the calling thread's TCB.
+    let pointer = get_current_thread_fs_base();
+    if pointer != 0 {
+        if let Some(offset) = thread_pointer::offset_of(1) {
+            return (pointer - offset) as *mut i32;
+        }
+    }
     ERRNO_POINTER
         .try_with(|slot| {
             let current = slot.get();
@@ -381,6 +395,12 @@ pub fn errno() -> i32 {
 pub fn set_errno(value: i32) {
     // SAFETY: the pointer addresses this thread's live TLS cell.
     unsafe { *errno_location() = value };
+}
+
+/// Native libc's reserved TLS module, available before any ELF constructors.
+pub fn errno_module() -> Result<usize, TlsError> {
+    reserve_static_elf_module(1)?;
+    Ok(1)
 }
 
 /// Registers one ELF `PT_TLS` image and returns its one-based module ID.
@@ -619,6 +639,18 @@ pub fn install_current_thread_static_tls() -> Result<usize, TlsError> {
                 .collect::<Vec<_>>();
             let block = thread_pointer::install(&images)?;
             let pointer = block.thread_pointer();
+            if let Some(offset) = thread_pointer::offset_of(1) {
+                ERRNO_POINTER.with(|slot| {
+                    let old = slot.get();
+                    let new = (pointer - offset) as *mut i32;
+                    if !old.is_null() {
+                        unsafe {
+                            new.write(old.read());
+                        }
+                    }
+                    slot.set(new);
+                });
+            }
             publish_static_thread_pointer(pointer)?;
             publish_host_transition_pointer(block.transition_pointer())?;
             *slot.borrow_mut() = Some(block);

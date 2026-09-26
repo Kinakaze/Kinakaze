@@ -111,7 +111,7 @@ fn posix(result: Result<i64, i32>) -> i64 {
         }
     }
 }
-#[unsafe(no_mangle)]
+#[unsafe(export_name = "kinakaze_abi_mq_open")]
 pub extern "sysv64" fn mq_open(name: usize, flags: i32, mode: u32, attributes: usize) -> i32 {
     posix((|| {
         let name = text(name, 258)?;
@@ -124,7 +124,7 @@ pub extern "sysv64" fn mq_open(name: usize, flags: i32, mode: u32, attributes: u
         mqueue::open(name, flags, mode, a).map(i64::from)
     })()) as i32
 }
-#[unsafe(no_mangle)]
+#[unsafe(export_name = "kinakaze_abi_mq_unlink")]
 pub extern "sysv64" fn mq_unlink(name: usize) -> i32 {
     posix((|| {
         let name = text(name, 258)?;
@@ -132,7 +132,7 @@ pub extern "sysv64" fn mq_unlink(name: usize) -> i32 {
         Ok(0)
     })()) as i32
 }
-#[unsafe(no_mangle)]
+#[unsafe(export_name = "kinakaze_abi_mq_close")]
 pub extern "sysv64" fn mq_close(fd: i32) -> i32 {
     posix((|| {
         if kinakaze_vfs::get(fd)?.kind != kinakaze_vfs::FdKind::MessageQueue {
@@ -142,7 +142,7 @@ pub extern "sysv64" fn mq_close(fd: i32) -> i32 {
         Ok(0)
     })()) as i32
 }
-#[unsafe(no_mangle)]
+#[unsafe(export_name = "kinakaze_abi_mq_timedsend")]
 pub extern "sysv64" fn mq_timedsend(
     fd: i32,
     data: usize,
@@ -159,7 +159,7 @@ pub extern "sysv64" fn mq_timedsend(
         time as u64,
     )) as i32
 }
-#[unsafe(no_mangle)]
+#[unsafe(export_name = "kinakaze_abi_mq_timedreceive")]
 pub extern "sysv64" fn mq_timedreceive(
     fd: i32,
     data: usize,
@@ -176,15 +176,15 @@ pub extern "sysv64" fn mq_timedreceive(
         time as u64,
     )) as isize
 }
-#[unsafe(no_mangle)]
+#[unsafe(export_name = "kinakaze_abi_mq_send")]
 pub extern "sysv64" fn mq_send(fd: i32, data: usize, length: usize, priority: u32) -> i32 {
     mq_timedsend(fd, data, length, priority, 0)
 }
-#[unsafe(no_mangle)]
+#[unsafe(export_name = "kinakaze_abi_mq_receive")]
 pub extern "sysv64" fn mq_receive(fd: i32, data: usize, length: usize, priority: usize) -> isize {
     mq_timedreceive(fd, data, length, priority, 0)
 }
-#[unsafe(no_mangle)]
+#[unsafe(export_name = "kinakaze_abi_mq_notify")]
 pub extern "sysv64" fn mq_notify(fd: i32, notification: usize) -> i32 {
     posix(syscall(244, fd as u64, notification as u64, 0, 0, 0)) as i32
 }
@@ -195,7 +195,7 @@ pub(crate) extern "sysv64" fn mq_getattr(fd: i32, attributes: usize) -> i32 {
     }
     mq_setattr(fd, 0, attributes)
 }
-#[unsafe(no_mangle)]
+#[unsafe(export_name = "kinakaze_abi_mq_setattr")]
 pub extern "sysv64" fn mq_setattr(fd: i32, attributes: usize, old: usize) -> i32 {
     posix(syscall(245, fd as u64, attributes as u64, old as u64, 0, 0)) as i32
 }

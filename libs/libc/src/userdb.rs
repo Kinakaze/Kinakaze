@@ -10,8 +10,10 @@ use std::sync::OnceLock;
 
 use kinakaze_vfs::{EINVAL, ENOENT, EPERM, ERANGE};
 
-mod account_files;
+pub(crate) mod account_files;
+mod nss_parse;
 mod password_lock;
+mod rhosts;
 mod shadow_stream;
 
 /// Linux `uid_t` and `gid_t`, both 32-bit unsigned on every Linux ABI.
@@ -2063,22 +2065,7 @@ pub unsafe extern "sysv64" fn fgetgrent(file: *mut crate::stdio::File) -> *mut G
 }
 
 // ---------------------------------------------------------------------------
-// Shadow passwords.
-//
-// There is no shadow entry to report, and this is the one place where returning
-// nothing is clearly better than returning something. A `struct spwd` exists to
-// carry `sp_pwdp`, the password hash, and every caller either verifies a
-// supplied password against it or copies it somewhere. Fabricating that field
-// has no safe value: an empty string asserts the account needs no password, `*`
-// or `!` asserts it is locked, and a made-up hash would be compared against real
-// user input by `su`. Reporting absence lets the caller decide, and ENOENT is
-// exactly what glibc reports on a host with no shadow file.
-//
-// The `struct spwd` layout is deliberately not defined here. Nothing is ever
-// written through such a pointer, and defining a type this module cannot
-// populate honestly would invite a later change to fill it in.
-// ---------------------------------------------------------------------------
-
+// Shadow records use the guest /etc/shadow without inventing account data.
 #[repr(C)]
 pub struct Spwd {
     pub sp_namp: *mut c_char,
@@ -2092,105 +2079,27 @@ pub struct Spwd {
     pub sp_flag: u64,
 }
 
-// Owns backing allocations for the raw pointers in the published C record.
-struct StaticSpwdStorage {
-    _name: CString,
-    _password: CString,
-    spwd: Spwd,
-}
-
-unsafe impl Send for StaticSpwdStorage {}
-unsafe impl Sync for StaticSpwdStorage {}
-
-static STATIC_SPWD: std::sync::Mutex<Option<Box<StaticSpwdStorage>>> = std::sync::Mutex::new(None);
-
-fn load_shadow_passwords() -> std::collections::HashMap<String, String> {
-    let mut map = std::collections::HashMap::new();
-    if let Ok(path) = kinakaze_vfs::resolve_linux_path("/etc/shadow") {
-        if let Ok(content) = std::fs::read_to_string(&path) {
-            for line in content.lines() {
-                let trimmed = line.trim();
-                if trimmed.is_empty() || trimmed.starts_with('#') {
-                    continue;
-                }
-                let parts: Vec<&str> = trimmed.split(':').collect();
-                if parts.len() >= 2 {
-                    map.insert(parts[0].to_string(), parts[1].to_string());
-                }
-            }
-        }
-    }
-    map
-}
-
-fn spwd_entry_for(account: &UserAccount) -> *mut Spwd {
-    let mut storage_guard = STATIC_SPWD.lock().unwrap();
-    let name = CString::new(account.name.as_str()).unwrap_or_default();
-    let shadow_map = load_shadow_passwords();
-    let shadow_pwd = shadow_map.get(&account.name).cloned().unwrap_or_default();
-    let password = CString::new(shadow_pwd.as_str()).unwrap_or_default();
-    let mut storage = Box::new(StaticSpwdStorage {
-        spwd: Spwd {
-            sp_namp: name.as_ptr().cast_mut(),
-            sp_pwdp: password.as_ptr().cast_mut(),
-            sp_lstchg: 19000,
-            sp_min: 0,
-            sp_max: 99999,
-            sp_warn: 7,
-            sp_inact: -1,
-            sp_expire: -1,
-            sp_flag: 0,
-        },
-        _name: name,
-        _password: password,
-    });
-    let ptr = &mut storage.spwd as *mut Spwd;
-    *storage_guard = Some(storage);
-    ptr
-}
-
-/// `getspnam`, returning shadow password entry for user.
-///
-/// # Safety
-///
-/// `name` must be null or a null-terminated string.
+/// Read the guest shadow database through VFS permission checks.
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn getspnam(name: *const c_char) -> *mut Spwd {
-    match unsafe { borrow(name) } {
-        Some(name) => {
-            if let Some(account) = find_user_by_name(name) {
-                spwd_entry_for(&account)
-            } else {
-                crate::set_errno(ENOENT);
-                ptr::null_mut()
-            }
-        }
-        None => {
-            crate::set_errno(ENOENT);
-            ptr::null_mut()
-        }
-    }
+    unsafe { crate::netdb::shadow_database::getspnam(name) }
 }
-
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn kinakaze_abi_getspnam(name: *const c_char) -> *mut Spwd {
     unsafe { getspnam(name) }
 }
-
-/// `getspent`, which reports an immediately-empty enumeration.
 #[unsafe(no_mangle)]
 pub extern "sysv64" fn kinakaze_abi_getspent() -> *mut c_void {
-    crate::set_errno(ENOENT);
-    ptr::null_mut()
+    crate::netdb::shadow_database::getspent().cast()
 }
-
-/// `setspent`. There is no enumeration to rewind.
 #[unsafe(no_mangle)]
-pub extern "sysv64" fn kinakaze_abi_setspent() {}
-
-/// `endspent`. There is no enumeration to close.
+pub extern "sysv64" fn kinakaze_abi_setspent() {
+    crate::netdb::shadow_database::setspent();
+}
 #[unsafe(no_mangle)]
-pub extern "sysv64" fn kinakaze_abi_endspent() {}
+pub extern "sysv64" fn kinakaze_abi_endspent() {
+    crate::netdb::shadow_database::endspent();
+}
 
 /// `crypt` password hashing.
 #[unsafe(no_mangle)]
@@ -3659,18 +3568,8 @@ mod tests {
     #[test]
     fn shadow_absence_and_linux_empty_capabilities_are_reported() {
         crate::set_errno(0);
-        // Root user has shadow entry
-        let sp = unsafe { kinakaze_abi_getspnam(c"root".as_ptr()) };
-        assert!(!sp.is_null(), "root shadow entry should exist");
-        // Unknown user reports ENOENT
-        crate::set_errno(0);
-        assert!(unsafe { kinakaze_abi_getspnam(c"nonexistent_user_12345".as_ptr()) }.is_null());
-        assert_eq!(kinakaze_tls::errno(), ENOENT);
-        crate::set_errno(0);
-        assert!(kinakaze_abi_getspent().is_null());
-        assert_eq!(kinakaze_tls::errno(), ENOENT);
-        // These exist so a caller's setup/teardown pair still links.
-        kinakaze_abi_setspent();
+        assert!(unsafe { kinakaze_abi_getspnam(ptr::null()) }.is_null());
+        assert_eq!(kinakaze_tls::errno(), EINVAL);
         kinakaze_abi_endspent();
 
         // Null pointers fail like the Linux syscalls, rather than being treated

@@ -8,6 +8,7 @@
 
 use core::ffi::{c_char, c_double, c_int, c_void};
 use core::fmt::Write as _;
+mod extended;
 mod extension;
 mod legacy_float;
 mod positional;
@@ -98,6 +99,12 @@ pub struct VaList {
 }
 
 impl VaList {
+    /// x87 arguments use a 16-byte aligned stack slot, never the SSE area.
+    unsafe fn next_extended(&mut self) -> u128 {
+        let address = (self.overflow_arg_area as usize + 15) & !15;
+        self.overflow_arg_area = (address + 16) as *mut c_void;
+        unsafe { (address as *const u128).read_unaligned() & ((1u128 << 80) - 1) }
+    }
     /// Reads the next integer-class argument.
     ///
     /// # Safety
@@ -506,9 +513,12 @@ unsafe fn emit<S: Sink>(sink: &mut S, spec: &Spec, arguments: &mut VaList) {
             }
         }
         b'e' | b'E' | b'f' | b'F' | b'g' | b'G' | b'a' | b'A' => {
-            // SAFETY: the caller guarantees a double argument.
-            let value = unsafe { arguments.next_double() };
-            emit_float(sink, spec, value);
+            if spec.length == Length::LongDouble {
+                extended::emit(sink, spec, unsafe { arguments.next_extended() });
+            } else {
+                let value = unsafe { arguments.next_double() };
+                emit_float(sink, spec, value);
+            }
         }
         b'n' => {
             // SAFETY: the caller guarantees a writable int pointer.

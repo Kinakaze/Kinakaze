@@ -260,7 +260,7 @@ unsafe fn render(
                 }
             }
             // Do not consume an SSE double for the different long-double ABI.
-            _ if spec.length == Length::LongDouble || spec.user != 0 => return Err(22),
+            _ if spec.user != 0 => return Err(22),
             _ => unsafe {
                 emit(sink, &spec, value);
             },

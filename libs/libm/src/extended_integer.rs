@@ -52,6 +52,36 @@ integral_entry!(ceill, "0x800");
 integral_entry!(floorl, "0x400");
 integral_entry!(truncl, "0xc00");
 
+/// Round in the caller's x87 mode without raising a new inexact exception.
+/// Preserve the result's TOP/tag state, the original control word, and any
+/// pre-existing precision flag. Restoring the pre-operation TOP would lose
+/// the return value and corrupt the caller's x87 stack.
+#[unsafe(export_name = "kinakaze_engine_libm_nearbyintl")]
+#[unsafe(naked)]
+pub unsafe extern "sysv64" fn nearbyintl() {
+    core::arch::naked_asm!(
+        "sub rsp, 56",
+        "fnstcw word ptr [rsp + 32]",
+        "fnstsw word ptr [rsp + 34]",
+        "movzx eax, word ptr [rsp + 32]",
+        "or eax, 0x20",
+        "mov word ptr [rsp + 36], ax",
+        "fldcw word ptr [rsp + 36]",
+        "fld tbyte ptr [rsp + 64]",
+        "frndint",
+        "fnstenv [rsp]",
+        "mov ax, word ptr [rsp + 32]",
+        "mov word ptr [rsp], ax",
+        "mov ax, word ptr [rsp + 34]",
+        "and ax, 0x20",
+        "and word ptr [rsp + 4], 0xffdf",
+        "or word ptr [rsp + 4], ax",
+        "fldenv [rsp]",
+        "add rsp, 56",
+        "ret",
+    );
+}
+
 fn rounded_magnitude(significand: u64, exponent: u16) -> Option<u64> {
     if exponent == 0 {
         return Some(0);

@@ -24,11 +24,8 @@
 //! no Unix logins — and it is what Linux itself reports in a container whose
 //! `/var/run/utmp` has not been created.
 //!
-//! **The shadow database reports absence**, exactly as [`crate::userdb`] does,
-//! and for the same reason: `struct spwd` exists to carry a password hash, and
-//! there is no value that field could hold that would not be a lie. The
-//! difference here is the *encoding* of that absence — `getspnam_r` reports "no
-//! such entry" as 0 with a null result pointer, not as an error.
+//! **The shadow database uses the guest's `/etc/shadow`.** Missing users return
+//! zero with a null result; I/O failures and short buffers remain errors.
 //!
 //! **The system log goes to the Windows Event Log, and to stderr when that is
 //! unavailable.** `ReportEventW` is the real structural counterpart to a syslog
@@ -1505,86 +1502,19 @@ pub unsafe extern "sysv64" fn kinakaze_abi_updwtmpx(path: *const c_char, record:
 }
 
 // ---------------------------------------------------------------------------
-// Shadow passwords.
-//
-// This reports absence, which is the decision [`crate::userdb`] already made for
-// `getspnam`, `getspent`, `setspent` and `endspent`. Its reasoning applies
-// unchanged and is worth restating because it is the whole justification: a
-// `struct spwd` exists to carry `sp_pwdp`, and every caller either verifies a
-// supplied password against that field or copies it somewhere. No value is safe
-// to invent — an empty string asserts the account needs no password, `*` or `!`
-// asserts it is locked, and a made-up hash would be compared against real user
-// input by `su`. Reporting absence lets the caller decide, and it is what glibc
-// reports on a host with no shadow file.
-//
-// What is new here is the *encoding*. `getspnam` reports "not found" as a null
-// return; `getspnam_r` reports it as **0 with a null result pointer**, not as an
-// error. That distinction is easy to get wrong and expensive when wrong: a
-// caller that receives ENOENT as the return value reports "shadow lookup failed"
-// and often aborts, whereas 0-with-null is the ordinary "no such user" it already
-// handles by falling back to the passwd entry.
-//
-// Unlike `userdb`, this section does define `struct spwd`. It has to: the `_r`
-// form takes a caller-allocated one, so its layout is part of the interface even
-// though this module never fills it in.
-// ---------------------------------------------------------------------------
+// Reuse the canonical Linux x86_64 shadow record layout.
+pub use crate::userdb::Spwd;
 
-/// The Linux x86_64 `struct spwd`.
-///
-/// Two pointers then seven longs: offsets 0, 8, 16, 24, 32, 40, 48, 56, 64, so
-/// the struct is 72 bytes with 8-byte alignment. Defined for the `_r` signature's
-/// sake; nothing in this module writes through such a pointer.
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct Spwd {
-    pub sp_namp: *mut c_char,
-    pub sp_pwdp: *mut c_char,
-    pub sp_lstchg: i64,
-    pub sp_min: i64,
-    pub sp_max: i64,
-    pub sp_warn: i64,
-    pub sp_inact: i64,
-    pub sp_expire: i64,
-    pub sp_flag: u64,
-}
-
-/// `getspnam_r`, which always reports that there is no shadow entry.
-///
-/// Returns **0** with `*result` set to null. That is the POSIX-style encoding of
-/// "no such entry": the lookup itself succeeded and found nothing. Returning
-/// `ENOENT` would tell the caller the database was unreadable, and BusyBox's
-/// `su`, `passwd` and `login` print an error and stop when they see that.
-///
-/// `entry` and `buffer` are left untouched, since nothing is written into them.
-///
-/// # Safety
-///
-/// `name` must be null or null-terminated, `result` must be writable, and
-/// `buffer` must name at least `length` writable bytes.
+/// Reentrant lookup in the guest shadow database.
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn kinakaze_abi_getspnam_r(
     name: *const c_char,
-    _entry: *mut Spwd,
-    _buffer: *mut c_char,
-    _length: usize,
+    entry: *mut Spwd,
+    buffer: *mut c_char,
+    length: usize,
     result: *mut *mut Spwd,
 ) -> c_int {
-    if result.is_null() {
-        return kinakaze_vfs::EFAULT;
-    }
-    // The name is validated but not consulted: no name has an entry. A caller
-    // that passes a null name is still told about it, since that is its bug and
-    // not a statement about the database.
-    // SAFETY: forwarded from this function's contract.
-    if unsafe { borrow(name) }.is_none() {
-        // SAFETY: `result` was checked non-null above.
-        unsafe { *result = ptr::null_mut() };
-        return kinakaze_vfs::EFAULT;
-    }
-    // SAFETY: `result` was checked non-null above.
-    unsafe { *result = ptr::null_mut() };
-    // Not an error. See this function's documentation.
-    0
+    unsafe { crate::netdb::shadow_database::getspnam_r(name, entry, buffer, length, result) }
 }
 
 // ---------------------------------------------------------------------------
@@ -2943,63 +2873,19 @@ mod tests {
     }
 
     #[test]
-    fn getspnam_r_reports_absence_as_success_with_a_null_result() {
-        let mut entry = Spwd {
-            sp_namp: ptr::null_mut(),
-            sp_pwdp: ptr::null_mut(),
-            sp_lstchg: -1,
-            sp_min: -1,
-            sp_max: -1,
-            sp_warn: -1,
-            sp_inact: -1,
-            sp_expire: -1,
-            sp_flag: 0,
-        };
-        let mut buffer = [0u8; 256];
-        // Deliberately not null to start with, so a call that forgot to clear it
-        // would be caught.
-        let mut result: *mut Spwd = (&raw mut entry).wrapping_add(1);
-
-        for name in [c"root", c"nosuchuser"] {
-            // SAFETY: the name is a literal, the entry and result are writable
-            // locals, and the buffer is 256 writable bytes.
-            let code = unsafe {
+    fn getspnam_r_rejects_missing_result_storage() {
+        assert_eq!(
+            unsafe {
                 kinakaze_abi_getspnam_r(
-                    name.as_ptr(),
-                    &raw mut entry,
-                    buffer.as_mut_ptr().cast::<c_char>(),
-                    buffer.len(),
-                    &raw mut result,
+                    c"root".as_ptr(),
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                    0,
+                    ptr::null_mut(),
                 )
-            };
-            // This is the distinction that matters: 0 means the lookup worked,
-            // and the null result means there was no entry. Returning ENOENT
-            // would make `su` report a failed shadow lookup and stop, instead of
-            // falling back to the passwd entry.
-            assert_eq!(code, 0, "absence is not an error, for {name:?}");
-            assert!(result.is_null(), "there is no shadow entry to point at");
-            assert_ne!(code, ENOENT, "ENOENT would be read as a lookup failure");
-        }
-
-        // No hash was fabricated into the caller's struct, which is the whole
-        // point of reporting absence. See `crate::userdb`'s shadow section.
-        assert!(entry.sp_pwdp.is_null());
-        assert!(entry.sp_namp.is_null());
-        assert_eq!(buffer[0], 0, "nothing was packed into the buffer");
-
-        // A null result pointer is the caller's bug and is reported as EFAULT,
-        // because there is nowhere to write the answer.
-        // SAFETY: passing null for `result` is the case under test.
-        let code = unsafe {
-            kinakaze_abi_getspnam_r(
-                c"root".as_ptr(),
-                &raw mut entry,
-                buffer.as_mut_ptr().cast(),
-                buffer.len(),
-                ptr::null_mut(),
-            )
-        };
-        assert_eq!(code, kinakaze_vfs::EFAULT);
+            },
+            EINVAL
+        );
     }
 
     #[test]

@@ -1784,6 +1784,53 @@ const ADJ_SINGLESHOT: c_int = 0x8000;
 pub const TIME_OK: c_int = 0;
 pub const TIME_ERROR: c_int = 5;
 
+/// Only CLOCK_REALTIME is an adjustable clock in this backend.
+/// # Safety
+/// `query` must point to a writable Linux timex.
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_clock_adjtime(clock: c_int, query: *mut Timex) -> c_int {
+    if clock != 0 {
+        crate::set_errno(if (1..=11).contains(&clock) { 95 } else { 22 });
+        return -1;
+    }
+    unsafe { kinakaze_abi_adjtimex(query) }
+}
+
+/// Linux x86-64 sys/timex.h (ntp_gettimex / GLIBC_2.12 layout).
+#[repr(C)]
+pub struct NtpTimeval {
+    pub time: TimeVal,
+    pub maxerror: i64,
+    pub esterror: i64,
+    pub tai: i64,
+    pub reserved: [i64; 4],
+}
+
+/// Query the same host clock as adjtimex without requesting a clock change.
+/// # Safety
+/// `output` must point to a writable Linux ntptimeval.
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_ntp_gettimex(output: *mut NtpTimeval) -> c_int {
+    if output.is_null() {
+        crate::set_errno(14);
+        return -1;
+    }
+    let mut query = Timex::default();
+    let state = unsafe { kinakaze_abi_adjtimex(&mut query) };
+    if state >= 0 {
+        unsafe {
+            output.write(NtpTimeval {
+                time: query.time,
+                maxerror: query.maxerror,
+                esterror: query.esterror,
+                tai: i64::from(query.tai),
+                reserved: [0; 4],
+            });
+        }
+    }
+    state
+}
+
 /// `STA_UNSYNC`: the clock is not being steered by a locked loop.
 pub const STA_UNSYNC: c_int = 0x0040;
 

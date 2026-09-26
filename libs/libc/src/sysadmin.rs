@@ -20,6 +20,30 @@ pub mod mqueue;
 use kinakaze_vfs::{EAGAIN, EFAULT, EINVAL, ENOSYS, ENOTDIR, EPERM, ETIMEDOUT};
 pub use mount_api::*;
 
+/// Raw host I/O ports are not delegated to guest user mode. Libpci must use
+/// its kernel interface instead of executing privileged IN/OUT instructions.
+#[unsafe(no_mangle)]
+pub extern "sysv64" fn kinakaze_abi_iopl(level: c_int) -> c_int {
+    set_errno(if (0..=3).contains(&level) {
+        EPERM
+    } else {
+        EINVAL
+    });
+    -1
+}
+
+#[unsafe(no_mangle)]
+pub extern "sysv64" fn kinakaze_abi_ioperm(from: u64, count: u64, _enable: c_int) -> c_int {
+    set_errno(
+        if count != 0 && from.checked_add(count).is_some_and(|end| end <= 65536) {
+            EPERM
+        } else {
+            EINVAL
+        },
+    );
+    -1
+}
+
 /// `ESRCH`, which the VFS error list does not carry because no filesystem path
 /// produces it.
 const ESRCH: i32 = 3;

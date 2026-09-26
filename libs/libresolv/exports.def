@@ -25,6 +25,8 @@ EXPORTS
   "__res_send"=kinakaze_engine_libresolv___res_send PRIVATE
   kinakaze_engine_libresolv___res_state
   "__res_state"=kinakaze_engine_libresolv___res_state PRIVATE
+  kinakaze_engine_libresolv_dn_comp
+  "dn_comp"=kinakaze_engine_libresolv_dn_comp PRIVATE
   kinakaze_engine_libresolv_dn_expand
   "dn_expand"=kinakaze_engine_libresolv_dn_expand PRIVATE
   kinakaze_engine_libresolv_dn_skipname

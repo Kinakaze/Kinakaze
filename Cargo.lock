@@ -338,6 +338,7 @@ dependencies = [
  "kinakaze-alloc",
  "kinakaze-elf",
  "kinakaze-kernel",
+ "kinakaze-link",
  "kinakaze-tls",
  "kinakaze-v2-libm",
  "kinakaze-v2-libpthread",

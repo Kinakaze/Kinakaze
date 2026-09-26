@@ -4,11 +4,14 @@
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn kinakaze_module_object_v1(name: *const u8, length: usize) -> u64 {
     if name.is_null() || length > 128 { return 0; }
+    crate::glibc_private::initialize();
     match unsafe { core::slice::from_raw_parts(name, length) } {
+        b"__curbrk" => (8u64 << 32) | 8,
         b"__daylight" => (4u64 << 32) | 4,
         b"__environ" => (8u64 << 32) | 8,
         b"__libc_single_threaded" => (1u64 << 32) | 1,
         b"__libc_stack_end" => (8u64 << 32) | 8,
+        b"__malloc_initialize_hook" => (8u64 << 32) | 8,
         b"__progname" => (8u64 << 32) | 8,
         b"__progname_full" => (8u64 << 32) | 8,
         b"__timezone" => (8u64 << 32) | 8,
@@ -16,12 +19,14 @@ pub unsafe extern "C" fn kinakaze_module_object_v1(name: *const u8, length: usiz
         b"_environ" => (8u64 << 32) | 8,
         b"_libc_intl_domainname" => (1u64 << 32) | 5,
         b"_nl_msg_cat_cntr" => (4u64 << 32) | 4,
+        b"_rtld_global_ro" => (8u64 << 32) | 896,
         b"argp_err_exit_status" => (4u64 << 32) | 4,
         b"argp_program_bug_address" => (8u64 << 32) | 8,
         b"argp_program_version" => (8u64 << 32) | 8,
         b"argp_program_version_hook" => (8u64 << 32) | 8,
         b"daylight" => (4u64 << 32) | 4,
         b"environ" => (8u64 << 32) | 8,
+        b"errno" => (4u64 << 32) | 4 | (1u64 << 63),
         b"error_message_count" => (4u64 << 32) | 4,
         b"error_one_per_line" => (4u64 << 32) | 4,
         b"error_print_progname" => (8u64 << 32) | 8,

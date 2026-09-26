@@ -1798,7 +1798,26 @@ pub unsafe fn getsockname(fd: i32, address: *mut u8, length: *mut i32) -> Result
     let queried =
         unsafe { wsa_getsockname(socket, storage.as_mut_ptr().cast(), &mut storage_length) };
     if queried == SOCKET_ERROR {
-        return Err(last_wsa_errno());
+        let error = last_wsa_errno();
+        if error != crate::EINVAL {
+            return Err(error);
+        }
+        // Winsock rejects an unbound socket. Linux returns its family with a
+        // wildcard address and port zero, without binding or consuming a port.
+        let mut info: WSAPROTOCOL_INFOW = unsafe { std::mem::zeroed() };
+        let mut size = size_of::<WSAPROTOCOL_INFOW>() as i32;
+        if unsafe { wsa_getsockopt(socket, 0xffff, 0x2005, (&raw mut info).cast(), &mut size) }
+            == SOCKET_ERROR
+        {
+            return Err(last_wsa_errno());
+        }
+        storage.fill(0);
+        storage[..2].copy_from_slice(&(info.iAddressFamily as u16).to_ne_bytes());
+        storage_length = match info.iAddressFamily {
+            2 => 16,
+            23 => 28,
+            _ => return Err(error),
+        };
     }
     // SAFETY: forwarded from this function's contract.
     unsafe { sockaddr_to_linux(&storage, storage_length, address, length) }

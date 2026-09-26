@@ -397,9 +397,13 @@ pub(crate) fn discover(directory: &Path) -> Result<ModuleSet> {
                 };
                 let layout = unsafe { query(name.as_ptr(), name.len()) };
                 if layout != 0 {
-                    export.kind = ExportKind::Object;
+                    export.kind = if layout & (1 << 63) != 0 {
+                        ExportKind::Tls
+                    } else {
+                        ExportKind::Object
+                    };
                     export.size = layout as u32 as u64;
-                    export.alignment = layout >> 32;
+                    export.alignment = (layout & !(1 << 63)) >> 32;
                 } else if symbol.object == Some(true) {
                     return Err(invalid(format!("missing object layout: {filename}:{name}")));
                 }

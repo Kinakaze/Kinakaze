@@ -25,6 +25,9 @@ INPUTS = load_inputs(ROOT)
 # CopiedInt/Pointer contain private relocation bookkeeping after this payload.
 # In6Addr has repr(C, align(4)), matching the Linux in6_addr union alignment.
 OBJECT_LAYOUTS = {
+    "errno": (4, 4),
+    "__curbrk": (8, 8), "__malloc_initialize_hook": (8, 8),
+    "_rtld_global_ro": (896, 8),
     "_nl_msg_cat_cntr": (4, 4),
     "__libc_stack_end": (8, 8),
     "_libc_intl_domainname": (5, 1),
@@ -126,7 +129,7 @@ def add_compatibility_exports(exports):
                                        ("libc", "libpthread", LIBC_PTHREAD_FORWARDERS),
                                        ("libc", "libm", LIBC_LIBM_FORWARDERS),
                                        ("libc", "librt", LIBC_RT_FORWARDERS),
-                                       ("ld-linux-x86-64", "libc", {"__tls_get_addr", "__libc_stack_end"})):
+                                       ("ld-linux-x86-64", "libc", {"__tls_get_addr", "__libc_stack_end", "__tunable_get_val", "_rtld_global_ro"})):
         for name in sorted(names):
             if name not in exports[source]:
                 raise ValueError(f"Compatibility export {destination}:{name} has no {source} implementation")
@@ -253,7 +256,7 @@ def guest_exports(provider: str, definitions: dict[str, str], aliases=()):
 
 def belongs(frontend: str, guest: str) -> bool:
     if frontend == "ld-linux-x86-64":
-        return guest in LOADER_EXPORTS | {"__tls_get_addr", "__libc_stack_end"}
+        return guest in LOADER_EXPORTS | {"__tls_get_addr", "__libc_stack_end", "__tunable_get_val", "_rtld_global_ro"}
     if frontend == "libdl":
         return guest in LOADER_EXPORTS
     if frontend == "libGL":
@@ -269,7 +272,7 @@ def belongs(frontend: str, guest: str) -> bool:
         "libXinerama": ("Xinerama",), "libXrender": ("XRender",),
         "libXxf86vm": ("XF86VidMode",),
         "libX11-xcb": ("XGetXCBConnection", "XSetEventQueueOwner"),
-        "libXext": ("XShm", "XShape", "Xdbe", "XSync", "DPMS", "Xext"),
+        "libXext": ("XShm", "XShape", "Xdbe", "XSync", "DPMS", "Xext", "XSecurity"),
     }
     if frontend in xfamilies:
         if frontend == "libXi":
@@ -441,7 +444,8 @@ def module_outputs(module, native_owners):
             private = ' PRIVATE' if name != target or owner != module['soname'] else ''
             definition.append(f'  "{name}"={binding}{suffix}{private}')
         if symbol['kind'] == 'object':
-            objects.append(f'        b"{symbol["name"]}" => ({symbol["alignment"]}u64 << 32) | {symbol["size"]},')
+            tls_flag = ' | (1u64 << 63)' if symbol['name'] == 'errno' and module['soname'] == 'libc.so.6' else ''
+            objects.append(f'        b"{symbol["name"]}" => ({symbol["alignment"]}u64 << 32) | {symbol["size"]}{tls_flag},')
     source = [
         '// Generated object layout query; PE export tables do not carry data sizes.',
         '// Buffers are borrowed only for this call. No memory ownership crosses the ABI.',
@@ -449,6 +453,7 @@ def module_outputs(module, native_owners):
         '#[unsafe(no_mangle)]',
         'pub unsafe extern "C" fn kinakaze_module_object_v1(name: *const u8, length: usize) -> u64 {',
         '    if name.is_null() || length > 128 { return 0; }',
+        *(['    crate::glibc_private::initialize();'] if module['soname'] == 'libc.so.6' else []),
         '    match unsafe { core::slice::from_raw_parts(name, length) } {',
         *objects,
         '        _ => 0,',
@@ -559,7 +564,7 @@ def main():
         if args.check:
             if not path.exists() or path.read_text(encoding="utf-8") != contents:
                 raise ValueError(f"Stale generated exports: {path}; regenerate after building libraries")
-        else:
+        elif not path.exists() or path.read_text(encoding="utf-8") != contents:
             path.write_text(contents, encoding="utf-8", newline="\n")
     print(f"{'Checked' if args.check else 'Updated'} {len(modules)} linker inputs, {sum(len(m['exports']) for m in modules)} guest exports")
     print(f"Version evidence: {len(evidence)} ELF files")

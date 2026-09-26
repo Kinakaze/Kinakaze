@@ -11,6 +11,7 @@ use crate::LinkError;
 pub enum ProviderSymbolKind {
     Function,
     Object,
+    Tls { module: usize, offset: usize },
 }
 
 #[derive(Clone, Debug)]
@@ -121,7 +122,7 @@ impl ProviderRegistry {
                 )));
             }
             if symbol.address == 0
-                || (symbol.kind == ProviderSymbolKind::Object && symbol.size == 0)
+                || (symbol.kind != ProviderSymbolKind::Function && symbol.size == 0)
             {
                 return Err(LinkError::InvalidProvider(format!(
                     "invalid address or object size for {}",

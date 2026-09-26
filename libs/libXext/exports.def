@@ -10,6 +10,16 @@ EXPORTS
   "DPMSQueryExtension"=kinakaze_engine_libXext_DPMSQueryExtension PRIVATE
   kinakaze_engine_libXext_DPMSSetTimeouts
   "DPMSSetTimeouts"=kinakaze_engine_libXext_DPMSSetTimeouts PRIVATE
+  kinakaze_engine_libXext_XSecurityAllocXauth
+  "XSecurityAllocXauth"=kinakaze_engine_libXext_XSecurityAllocXauth PRIVATE
+  kinakaze_engine_libXext_XSecurityFreeXauth
+  "XSecurityFreeXauth"=kinakaze_engine_libXext_XSecurityFreeXauth PRIVATE
+  kinakaze_engine_libXext_XSecurityGenerateAuthorization
+  "XSecurityGenerateAuthorization"=kinakaze_engine_libXext_XSecurityGenerateAuthorization PRIVATE
+  kinakaze_engine_libXext_XSecurityQueryExtension
+  "XSecurityQueryExtension"=kinakaze_engine_libXext_XSecurityQueryExtension PRIVATE
+  kinakaze_engine_libXext_XSecurityRevokeAuthorization
+  "XSecurityRevokeAuthorization"=kinakaze_engine_libXext_XSecurityRevokeAuthorization PRIVATE
   kinakaze_engine_libXext_XShapeCombineMask
   "XShapeCombineMask"=kinakaze_engine_libXext_XShapeCombineMask PRIVATE
   kinakaze_engine_libXext_XShapeCombineRectangles

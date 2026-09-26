@@ -95,7 +95,7 @@ unsafe fn number(cursor: &mut *mut c_char, colon: bool, empty: u64) -> Option<u6
     Some(value)
 }
 
-unsafe fn parse_shadow(text: *mut c_char) -> Option<Spwd> {
+pub(crate) unsafe fn parse_shadow(text: *mut c_char) -> Option<Spwd> {
     let bytes = unsafe { CStr::from_ptr(text) }.to_bytes();
     if let Some(end) = bytes.iter().position(|&b| b == b'\n') {
         unsafe { text.add(end).write(0) };

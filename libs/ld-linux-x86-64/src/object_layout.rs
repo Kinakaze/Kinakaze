@@ -6,6 +6,7 @@ pub unsafe extern "C" fn kinakaze_module_object_v1(name: *const u8, length: usiz
     if name.is_null() || length > 128 { return 0; }
     match unsafe { core::slice::from_raw_parts(name, length) } {
         b"__libc_stack_end" => (8u64 << 32) | 8,
+        b"_rtld_global_ro" => (8u64 << 32) | 896,
         _ => 0,
     }
 }

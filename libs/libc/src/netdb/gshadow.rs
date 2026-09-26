@@ -157,6 +157,126 @@ pub unsafe extern "sysv64" fn kinakaze_abi_getsgnam(name: *const c_char) -> *mut
     }
     publish(lookup(unsafe { CStr::from_ptr(name) }.to_bytes()))
 }
+
+unsafe fn pack(
+    entry: &Entry,
+    output: *mut Sgrp,
+    buffer: *mut c_char,
+    size: usize,
+) -> Result<(), i32> {
+    let alignment = core::mem::align_of::<*mut c_char>();
+    let padding = (buffer as usize).wrapping_neg() & (alignment - 1);
+    let table_size = (entry.administrators.len() + entry.members.len() + 2) * alignment;
+    let strings: Vec<_> = [&entry.name, &entry.password]
+        .into_iter()
+        .chain(entry.administrators.iter())
+        .chain(entry.members.iter())
+        .collect();
+    let needed = padding + table_size + strings.iter().map(|s| s.len() + 1).sum::<usize>();
+    if size < needed {
+        return Err(34);
+    }
+    unsafe {
+        let administrators = buffer.byte_add(padding).cast::<*mut c_char>();
+        let members = administrators.add(entry.administrators.len() + 1);
+        let mut data = buffer.byte_add(padding + table_size);
+        let mut pointers = Vec::with_capacity(strings.len());
+        for value in strings {
+            pointers.push(data);
+            ptr::copy_nonoverlapping(value.as_ptr(), data.cast(), value.len());
+            data.add(value.len()).write(0);
+            data = data.add(value.len() + 1);
+        }
+        for (n, &value) in pointers[2..2 + entry.administrators.len()]
+            .iter()
+            .enumerate()
+        {
+            administrators.add(n).write(value);
+        }
+        administrators
+            .add(entry.administrators.len())
+            .write(ptr::null_mut());
+        for (n, &value) in pointers[2 + entry.administrators.len()..]
+            .iter()
+            .enumerate()
+        {
+            members.add(n).write(value);
+        }
+        members.add(entry.members.len()).write(ptr::null_mut());
+        output.write(Sgrp {
+            name: pointers[0],
+            password: pointers[1],
+            administrators,
+            members,
+        });
+    }
+    Ok(())
+}
+
+/// # Safety
+/// The caller supplies a name, writable record, byte buffer and result pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_getsgnam_r(
+    name: *const c_char,
+    output: *mut Sgrp,
+    buffer: *mut c_char,
+    size: usize,
+    result: *mut *mut Sgrp,
+) -> c_int {
+    if result.is_null() {
+        return 22;
+    }
+    unsafe {
+        result.write(ptr::null_mut());
+    }
+    if name.is_null() || output.is_null() || buffer.is_null() {
+        return 22;
+    }
+    match lookup(unsafe { CStr::from_ptr(name) }.to_bytes()) {
+        Ok(Some(entry)) => match unsafe { pack(&entry, output, buffer, size) } {
+            Ok(()) => {
+                unsafe {
+                    result.write(output);
+                }
+                0
+            }
+            Err(error) => error,
+        },
+        Ok(None) => 0,
+        Err(error) => error,
+    }
+}
+
+/// # Safety
+/// file must identify an open readable guest FILE, not a host CRT stream.
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_fgetsgent(file: *mut crate::stdio::File) -> *mut Sgrp {
+    if file.is_null() {
+        crate::set_errno(22);
+        return ptr::null_mut();
+    }
+    loop {
+        let mut line = Vec::new();
+        loop {
+            let byte = crate::stdio::fgetc(file);
+            if byte < 0 || byte == 10 {
+                break;
+            }
+            line.push(byte as u8);
+        }
+        if crate::stdio::ferror(file) != 0 {
+            crate::set_errno(5);
+            return ptr::null_mut();
+        }
+        if line.is_empty() && crate::stdio::feof(file) != 0 {
+            return ptr::null_mut();
+        }
+        match next(&mut line.as_slice()) {
+            Ok(None) => continue,
+            outcome => return publish(outcome),
+        }
+    }
+}
 /// # Safety
 /// entry and its strings/tables are readable; file is a valid writable stream.
 #[unsafe(no_mangle)]
@@ -221,5 +341,36 @@ pub unsafe extern "sysv64" fn kinakaze_abi_putsgent(
         0
     } else {
         -1
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn reentrant_record_aligns_tables_and_preserves_every_name() {
+        let entry = next(&mut b"staff:!:root,admin:alice,bob\n".as_slice())
+            .unwrap()
+            .unwrap();
+        let mut bytes = [0u8; 256];
+        let buffer = unsafe { bytes.as_mut_ptr().add(1).cast() };
+        let mut output = core::mem::MaybeUninit::<Sgrp>::uninit();
+        assert_eq!(
+            unsafe { pack(&entry, output.as_mut_ptr(), buffer, 1) },
+            Err(34)
+        );
+        unsafe {
+            pack(&entry, output.as_mut_ptr(), buffer, 255).unwrap();
+            let output = output.assume_init();
+            assert_eq!(output.administrators as usize % 8, 0);
+            assert_eq!(CStr::from_ptr(output.name).to_bytes(), b"staff");
+            assert_eq!(
+                CStr::from_ptr(*output.administrators.add(1)).to_bytes(),
+                b"admin"
+            );
+            assert_eq!(CStr::from_ptr(*output.members.add(1)).to_bytes(), b"bob");
+            assert!((*output.administrators.add(2)).is_null());
+            assert!((*output.members.add(2)).is_null());
+        }
     }
 }

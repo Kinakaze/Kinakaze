@@ -34,6 +34,22 @@ use crate::signal::SigSet;
 /// reaching into another crate's internals to build a second wakeup path.
 const POLL_INTERVAL: Duration = Duration::from_millis(1);
 
+/// Linux sigval occupies one machine word, including pointer-valued payloads.
+#[unsafe(no_mangle)]
+pub extern "sysv64" fn kinakaze_abi_sigqueue(pid: c_int, signal: c_int, value: usize) -> c_int {
+    crate::signal::ensure_terminate_hook();
+    match kinakaze_vfs::job::sigqueue(pid, signal, value) {
+        Ok(()) => {
+            signal::deliver_pending();
+            0
+        }
+        Err(error) => {
+            crate::set_errno(error);
+            -1
+        }
+    }
+}
+
 /// Installs the process-termination hook without changing any disposition.
 ///
 /// A signal whose default action is to terminate can only do so if
@@ -176,7 +192,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_sigtimedwait(
         Some(Instant::now() + Duration::new(requested.tv_sec as u64, requested.tv_nsec as u32))
     };
 
-    signal::register_waiter();
+    signal::register_signal_waiter(wanted);
     let outcome = loop {
         // A wanted signal that is already pending is taken without sleeping.
         if let Some(pending) = signal::take_pending(wanted) {
