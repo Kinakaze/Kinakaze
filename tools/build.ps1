@@ -94,7 +94,7 @@ try {
             $env:PATH = (Join-Path $testDistDir 'rootfs/lib') + [IO.Path]::PathSeparator + $testPathBefore
             # Kernel/VFS tests mutate process-wide PID, descriptor and mapping
             # state; each test still exercises its own threads and children.
-            Invoke-Checked 'cargo' ($testArgs + @('--', '--test-threads=1'))
+            Invoke-Checked 'cargo' ($testArgs + @('--no-fail-fast', '--', '--test-threads=1'))
         }
         finally {
             $env:PATH = $testPathBefore

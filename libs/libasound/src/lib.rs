@@ -1454,7 +1454,22 @@ mod tests {
             );
             assert_eq!(rate, 48000);
 
-            assert_eq!(snd_pcm_hw_params(pcm, params), 0);
+            let configured = snd_pcm_hw_params(pcm, params);
+            if windows_sys::Win32::Media::Audio::waveOutGetNumDevs() == 0 {
+                // A headless host must report the missing playback endpoint
+                // without preventing parameter negotiation or cleanup.
+                assert_eq!(configured, -19); // -ENODEV
+                assert!((*pcm).audio.lock().unwrap().is_none());
+                let poll_fd = (*pcm).poll_fd;
+                snd_pcm_hw_params_free(params);
+                assert_eq!(snd_pcm_close(pcm), 0);
+                assert!(matches!(
+                    kinakaze_vfs::get(poll_fd),
+                    Err(kinakaze_vfs::EBADF)
+                ));
+                return;
+            }
+            assert_eq!(configured, 0);
             assert_eq!(snd_pcm_prepare(pcm), 0);
 
             let buffer = [0i16; 1024];
