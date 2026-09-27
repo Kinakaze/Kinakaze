@@ -200,6 +200,9 @@ impl Fixture {
             std::fs::create_dir_all(root.join(part)).unwrap();
         }
         std::fs::write(root.join("lower/data"), b"lower").unwrap();
+        // Virtual children do not exist on the host, so their conversion cannot
+        // expand an 8.3 TEMP alias. Keep one canonical root for every fixture path.
+        let root = root.canonicalize().unwrap();
         Self {
             root,
             fds: Vec::new(),

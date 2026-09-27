@@ -153,6 +153,60 @@ fn host_ready() -> bool {
         eprintln!("skipped: no host Vulkan loader on this machine");
         return false;
     }
+    // The SDK can install a loader without a GPU driver. Probe the native ABI
+    // first so an unavailable driver is distinguished from a broken guest thunk.
+    let create = InstanceCreateInfo {
+        s_type: INSTANCE_CREATE_INFO,
+        next: core::ptr::null(),
+        flags: 0,
+        application_info: core::ptr::null(),
+        enabled_layer_count: 0,
+        enabled_layer_names: core::ptr::null(),
+        enabled_extension_count: 0,
+        enabled_extension_names: core::ptr::null(),
+    };
+    type Create = unsafe extern "system" fn(*const c_void, *const c_void, *mut VkInstance) -> i32;
+    type Destroy = unsafe extern "system" fn(VkInstance, *const c_void);
+    let native_create: Create = unsafe {
+        core::mem::transmute(
+            crate::host::symbol("vkCreateInstance").expect("native vkCreateInstance"),
+        )
+    };
+    let mut instance = core::ptr::null_mut();
+    let result = unsafe {
+        native_create(
+            (&raw const create).cast(),
+            core::ptr::null(),
+            &raw mut instance,
+        )
+    };
+    if result != SUCCESS {
+        assert_eq!(result, -9, "unexpected native Vulkan initialization error"); // VK_ERROR_INCOMPATIBLE_DRIVER
+        assert!(instance.is_null());
+        let guest = unsafe {
+            vkCreateInstance(
+                (&raw const create).cast(),
+                no_allocator(),
+                &raw mut instance,
+            )
+        };
+        assert_eq!(
+            guest, result,
+            "guest must preserve the native missing-driver error"
+        );
+        assert!(instance.is_null());
+        eprintln!(
+            "skipped hardware exercise: native Vulkan has no compatible driver; guest error verified"
+        );
+        return false;
+    }
+    assert!(!instance.is_null());
+    let native_destroy: Destroy = unsafe {
+        core::mem::transmute(
+            crate::host::symbol("vkDestroyInstance").expect("native vkDestroyInstance"),
+        )
+    };
+    unsafe { native_destroy(instance, core::ptr::null()) };
     true
 }
 

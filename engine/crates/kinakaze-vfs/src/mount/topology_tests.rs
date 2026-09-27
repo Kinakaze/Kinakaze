@@ -103,6 +103,7 @@ fn new_shared_bind_does_not_receive_its_own_mount_event() {
     for tail in ["backing/sub", "backing/tmp/mount", "view", "peer"] {
         std::fs::create_dir_all(root.join(tail)).unwrap();
     }
+    let root = root.canonicalize().unwrap();
     let path = |tail: &str| crate::to_guest_path(&root.join(tail));
     bind(&path("backing"), &path("view"), MS_BIND).unwrap();
     set_propagation(&path("view"), MS_SHARED).unwrap();
@@ -492,6 +493,7 @@ fn propagation_preserves_intermediate_shared_slave_masters() {
         std::fs::create_dir_all(root.join(path)).unwrap();
     }
     std::fs::write(root.join("payload/value"), b"chain").unwrap();
+    let root = root.canonicalize().unwrap();
     let guest = |path: &str| crate::to_guest_path(&root.join(path));
     bind(&guest("base"), &guest("target"), MS_BIND).unwrap();
     set_propagation(&guest("target"), MS_SHARED).unwrap();

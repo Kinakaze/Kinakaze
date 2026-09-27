@@ -10885,7 +10885,7 @@ mod tests {
         let original = fs::getcwd();
         let host_before = std::env::current_dir().unwrap();
         // A real directory to move into: the host temporary directory.
-        let native = std::env::temp_dir();
+        let native = std::env::temp_dir().canonicalize().unwrap();
         let guest = windows_to_linux(&native);
         let fd = open(&guest, fs::O_RDONLY | fs::O_DIRECTORY);
 
