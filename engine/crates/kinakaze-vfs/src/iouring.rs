@@ -760,7 +760,7 @@ fn enter_owned(
             interrupt_event,
         ];
         signal::register_waiter();
-        let pending = signal::pending() & !signal::blocked_mask() != 0;
+        let pending = signal::interrupt_pending();
         let waited = if pending {
             WAIT_OBJECT_0 + 3
         } else {
@@ -769,6 +769,9 @@ fn enter_owned(
         signal::unregister_waiter();
         // Deliver/restart at the syscall boundary after transient Arcs unwind.
         if waited == WAIT_OBJECT_0 + 3 {
+            if !signal::interrupt_pending() {
+                continue;
+            }
             *interrupted = true;
             // Linux keeps io_submit_sqes' positive count when the following
             // CQ wait is interrupted; only a wait-only enter returns EINTR.

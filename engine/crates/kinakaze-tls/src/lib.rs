@@ -1476,16 +1476,27 @@ mod tests {
         );
         assert_eq!(serialize_fork_state().unwrap(), payload);
 
-        // This isolated fixture has no ELF modules or live TLS blocks. A
-        // mismatched stamped value must fail without publishing key state.
-        assert!(modules().read().unwrap().is_empty());
+        // The built-in errno template is present even in an isolated process.
+        // Skip its serialized records before corrupting a key's generation.
+        let templates = modules().read().unwrap();
+        assert_eq!(templates.len(), 1);
+        let template_bytes: usize = templates
+            .iter()
+            .map(|module| (24 + module.image.len() + 7) & !7)
+            .sum();
+        drop(templates);
         assert!(ELF_TLS.with(|slots| slots.borrow().is_empty()));
         let count = pthread_keys().read().unwrap().len();
-        let value_offset = 40 + count * 24;
+        let value_offset = 40 + template_bytes + count * 24;
+        assert_eq!(
+            u64::from_le_bytes(payload[value_offset..value_offset + 8].try_into().unwrap()),
+            2
+        );
         let mut corrupt = payload.clone();
         corrupt[value_offset..value_offset + 8].copy_from_slice(&3u64.to_le_bytes());
         assert_eq!(restore_fork_state(&corrupt), Err(()));
         assert_eq!(pthread_getspecific(first).unwrap() as usize, 0x5678);
+        assert_eq!(serialize_fork_state().unwrap(), payload);
         assert_eq!(pthread_key_create(None).unwrap(), inactive);
         assert_eq!(
             pthread_keys().read().unwrap()[inactive as usize].generation,

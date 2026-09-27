@@ -290,6 +290,11 @@ fn closing_ring_wakes_all_enter_waiters_and_old_arcs_stay_closed() {
     if !available() {
         return;
     }
+    let _serialized = signal::test_lock();
+    let old_action = signal::sigaction(signal::SIGCHLD, Some(signal::Action::default())).unwrap();
+    // Child exit remains available to sigwait/signalfd, but its default-ignored
+    // disposition must not abort any of the ring's native waits with EINTR.
+    signal::raise_signal(signal::SIGCHLD).unwrap();
     let fd = setup(2, 0).unwrap();
     let old = lookup(fd).unwrap();
     let (send, receive) = std::sync::mpsc::channel();
@@ -324,6 +329,11 @@ fn closing_ring_wakes_all_enter_waiters_and_old_arcs_stay_closed() {
         completion(&replacement, &SubmissionEntry::default()).result,
         0
     );
+    assert_eq!(
+        signal::take_pending(1 << (signal::SIGCHLD - 1)).map(|info| info.signal),
+        Some(signal::SIGCHLD)
+    );
+    signal::sigaction(signal::SIGCHLD, Some(old_action)).unwrap();
 }
 
 #[test]
@@ -813,6 +823,16 @@ fn interrupted_wait_reports_already_consumed_entries_without_releasing_ring_stat
     if !available() {
         return;
     }
+    let _signals = signal::test_lock();
+    unsafe extern "sysv64" fn handler(_: i32) {}
+    let old_action = signal::sigaction(
+        12,
+        Some(signal::Action {
+            disposition: signal::Disposition::Handle(handler, 0),
+            ..signal::Action::default()
+        }),
+    )
+    .unwrap();
     for submitted in [false, true] {
         let ring = Fd(setup(2, 0).unwrap());
         let owner = lookup(ring.0).unwrap();
@@ -832,7 +852,7 @@ fn interrupted_wait_reports_already_consumed_entries_without_releasing_ring_stat
             assert!(Instant::now() < deadline);
             std::thread::yield_now();
         }
-        assert!(interrupt::interrupt_thread(thread_id));
+        signal::raise_thread_signal(thread_id, 12).unwrap();
         assert_eq!(
             thread.join().unwrap(),
             if submitted { Ok(1) } else { Err(crate::EINTR) }
@@ -844,6 +864,7 @@ fn interrupted_wait_reports_already_consumed_entries_without_releasing_ring_stat
             assert_eq!(out[0].result, 0);
         }
     }
+    signal::sigaction(12, Some(old_action)).unwrap();
 }
 
 // Fork/exec serializers inspect process-global descriptor state. Run their race

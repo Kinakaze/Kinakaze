@@ -152,7 +152,7 @@ impl Directory {
         }
         loop {
             crate::signal::register_waiter();
-            if crate::signal::pending() & !crate::signal::blocked_mask() != 0 {
+            if crate::signal::interrupt_pending() {
                 crate::signal::unregister_waiter();
                 return Err(EINTR);
             }

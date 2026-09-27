@@ -624,7 +624,7 @@ impl Drop for DirectoryLock {
 }
 
 fn interrupted() -> Result<(), i32> {
-    if crate::signal::pending() & !crate::signal::blocked_mask() != 0 {
+    if crate::signal::interrupt_pending() {
         Err(EINTR)
     } else {
         Ok(())
@@ -810,6 +810,13 @@ mod tests {
 
     #[test]
     fn staged_file_is_atomic_and_preserves_data_metadata_and_xattrs() {
+        let _signals = crate::signal::test_lock();
+        let old_action = crate::signal::sigaction(
+            crate::signal::SIGCHLD,
+            Some(crate::signal::Action::default()),
+        )
+        .unwrap();
+        crate::signal::raise_signal(crate::signal::SIGCHLD).unwrap();
         let f = Fixture::new();
         let data: Vec<u8> = (0..2 * 1024 * 1024 + 13).map(|n| (n % 251) as u8).collect();
         std::fs::write(f.path("lower/file"), &data).unwrap();
@@ -865,6 +872,11 @@ mod tests {
             attributes.get(b"trusted.overlay.origin").unwrap(),
             b"private"
         );
+        assert_eq!(
+            crate::signal::take_pending(1 << (crate::signal::SIGCHLD - 1)).map(|info| info.signal),
+            Some(crate::signal::SIGCHLD)
+        );
+        crate::signal::sigaction(crate::signal::SIGCHLD, Some(old_action)).unwrap();
     }
 
     #[test]

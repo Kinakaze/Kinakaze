@@ -448,7 +448,7 @@ fn getevents_owned(
             })
             .unwrap_or(INFINITE);
         signal::register_waiter();
-        let pending = signal::pending() & !signal::blocked_mask() != 0;
+        let pending = signal::interrupt_pending();
         let result = if pending {
             WAIT_OBJECT_0 + 2
         } else {
@@ -456,6 +456,9 @@ fn getevents_owned(
         };
         signal::unregister_waiter();
         if result == WAIT_OBJECT_0 + 2 {
+            if !signal::interrupt_pending() {
+                continue;
+            }
             *interrupted = true;
             return if copied > 0 {
                 Ok(copied)

@@ -110,7 +110,7 @@ impl InodeLock {
         let handles = [mutex.0, interrupt];
         loop {
             crate::signal::register_waiter();
-            if crate::signal::pending() & !crate::signal::blocked_mask() != 0 {
+            if crate::signal::interrupt_pending() {
                 crate::signal::unregister_waiter();
                 return Err(crate::EINTR);
             }
@@ -451,6 +451,13 @@ mod tests {
 
     #[test]
     fn concurrent_native_ea_updates_do_not_lose_other_names() {
+        let _signals = crate::signal::test_lock();
+        let old_action = crate::signal::sigaction(
+            crate::signal::SIGCHLD,
+            Some(crate::signal::Action::default()),
+        )
+        .unwrap();
+        crate::signal::raise_signal(crate::signal::SIGCHLD).unwrap();
         let f = Fixture::new();
         let path = f.0.join("file");
         std::fs::write(&path, b"").unwrap();
@@ -480,6 +487,11 @@ mod tests {
                 [19]
             );
         }
+        assert_eq!(
+            crate::signal::take_pending(1 << (crate::signal::SIGCHLD - 1)).map(|info| info.signal),
+            Some(crate::signal::SIGCHLD)
+        );
+        crate::signal::sigaction(crate::signal::SIGCHLD, Some(old_action)).unwrap();
     }
 
     #[test]

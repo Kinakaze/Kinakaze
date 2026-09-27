@@ -14,7 +14,9 @@ jobs:
   publish:
     name: Publish Windows runtime and source
     needs: checks
-    runs-on: windows-2022
+    # Native IoRing APIs are unavailable on Server 2022. Packaging loads the
+    # providers and runs guest I/O tests, so use a supported runtime host.
+    runs-on: windows-2025
     timeout-minutes: 90
     defaults:
       run:

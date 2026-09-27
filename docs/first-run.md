@@ -1,5 +1,7 @@
 # 首次安装与包管理
 
+宿主使用 Windows 11 24H2 / Windows Server 2025 及以上的 x86-64 系统；原生 I/O 依赖新版 Windows IoRing API。
+
 Windows x86-64 运行包解压后，双击 `worker.exe`，或在 PowerShell 中执行：
 
 ```powershell

@@ -108,7 +108,7 @@ impl Flush {
             }
             let handles = [self.event, interrupt];
             signal::register_waiter();
-            if !interrupted && signal::pending() & !signal::blocked_mask() != 0 {
+            if !interrupted && signal::interrupt_pending() {
                 interrupted = true;
                 unsafe { CancelIoEx(file, ptr::null()) };
             }
@@ -128,7 +128,7 @@ impl Flush {
                 // Retire the original flush, not merely its cancellation, before
                 // releasing the stage. Signal delivery belongs to the syscall
                 // boundary after the transaction has unwound.
-                if signal::pending() & !signal::blocked_mask() != 0 {
+                if signal::interrupt_pending() {
                     interrupted = true;
                     unsafe { CancelIoEx(file, ptr::null()) };
                 }
@@ -148,6 +148,10 @@ mod tests {
 
     #[test]
     fn native_ring_flush_completes_and_reports_handle_errors() {
+        let _serialized = signal::test_lock();
+        let old_action =
+            signal::sigaction(signal::SIGCHLD, Some(signal::Action::default())).unwrap();
+        signal::raise_signal(signal::SIGCHLD).unwrap();
         let path = std::env::temp_dir().join(format!(
             "kinakaze-ring-flush-{}-{}",
             std::process::id(),
@@ -170,5 +174,10 @@ mod tests {
         assert!(unsafe { flush.file(readonly.as_raw_handle()) }.is_err());
         drop(readonly);
         std::fs::remove_file(path).unwrap();
+        assert_eq!(
+            signal::take_pending(1 << (signal::SIGCHLD - 1)).map(|info| info.signal),
+            Some(signal::SIGCHLD)
+        );
+        signal::sigaction(signal::SIGCHLD, Some(old_action)).unwrap();
     }
 }
