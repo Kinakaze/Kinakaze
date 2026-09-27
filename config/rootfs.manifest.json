@@ -1,5 +1,10 @@
 {
   "schema": 1,
+  "download": {
+    "debian_mirror": "https://mirrors.ustc.edu.cn/debian",
+    "security_mirror": "https://mirrors.ustc.edu.cn/debian-security",
+    "proxy": "system"
+  },
   "directories": [
     "bin",
     "sbin",
@@ -7,6 +12,13 @@
     "usr/sbin",
     "usr/lib",
     "etc",
+    "etc/ssh",
+    "etc/default",
+    "etc/profile.d",
+    "etc/systemd/system/ssh.service.d",
+    "etc/systemd/system/kinakaze.target.wants",
+    "etc/systemd/system-preset",
+    "usr/local/sbin",
     "root",
     "home",
     "tmp",
@@ -29,16 +41,64 @@
     "var/lib/dpkg/info",
     "var/lib/dpkg/updates",
     "var/lib/dpkg/triggers",
-    "var/lib/dpkg/alternatives"
+    "var/lib/dpkg/alternatives",
+    "etc/kinakaze",
+    "usr/lib/kinakaze"
   ],
+  "permissions": {
+    "etc/shadow": 384
+  },
+  "links": {
+    "etc/systemd/system/default.target": "/lib/systemd/system/kinakaze.target",
+    "etc/systemd/system/kinakaze.target.wants/ssh.service": "/lib/systemd/system/ssh.service",
+    "var/run": "/run",
+    "var/lock": "/run/lock",
+    "etc/systemd/system/kinakaze.target.wants/kinakaze-session.service": "/lib/systemd/system/kinakaze-session.service"
+  },
   "files": [
     {
       "path": "etc/passwd",
-      "content": "root:x:0:0:root:/root:/bin/sh\n_apt:x:100:65534:APT sandbox:/nonexistent:/bin/false\nnobody:x:65534:65534:nobody:/nonexistent:/bin/false\n"
+      "content": "root:x:0:0:root:/root:/bin/sh\n_apt:x:100:65534:APT sandbox:/nonexistent:/bin/false\nsshd:x:101:65534:OpenSSH privilege separation:/run/sshd:/usr/sbin/nologin\nmessagebus:x:102:102:System message bus:/nonexistent:/usr/sbin/nologin\nnobody:x:65534:65534:nobody:/nonexistent:/bin/false\n"
+    },
+    {
+      "path": "etc/shadow",
+      "content": "root:$6$kzDefault2026092$hJpV0.Wh5JzxS32h/mO0g2FFMsDaqCT42E7QWMS3Ktt/M/xdtQSwcoQ1SNXWiJm7lAYKTYFDdBRsI93N742iX0:20000:0:99999:7:::\n_apt:!:20000:0:99999:7:::\nsshd:!:20000:0:99999:7:::\nnobody:!:20000:0:99999:7:::\n"
+    },
+    {
+      "path": "etc/ssh/sshd_config",
+      "content": "# Kinakaze default: ssh -p 2222 root@127.0.0.1 (password: kinakaze)\nPort 2222\nListenAddress 127.0.0.1\nHostKey /etc/ssh/ssh_host_ed25519_key\nHostKey /etc/ssh/ssh_host_rsa_key\nHostKey /etc/ssh/ssh_host_ecdsa_key\nPidFile /run/sshd.pid\nPermitRootLogin yes\nPasswordAuthentication yes\nPermitEmptyPasswords no\nKbdInteractiveAuthentication no\nPubkeyAuthentication yes\nUsePAM no\nStrictModes yes\nUseDNS no\nPrintMotd no\nAcceptEnv LANG LC_*\nSubsystem sftp internal-sftp\n"
+    },
+    {
+      "path": "etc/default/kinakaze-sshd",
+      "content": "# Start the bundled sshd when opening the default login shell.\nENABLED=yes\n"
+    },
+    {
+      "path": "usr/local/sbin/kinakaze-sshd",
+      "content": "#!/bin/sh\nset -eu\n[ ! -r /etc/default/kinakaze-sshd ] || . /etc/default/kinakaze-sshd\n[ \"${ENABLED:-yes}\" = yes ] || exit 0\numask 077\nmkdir -p /run/sshd\nchmod 755 /run/sshd\nexec /usr/bin/flock -n -F /run/kinakaze-sshd.lock /bin/sh -ec '\n    /usr/bin/ssh-keygen -A\n    /usr/sbin/sshd -t\n    exec /usr/sbin/sshd -D -e\n'\n"
+    },
+    {
+      "path": "etc/profile.d/kinakaze-sshd.sh",
+      "content": "# In a systemd session, ssh.service owns the listener.\nif [ ! -d /run/systemd/system ] && [ -x /usr/sbin/sshd ] && [ -x /usr/local/sbin/kinakaze-sshd ] && [ \"$(id -u)\" = 0 ]; then\n    /usr/local/sbin/kinakaze-sshd </dev/null >>/var/log/sshd.log 2>&1 &\nfi\n"
+    },
+    {
+      "path": "etc/systemd/system-preset/00-kinakaze.preset",
+      "content": "# Default services for the hosted Debian session.\nenable kinakaze.target\nenable ssh.service\ndisable *\n"
+    },
+    {
+      "path": "lib/systemd/system/kinakaze.target",
+      "content": "[Unit]\nDescription=Kinakaze Debian services\n# Runtime initialization is performed by the Windows host.\nDefaultDependencies=no\nAllowIsolate=yes\n\n[Install]\nAlias=default.target\n"
+    },
+    {
+      "path": "etc/systemd/system/ssh.service.d/kinakaze.conf",
+      "content": "[Unit]\n# The host initializes mounts, devices and networking before starting PID 1.\nDefaultDependencies=no\n\n[Service]\nExecStartPre=\nExecStartPre=/usr/bin/ssh-keygen -A\nExecStartPre=/usr/sbin/sshd -t\nExecStart=\nExecStart=/usr/sbin/sshd -D -e $SSHD_OPTS\nStandardOutput=append:/var/log/sshd.log\nStandardError=append:/var/log/sshd.log\n\n[Install]\nWantedBy=\nWantedBy=kinakaze.target\n"
+    },
+    {
+      "path": "usr/local/sbin/kinakaze-systemd",
+      "content": "#!/bin/sh\nset -eu\n# Persist a unique identity before PID 1 starts the configured services.\n/bin/systemd-machine-id-setup\nexec /lib/systemd/systemd --system --unit=kinakaze.target --log-target=console \"$@\"\n"
     },
     {
       "path": "etc/group",
-      "content": "root:x:0:\nnogroup:x:65534:\n"
+      "content": "root:x:0:\nmessagebus:x:102:\nnogroup:x:65534:\n"
     },
     {
       "path": "etc/hosts",
@@ -62,11 +122,58 @@
     },
     {
       "path": "etc/apt/sources.list.d/debian.sources",
-      "content": "Types: deb\nURIs: https://deb.debian.org/debian\nSuites: bookworm bookworm-updates\nComponents: main\nArchitectures: amd64\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg\n\nTypes: deb\nURIs: https://deb.debian.org/debian-security\nSuites: bookworm-security\nComponents: main\nArchitectures: amd64\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg\n"
+      "content": "Types: deb\nURIs: https://mirrors.ustc.edu.cn/debian\nSuites: bookworm bookworm-updates\nComponents: main\nArchitectures: amd64\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg\n\nTypes: deb\nURIs: https://mirrors.ustc.edu.cn/debian-security\nSuites: bookworm-security\nComponents: main\nArchitectures: amd64\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg\n"
     },
     {
       "path": "etc/apt/apt.conf.d/00kinakaze",
       "content": "APT::Architecture \"amd64\";\nAPT::Install-Recommends \"false\";\nAPT::Install-Suggests \"false\";\n// Reserve enough space for the three default Debian indexes.\nAPT::Cache-Start \"67108864\";\nAcquire::Languages \"none\";\nAcquire::Retries \"3\";\nDPkg::Use-Pty \"false\";\n"
+    },
+    {
+      "path": "usr/lib/kinakaze/session.py",
+      "content": "#!/usr/bin/python3\n\"\"\"Distribution-provided guest session service; owns PTYs and reaps children.\n\nRuns inside the downloaded Debian image, never in a host Python installation.\nOnly the native init owns the authenticated control listener. Client detach does\nnot close a PTY, send a signal, fork, or change a guest's parent.\n\"\"\"\nimport ctypes\nimport errno\nimport fcntl\nimport json\nimport os\nimport select\nimport signal\nimport socket\nimport struct\nimport sys\nimport termios\nimport time\n\nLIMIT = 1024 * 1024\n\n\ndef main():\n    with open(sys.argv[1]) as source:\n        config = json.load(source)\n    os.environ.update(config['startup'].get('environment', {}))\n    # Adopt double-forked descendants; Linux's live process registry owns PPID.\n    libc = ctypes.CDLL(None, use_errno=True)\n    if libc.prctl(36, 1, 0, 0, 0) != 0:  # PR_SET_CHILD_SUBREAPER\n        raise OSError(ctypes.get_errno(), 'PR_SET_CHILD_SUBREAPER')\n    control = socket.create_connection(('127.0.0.1', config['port']), timeout=30)\n    control.settimeout(None)\n    control.set_inheritable(False)\n\n    def send(value):\n        control.sendall(json.dumps(value, separators=(',', ':')).encode() + b'\\n')\n\n    send({'role': 'broker', 'token': config['token']})\n    poller = select.poll()\n    poller.register(control, select.POLLIN)\n    wake_r, wake_w = os.pipe2(os.O_NONBLOCK | os.O_CLOEXEC)\n    poller.register(wake_r, select.POLLIN)\n    signal.set_wakeup_fd(wake_w)\n    stopping = False\n\n    def terminate(*_):\n        nonlocal stopping\n        stopping = True\n\n    signal.signal(signal.SIGTERM, terminate)\n    signal.signal(signal.SIGHUP, terminate)\n    signal.signal(signal.SIGCHLD, lambda *_: None)\n    terminals = {}\n    masters = {}\n    specs = {item['name']: item for item in config['startup']['terminals']}\n\n    def spawn(spec):\n        name = spec['name']\n        previous = terminals.get(name)\n        if previous is not None:\n            if previous['spec'] != spec:\n                raise ValueError('terminal name already belongs to another command; use a new name')\n            return {k: v for k, v in previous.items() if k not in ('spec', 'pending')}\n        if len(terminals) >= 128:\n            raise ValueError('terminal limit reached')\n        master, slave = os.openpty()\n        fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH', 30, 120, 0, 0))\n        pid = os.fork()\n        if pid == 0:\n            try:\n                signal.set_wakeup_fd(-1)\n                for sig in (signal.SIGCHLD, signal.SIGTERM, signal.SIGHUP, signal.SIGINT, signal.SIGQUIT, signal.SIGTSTP, signal.SIGTTIN, signal.SIGTTOU, signal.SIGPIPE):\n                    signal.signal(sig, signal.SIG_DFL)\n                os.setsid()\n                fcntl.ioctl(slave, termios.TIOCSCTTY, 0)\n                os.tcsetpgrp(slave, os.getpgrp())\n                for fd in (0, 1, 2):\n                    os.dup2(slave, fd)\n                control.close()\n                os.close(wake_r)\n                os.close(wake_w)\n                for fd in list(masters) + [master, slave]:\n                    if fd > 2:\n                        os.close(fd)\n                os.chdir(spec.get('cwd', '/'))\n                env = dict(os.environ)\n                env.setdefault('TERM', 'xterm-256color')\n                env.update(spec.get('environment', {}))\n                os.execve(spec['command'][0], spec['command'], env)\n            except BaseException as error:\n                os.write(2, ('kinakaze: ' + str(error) + '\\r\\n').encode())\n                os._exit(127)\n        os.close(slave)\n        os.set_blocking(master, False)\n        terminals[name] = {'name': name, 'pid': pid, 'ppid': os.getpid(), 'status': None, 'spec': spec, 'pending': bytearray()}\n        masters[master] = name\n        poller.register(master, select.POLLIN)\n        return {'name': name, 'pid': pid, 'ppid': os.getpid(), 'status': None}\n\n    def reap():\n        while True:\n            try:\n                pid, status = os.waitpid(-1, os.WNOHANG)\n            except ChildProcessError:\n                return\n            if not pid:\n                return\n            for item in terminals.values():\n                if item['pid'] == pid:\n                    item['status'] = os.waitstatus_to_exitcode(status)\n                    # Keep output readable until the PTY closes. Exit is a state\n                    # event, not permission for the host to consume guest wait().\n                    send({'event': 'exit', 'name': item['name'], 'status': item['status']})\n                    break\n\n    def resize(name, rows, cols):\n        fd = next(fd for fd, value in masters.items() if value == name)\n        fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', max(1, min(rows, 500)), max(1, min(cols, 500)), 0, 0))\n\n    def command(request):\n        nonlocal stopping\n        op = request['op']\n        if op == 'start':\n            spec = request.get('terminal') or specs[request['name']]\n            if not spec['command'][0].startswith('/') or not spec.get('cwd', '/root').startswith('/'):\n                raise ValueError('absolute executable and cwd required')\n            result = spawn(spec)\n            send({'event': 'terminal', **result})\n            return result\n        if op == 'input':\n            name = request['name']\n            data = bytes.fromhex(request['data'])\n            item = terminals[name]\n            if len(item['pending']) + len(data) > LIMIT:\n                raise ValueError('terminal input buffer full')\n            item['pending'].extend(data)\n            fd = next(fd for fd, value in masters.items() if value == name)\n            poller.modify(fd, select.POLLIN | select.POLLOUT)\n        elif op == 'resize':\n            resize(request['name'], int(request['rows']), int(request['cols']))\n        elif op == 'signal':\n            pid = int(request['pid'])\n            if pid <= 1 or pid == os.getpid():\n                raise ValueError('use shutdown to stop the process tree')\n            os.kill(pid, signal.SIGTERM)\n        elif op == 'processes':\n            result = []\n            for entry in os.listdir('/proc'):\n                if not entry.isdigit():\n                    continue\n                try:\n                    with open('/proc/' + entry + '/stat') as source:\n                        stat = source.read().rsplit(')', 1)[1].split()\n                    with open('/proc/' + entry + '/comm') as source:\n                        name = source.read().strip()\n                    result.append({'pid': int(entry), 'ppid': int(stat[1]), 'program': name})\n                except (OSError, ValueError, IndexError):\n                    pass\n            return result\n        elif op == 'shutdown':\n            shutdown = config['startup'].get('shutdown', [])\n            if shutdown:\n                pid = os.fork()\n                if pid == 0:\n                    os.execve(shutdown[0], shutdown, os.environ)\n                    os._exit(127)\n            elif os.getpid() == 1:\n                stopping = True\n            else:\n                os.kill(1, signal.SIGTERM)\n        else:\n            raise ValueError('unknown operation')\n        return {}\n\n    try:\n        script = config['startup'].get('script')\n        if script:\n            pid = os.fork()\n            if pid == 0:\n                os.execve(script[0], script, os.environ)\n                os._exit(127)\n            _, status = os.waitpid(pid, 0)\n            if status:\n                raise RuntimeError('startup script failed: ' + str(os.waitstatus_to_exitcode(status)))\n        for spec in specs.values():\n            if spec.get('autostart', True):\n                send({'event': 'terminal', **spawn(spec)})\n        send({'event': 'ready', 'pid': os.getpid(), 'ppid': os.getppid()})\n        incoming = bytearray()\n        while not stopping:\n            for fd, events in poller.poll():\n                if fd == wake_r:\n                    try:\n                        os.read(wake_r, 4096)\n                    except BlockingIOError:\n                        pass\n                    reap()\n                elif fd == control.fileno():\n                    data = control.recv(65536)\n                    if not data:\n                        stopping = True\n                        break\n                    incoming.extend(data)\n                    if len(incoming) > LIMIT:\n                        raise ValueError('oversized control frame')\n                    while b'\\n' in incoming:\n                        line, _, incoming = incoming.partition(b'\\n')\n                        request = json.loads(line)\n                        try:\n                            result = command(request)\n                            send({'id': request['id'], 'ok': result})\n                        except (OSError, ValueError, KeyError, StopIteration) as error:\n                            send({'id': request['id'], 'error': str(error)})\n                elif fd in masters:\n                    name = masters[fd]\n                    item = terminals[name]\n                    if events & select.POLLOUT and item['pending']:\n                        try:\n                            count = os.write(fd, item['pending'])\n                            del item['pending'][:count]\n                        except BlockingIOError:\n                            pass\n                        if not item['pending']:\n                            poller.modify(fd, select.POLLIN)\n                    if events & (select.POLLIN | select.POLLHUP | select.POLLERR):\n                        try:\n                            data = os.read(fd, 8192)\n                        except BlockingIOError:\n                            continue\n                        except OSError as error:\n                            if error.errno != errno.EIO:\n                                raise\n                            data = b''\n                        if data:\n                            send({'event': 'output', 'name': name, 'data': data.hex()})\n                        else:\n                            poller.unregister(fd)\n                            os.close(fd)\n                            del masters[fd]\n                            reap()\n                            send({'event': 'closed', 'name': name})\n            reap()\n    finally:\n        signal.set_wakeup_fd(-1)\n        for fd in masters:\n            os.close(fd)\n        # Includes adopted/double-forked descendants, not merely the original\n        # process group. No process belonging to another session is signaled.\n        def descendants():\n            parents = {}\n            for entry in os.listdir('/proc'):\n                if entry.isdigit():\n                    try:\n                        with open('/proc/' + entry + '/stat') as source:\n                            fields = source.read().rsplit(')', 1)[1].split()\n                        parents[int(entry)] = int(fields[1])\n                    except (OSError, ValueError, IndexError):\n                        pass\n            owned = {os.getpid()}\n            while True:\n                extended = owned | {pid for pid, parent in parents.items() if parent in owned}\n                if extended == owned:\n                    return owned - {os.getpid()}\n                owned = extended\n        for sig in (signal.SIGTERM, signal.SIGKILL):\n            for pid in descendants():\n                try:\n                    os.kill(pid, sig)\n                except ProcessLookupError:\n                    pass\n            deadline = time.monotonic() + 1\n            while time.monotonic() < deadline:\n                try:\n                    pid, _ = os.waitpid(-1, os.WNOHANG)\n                    if not pid:\n                        time.sleep(.02)\n                except ChildProcessError:\n                    break\n        control.close()\n\n\nif __name__ == '__main__':\n    main()\n"
+    },
+    {
+      "path": "lib/systemd/system/kinakaze-session.service",
+      "content": "[Unit]\nDescription=Kinakaze persistent terminal sessions\nDefaultDependencies=no\nConditionPathExists=/etc/kinakaze/session.json\nBefore=kinakaze.target\n\n[Service]\nType=simple\nExecStart=/usr/bin/python3 -u /usr/lib/kinakaze/session.py /etc/kinakaze/session.json\nKillMode=process\nTimeoutStopSec=5\nStandardOutput=append:/var/log/kinakaze-session.log\nStandardError=append:/var/log/kinakaze-session.log\n\n[Install]\nWantedBy=kinakaze.target\n"
     }
-  ]
+  ],
+  "startup": {
+    "command": [
+      "/usr/local/sbin/kinakaze-systemd"
+    ],
+    "script": null,
+    "shutdown": [
+      "/bin/systemctl",
+      "--no-block",
+      "exit"
+    ],
+    "session_config": "/etc/kinakaze/session.json",
+    "terminals": [
+      {
+        "name": "bash",
+        "command": [
+          "/bin/bash",
+          "-l"
+        ],
+        "cwd": "/root",
+        "environment": {
+          "TERM": "xterm-256color"
+        },
+        "autostart": true
+      }
+    ],
+    "default_terminal": "bash",
+    "tray": true,
+    "web": "127.0.0.1:0",
+    "shutdown_timeout_seconds": 3,
+    "environment": {
+      "HOME": "/root",
+      "USER": "root",
+      "LOGNAME": "root",
+      "SHELL": "/bin/bash",
+      "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+      "LANG": "C.UTF-8",
+      "TERM": "xterm-256color"
+    }
+  }
 }

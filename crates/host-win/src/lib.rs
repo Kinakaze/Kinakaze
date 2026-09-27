@@ -1,7 +1,10 @@
 //! Windows resources owned by the V2 runtime infrastructure.
 //!
-//! Native handles never cross the RPC or provider ABI. Every owning object
-//! releases its resource on drop, including partially completed operations.
+//! Native handles stay inside owning wrappers. Init's image-cache RPC is the
+//! explicit exception: it duplicates an authenticated peer's readable file and
+//! transfers only a read/execute section capability into that same process.
+//! Provider ABIs carry no native handles. Every owning wrapper releases its
+//! resource on drop, including partially completed operations.
 
 #![cfg(windows)]
 
@@ -12,6 +15,7 @@ mod memory;
 mod pipes;
 mod process;
 mod security;
+mod startup_gate;
 mod startup_profile;
 
 pub use diagnostics::{ProcessMetrics, process_metrics};
@@ -23,6 +27,7 @@ pub use process::{
     Job, ProcessHandle, background_creation_flags, inherited_process_priority,
     set_current_process_priority,
 };
+pub use startup_gate::StartupGate;
 pub use startup_profile::StartupSpan;
 
 use std::ffi::OsStr;

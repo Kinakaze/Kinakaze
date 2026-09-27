@@ -26,6 +26,11 @@ pub struct ForkReservation {
 pub struct ProcessAuthority {
     pub identity: fn() -> Result<Identity, i32>,
     pub memory_target: fn(u32, bool) -> Result<(u32, u64), i32>,
+    #[cfg(windows)]
+    pub image_snapshot: fn(
+        std::os::windows::io::BorrowedHandle<'_>,
+        usize,
+    ) -> Option<(std::os::windows::io::OwnedHandle, [u8; 32])>,
     pub prepare_fork: fn(Option<u32>) -> Result<ForkReservation, i32>,
     pub adopt_fork: fn(&ForkReservation) -> Result<(), i32>,
     pub mark_ready: fn() -> Result<(), i32>,

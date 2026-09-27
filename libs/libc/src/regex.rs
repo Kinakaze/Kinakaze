@@ -7,8 +7,8 @@ use core::ptr;
 // POSIX cflags
 pub const REG_EXTENDED: c_int = 1;
 pub const REG_ICASE: c_int = 2;
-pub const REG_NOSUB: c_int = 4;
-pub const REG_NEWLINE: c_int = 8;
+pub const REG_NEWLINE: c_int = 4;
+pub const REG_NOSUB: c_int = 8;
 
 // POSIX eflags
 pub const REG_NOTBOL: c_int = 1;
@@ -69,7 +69,8 @@ enum RegexAst {
     AnyChar,
     StartOfLine,
     EndOfLine,
-    CharClass(Box<[bool; 256]>),
+    CharClass(Box<[bool; 256]>, bool),
+    BackRef(usize),
     Concat(Vec<RegexAst>),
     Alt(Vec<RegexAst>),
     Repeat(Box<RegexAst>, usize, usize), // min, max (usize::MAX for unlimited)
@@ -81,6 +82,7 @@ struct CompiledPattern {
     num_groups: usize,
     icase: bool,
     newline: bool,
+    no_sub: bool,
 }
 
 struct Parser<'a> {
@@ -293,7 +295,13 @@ impl<'a> Parser<'a> {
             }
             b'\\' => {
                 let escaped = self.next().ok_or(REG_EESCAPE)?;
-                if !self.extended && escaped == b'(' {
+                if (b'1'..=b'9').contains(&escaped) {
+                    let index = (escaped - b'0') as usize;
+                    if index > self.group_counter {
+                        return Err(REG_ESUBREG);
+                    }
+                    Ok(RegexAst::BackRef(index))
+                } else if !self.extended && escaped == b'(' {
                     self.group_counter += 1;
                     let group_idx = self.group_counter;
                     let inner = self.parse_alt()?;
@@ -324,9 +332,11 @@ impl<'a> Parser<'a> {
         }
         let mut class = Box::new([false; 256]);
         let mut first = true;
+        let mut closed = false;
 
         while let Some(ch) = self.next() {
             if ch == b']' && !first {
+                closed = true;
                 break;
             }
             first = false;
@@ -388,7 +398,18 @@ impl<'a> Parser<'a> {
                             }
                         }
                     }
-                    _ => {}
+                    b"lower" | b"upper" | b"cntrl" | b"graph" | b"print" => {
+                        for b in 0..=127u8 {
+                            class[b as usize] |= match name.as_slice() {
+                                b"lower" => b.is_ascii_lowercase(),
+                                b"upper" => b.is_ascii_uppercase(),
+                                b"cntrl" => b.is_ascii_control(),
+                                b"graph" => b.is_ascii_graphic(),
+                                _ => b.is_ascii_graphic() || b == b' ',
+                            };
+                        }
+                    }
+                    _ => return Err(REG_ECTYPE),
                 }
                 continue;
             }
@@ -396,6 +417,9 @@ impl<'a> Parser<'a> {
             if self.peek() == Some(b'-') && self.chars.get(self.pos + 1) != Some(&b']') {
                 self.next(); // skip '-'
                 let end = self.next().ok_or(REG_EBRACK)?;
+                if ch > end {
+                    return Err(REG_ERANGE);
+                }
                 for b in ch..=end {
                     class[b as usize] = true;
                 }
@@ -404,12 +428,10 @@ impl<'a> Parser<'a> {
             }
         }
 
-        if invert {
-            for b in 0..=255 {
-                class[b] = !class[b];
-            }
+        if !closed {
+            return Err(REG_EBRACK);
         }
-        Ok(RegexAst::CharClass(class))
+        Ok(RegexAst::CharClass(class, invert))
     }
 }
 
@@ -421,13 +443,91 @@ impl CompiledPattern {
         start_pos: usize,
         eflags: c_int,
     ) -> Option<Vec<(isize, isize)>> {
-        let mut captures = vec![(-1isize, -1isize); self.num_groups + 1];
-        if let Some(end) = self.match_step(&self.ast, text, start_pos, eflags, &mut captures) {
-            captures[0] = (start_pos as isize, end as isize);
-            Some(captures)
-        } else {
-            None
-        }
+        let captures = vec![(-1isize, -1isize); self.num_groups + 1];
+        let (end, mut captures) = self
+            .match_candidates(&self.ast, text, start_pos, eflags, &captures)
+            .into_iter()
+            .max_by(|a, b| a.0.cmp(&b.0).then_with(|| capture_order(&a.1, &b.1)))?;
+        captures[0] = (start_pos as isize, end as isize);
+        Some(captures)
+    }
+
+    /// Retain every viable endpoint until its continuation has matched. A
+    /// greedy repetition cannot commit before the following expression runs.
+    /// Iterating repetition levels also avoids one stack frame per input byte.
+    fn match_candidates(
+        &self,
+        node: &RegexAst,
+        text: &[u8],
+        pos: usize,
+        eflags: c_int,
+        captures: &[(isize, isize)],
+    ) -> Vec<(usize, Vec<(isize, isize)>)> {
+        let mut result = match node {
+            RegexAst::Concat(nodes) => {
+                let mut states = vec![(pos, captures.to_vec())];
+                for node in nodes {
+                    states = states
+                        .into_iter()
+                        .flat_map(|(at, caps)| self.match_candidates(node, text, at, eflags, &caps))
+                        .collect();
+                    dedup_matches(&mut states);
+                    if states.is_empty() {
+                        break;
+                    }
+                }
+                states
+            }
+            RegexAst::Alt(branches) => branches
+                .iter()
+                .flat_map(|branch| self.match_candidates(branch, text, pos, eflags, captures))
+                .collect(),
+            RegexAst::Group(index, inner) => {
+                let mut states = self.match_candidates(inner, text, pos, eflags, captures);
+                for (end, caps) in &mut states {
+                    caps[*index] = (pos as isize, *end as isize);
+                }
+                states
+            }
+            RegexAst::Repeat(inner, min, max) => {
+                let mut accepted = Vec::new();
+                let mut level = vec![(pos, captures.to_vec())];
+                if *min == 0 {
+                    accepted.extend(level.iter().cloned());
+                }
+                // Every continuing iteration must consume a byte. Empty
+                // matches can pad the minimum without changing input/captures.
+                for count in 1..=(*max).min(text.len() - pos + 1) {
+                    let mut next = Vec::new();
+                    for (at, caps) in level {
+                        for state in self.match_candidates(inner, text, at, eflags, &caps) {
+                            if state.0 == at {
+                                accepted.push(state);
+                            } else {
+                                if count >= *min {
+                                    accepted.push(state.clone());
+                                }
+                                next.push(state);
+                            }
+                        }
+                    }
+                    dedup_matches(&mut next);
+                    if next.is_empty() {
+                        break;
+                    }
+                    level = next;
+                }
+                accepted
+            }
+            _ => {
+                let mut caps = captures.to_vec();
+                self.match_step(node, text, pos, eflags, &mut caps)
+                    .map(|end| vec![(end, caps)])
+                    .unwrap_or_default()
+            }
+        };
+        dedup_matches(&mut result);
+        result
     }
 
     fn match_step(
@@ -464,7 +564,7 @@ impl CompiledPattern {
                     } else {
                         None
                     }
-                } else if text.get(pos - 1) == Some(&b'\n') {
+                } else if self.newline && text.get(pos - 1) == Some(&b'\n') {
                     Some(pos)
                 } else {
                     None
@@ -477,95 +577,64 @@ impl CompiledPattern {
                     } else {
                         None
                     }
-                } else if text.get(pos) == Some(&b'\n') {
+                } else if self.newline && text.get(pos) == Some(&b'\n') {
                     Some(pos)
                 } else {
                     None
                 }
             }
-            RegexAst::CharClass(class) => {
+            RegexAst::BackRef(index) => {
+                let &(start, end) = captures.get(*index)?;
+                if start < 0 || end < start {
+                    return None;
+                }
+                let captured = text.get(start as usize..end as usize)?;
+                let candidate = text.get(pos..pos.checked_add(captured.len())?)?;
+                let matched = if self.icase {
+                    captured.eq_ignore_ascii_case(candidate)
+                } else {
+                    captured == candidate
+                };
+                matched.then_some(pos + captured.len())
+            }
+            RegexAst::CharClass(class, inverted) => {
                 let ch = text.get(pos).copied()?;
+                if *inverted && self.newline && ch == b'\n' {
+                    return None;
+                }
                 let matches = if self.icase {
                     class[ch.to_ascii_lowercase() as usize]
                         || class[ch.to_ascii_uppercase() as usize]
                 } else {
                     class[ch as usize]
                 };
-                if matches { Some(pos + 1) } else { None }
-            }
-            RegexAst::Concat(nodes) => {
-                let mut cur = pos;
-                for n in nodes {
-                    cur = self.match_step(n, text, cur, eflags, captures)?;
+                if matches != *inverted {
+                    Some(pos + 1)
+                } else {
+                    None
                 }
-                Some(cur)
             }
-            RegexAst::Alt(branches) => {
-                for b in branches {
-                    let mut saved = captures.to_vec();
-                    if let Some(end) = self.match_step(b, text, pos, eflags, &mut saved) {
-                        captures.copy_from_slice(&saved);
-                        return Some(end);
-                    }
-                }
-                None
-            }
-            RegexAst::Group(idx, inner) => {
-                let start = pos as isize;
-                let end = self.match_step(inner, text, pos, eflags, captures)?;
-                if *idx < captures.len() {
-                    captures[*idx] = (start, end as isize);
-                }
-                Some(end)
-            }
-            RegexAst::Repeat(inner, min, max) => {
-                self.match_repeat(inner, *min, *max, text, pos, eflags, captures)
-            }
+            _ => unreachable!("compound expressions use match_candidates"),
         }
     }
+}
 
-    fn match_repeat(
-        &self,
-        inner: &RegexAst,
-        min: usize,
-        max: usize,
-        text: &[u8],
-        pos: usize,
-        eflags: c_int,
-        captures: &mut [(isize, isize)],
-    ) -> Option<usize> {
-        let mut matches = Vec::new();
-        let mut cur = pos;
-        let mut count = 0;
+fn dedup_matches(states: &mut Vec<(usize, Vec<(isize, isize)>)>) {
+    states.sort_unstable();
+    states.dedup();
+}
 
-        while count < max {
-            let mut snap = captures.to_vec();
-            if let Some(next_pos) = self.match_step(inner, text, cur, eflags, &mut snap) {
-                if next_pos == cur {
-                    // Empty match, avoid infinite loop
-                    break;
-                }
-                matches.push((cur, next_pos, snap));
-                cur = next_pos;
-                count += 1;
-            } else {
-                break;
-            }
-        }
-
-        if count < min {
-            return None;
-        }
-
-        // Repetition alone chooses the longest match. Sequence matching owns
-        // any subsequent backtracking; this branch has no continuation to try.
-        if let Some((_, end_pos, snap)) = matches.last() {
-            captures.copy_from_slice(snap);
-            Some(*end_pos)
-        } else {
-            Some(pos)
+fn capture_order(left: &[(isize, isize)], right: &[(isize, isize)]) -> core::cmp::Ordering {
+    for (&(ls, le), &(rs, re)) in left.iter().zip(right).skip(1) {
+        let order = (ls >= 0)
+            .cmp(&(rs >= 0))
+            .then_with(|| (le - ls).cmp(&(re - rs)))
+            .then_with(|| rs.cmp(&ls));
+        if !order.is_eq() {
+            return order;
         }
     }
+    core::cmp::Ordering::Equal
 }
 
 /// POSIX `regcomp(3)`.
@@ -595,6 +664,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_regcomp(
         num_groups: parser.group_counter,
         icase,
         newline,
+        no_sub: cflags & REG_NOSUB != 0,
     });
 
     unsafe {
@@ -626,7 +696,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_regexec(
     for start in 0..=bytes.len() {
         if let Some(mut caps) = compiled.match_at(bytes, start, eflags) {
             caps[0].0 = start as isize;
-            if !pmatch.is_null() && nmatch > 0 {
+            if !compiled.no_sub && !pmatch.is_null() && nmatch > 0 {
                 for i in 0..nmatch {
                     if i < caps.len() {
                         let (s, e) = caps[i];
@@ -726,6 +796,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_re_compile_pattern(
         num_groups: parser.group_counter,
         icase: syntax & (1 << 22) != 0,  // RE_ICASE
         newline: syntax & (1 << 6) == 0, // !RE_DOT_NEWLINE
+        no_sub: syntax & (1 << 25) != 0, // RE_NO_SUB
     });
 
     unsafe {
@@ -748,22 +819,28 @@ pub unsafe extern "sysv64" fn kinakaze_abi_re_search(
     range: c_int,
     regs: *mut re_registers,
 ) -> c_int {
-    if buffer.is_null() || string.is_null() || unsafe { (*buffer).buffer.is_null() } {
+    if buffer.is_null()
+        || string.is_null()
+        || unsafe { (*buffer).buffer.is_null() }
+        || length < 0
+        || start < 0
+        || start > length
+    {
         return -1;
     }
     let compiled = unsafe { &*((*buffer).buffer as *const CompiledPattern) };
     let full_bytes =
         unsafe { core::slice::from_raw_parts(string as *const u8, length.max(0) as usize) };
 
-    let start_idx = start.max(0) as usize;
-    let end_idx = (start + range).max(0) as usize;
-    let (search_from, search_to) = if start_idx <= end_idx {
-        (start_idx, end_idx.min(full_bytes.len()))
+    let start_idx = start as usize;
+    let end_idx = (i64::from(start) + i64::from(range)).clamp(0, i64::from(length)) as usize;
+    let positions: Box<dyn Iterator<Item = usize>> = if range >= 0 {
+        Box::new(start_idx..=end_idx)
     } else {
-        (end_idx, start_idx.min(full_bytes.len()))
+        Box::new((end_idx..=start_idx).rev())
     };
 
-    for pos in search_from..=search_to {
+    for pos in positions {
         if let Some(caps) = compiled.match_at(full_bytes, pos, 0) {
             if !regs.is_null() {
                 let num_regs = (compiled.num_groups + 1).max(1);
@@ -845,7 +922,15 @@ pub unsafe extern "sysv64" fn kinakaze_abi_re_match(
     start: c_int,
     regs: *mut re_registers,
 ) -> c_int {
-    unsafe { kinakaze_abi_re_search(buffer, string, length, start, 0, regs) }
+    let found = unsafe { kinakaze_abi_re_search(buffer, string, length, start, 0, regs) };
+    if found < 0 {
+        return found;
+    }
+    let compiled = unsafe { &*((*buffer).buffer as *const CompiledPattern) };
+    let bytes = unsafe { core::slice::from_raw_parts(string.cast::<u8>(), length as usize) };
+    compiled
+        .match_at(bytes, start as usize, 0)
+        .map_or(-1, |caps| (caps[0].1 - caps[0].0) as c_int)
 }
 
 #[unsafe(no_mangle)]
@@ -950,3 +1035,6 @@ pub unsafe extern "sysv64" fn re_search(
 ) -> c_int {
     unsafe { kinakaze_abi_re_search(buffer, string, length, start, range, regs) }
 }
+
+#[cfg(test)]
+mod tests;

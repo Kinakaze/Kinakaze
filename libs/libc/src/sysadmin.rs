@@ -834,6 +834,8 @@ pub const PR_SET_NAME: c_int = 15;
 pub const PR_GET_NAME: c_int = 16;
 pub const PR_CAPBSET_READ: c_int = 23;
 pub const PR_CAPBSET_DROP: c_int = 24;
+pub const PR_GET_SECUREBITS: c_int = 27;
+pub const PR_SET_SECUREBITS: c_int = 28;
 pub const PR_SET_TIMERSLACK: c_int = 29;
 pub const PR_GET_TIMERSLACK: c_int = 30;
 pub const PR_SET_CHILD_SUBREAPER: c_int = 36;
@@ -1009,6 +1011,24 @@ pub unsafe extern "sysv64" fn kinakaze_abi_prctl(
             }
         }
         PR_CAPBSET_DROP => 0,
+        PR_GET_SECUREBITS => 0,
+        PR_SET_SECUREBITS => {
+            // The default policy is supported. Do not accept restrictions
+            // whose UID/exec capability semantics the runtime cannot enforce.
+            if !kinakaze_vfs::user_namespace::current_capable(8) {
+                crate::set_errno(EPERM);
+                -1
+            } else if argument2 == 0 {
+                0
+            } else {
+                crate::set_errno(if argument2 & !0xff != 0 {
+                    EINVAL
+                } else {
+                    kinakaze_vfs::EOPNOTSUPP
+                });
+                -1
+            }
+        }
         PR_SET_KEEPCAPS => 0,
         PR_GET_KEEPCAPS => 0,
         PR_CAP_AMBIENT => 0,
@@ -4568,12 +4588,32 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
             to_kernel(res as i64)
         }
         SYS_EPOLL_PWAIT | SYS_EPOLL_PWAIT2 => {
+            let timeout_ms = if number == SYS_EPOLL_PWAIT2 {
+                if argument4 == 0 {
+                    -1
+                } else {
+                    let address = argument4 as usize;
+                    if let Err(error) = futex_access(address, size_of::<KernelTimespec>(), false) {
+                        return error;
+                    }
+                    let timeout = unsafe { (address as *const KernelTimespec).read_unaligned() };
+                    match timespec_ns(&timeout) {
+                        Ok(ns) => ns.div_ceil(1_000_000).min(c_int::MAX as u128) as c_int,
+                        Err(error) => return error,
+                    }
+                }
+            } else {
+                argument4 as c_int
+            };
+            if argument5 != 0 && argument6 != 8 {
+                return -i64::from(EINVAL);
+            }
             let res = unsafe {
                 crate::net::kinakaze_abi_epoll_pwait(
                     argument1 as c_int,
                     argument2 as *mut kinakaze_vfs::epoll::EpollEvent,
                     argument3 as c_int,
-                    argument4 as c_int,
+                    timeout_ms,
                     argument5 as *const c_void,
                 )
             };
@@ -4806,10 +4846,11 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
         }
         SYS_SIGNALFD => {
             let res = unsafe {
-                crate::fdio::kinakaze_abi_signalfd(
+                crate::fdio::kinakaze_abi_signalfd4(
                     argument1 as c_int,
                     argument2 as *const c_void,
-                    argument3 as c_int,
+                    argument3 as usize,
+                    0,
                 )
             };
             to_kernel(res as i64)
@@ -5216,8 +5257,26 @@ fn clone_dispatch(
     {
         return -i64::from(EINVAL);
     }
-    if flags == (CLONE_VM | 0x4000 | 17) && stack == 0 {
-        return to_kernel(unsafe { crate::exec::kinakaze_abi_vfork() } as i64);
+    if flags == (CLONE_VM | 0x4000 | 17) {
+        // musl posix_spawn uses vfork with a separate child stack. Keep the
+        // provider's return frames on their private stack and let the raw
+        // syscall trampoline restore the requested guest RSP in the child.
+        let instruction = if stack != 0 {
+            match kinakaze_tls::thread_pointer::active_guest_signal_context() {
+                Some((_, instruction)) => instruction,
+                None => return -i64::from(EINVAL),
+            }
+        } else {
+            0
+        };
+        let result = unsafe { crate::exec::kinakaze_abi_vfork() };
+        if result == 0
+            && stack != 0
+            && !kinakaze_tls::thread_pointer::update_active_guest_signal_context(stack, instruction)
+        {
+            crate::process::terminate_host_process(127);
+        }
+        return to_kernel(i64::from(result));
     }
     if flags == 17 && stack == 0 {
         return to_kernel(crate::kinakaze_abi_fork() as i64);
@@ -5453,6 +5512,62 @@ mod mount_tests;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn epoll_pwait2_uses_timespec_and_blocks_for_null_timeout() {
+        use kinakaze_vfs::{epoll, eventfd};
+        use std::time::{Duration, Instant};
+
+        let set = epoll::epoll_create1(0).unwrap();
+        let counter = eventfd::create_eventfd(0, 0).unwrap();
+        epoll::epoll_ctl(
+            set,
+            epoll::EPOLL_CTL_ADD,
+            counter,
+            Some(epoll::EpollEvent {
+                events: epoll::EPOLLIN,
+                data: 73,
+            }),
+        )
+        .unwrap();
+        let mut event = epoll::EpollEvent { events: 0, data: 0 };
+        let mut wait = |timeout: u64| unsafe {
+            kinakaze_abi_syscall_raw(
+                SYS_EPOLL_PWAIT2,
+                set as u64,
+                (&raw mut event) as u64,
+                1,
+                timeout,
+                0,
+                8,
+            )
+        };
+        let timeout = KernelTimespec {
+            tv_sec: 0,
+            tv_nsec: 20_000_001,
+        };
+        let start = Instant::now();
+        assert_eq!(wait((&raw const timeout) as u64), 0);
+        assert!(start.elapsed() >= Duration::from_millis(20));
+        let invalid = KernelTimespec {
+            tv_sec: 0,
+            tv_nsec: 1_000_000_000,
+        };
+        assert_eq!(wait((&raw const invalid) as u64), -i64::from(EINVAL));
+        assert_eq!(wait(1), -i64::from(EFAULT));
+
+        let writer = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(30));
+            eventfd::write_eventfd(counter, &1u64.to_ne_bytes(), false).unwrap();
+        });
+        let start = Instant::now();
+        assert_eq!(wait(0), 1);
+        assert!(start.elapsed() >= Duration::from_millis(20));
+        writer.join().unwrap();
+        assert_eq!({ event.data }, 73);
+        kinakaze_vfs::close(counter).unwrap();
+        kinakaze_vfs::close(set).unwrap();
+    }
 
     #[test]
     fn raw_process_group_syscalls_report_linux_errno() {

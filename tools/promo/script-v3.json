@@ -1,0 +1,23 @@
+{
+ "title":"给 Windows 上的 Agent，接上 Linux 工具｜Kinakaze",
+ "style":"精致清透日系发布会；3D 生长、连续运镜、2D 信息动画；A 声线；踩点；无倒数、无吐槽、无人物",
+ "segments":[
+  {"id":"01","scene":"seed","start":0,"duration":6.85,"text":"你的 Agent，想调用一个 Linux 工具。","speak":"你的诶减特，想调用一个里纳克斯工具。","hold":0},
+  {"id":"02","scene":"routes","start":6.85,"duration":9.6,"text":"完整环境，远程连接，或是另一套工具路线。","speak":"完整环境，远程连接，或是另一套工具路线。","hold":0},
+  {"id":"03","scene":"growth","start":16.45,"duration":6.86,"text":"从环境维护，到路径切换。还有一条，更贴近本机的路。","speak":"从环境维护，到路径切换。还有一条，更贴近本机的路。","hold":0},
+  {"id":"04","scene":"hero","start":23.31,"duration":5.49,"text":"Kinakaze。让 Linux 程序，走进 Windows 用户态。","speak":"基纳卡泽。让里纳克斯程序，走进温豆斯用户态。","hold":0},
+  {"id":"05","scene":"agent","start":28.8,"duration":6.86,"text":"把命令行入口，接进 Agent 的工具调用。","speak":"把命令行入口，接进诶减特的工具调用。","hold":0},
+  {"id":"06","scene":"roundtrip","start":35.66,"duration":8.23,"text":"下发命令，拿回输出和退出码。目录里的文件，处理后直接读回。","speak":"下发命令，拿回输出和退出码。目录里的文件，处理后直接读回。","hold":0},
+  {"id":"07","scene":"vi","start":43.89,"duration":5.48,"text":"从 Vi 开始，写下一行。","speak":"从微艾开始，写下一行。","hold":0},
+  {"id":"08","scene":"vim","start":49.37,"duration":5.49,"text":"到 Vim，编辑、保存，操作照常。","speak":"到维姆，编辑，保存，操作照常。","hold":0},
+  {"id":"09","scene":"ssh","start":54.86,"duration":6.85,"text":"SSH 连进来，Linux 服务，响应你的下一条命令。","speak":"远程连接进来，里纳克斯服务，响应你的下一条命令。","hold":0},
+  {"id":"10","scene":"portal","start":61.71,"duration":5.49,"text":"你以为，只能做到命令行？","speak":"你以为，只能做到命令行？","hold":0},
+  {"id":"11","scene":"gnome","start":67.2,"duration":10.97,"text":"把视野打开。GNOME，真的亮起来了。","speak":"把视野打开。诺姆，真的亮起来了。","hold":0},
+  {"id":"12","scene":"java","start":78.17,"duration":10.97,"text":"再把工作交给 Linux 版 Java。即时编译，线程、文件，还有子进程。","speak":"再把工作交给里纳克斯版加瓦。即时编译，线程，文件，还有子进程。","hold":0},
+  {"id":"13","scene":"voxels","start":89.14,"duration":5.49,"text":"下一次打开的，会不会，是你熟悉的世界？","speak":"下一次打开的，会不会，是你熟悉的世界？","hold":0},
+  {"id":"14","scene":"minecraft","start":94.63,"duration":9.6,"text":"Minecraft。Linux 客户端，主菜单和按钮已经可以响应。","speak":"我的世界。里纳克斯客户端，主菜单和按钮已经可以响应。","hold":0},
+  {"id":"15","scene":"minecraft","start":104.23,"duration":6.86,"text":"世界内游玩，还在推进。更多兼容性，一起向前。","speak":"世界内游玩，还在推进。更多兼容性，一起向前。","hold":0},
+  {"id":"16","scene":"constellation","start":111.09,"duration":8.22,"text":"无需管理员权限，无需自定义驱动。给你的 Agent，多一条 Linux 执行路径。","speak":"无需管理员权限，无需自定义驱动。给你的诶减特，多一条里纳克斯执行路径。","hold":0},
+  {"id":"17","scene":"end","start":119.31,"duration":8.59,"text":"Kinakaze。已经开源，来试试看。","speak":"基纳卡泽。已经开源，来试试看。","hold":0}
+ ]
+}

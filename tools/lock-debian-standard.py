@@ -34,7 +34,7 @@ def main():
     parser.add_argument('--dist', type=Path, required=True)
     parser.add_argument('--root', type=Path, required=True)
     parser.add_argument('--output', type=Path, default=ROOT / 'config/debian-standard.lock.json')
-    parser.add_argument('--extra', action='append', default=['busybox', 'curl', 'zip', 'unzip', 'tree'])
+    parser.add_argument('--extra', action='append', default=['busybox', 'curl', 'zip', 'unzip', 'tree', 'openssh-server'])
     args = parser.parse_args()
     root, dist = args.root.resolve(), args.dist.resolve()
     command = [str(dist / 'worker.exe'), '--root', str(root), '--dist', str(dist), '--']

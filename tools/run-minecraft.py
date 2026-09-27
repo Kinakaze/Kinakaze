@@ -1,7 +1,8 @@
 """Launch installed Minecraft Java client metadata with the Linux V2 runtime.
 
-Uses a separate game directory and official demo mode by default. No account
-credentials or existing worlds are read. Libraries must match Mojang metadata.
+Uses a separate game directory and a local offline identity by default. Pass
+--demo for the official demo mode. No account credentials are read. Libraries
+must match Mojang metadata.
 """
 import argparse
 import hashlib
@@ -48,7 +49,7 @@ def command(args):
     game = root / 'minecraft'
     version_dir = game / 'versions' / args.version
     metadata = json.loads((version_dir / f'{args.version}.json').read_text(encoding='utf-8'))
-    features = {'is_demo_user': True, 'has_custom_resolution': True}
+    features = {'is_demo_user': args.demo, 'has_custom_resolution': True}
     classpath = []
     for library in metadata['libraries']:
         if not allowed(library.get('rules'), features):
@@ -63,12 +64,13 @@ def command(args):
     if hashlib.sha1(client.read_bytes()).hexdigest() != metadata['downloads']['client']['sha1']:
         raise ValueError(f'client checksum mismatch: {client}')
     classpath.append(f'/minecraft/versions/{args.version}/{args.version}.jar')
-    game_directory = '/minecraft/v2-demo'
+    game_directory = '/minecraft/v2-demo' if args.demo else '/minecraft/v2-game'
     for path in (game_directory, '/minecraft/v2-natives/java', '/minecraft/v2-natives/jna',
                  '/minecraft/v2-natives/lwjgl', '/minecraft/v2-natives/netty'):
         (root / path.lstrip('/')).mkdir(parents=True, exist_ok=True)
     variables = {
-        'auth_player_name': 'KinakazeDemo', 'auth_uuid': '00000000000000000000000000000000',
+        'auth_player_name': 'KinakazeDemo' if args.demo else 'KinakazePlayer',
+        'auth_uuid': '00000000000000000000000000000000',
         'auth_access_token': '0', 'clientid': '', 'auth_xuid': '',
         'version_name': args.version, 'version_type': metadata.get('type', 'release'),
         'game_directory': game_directory, 'assets_root': '/minecraft/assets',
@@ -94,6 +96,12 @@ def main():
     parser.add_argument('--memory', default='2G')
     parser.add_argument('--width', type=int, default=960)
     parser.add_argument('--height', type=int, default=600)
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--full', dest='demo', action='store_false',
+                      help='full local game mode (default); no online account login')
+    mode.add_argument('--demo', dest='demo', action='store_true',
+                      help='official demo mode in a separate game directory')
+    parser.set_defaults(demo=False)
     parser.add_argument('--print-command', action='store_true')
     args = parser.parse_args()
     args.version = args.version or minecraft_version(args.root)

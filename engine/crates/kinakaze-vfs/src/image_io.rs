@@ -11,6 +11,9 @@ use std::fs::File;
 use std::io::{self, Read, Seek, SeekFrom};
 use std::path::Path;
 
+#[cfg(windows)]
+pub(crate) mod parallel;
+
 /// An executable reader must obey the same integrity and logical-EOF boundary
 /// as guest read(2). Keeping the native file private prevents magic probes or
 /// dependency loading from accidentally exposing the hidden Merkle tail.
@@ -32,8 +35,26 @@ impl GuestImage {
     pub fn snapshot(mut self) -> io::Result<kinakaze_runtime::immutable::ImmutableBytes> {
         let len = usize::try_from(self.logical_length()?)
             .map_err(|_| io::Error::new(io::ErrorKind::OutOfMemory, "image too large"))?;
+        #[cfg(windows)]
+        if len >= 8 * 1024 * 1024
+            && let Some(bytes) = crate::fs::verity::cached_image_object(&self.file, len)
+        {
+            return Ok(bytes);
+        }
         self.seek(SeekFrom::Start(0))?;
         kinakaze_runtime::immutable::ImmutableBytes::initialize_executable(len, |bytes| {
+            #[cfg(windows)]
+            {
+                // The reader retains the inode/verity lock across all chunks;
+                // the immutable initializer retains the fork mapping lock.
+                loop {
+                    match crate::fs::verity::read_image_object(&self.file, bytes) {
+                        Err(crate::EINTR) => continue,
+                        result => return result.map_err(integrity_error),
+                    }
+                }
+            }
+            #[cfg(not(windows))]
             self.read_exact(bytes)
         })
     }
@@ -251,6 +272,71 @@ mod tests {
         std::fs::remove_file(&moved).unwrap();
         std::fs::remove_file(&path).unwrap();
         assert_eq!(snapshot.as_slice(), original);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn parallel_snapshot_preserves_all_chunks_of_an_unlinked_open_inode() {
+        let path = temporary_image("parallel-unlink");
+        let moved = path.with_extension("old");
+        let original: Vec<_> = (0usize..16 * 1024 * 1024 + 37)
+            .map(|i| (i ^ (i >> 8) ^ (i >> 16)) as u8)
+            .collect();
+        std::fs::write(&path, &original).unwrap();
+        let image = open_guest_image(&path).unwrap();
+        std::fs::rename(&path, &moved).unwrap();
+        std::fs::remove_file(&moved).unwrap();
+        std::fs::write(&path, b"replacement inode").unwrap();
+        let snapshot = image.snapshot().unwrap();
+        assert_eq!(snapshot.as_slice(), original);
+        std::fs::remove_file(path).unwrap();
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn parallel_read_rejects_short_input_without_publishing_zero_tail() {
+        let path = temporary_image("parallel-short");
+        std::fs::write(&path, b"short file").unwrap();
+        let image = open_guest_image(&path).unwrap();
+        let mut bytes = vec![0xcc; 16 * 1024 * 1024 + 37];
+        assert_eq!(
+            crate::fs::verity::read_image_object(&image.file, &mut bytes),
+            Err(crate::EIO)
+        );
+        if std::thread::available_parallelism().unwrap().get() > 1 {
+            assert_eq!(
+                parallel::read(&image.file, &mut bytes),
+                Some(Err(crate::EIO))
+            );
+        }
+        drop(image);
+        std::fs::remove_file(path).unwrap();
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn parallel_sized_snapshot_still_verifies_every_verity_block() {
+        use std::io::Write;
+        use std::os::windows::fs::OpenOptionsExt;
+        let path = temporary_image("parallel-verity");
+        let data = vec![0x5b; 16 * 1024 * 1024 + 37];
+        std::fs::write(&path, &data).unwrap();
+        let fd = crate::fs::open(&crate::to_guest_path(&path), crate::fs::O_RDONLY, 0).unwrap();
+        crate::fs::verity::enable(fd, 1, 4096, b"large image").unwrap();
+        crate::close(fd).unwrap();
+        assert!(std::fs::metadata(&path).unwrap().len() > data.len() as u64);
+        assert_eq!(snapshot_guest_image(&path).unwrap().as_slice(), data);
+        let mut native = std::fs::OpenOptions::new()
+            .write(true)
+            .share_mode(7)
+            .open(&path)
+            .unwrap();
+        native.seek(SeekFrom::Start(12 * 1024 * 1024 + 17)).unwrap();
+        native.write_all(b"corruption").unwrap();
+        native.sync_all().unwrap();
+        drop(native);
+        assert!(snapshot_guest_image(&path).is_err());
+        std::fs::remove_file(path).unwrap();
     }
 
     #[cfg(windows)]

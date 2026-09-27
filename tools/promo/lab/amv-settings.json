@@ -1,0 +1,15 @@
+{
+  "width": 2560,
+  "height": 1440,
+  "fps": 60,
+  "frames": 3226,
+  "designWidth": 1920,
+  "designHeight": 1080,
+  "filename": "kinakaze-amv-v4-2k.mp4",
+  "stillsDirectory": "stills-v4",
+  "reportSuffix": "v4",
+  "closeArt": "close-hq.png",
+  "minecraftClip": "minecraft-hd.mp4",
+  "crf": 15,
+  "captureFormat": "png"
+}

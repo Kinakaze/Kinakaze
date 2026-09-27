@@ -109,6 +109,9 @@ EXPORTS
   "pthread_attr_setschedpolicy@GLIBC_2.2.5"=pthread_attr_setschedpolicy PRIVATE
   "pthread_attr_setscope"=libc.so.6.kinakaze_abi_pthread_attr_setscope PRIVATE
   "pthread_attr_setscope@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_pthread_attr_setscope PRIVATE
+  pthread_attr_setstack
+  "pthread_attr_setstack"=pthread_attr_setstack
+  "pthread_attr_setstack@GLIBC_2.2.5"=pthread_attr_setstack PRIVATE
   pthread_attr_setstacksize
   "pthread_attr_setstacksize"=pthread_attr_setstacksize
   "pthread_attr_setstacksize@GLIBC_2.2.5"=pthread_attr_setstacksize PRIVATE

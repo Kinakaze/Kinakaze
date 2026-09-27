@@ -3,6 +3,7 @@ import argparse
 from pathlib import Path
 import subprocess
 import uuid
+from gnome_ibus import LIBRARY as GNOME_LIBRARY, prepare_ibus_override
 
 
 def prepare_service_accounts(root):
@@ -38,11 +39,19 @@ def prepare_service_accounts(root):
 
 
 def prepare_session_defaults(root, timezone=None):
+    # ICU searches for a matching zone when a desktop-only root has tzdata but
+    # no system configuration, blocking GNOME's first local Date conversion.
+    # Match the base root's UTC default, preserving an existing localtime file.
+    configured_zone = root / 'etc/timezone'
+    if timezone is None and not (root / 'etc/localtime').exists():
+        timezone = ((configured_zone.read_text(encoding='utf-8').strip() or 'Etc/UTC')
+                    if configured_zone.is_file() else 'Etc/UTC')
     if timezone:
         zones = (root / 'usr/share/zoneinfo').resolve()
         source = (zones / timezone).resolve()
         if not source.is_relative_to(zones) or not source.is_file():
             raise ValueError('Unknown installed timezone: ' + timezone)
+        timezone = source.relative_to(zones).as_posix()
         (root / 'etc/localtime').write_bytes(source.read_bytes())
         (root / 'etc/timezone').write_text(timezone + '\n', encoding='utf-8', newline='\n')
     if (root / 'bin/bash').is_file():
@@ -92,19 +101,23 @@ def prepare(dist, root=None, timezone=None):
     prepare_service_accounts(root)
     prepare_session_defaults(root, timezone)
 
-    def run(program, *args):
+    def run(program, *args, **kwargs):
         if not (root / program.lstrip('/')).is_file():
             raise FileNotFoundError(program)
         print('Preparing:', program, *args, flush=True)
-        subprocess.run([str(worker), 'run', '--root', str(root), '--dist', str(dist),
-                        '--', program, *args], check=True, timeout=90,
-                       creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+        return subprocess.run([str(worker), 'run', '--root', str(root), '--dist', str(dist),
+                        '--', program, *args], check=kwargs.pop('check', True), timeout=90,
+                       creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0), **kwargs)
 
     schemas = root / 'usr/share/glib-2.0/schemas'
     if schemas.is_dir() and any(schemas.glob('*.gschema.xml')):
         run('/usr/bin/glib-compile-schemas', '--strict', '/usr/share/glib-2.0/schemas')
     for library in sorted((root / 'usr/lib').glob('*/gdk-pixbuf-2.0')):
         run('/' + (library / 'gdk-pixbuf-query-loaders').relative_to(root).as_posix(), '--update-cache')
+    # Pixbuf's loader cache does not index icon themes. GTK otherwise walks the
+    # theme directories in each new desktop/application process.
+    for theme in sorted((root / 'usr/share/icons').glob('*/index.theme')):
+        run('/usr/bin/gtk-update-icon-cache', '/' + theme.parent.relative_to(root).as_posix())
     for modules in sorted((root / 'usr/lib').glob('*/gio/modules')):
         if any(modules.glob('*.so')):
             run('/usr/bin/gio-querymodules', '/' + modules.relative_to(root).as_posix())
@@ -118,6 +131,12 @@ def prepare(dist, root=None, timezone=None):
         run('/usr/bin/ibus', 'write-cache', '--system')
     if (root / 'usr/bin/dconf').is_file() and (root / 'etc/dconf/db').is_dir():
         run('/usr/bin/dconf', 'update')
+    if (root / GNOME_LIBRARY).is_file() and (root / 'usr/bin/gresource').is_file():
+        resource = run('/usr/bin/gresource', 'extract', '/' + GNOME_LIBRARY.as_posix(),
+                       '/org/gnome/shell/misc/ibusManager.js', stdout=subprocess.PIPE,
+                       stderr=subprocess.PIPE, check=False)
+        if resource.returncode != 0 or not prepare_ibus_override(root, resource.stdout):
+            print('Keeping upstream IBus startup: unrecognized GNOME resource version', flush=True)
 
     # XDG base directories belong to login homes; service accounts have no desktop.
     for line in (root / 'etc/passwd').read_text(encoding='utf-8').splitlines():
@@ -148,6 +167,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--dist', required=True, type=Path)
     parser.add_argument('--root', type=Path, help='Separate guest root; defaults to DIST/rootfs')
-    parser.add_argument('--timezone', help='Installed IANA timezone, for example Asia/Shanghai')
+    parser.add_argument('--timezone', help='Installed IANA timezone; unconfigured roots default to Etc/UTC')
     args = parser.parse_args()
     prepare(args.dist, args.root, args.timezone)

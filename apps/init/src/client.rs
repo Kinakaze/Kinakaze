@@ -1,8 +1,8 @@
 //! Reconnectable launch client; no native worker credentials leave init.
 use kinakaze_v2_host_win::{PipeConnection, ProcessHandle, private_file};
 use kinakaze_v2_protocol::{
-    ClientRole, Hello, PROTOCOL_VERSION, PoolLaunch, Reply, Request, WireRequest, WireResponse,
-    read_frame, write_frame,
+    CONTROL_PROTOCOL_VERSION, ClientRole, Hello, PoolLaunch, Reply, Request, WireRequest,
+    WireResponse, read_frame, write_frame,
 };
 use serde::{Deserialize, Serialize};
 use std::{fs, io::Write, path::PathBuf};
@@ -126,7 +126,7 @@ pub(super) fn launch() -> Result<i32> {
     }
     let mut client = Client { pipe, sequence: 0 };
     match client.call(Request::Hello(Hello {
-        version: PROTOCOL_VERSION,
+        version: CONTROL_PROTOCOL_VERSION,
         token: descriptor.token,
         role: ClientRole::Launcher,
         adoption_ticket: None,

@@ -87,3 +87,40 @@ fn initialization_failure_unmaps_staging_and_does_not_publish() {
         .is_err()
     );
 }
+
+#[test]
+fn large_executable_snapshot_preserves_bytes_and_readonly_publication() {
+    let bytes = ImmutableBytes::initialize_executable(16 * 1024 * 1024 + 37, |target| {
+        assert!(target.iter().all(|&byte| byte == 0));
+        for (index, byte) in target.iter_mut().enumerate() {
+            *byte = index.wrapping_mul(31) as u8;
+        }
+        Ok(())
+    })
+    .unwrap();
+    assert!(
+        bytes
+            .iter()
+            .enumerate()
+            .all(|(i, &byte)| byte == i.wrapping_mul(31) as u8)
+    );
+    assert_eq!(query(bytes.as_ptr()).Protect, PAGE_READONLY);
+    let section = bytes.duplicate_section().unwrap();
+    use std::os::windows::io::AsRawHandle;
+    let copy = unsafe {
+        MapViewOfFile(
+            section.as_raw_handle(),
+            FILE_MAP_COPY | FILE_MAP_EXECUTE,
+            0,
+            0,
+            bytes.len(),
+        )
+    };
+    assert!(!copy.Value.is_null());
+    unsafe { copy.Value.cast::<u8>().add(bytes.len() - 1).write(17) };
+    assert_eq!(
+        bytes[bytes.len() - 1],
+        (bytes.len() - 1).wrapping_mul(31) as u8
+    );
+    assert_ne!(unsafe { UnmapViewOfFile(copy) }, 0);
+}

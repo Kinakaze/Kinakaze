@@ -167,7 +167,7 @@ dpkg-query -S /usr/bin/man /bin/bash; apt-get check; dpkg --audit
             print('PASS: ' + name, flush=True)
     report = dict(passed=True, checks=checks, images={
         name: hashlib.sha256((dist / name).read_bytes()).hexdigest()
-        for name in ('init.exe', 'worker.exe', 'rootfs.manifest.json', 'kinakaze.cmd')})
+        for name in ('init.exe', 'worker.exe', 'rootfs.manifest.json')})
     if args.report:
         args.report.write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
     print(json.dumps(report, indent=2))

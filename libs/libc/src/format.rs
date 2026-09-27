@@ -500,6 +500,12 @@ unsafe fn emit<S: Sink>(sink: &mut S, spec: &Spec, arguments: &mut VaList) {
                 emit_string(sink, spec, text);
             }
         }
+        b'm' => {
+            // GNU printf's errno conversion consumes no variadic argument.
+            // systemd uses it for essentially every syscall error diagnostic.
+            let text = crate::string::strerror(crate::kinakaze_errno());
+            emit_string(sink, spec, text);
+        }
         b'p' => {
             // SAFETY: the caller guarantees a pointer argument.
             let value = unsafe { arguments.next_integer::<usize>() };

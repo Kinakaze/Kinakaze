@@ -33,6 +33,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--dist', type=Path, required=True)
     parser.add_argument('--report', type=Path)
+    parser.add_argument('--cache', type=Path, help='reuse downloaded Debian archives')
     parser.add_argument('--network', action='store_true', help='also update signed Debian sources and exercise bzip2')
     parser.add_argument('--proxy', help='HTTP proxy for the optional network test only')
     args = parser.parse_args()
@@ -42,8 +43,14 @@ def main():
         root = Path(directory) / 'root with spaces'
         env = {k: v for k, v in os.environ.items() if not k.startswith('KINAKAZE_')}
         env['PATH'] = ''
+        if args.cache:
+            env['KINAKAZE_ROOTFS_CACHE'] = str(args.cache.resolve())
 
         def invoke(arguments, input=None, expected=0, timeout=90):
+            # These package transactions intentionally use a disposable process
+            # domain. Persistent desktop/PTY behavior has its own acceptance.
+            if arguments[0] != 'setup':
+                arguments = ['oneshot', *arguments]
             result = subprocess.run([str(dist / 'worker.exe'), *arguments], input=None if input is None else input.encode(), env=env,
                                     capture_output=True,
                                     timeout=timeout, creationflags=subprocess.CREATE_NO_WINDOW)
@@ -54,10 +61,10 @@ def main():
         def shell(script, **kwargs):
             return invoke(['--root', str(root), '--', '/bin/sh', '-lc', 'set -eu\n' + script], **kwargs)
 
-        invoke(['setup', '--root', str(root)])
+        invoke(['setup', '--root', str(root)], timeout=1800)
         assert not any(root.glob('**/.kinakaze-aot*'))
         assert (root / 'usr/bin/apt-get').is_file()
-        checks.append('offline setup creates complete APT root without starting a guest')
+        checks.append('setup creates complete APT root from the default manifest without starting a guest')
         assert shell('stat -c "%a %u:%g" /usr/share/keyrings/debian-archive-keyring.gpg /tmp').splitlines() == ['644 0:0', '1777 0:0']
         checks.append('offline inode permissions survive guest startup and permit the APT sandbox')
         assert invoke(['--root', str(root)], input='command -v apt-get\nexit 17\n', expected=17).strip() == '/usr/bin/apt-get'
@@ -116,7 +123,7 @@ def main():
         assert (root / 'etc/hostname').read_text() == 'preserved\n'
         checks.append('repeated setup preserves a nonempty root without opening a manifest')
     report = dict(passed=True, checks=checks, images={name: hashlib.sha256((dist / name).read_bytes()).hexdigest()
-                  for name in ('init.exe', 'worker.exe', 'rootfs.manifest.json', 'kinakaze.cmd')})
+                  for name in ('init.exe', 'worker.exe', 'rootfs.manifest.json')})
     if args.report:
         args.report.write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8', newline='\n')
     print(json.dumps(report, indent=2))

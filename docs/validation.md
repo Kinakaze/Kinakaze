@@ -147,7 +147,7 @@ python tools/run-minecraft.py --root artifacts/guest-root --dist dist --version 
 python tools/run-minecraft.py --root artifacts/guest-root --dist dist --version 26.2
 ```
 
-该工具使用独立 `minecraft/v2-demo` 目录和 demo 参数；版本/JRE 路径不同需显式调整。客户端通过标准必须包含实际窗口和场景渲染、鼠标键盘输入、尺寸变化、音频输出、资源装载和正常退出；需要记录日志和可观察结果。依赖扫描成功、`java -version` 成功或部分 LWJGL 装载均不能替代这些验证。当前尚无完整客户端通过记录。
+该工具默认使用独立 `minecraft/v2-game` 目录和完整本地游戏参数（也可显式指定 `--full`），当前使用离线身份，尚未接入账号登录。指定 `--demo` 时使用 `minecraft/v2-demo` 目录和 demo 参数；版本/JRE 路径不同需显式调整。客户端通过标准必须包含实际窗口和场景渲染、鼠标键盘输入、尺寸变化、音频输出、资源装载和正常退出；需要记录日志和可观察结果。依赖扫描成功、`java -version` 成功或部分 LWJGL 装载均不能替代这些验证。当前尚无完整客户端通过记录。
 
 第三轮 init 预热、CPU/JIT/SIMD 分析及完整性能边界见 [启动性能第三轮报告](startup-performance-round3-2026-09-22.md)。
 

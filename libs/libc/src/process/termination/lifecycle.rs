@@ -22,6 +22,8 @@ fn encode(handlers: &[Handler]) -> Vec<u8> {
     for handler in handlers {
         let words = match *handler {
             Handler::Plain(function) => [0, function as usize as u64, 0, 0],
+            Handler::Quick(function) => [2, function as usize as u64, 0, 0],
+            Handler::QuickCxa { function, dso } => [3, function as usize as u64, 0, dso as u64],
             Handler::Cxa {
                 function,
                 argument,
@@ -62,6 +64,13 @@ fn decode(bytes: &[u8]) -> Result<Vec<Handler>, i32> {
             1 => Handler::Cxa {
                 function: unsafe { core::mem::transmute::<usize, CxaHandler>(function) },
                 argument,
+                dso,
+            },
+            2 if argument.is_null() && dso.is_null() => {
+                Handler::Quick(unsafe { core::mem::transmute::<usize, ExitHandler>(function) })
+            }
+            3 if argument.is_null() => Handler::QuickCxa {
+                function: unsafe { core::mem::transmute::<usize, CxaHandler>(function) },
                 dso,
             },
             _ => return Err(kinakaze_vfs::EINVAL),
@@ -152,6 +161,11 @@ mod tests {
                 argument: 12usize as _,
                 dso: 34usize as _,
             },
+            Handler::Quick(plain),
+            Handler::QuickCxa {
+                function: cxa,
+                dso: 34usize as _,
+            },
         ]);
         assert_eq!(encode(&decode(&bytes).unwrap()), bytes);
         for end in 0..bytes.len() {
@@ -161,7 +175,7 @@ mod tests {
         invalid.push(0);
         assert!(decode(&invalid).is_err());
         invalid = bytes.clone();
-        invalid[16] = 2;
+        invalid[16] = 4;
         assert!(decode(&invalid).is_err());
         invalid = bytes;
         invalid[24..32].fill(0);

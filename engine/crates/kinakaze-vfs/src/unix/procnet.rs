@@ -61,7 +61,7 @@ impl Record {
     }
     pub(super) fn passcred(&self) -> Result<bool, i32> {
         self.store.read_with(|bytes| {
-            if bytes.len() < 32 || &bytes[..8] != b"CYUNIX02" {
+            if bytes.len() < 40 || &bytes[..8] != b"CYUNIX03" {
                 return Err(EIO);
             }
             Ok(bytes[28] != 0)
@@ -69,7 +69,7 @@ impl Record {
     }
     pub(super) fn set_passcred(&self, enabled: bool) -> Result<(), i32> {
         self.store.update(|bytes| {
-            if bytes.len() < 32 || &bytes[..8] != b"CYUNIX02" {
+            if bytes.len() < 40 || &bytes[..8] != b"CYUNIX03" {
                 return Err(EIO);
             }
             let mut bytes = bytes.to_vec();
@@ -84,6 +84,22 @@ impl Record {
             socket.state,
             &socket.local,
         )
+    }
+    pub(super) fn data(&self) -> Result<Vec<u8>, i32> {
+        self.store
+            .read_with(|bytes| Ok(bytes[data_start(bytes)?..].to_vec()))
+    }
+    pub(super) fn update_data<T>(
+        &self,
+        update: impl FnOnce(&[u8]) -> Result<(Vec<u8>, T), i32>,
+    ) -> Result<T, i32> {
+        self.store.update(|bytes| {
+            let start = data_start(bytes)?;
+            let (data, result) = update(&bytes[start..])?;
+            let mut bytes = bytes[..start].to_vec();
+            bytes.extend_from_slice(&data);
+            Ok((bytes, result))
+        })
     }
     fn write(
         &self,
@@ -102,26 +118,47 @@ impl Record {
             State::Disconnected => 4,
             _ => 1,
         };
-        let mut bytes = b"CYUNIX02".to_vec();
+        let mut bytes = b"CYUNIX03".to_vec();
         bytes.extend_from_slice(&network.to_le_bytes());
         bytes.extend_from_slice(&(kind as u32).to_le_bytes());
         bytes.extend_from_slice(&flags.to_le_bytes());
         bytes.extend_from_slice(&state.to_le_bytes());
         bytes.extend_from_slice(&0u32.to_le_bytes());
+        bytes.extend_from_slice(
+            &((address.name.len() + usize::from(address.namespace == Namespace::Abstract)) as u64)
+                .to_le_bytes(),
+        );
         if address.namespace == Namespace::Abstract {
             bytes.push(b'@');
         }
         bytes.extend_from_slice(&address.name);
         self.store.update(|previous| {
             if !previous.is_empty() {
-                if previous.len() < 32 || &previous[..8] != b"CYUNIX02" {
-                    return Err(EIO);
-                }
+                let data = data_start(previous)?;
                 bytes[28..32].copy_from_slice(&previous[28..32]);
+                bytes.extend_from_slice(&previous[data..]);
             }
             Ok((bytes, ()))
         })
     }
+}
+
+fn data_start(bytes: &[u8]) -> Result<usize, i32> {
+    if bytes.len() < 40 || &bytes[..8] != b"CYUNIX03" {
+        return Err(EIO);
+    }
+    let size = u64::from_le_bytes(bytes[32..40].try_into().unwrap()) as usize;
+    let end = 40usize.checked_add(size).ok_or(EIO)?;
+    if end > bytes.len() {
+        return Err(EIO);
+    }
+    Ok(end)
+}
+pub(super) fn records() -> Result<Vec<Arc<Record>>, i32> {
+    Ok(ids(&directory()?.read()?.1)?
+        .into_iter()
+        .filter_map(|id| Record::from_store(Store::user_object(id, false).ok()?).ok())
+        .collect())
 }
 
 #[cfg(test)]
@@ -146,16 +183,14 @@ pub(crate) fn snapshot(network: u64) -> Result<String, i32> {
             continue;
         };
         let bytes = store.read()?.1;
-        if bytes.len() < 32 || &bytes[..8] != b"CYUNIX02" {
-            return Err(EIO);
-        }
+        let end = data_start(&bytes)?;
         if u64::from_le_bytes(bytes[8..16].try_into().unwrap()) != network {
             continue;
         }
         let word = |start| u32::from_le_bytes(bytes[start..start + 4].try_into().unwrap());
         // Addresses are bytes; preserve embedded abstract-name NULs as @,
         // matching Linux's text view. Do not expose a native pointer/refcount.
-        let path: Vec<u8> = bytes[32..]
+        let path: Vec<u8> = bytes[40..end]
             .iter()
             .map(|b| if *b == 0 { b'@' } else { *b })
             .collect();

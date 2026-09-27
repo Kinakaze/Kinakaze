@@ -20,7 +20,7 @@ kinakaze-tls.workspace = true
 kinakaze-vfs.workspace = true
 libc = { path = "../../../libs/libc", package = "kinakaze-v2-libc" }
 iced-x86.workspace = true
-blake3 = "1.8"
+blake3 = "1.8.7"
 gimli = { version = "0.32", default-features = false, features = ["read", "std"] }
 
 [target.'cfg(windows)'.dependencies]

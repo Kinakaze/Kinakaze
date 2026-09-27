@@ -226,6 +226,7 @@ struct EndpointState {
     receive_timeout_us: Option<u64>,
     send_timeout_us: Option<u64>,
     pass_credentials: bool,
+    packet_info: bool,
     receive_buffer: i32,
     send_buffer: i32,
 }
@@ -270,6 +271,7 @@ impl Endpoint {
                 receive_timeout_us: None,
                 send_timeout_us: None,
                 pass_credentials: false,
+                packet_info: false,
                 receive_buffer: 212_992,
                 send_buffer: 212_992,
             }),
@@ -2599,6 +2601,47 @@ pub unsafe fn setsockopt(
     length: i32,
 ) -> Result<(), i32> {
     let item = endpoint(fd)?;
+    if level == 270 && matches!(name, 1 | 2 | 3) {
+        if value.is_null() {
+            return Err(EFAULT);
+        }
+        if length < 4 {
+            return Err(EINVAL);
+        }
+        let setting = unsafe { value.cast::<u32>().read_unaligned() };
+        if name == 3 {
+            item.state.lock().map_err(|_| EIO)?.packet_info = setting != 0;
+            return Ok(());
+        }
+        if setting == 0 || setting > 32 {
+            return Err(EINVAL);
+        }
+        let group = 1u32 << (setting - 1);
+        let allowed = match item.protocol {
+            NETLINK_ROUTE => 1,
+            NETLINK_KOBJECT_UEVENT => 3,
+            _ => 0,
+        };
+        if group & !allowed != 0 {
+            return Err(EOPNOTSUPP);
+        }
+        let mut state = item.state.lock().map_err(|_| EIO)?;
+        if name == 1 && item.protocol == NETLINK_ROUTE && state.bound.is_none_or(|b| b.groups == 0)
+        {
+            state.multicast_cursor = crate::route_state::snapshot_for(item.namespace)?
+                .notifications
+                .sequence;
+        }
+        let bound = state
+            .bound
+            .get_or_insert(NetlinkAddress { port: 0, groups: 0 });
+        if name == 1 {
+            bound.groups |= group;
+        } else {
+            bound.groups &= !group;
+        }
+        return Ok(());
+    }
     if trace_enabled() {
         eprintln!("kinakaze netlink: setsockopt fd={fd} level={level} name={name}");
     }
@@ -2661,6 +2704,35 @@ pub unsafe fn getsockopt(
     length: *mut i32,
 ) -> Result<(), i32> {
     let item = endpoint(fd)?;
+    if level == 270 && matches!(name, 3 | 9) {
+        if length.is_null() {
+            return Err(EFAULT);
+        }
+        let capacity = unsafe { *length };
+        if capacity < 0 {
+            return Err(EINVAL);
+        }
+        let state = item.state.lock().map_err(|_| EIO)?;
+        let value_bytes = if name == 3 {
+            u32::from(state.packet_info)
+        } else {
+            state.bound.map_or(0, |b| b.groups)
+        }
+        .to_ne_bytes();
+        let copied = (capacity as usize).min(4);
+        if copied != 0 {
+            if value.is_null() {
+                return Err(EFAULT);
+            }
+            unsafe {
+                std::ptr::copy_nonoverlapping(value_bytes.as_ptr(), value, copied);
+            }
+        }
+        unsafe {
+            *length = 4;
+        }
+        return Ok(());
+    }
     if trace_enabled() {
         eprintln!("kinakaze netlink: getsockopt fd={fd} level={level} name={name}");
     }
@@ -2721,6 +2793,9 @@ pub fn shutdown(fd: i32, _how: i32) -> Result<(), i32> {
     endpoint(fd)?;
     Err(EOPNOTSUPP)
 }
+pub fn packet_info(fd: i32) -> Result<bool, i32> {
+    Ok(endpoint(fd)?.state.lock().map_err(|_| EIO)?.packet_info)
+}
 
 pub fn close(fd: i32) {
     detach(fd);
@@ -2770,7 +2845,9 @@ pub fn serialize_matching(mut keep: impl FnMut(i32) -> bool) -> Result<Vec<u8>, 
         payload.extend_from_slice(&item.namespace.to_le_bytes());
         payload.extend_from_slice(&state.multicast_cursor.to_le_bytes());
         payload.extend_from_slice(&u32::from(state.multicast_overflow).to_le_bytes());
-        payload.extend_from_slice(&u32::from(state.pass_credentials).to_le_bytes());
+        payload.extend_from_slice(
+            &(u32::from(state.pass_credentials) | u32::from(state.packet_info) << 1).to_le_bytes(),
+        );
         payload.extend_from_slice(&state.receive_buffer.to_le_bytes());
         payload.extend_from_slice(&state.send_buffer.to_le_bytes());
         for datagram in &state.queue {
@@ -2818,7 +2895,8 @@ pub fn restore(payload: &[u8]) -> bool {
         let namespace = u64::from_le_bytes(header[48..56].try_into().unwrap());
         let multicast_cursor = u64::from_le_bytes(header[56..64].try_into().unwrap());
         let multicast_overflow = read_u32(64) != 0;
-        let pass_credentials = read_u32(68) != 0;
+        let pass_credentials = read_u32(68) & 1 != 0;
+        let packet_info = read_u32(68) & 2 != 0;
         let receive_buffer = read_i32(72);
         let send_buffer = read_i32(76);
         cursor += 80;
@@ -2885,6 +2963,7 @@ pub fn restore(payload: &[u8]) -> bool {
             state.multicast_overflow = multicast_overflow;
             state.send_timeout_us = (send_timeout_us != 0).then_some(send_timeout_us);
             state.pass_credentials = pass_credentials;
+            state.packet_info = packet_info;
             state.receive_buffer = receive_buffer;
             state.send_buffer = send_buffer;
             state.queue = queue;

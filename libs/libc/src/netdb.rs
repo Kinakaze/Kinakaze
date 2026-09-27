@@ -3183,17 +3183,16 @@ pub unsafe extern "sysv64" fn kinakaze_abi_sendmsg(
             Err(EOPNOTSUPP)
         } else {
             unsafe {
-                kinakaze_vfs::unix::validate_destination(fd, name.cast(), name_length as i32)
-                    .and_then(|()| {
-                        kinakaze_vfs::unix::send_control(
-                            fd,
-                            buffer.as_ptr(),
-                            buffer.len(),
-                            flags,
-                            &rights,
-                            credentials.as_ref(),
-                        )
-                    })
+                kinakaze_vfs::unix::send_control_to(
+                    fd,
+                    buffer.as_ptr(),
+                    buffer.len(),
+                    flags,
+                    &rights,
+                    credentials.as_ref(),
+                    name.cast(),
+                    name_length as i32,
+                )
             }
         }
     } else if name.is_null() || name_length == 0 {
@@ -3279,6 +3278,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_recvmsg(
     let mut rights = Vec::new();
     let mut credentials = None;
     let mut ancillary_flags = 0;
+    let mut netlink_group = None;
     // Netlink can report the complete datagram size without copying beyond the
     // supplied buffer. This also sets msg_flags when only the copied size is
     // requested, and supports iproute2's zero-length PEEK|TRUNC size probe.
@@ -3289,29 +3289,60 @@ pub unsafe extern "sysv64" fn kinakaze_abi_recvmsg(
     };
     let result = if kinakaze_vfs::unix::is_unix_socket(fd) {
         unsafe {
-            kinakaze_vfs::unix::recv_control(
+            kinakaze_vfs::unix::recv_control_from(
                 fd,
                 scratch.as_mut_ptr(),
                 capacity,
                 flags,
                 control_capacity,
                 true,
+                name.cast(),
+                if name.is_null() {
+                    ptr::null_mut()
+                } else {
+                    &raw mut address_length
+                },
             )
         }
         .map(|(received, fds, truncated, sender)| {
             rights = fds;
             credentials = sender;
             ancillary_flags = truncated;
-            if !name.is_null() {
-                if unsafe {
-                    kinakaze_vfs::unix::getpeername(fd, name.cast(), &raw mut address_length)
-                }
-                .is_err()
-                {
-                    address_length = 0;
-                }
-            }
             received
+        })
+    } else if kinakaze_vfs::netlink::is_netlink_socket(fd) {
+        let mut source = [0u8; 12];
+        let mut source_length = 12;
+        unsafe {
+            kinakaze_vfs::netlink::recvfrom(
+                fd,
+                scratch.as_mut_ptr(),
+                capacity,
+                receive_flags,
+                source.as_mut_ptr(),
+                &raw mut source_length,
+            )
+        }
+        .and_then(|received| {
+            if kinakaze_vfs::netlink::packet_info(fd)? {
+                let groups = u32::from_ne_bytes(source[8..12].try_into().unwrap());
+                netlink_group = Some(if groups == 0 {
+                    0
+                } else {
+                    groups.trailing_zeros() + 1
+                });
+            }
+            if !name.is_null() {
+                unsafe {
+                    ptr::copy_nonoverlapping(
+                        source.as_ptr(),
+                        name.cast::<u8>(),
+                        (name_capacity as usize).min(12),
+                    );
+                }
+                address_length = 12;
+            }
+            Ok(received)
         })
     } else {
         unsafe {
@@ -3366,6 +3397,29 @@ pub unsafe extern "sysv64" fn kinakaze_abi_recvmsg(
         result_flags |= ancillary_flags;
         (*msg).msg_flags = result_flags;
         (*msg).msg_controllen = 0;
+        if let Some(group) = netlink_group {
+            let required = size_of::<CmsgHdr>() + 4;
+            if control_capacity < required {
+                (*msg).msg_flags |= 8;
+            }
+            if control_capacity >= size_of::<CmsgHdr>() {
+                let length = required.min(control_capacity);
+                let used = cmsg_align(length).min(control_capacity);
+                let out = (*msg).msg_control.cast::<u8>();
+                ptr::write_bytes(out, 0, used);
+                out.cast::<CmsgHdr>().write_unaligned(CmsgHdr {
+                    cmsg_len: length,
+                    cmsg_level: 270,
+                    cmsg_type: 3,
+                });
+                ptr::copy_nonoverlapping(
+                    group.to_ne_bytes().as_ptr(),
+                    out.add(size_of::<CmsgHdr>()),
+                    length - size_of::<CmsgHdr>(),
+                );
+                (*msg).msg_controllen = used;
+            }
+        }
         if let Some(credentials) = credentials {
             let required = size_of::<CmsgHdr>() + size_of_val(&credentials);
             if control_capacity < required {

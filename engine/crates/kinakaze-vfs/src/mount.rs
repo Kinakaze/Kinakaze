@@ -991,7 +991,7 @@ pub fn bind(source: &str, target: &str, flags: u64) -> Result<(), i32> {
 
 /// Mount topology stores namespace-absolute paths even after chroot. Resolve
 /// the caller's spelling against its retained overlay root before publication.
-fn namespace_path(path: &str) -> Result<String, i32> {
+pub(crate) fn namespace_path(path: &str) -> Result<String, i32> {
     if !path.starts_with('/') {
         if let Some(cwd) = crate::fs::cwd::namespace()? {
             return normalize(&join(&cwd, path));

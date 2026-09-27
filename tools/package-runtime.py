@@ -1,4 +1,4 @@
-"""Archive a tested, configured native distribution with notices and hashes."""
+"""Archive entry points, native DLLs and a tested first-run Debian manifest."""
 import argparse
 from datetime import datetime, timezone
 import hashlib
@@ -28,12 +28,15 @@ def main():
         raise ValueError('runtime acceptance report is not passing')
     dist = args.dist.resolve()
     manifest = json.loads((dist / 'rootfs.manifest.json').read_text(encoding='utf-8'))
+    online = bool(manifest.get('archives'))
     if (dist / 'rootfs/.kinakaze-rootfs.sha256').exists():
         raise ValueError('publish an uninitialized distribution, not a used guest root')
     files = {}
-    for name in ('init.exe', 'worker.exe', 'rootfs.manifest.json', 'kinakaze.cmd'):
+    for name in ('init.exe', 'worker.exe', 'rootfs.manifest.json'):
         files[name] = (dist / name).read_bytes()
-    for directory in ('rootfs',):
+    for path in sorted(dist.glob('*.dll')):
+        files[path.name] = path.read_bytes()
+    for directory in (('native',) if online else ('rootfs',)):
         for path in sorted((dist / directory).rglob('*')):
             if path.is_symlink() or path.is_junction():
                 raise ValueError(f'redirected distribution input: {path}')
@@ -41,7 +44,8 @@ def main():
                 files[path.relative_to(dist).as_posix()] = path.read_bytes()
     for entry in manifest['files']:
         if 'source' in entry:
-            if entry['source'] != f'rootfs-seed/{entry["sha256"]}' or len(entry['sha256']) != 64:
+            native_source = online and entry['source'] == 'native/' + Path(entry['path']).name
+            if (not native_source and entry['source'] != f'rootfs-seed/{entry["sha256"]}') or len(entry['sha256']) != 64:
                 raise ValueError(f'invalid release seed: {entry["source"]}')
             source = dist / entry['source']
             if source.is_symlink() or source.is_junction() or source.parent.is_junction():
@@ -50,10 +54,10 @@ def main():
         if 'source' in entry and hashlib.sha256(files[entry['source']]).hexdigest() != entry['sha256']:
             raise ValueError(f'seed hash mismatch: {entry["path"]}')
         expected = entry.get('sha256') or hashlib.sha256(entry['content'].encode()).hexdigest()
-        if hashlib.sha256(files[f'rootfs/{entry["path"]}']).hexdigest() != expected:
+        if not online and hashlib.sha256(files[f'rootfs/{entry["path"]}']).hexdigest() != expected:
             raise ValueError(f'bundled root differs from first-install manifest: {entry["path"]}')
     planned = {f'rootfs/{entry["path"]}' for entry in manifest['files']}
-    for name in manifest.get('links', {}):
+    for name in (() if online else manifest.get('links', {})):
         if not (dist / 'rootfs' / name).is_file():
             raise ValueError(f'missing emulated guest link: {name}')
         planned.add(f'rootfs/{name}')
@@ -61,19 +65,21 @@ def main():
     if unexpected:
         raise ValueError(f'root contains files absent from the install manifest: {sorted(unexpected)}')
     # Verify the build root's directory layout before archiving its install seed.
-    for directory in manifest['directories']:
+    for directory in ([] if online else manifest['directories']):
         if not (dist / 'rootfs' / directory).is_dir():
             raise ValueError(f'missing root directory: {directory}')
         files[f'rootfs/{directory}/'] = b''
     if not report.get('images'):
         raise ValueError('acceptance report has no image hashes')
-    for name, expected in report['images'].items():
-        if hashlib.sha256(files[name]).hexdigest() != expected:
+    # Check every shipped runtime image; older reports can also describe
+    # launcher aliases that are no longer part of the distribution.
+    images = {name for name in files if '/' not in name or name.startswith('native/')}
+    for name in images:
+        if hashlib.sha256(files[name]).hexdigest() != report['images'].get(name):
             raise ValueError(f'acceptance report belongs to a different image: {name}')
-    for name in ('LICENSE-MIT', 'LICENSE-APACHE', 'THIRD_PARTY.md'):
-        files[name] = (ROOT / name).read_bytes()
-    files['README.md'] = (ROOT / 'docs/first-run.md').read_bytes()
-    files['validation.json'] = args.report.read_bytes()
+    for name in ('LICENSE-MIT', 'LICENSE-APACHE'):
+        files[f'licenses/kinakaze/{name}'] = (ROOT / name).read_bytes()
+    files['licenses/kinakaze/THIRD_PARTY.md'] = (ROOT / 'THIRD_PARTY.md').read_bytes()
     metadata = json.loads(subprocess.check_output([
         'cargo', 'metadata', '--locked', '--offline', '--format-version', '1',
         '--filter-platform', 'x86_64-pc-windows-msvc'], cwd=ROOT))
@@ -91,38 +97,37 @@ def main():
     sysroot = Path(subprocess.check_output(['rustc', '--print', 'sysroot'], text=True).strip())
     files['licenses/rust/COPYRIGHT-library.html'] = (sysroot / 'share/doc/rust/COPYRIGHT-library.html').read_bytes()
     files['licenses/kinakaze-libm-powl.c'] = (ROOT / 'libs/libm/src/ld80/powl.c').read_bytes()
-    source_lock = ROOT / 'config/release-sources.lock.json'
-    base = json.loads(files['rootfs/usr/share/kinakaze/bootstrap-packages.json'])
-    required_sources = {(p['source_package'], p['source_version']) for p in base['packages']}
-    locked_sources = json.loads(source_lock.read_text(encoding='utf-8'))['packages']
-    if required_sources != {(p['package'], p['version']) for p in locked_sources}:
-        raise ValueError('corresponding sources differ from the base image; run tools/update-release-sources.py')
-    files['sources/manifest.json'] = source_lock.read_bytes()
-    for package in locked_sources:
-        for source in package['files']:
-            filename = source['filename']
-            if Path(filename).name != filename or '/' in filename or '\\' in filename:
-                raise ValueError(f'invalid source filename: {filename}')
-            cached = args.source_cache / filename
-            if cached.exists():
-                data = cached.read_bytes()
-            elif args.offline:
-                raise FileNotFoundError(f'corresponding source is not cached: {filename}')
-            else:
-                with urllib.request.urlopen(source['url'], timeout=60) as response:
-                    data = response.read()
-            if len(data) != source['size'] or hashlib.sha256(data).hexdigest() != source['sha256']:
-                raise ValueError(f'corresponding source hash mismatch: {filename}')
-            if not cached.exists():
-                args.source_cache.mkdir(parents=True, exist_ok=True)
-                cached.write_bytes(data)
-            files[f'sources/{package["package"]}/{filename}'] = data
+    if not online:
+        source_lock = ROOT / 'config/release-sources.lock.json'
+        base = json.loads(files['rootfs/usr/share/kinakaze/bootstrap-packages.json'])
+        required_sources = {(p['source_package'], p['source_version']) for p in base['packages']}
+        locked_sources = json.loads(source_lock.read_text(encoding='utf-8'))['packages']
+        if required_sources != {(p['package'], p['version']) for p in locked_sources}:
+            raise ValueError('corresponding sources differ from the base image; run tools/update-release-sources.py')
+        files['sources/manifest.json'] = source_lock.read_bytes()
+        for package in locked_sources:
+            for source in package['files']:
+                filename = source['filename']
+                if Path(filename).name != filename or '/' in filename or '\\' in filename:
+                    raise ValueError(f'invalid source filename: {filename}')
+                cached = args.source_cache / filename
+                if cached.exists():
+                    data = cached.read_bytes()
+                elif args.offline:
+                    raise FileNotFoundError(f'corresponding source is not cached: {filename}')
+                else:
+                    with urllib.request.urlopen(source['url'], timeout=60) as response:
+                        data = response.read()
+                if len(data) != source['size'] or hashlib.sha256(data).hexdigest() != source['sha256']:
+                    raise ValueError(f'corresponding source hash mismatch: {filename}')
+                if not cached.exists():
+                    args.source_cache.mkdir(parents=True, exist_ok=True)
+                    cached.write_bytes(data)
+                files[f'sources/{package["package"]}/{filename}'] = data
     dirty = bool(subprocess.check_output(['git', 'status', '--porcelain'], cwd=ROOT))
     if dirty and not args.preview:
         raise ValueError('formal runtime packages require a clean checkout; use --preview for local validation')
-    files['build.json'] = (json.dumps(dict(version=version, revision=revision, dirty=dirty, preview=args.preview,
-        rustc=subprocess.check_output(['rustc', '--version'], text=True).strip()), indent=2) + '\n').encode()
-    for path in (dist / 'rootfs/lib').iterdir():
+    for path in ([] if online else (dist / 'rootfs/lib').iterdir()):
         if path.is_file():
             files[f'native/{path.name}'] = files[f'rootfs/lib/{path.name}']
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -144,6 +149,7 @@ def main():
         checksum = hashlib.file_digest(stream, 'sha256').hexdigest()
     archive.with_suffix('.zip.sha256').write_text(f'{checksum}  {archive.name}\n', encoding='utf-8')
     print(archive)
+    print(f'Revision: {revision}; preview: {args.preview}; dirty: {dirty}')
 
 
 if __name__ == '__main__':

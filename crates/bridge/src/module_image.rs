@@ -20,10 +20,33 @@ struct BoundExport {
 
 impl ModuleImage {
     pub fn load(dist: &Path, module: &Module) -> Result<Self> {
+        let (library, exports) = Self::bind_exports(dist, module.clone())?;
+        let symbols = exports
+            .into_iter()
+            .map(|(declaration, address)| {
+                (
+                    declaration.name.clone(),
+                    BoundExport {
+                        declaration,
+                        address,
+                    },
+                )
+            })
+            .collect();
+        Ok(Self { library, symbols })
+    }
+
+    /// Resolve and validate each address once while transferring its owned ABI
+    /// declaration. A linker building its own symbol index need not construct
+    /// and discard ModuleImage's second name index or clone every ABI version.
+    pub fn bind_exports(
+        dist: &Path,
+        module: Module,
+    ) -> Result<(Arc<Library>, Vec<(Export, usize)>)> {
         module.validate()?;
         let library = Arc::new(Library::open(&module.image_path(dist))?);
-        let mut symbols = HashMap::with_capacity(module.exports.len());
-        for export in &module.exports {
+        let mut exports = Vec::with_capacity(module.exports.len());
+        for export in module.exports {
             let name = CString::new(export.pe_export.as_str())
                 .map_err(|_| invalid("invalid native symbol"))?;
             let address = unsafe { library.symbol(&name)? } as usize;
@@ -33,15 +56,9 @@ impl ModuleImage {
                     export.name
                 )));
             }
-            symbols.insert(
-                export.name.clone(),
-                BoundExport {
-                    declaration: export.clone(),
-                    address,
-                },
-            );
+            exports.push((export, address));
         }
-        Ok(Self { library, symbols })
+        Ok((library, exports))
     }
 
     pub fn library(&self) -> Arc<Library> {
@@ -125,10 +142,17 @@ mod tests {
         let pinned = kinakaze_v2_host_win::LoadedModule::pin(image.base_address()).unwrap();
         assert_eq!(pinned.mapped_len(), image.mapped_len());
         let address = unsafe { image.symbol("timezone") }.unwrap();
+        let (bulk_owner, bulk_symbols) =
+            ModuleImage::bind_exports(&directory, module.clone()).unwrap();
+        assert_eq!(bulk_symbols.len(), 1);
+        assert_eq!(bulk_symbols[0].0, module.exports[0]);
+        assert_eq!(bulk_symbols[0].1, address as usize);
         drop(image);
         // A retained library reference still pins its exports after image drop.
         assert!(unsafe { library.symbol(c"_timezone") }.is_ok());
         drop(library);
+        assert_eq!(unsafe { bulk_owner.symbol(c"_timezone") }.unwrap(), address);
+        drop(bulk_owner);
         // The child restore path owns an independent native reference, without
         // relying on the original image or its Rust owner having survived.
         assert_eq!(unsafe { pinned.symbol(c"_timezone") }.unwrap(), address);

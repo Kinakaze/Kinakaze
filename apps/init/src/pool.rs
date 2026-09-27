@@ -176,6 +176,16 @@ fn maintain(service: Arc<Service>) {
         if pool.demand.swap(false, Ordering::AcqRel) {
             next_spawn = Instant::now();
         }
+        // The grace period protects an application's startup. Once every
+        // remaining logical process is an unused ready worker, there is no
+        // application left to compete with. The native exit watcher wakes this
+        // condition variable; refill now instead of making the next request pay
+        // for preparation. Count logical processes so an exec handoff cannot
+        // mistake its retiring native owner for the application's final exit.
+        // Failed preparation still observes its existing retry backoff.
+        if failures == 0 && manager.stats().processes == manager.pool_ready_count() {
+            next_spawn = Instant::now();
+        }
         if failures >= 3 {
             // Fail the pool, not already running applications in this session.
             pool.failed.store(true, Ordering::Release);

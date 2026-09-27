@@ -36,12 +36,39 @@ pub struct InstructionTrampoline {
 pub(super) struct UnpublishedCode {
     start: usize,
     length: usize,
+    tls_encoding: std::cell::RefCell<TlsEncoding>,
+}
+
+/// Scratch belongs to one unpublished segment, never to a guest thread or a
+/// global pool. Reuse iced's register analysis and byte buffer across TLS sites.
+struct TlsEncoding {
+    info: InstructionInfoFactory,
+    encoder: Encoder,
+    trace_site: Option<usize>,
+}
+
+impl TlsEncoding {
+    fn new() -> Self {
+        Self {
+            info: InstructionInfoFactory::new(),
+            encoder: Encoder::new(64),
+            trace_site: std::env::var("KINAKAZE_TRACE_AOT_SITE")
+                .ok()
+                .and_then(|value| {
+                    usize::from_str_radix(value.trim().trim_start_matches("0x"), 16).ok()
+                }),
+        }
+    }
 }
 
 impl UnpublishedCode {
     /// The whole range must be writable and unpublished to guest execution.
     pub(super) unsafe fn new(start: usize, length: usize) -> Self {
-        Self { start, length }
+        Self {
+            start,
+            length,
+            tls_encoding: std::cell::RefCell::new(TlsEncoding::new()),
+        }
     }
 
     fn contains(&self, address: usize, length: usize) -> bool {
@@ -103,12 +130,14 @@ pub unsafe fn first_fs_instruction_len(address: usize) -> Option<usize> {
 /// independent control-flow entry lands in the additional whole instructions.
 pub(crate) fn fs_detour_length(code: &[u8], offset: usize, address: usize) -> Option<usize> {
     let bytes = code.get(offset..)?;
-    decode_fs_detour(bytes, address).map(|(_, _, overwritten)| overwritten)
+    decode_fs_detour(bytes, address, &mut InstructionInfoFactory::new())
+        .map(|(_, _, overwritten)| overwritten)
 }
 
 fn decode_fs_detour(
     bytes: &[u8],
     address: usize,
+    info: &mut InstructionInfoFactory,
 ) -> Option<((Instruction, Register), Vec<Instruction>, usize)> {
     let mut decoder = Decoder::with_ip(64, bytes, address as u64, DecoderOptions::NONE);
     let first = decoder.decode();
@@ -118,7 +147,7 @@ fn decode_fs_detour(
     // Validate translation while the object is still pristine. This keeps the
     // planner and installer exact and prevents a partially patched object when
     // an FS addressing form cannot be represented by the trampoline.
-    let translated = translate_fs_instruction(first).ok()?;
+    let translated = translate_fs_instruction_with_info(first, info).ok()?;
 
     let mut trailing_instructions = Vec::new();
     let mut overwritten = first.len();
@@ -202,6 +231,32 @@ unsafe fn install_impl(
     _scratch_teb_offset: usize,
     unpublished: Option<&UnpublishedCode>,
 ) -> Result<InstructionTrampoline, ExecutionError> {
+    match unpublished {
+        Some(range) => unsafe {
+            install_encoded(
+                address,
+                thread_pointer_teb_offset,
+                unpublished,
+                &mut range.tls_encoding.borrow_mut(),
+            )
+        },
+        None => unsafe {
+            install_encoded(
+                address,
+                thread_pointer_teb_offset,
+                None,
+                &mut TlsEncoding::new(),
+            )
+        },
+    }
+}
+
+unsafe fn install_encoded(
+    address: usize,
+    thread_pointer_teb_offset: usize,
+    unpublished: Option<&UnpublishedCode>,
+    encoding: &mut TlsEncoding,
+) -> Result<InstructionTrampoline, ExecutionError> {
     use kinakaze_runtime::memory_protection::protect_preserving_copy_on_write as VirtualProtect;
     use windows_sys::Win32::System::Diagnostics::Debug::FlushInstructionCache;
     use windows_sys::Win32::System::Memory::PAGE_EXECUTE_READWRITE;
@@ -216,13 +271,16 @@ unsafe fn install_impl(
         None => unsafe { std::slice::from_raw_parts(address as *const u8, MAX_SNAPSHOT) },
     };
     let ((translated, scratch), trailing_instructions, overwritten) =
-        decode_fs_detour(snapshot, address).ok_or(ExecutionError::AddressOverflow)?;
+        decode_fs_detour(snapshot, address, &mut encoding.info)
+            .ok_or(ExecutionError::AddressOverflow)?;
     if unpublished.is_some_and(|range| !range.contains(address, overwritten)) {
         return Err(ExecutionError::AddressOverflow);
     }
 
     let trampoline = allocate_near(address)?;
-    let mut code = Vec::with_capacity(STUB_SIZE);
+    let mut code = encoding.encoder.take_buffer();
+    code.clear();
+    code.reserve(STUB_SIZE);
     // Linux leaf functions own the 128 bytes below RSP. Save our scratch below
     // that red zone, without changing the instruction's incoming condition flags.
     code.extend_from_slice(&[0x48, 0x8d, 0x64, 0x24, 0x80]); // lea rsp,[rsp-128]
@@ -234,12 +292,12 @@ unsafe fn install_impl(
     // Translation accepts only straight-line instructions and replaces the
     // memory base/index, so no branch relaxation or block graph is needed.
     // Give Encoder the existing buffer to avoid a second allocation and copy.
-    let mut encoder = Encoder::new(64);
-    encoder.set_buffer(code);
-    encoder
+    encoding.encoder.set_buffer(code);
+    encoding
+        .encoder
         .encode(&translated, translated_ip)
         .map_err(|_| ExecutionError::AddressOverflow)?;
-    let mut code = encoder.take_buffer();
+    let mut code = encoding.encoder.take_buffer();
     emit_pop_gpr(&mut code, scratch)?;
     code.extend_from_slice(&[0x48, 0x8d, 0xa4, 0x24, 0x80, 0, 0, 0]); // lea rsp,[rsp+128]
     if !trailing_instructions.is_empty() {
@@ -263,11 +321,7 @@ unsafe fn install_impl(
     if code.len() > STUB_SIZE {
         return Err(ExecutionError::AddressOverflow);
     }
-    if std::env::var("KINAKAZE_TRACE_AOT_SITE")
-        .ok()
-        .and_then(|value| usize::from_str_radix(value.trim().trim_start_matches("0x"), 16).ok())
-        == Some(address)
-    {
+    if encoding.trace_site == Some(address) {
         eprintln!(
             "kinakaze: AOT site {address:#x} original={:02x?} relocated={:02x?}",
             &snapshot[..overwritten],
@@ -282,10 +336,12 @@ unsafe fn install_impl(
             FlushInstructionCache(process, trampoline as *const core::ffi::c_void, code.len())
         };
     }
+    encoding.encoder.set_buffer(code);
 
     let relative = trampoline as i128 - (address + MIN_DETOUR_SIZE) as i128;
     let relative = i32::try_from(relative).map_err(|_| ExecutionError::AddressOverflow)?;
-    let mut detour = vec![0x90; overwritten];
+    let mut detour_bytes = [0x90; MAX_SNAPSHOT];
+    let detour = &mut detour_bytes[..overwritten];
     detour[0] = 0xe9;
     detour[1..5].copy_from_slice(&relative.to_le_bytes());
 
@@ -343,8 +399,16 @@ unsafe fn install_impl(
 /// Converts one FS-relative memory instruction into an equivalent ordinary
 /// memory instruction whose extra base register holds the Linux thread pointer.
 /// The selected register is not read or written by the original instruction.
+#[cfg(test)]
 fn translate_fs_instruction(
+    instruction: Instruction,
+) -> Result<(Instruction, Register), ExecutionError> {
+    translate_fs_instruction_with_info(instruction, &mut InstructionInfoFactory::new())
+}
+
+fn translate_fs_instruction_with_info(
     mut instruction: Instruction,
+    info_factory: &mut InstructionInfoFactory,
 ) -> Result<(Instruction, Register), ExecutionError> {
     if instruction.segment_prefix() != Register::FS
         || instruction.flow_control() != FlowControl::Next
@@ -352,7 +416,6 @@ fn translate_fs_instruction(
         return Err(ExecutionError::AddressOverflow);
     }
 
-    let mut info_factory = InstructionInfoFactory::new();
     let info = info_factory.info(&instruction);
     let candidates = [
         Register::R11,
@@ -529,12 +592,19 @@ unsafe fn install_syscall_impl(
         None => unsafe { std::slice::from_raw_parts(address as *const u8, MAX_SNAPSHOT) },
     };
     let mut decoder = Decoder::with_ip(64, snapshot, address as u64, DecoderOptions::NONE);
-    let first = decoder.decode();
+    let mut first = decoder.decode();
+    let prefix_len = if super::segment_patch::is_exit_number_load(&first) {
+        let length = first.len();
+        first = decoder.decode();
+        length
+    } else {
+        0
+    };
     if first.is_invalid() || first.mnemonic() != iced_x86::Mnemonic::Syscall {
         return Err(ExecutionError::AddressOverflow);
     }
     let mut trailing_instructions = Vec::new();
-    let mut overwritten = first.len();
+    let mut overwritten = prefix_len + first.len();
     while overwritten < MIN_DETOUR_SIZE {
         let instruction = decoder.decode();
         if instruction.is_invalid() {
@@ -551,11 +621,12 @@ unsafe fn install_syscall_impl(
     }
     let trampoline = allocate_near(address)?;
     let mut code = Vec::with_capacity(STUB_SIZE);
+    code.extend_from_slice(&snapshot[..prefix_len]);
     let (relocated_return_immediate, frame_return_immediate) = emit_syscall_stub(
         &mut code,
         syscall_dispatcher,
         address
-            .checked_add(first.len())
+            .checked_add(prefix_len + first.len())
             .ok_or(ExecutionError::AddressOverflow)?,
         thread_pointer_teb_offset,
         host_transition_teb_offset,
@@ -601,7 +672,7 @@ unsafe fn install_syscall_impl(
     if std::env::var_os("KINAKAZE_FORK_TRACE").is_some() {
         eprintln!(
             "kinakaze: syscall trampoline source={address:#x} continuation={:#x} trampoline={trampoline:#x} tp_teb_offset={thread_pointer_teb_offset:?} transition_teb_offset={host_transition_teb_offset:?}",
-            address + first.len(),
+            address + prefix_len + first.len(),
         );
     }
 
@@ -1359,15 +1430,26 @@ mod tests {
         // mov rax,fs:[-8]; ret
         let bytes = [0x64, 0x48, 0x8b, 0x04, 0x25, 0xf8, 0xff, 0xff, 0xff, 0xc3];
         unsafe { std::ptr::copy_nonoverlapping(bytes.as_ptr(), block, bytes.len()) };
+        // The next site uses R11 itself, forcing a different scratch register.
+        // Reusing an encoder/info factory must not retain the first site's state.
+        let second = [
+            0x64, 0x4c, 0x8b, 0x1c, 0x25, 0xf8, 0xff, 0xff, 0xff, 0x4c, 0x89, 0xd8, 0xc3,
+        ];
+        unsafe { std::ptr::copy_nonoverlapping(second.as_ptr(), block.add(64), second.len()) };
         let thread_offset = crate::execution::segment_patch::teb_slot_offset(teb_slot);
         let scratch_offset = crate::execution::segment_patch::teb_slot_offset(scratch_slot);
         if unpublished {
-            let range = unsafe { UnpublishedCode::new(block as usize, bytes.len()) };
+            let range = unsafe { UnpublishedCode::new(block as usize, 64 + second.len()) };
             unsafe { install_unpublished(block as usize, thread_offset, scratch_offset, &range) }
                 .unwrap();
+            unsafe {
+                install_unpublished(block as usize + 64, thread_offset, scratch_offset, &range)
+            }
+            .unwrap();
             range.finish().unwrap();
         } else {
             unsafe { install(block as usize, thread_offset, scratch_offset) }.unwrap();
+            unsafe { install(block as usize + 64, thread_offset, scratch_offset) }.unwrap();
         }
 
         let previous_fs: usize;
@@ -1377,10 +1459,14 @@ mod tests {
         }
         let function: unsafe extern "C" fn() -> u64 = unsafe { core::mem::transmute(block) };
         let observed = unsafe { function() };
+        let function: unsafe extern "C" fn() -> u64 =
+            unsafe { core::mem::transmute(block.add(64)) };
+        let second_observed = unsafe { function() };
         unsafe {
             core::arch::asm!("wrfsbase {}", in(reg) previous_fs, options(nostack, preserves_flags));
         }
         assert_eq!(observed, *value);
+        assert_eq!(second_observed, *value);
 
         unsafe { VirtualFree(block.cast(), 0, MEM_RELEASE) };
         assert_ne!(unsafe { TlsFree(teb_slot) }, 0);
@@ -1688,6 +1774,29 @@ mod tests {
                 .read_unaligned()
         };
         assert_eq!(host_stack_used, 0, "the syscall lane must be released");
+
+        // The exit syscall may be immediately followed by another function.
+        // Its preceding number load supplies the detour space, and must be
+        // replayed before entering the dispatcher, without consuming the RET.
+        let terminal = unsafe { block.add(32) };
+        let terminal_bytes = [0xb8, 60, 0, 0, 0, 0x0f, 0x05, 0xc3];
+        unsafe {
+            std::ptr::copy_nonoverlapping(terminal_bytes.as_ptr(), terminal, terminal_bytes.len())
+        };
+        let terminal_site = unsafe {
+            install_syscall(
+                terminal as usize,
+                mock_syscall_dispatcher as *const () as usize,
+                Some(crate::execution::segment_patch::teb_slot_offset(teb_slot)),
+                Some(crate::execution::segment_patch::teb_slot_offset(
+                    transition_slot,
+                )),
+            )
+        }
+        .unwrap();
+        assert_eq!(terminal_site.overwritten, 7);
+        assert_eq!(unsafe { terminal.add(7).read() }, 0xc3);
+        assert_eq!(unsafe { invoke_raw_syscall(terminal as usize, 12345) }, 66);
 
         unsafe { VirtualFree(block.cast(), 0, MEM_RELEASE) };
         TEST_TRANSITION_POINTER.store(0, Ordering::SeqCst);

@@ -40,8 +40,17 @@ try {
     Invoke-Checked 'cargo' (@('build', '--workspace', '--locked', '--features', 'kinakaze-v2-runtime/guest-engine') + $profileArgs + $targetArgs)
     # Entry executables have only rlib dependencies. Link their own standard
     # library so Windows can start them before rootfs/lib has been opened.
-    Invoke-Checked 'cargo' (@('--config', "build.rustflags=['-C','prefer-dynamic=no']",
-        'build', '--locked', '--target-dir', (Join-Path $buildRoot 'entry'), '-p', 'kinakaze-v2-init', '-p', 'kinakaze-v2-worker') + $profileArgs)
+    $entryRustflags = $env:RUSTFLAGS
+    $entryEncodedRustflags = $env:CARGO_ENCODED_RUSTFLAGS
+    try {
+        $env:RUSTFLAGS = '-C prefer-dynamic=no'
+        $env:CARGO_ENCODED_RUSTFLAGS = $null
+        Invoke-Checked 'cargo' (@('build', '--locked', '--target-dir', (Join-Path $buildRoot 'entry'), '-p', 'kinakaze-v2-init', '-p', 'kinakaze-v2-worker') + $profileArgs)
+    }
+    finally {
+        $env:RUSTFLAGS = $entryRustflags
+        $env:CARGO_ENCODED_RUSTFLAGS = $entryEncodedRustflags
+    }
     $binaryDir = Join-Path $buildRoot $profileName
     $entryDir = Join-Path $buildRoot "entry/$profileName"
     foreach ($entry in @('init.exe', 'worker.exe')) {
@@ -58,9 +67,11 @@ try {
     )
     if ($Development) { $packageArgs += '--development' }
     Invoke-Checked (Join-Path $binaryDir 'kinakaze-packager.exe') $packageArgs
+    & (Join-Path $PSScriptRoot 'copy-runtime-dlls.ps1') -DistDirectory $DistDirectory
     if (-not $NativeOnly) {
         $rootfsArgs = @('tools/prepare-release-rootfs.py', '--dist', $DistDirectory)
         if ($Offline) { $rootfsArgs += '--offline' }
+        if ($Release) { $rootfsArgs += '--online' }
         Invoke-Checked 'python' $rootfsArgs
     }
     if (-not $SkipTests) {
@@ -95,7 +106,7 @@ try {
         }
         Invoke-Checked (Join-Path $entryDir 'worker.exe') @('smoke', '--dist', $DistDirectory)
         if (-not $NativeOnly) {
-            Invoke-Checked 'python' @('tools/test-first-run.py', '--dist', $DistDirectory)
+            Invoke-Checked 'python' @('tools/test-first-run.py', '--dist', $DistDirectory, '--cache', (Join-Path $buildRoot 'rootfs-downloads'))
         }
     }
 }

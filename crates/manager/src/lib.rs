@@ -5,8 +5,8 @@
 //! `process_exited` only after verifying PID and creation time together.
 
 use kinakaze_v2_protocol::{
-    ClientRole, ErrorCode, ForkPolicy, ForkTicket, Hello, MAX_STATE_NAME_BYTES, PROTOCOL_VERSION,
-    PoolLaunch, ProcessIdentity, Reply, Request, RpcError, Stats,
+    ClientRole, ErrorCode, ForkPolicy, ForkTicket, Hello, MAX_STATE_NAME_BYTES, PoolLaunch,
+    ProcessIdentity, Reply, Request, RpcError, Stats,
 };
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
@@ -161,6 +161,7 @@ pub struct StateManager {
     next_object: u64,
     next_transaction: u64,
     shutdown_requested: bool,
+    single_root: bool,
 }
 
 type RpcResult<T> = Result<T, RpcError>;
@@ -198,6 +199,13 @@ fn secure_ticket() -> RpcResult<String> {
 }
 
 impl StateManager {
+    /// A Linux process tree has one initial process. Later images must arrive
+    /// through their creator's fork reservation or an existing exec transaction.
+    pub fn for_process_tree(epoch: u64, token: String) -> Self {
+        let mut manager = Self::new(epoch, token);
+        manager.single_root = true;
+        manager
+    }
     pub fn new(epoch: u64, token: String) -> Self {
         Self::with_limits(epoch, token, Limits::default())
     }
@@ -221,11 +229,12 @@ impl StateManager {
             next_object: 1,
             next_transaction: 1,
             shutdown_requested: false,
+            single_root: false,
         }
     }
 
     pub fn connect(&mut self, hello: Hello, peer: PeerIdentity) -> RpcResult<(ClientId, Reply)> {
-        if hello.version != PROTOCOL_VERSION {
+        if !kinakaze_v2_protocol::supported_version(hello.version) {
             return Err(error(
                 ErrorCode::VersionMismatch,
                 "unsupported protocol version",
@@ -321,6 +330,12 @@ impl StateManager {
                     let identity = match hello.adoption_ticket {
                         Some(token) => self.adopt(&token, peer)?,
                         None => {
+                            if self.single_root && self.next_pid != 1 {
+                                return Err(error(
+                                    ErrorCode::Unauthorized,
+                                    "process tree already has its init; a fork or exec reservation is required",
+                                ));
+                            }
                             self.check_process_capacity()?;
                             let identity = self.allocate_identity(0)?;
                             self.processes.insert(
@@ -501,6 +516,7 @@ impl StateManager {
             ProcessState::Active => {}
         }
         match request {
+            Request::ImageSnapshot { .. } => Ok(Reply::Ok),
             Request::MarkPrewarmReady => {
                 let process = self.processes.get_mut(&pid).unwrap();
                 if process.identity.parent_pid != 0
@@ -1561,6 +1577,7 @@ impl StateManager {
             .ok_or_else(|| error(ErrorCode::Aborted, "exec owner has exited"))?;
         match request {
             Request::Identity => Ok(Reply::Identity(process.identity)),
+            Request::ImageSnapshot { .. } => Ok(Reply::Ok),
             Request::RegisterModule { module_id, schema } => {
                 match process.snapshot.modules.get(&module_id) {
                     Some(existing) if *existing == schema => Ok(Reply::Ok),
@@ -1710,6 +1727,7 @@ impl StateManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use kinakaze_v2_protocol::PROTOCOL_VERSION;
 
     #[test]
     fn signed_pid_boundary_rejects_connect_and_fork_without_mutation() {

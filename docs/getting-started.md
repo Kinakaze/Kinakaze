@@ -44,12 +44,15 @@ python -m unittest discover -s tools/guest-deps
 artifacts/kinakaze-dist/
   init.exe
   worker.exe
+  vcruntime140.dll       # VC++ 运行库 DLL 随包提供
+  rootfs.manifest.json   # Release 默认 Debian 在线安装清单
+  native/               # Release 原生兼容模块及共享运行库
   rootfs/
     lib/                 # 原生兼容模块及运行库
     usr/share/doc/       # 随包第三方声明
 ```
 
-客体程序和数据需要单独准备。原生模块仍依赖 Windows 系统和 VC Runtime；干净 Windows 安装上的独立部署尚待验收。
+Release 构建在首次启动 `init.exe` 或 `worker.exe` 时自动联网下载并配置默认 Debian rootfs，不要求用户安装 Python；构建阶段才使用 Python。调试构建保留已初始化的 `rootfs/` 和离线种子。自定义客体程序和数据可按下节另行准备。
 
 ## 准备 Linux 文件树
 
@@ -74,7 +77,15 @@ python tools/prepare-root.py --source "$GuestSource" --root artifacts/guest-root
 
 worker 默认从自身所在目录寻找原生模块；`--root` 是客体文件树，`--` 后是 Linux 程序路径与参数。客体程序路径采用绝对 Linux 路径。若程序和依赖已放入发布目录相邻的 `rootfs/`，可省略 `--root`。
 
-可选只读进程页面：
+需要图形化启动和管理程序时，可开启独立的 WebUI 会话：
+
+```powershell
+./artifacts/kinakaze-dist/init.exe --session-file artifacts/session.json --root artifacts/guest-root --web 127.0.0.1:0
+```
+
+使用终端输出的地址访问，可编辑参数、工作目录和环境变量，查看详情、搜索筛选及结束进程。程序输出仍在启动终端中，更多说明见 [WebUI 指南](webui.md)。
+
+也可以为单次运行附加进程页面；此模式没有预热池，不能从页面启动新程序：
 
 ```powershell
 ./artifacts/kinakaze-dist/worker.exe run --root artifacts/guest-root --web 127.0.0.1:0 -- /bin/sh

@@ -1,0 +1,29 @@
+{
+  "title": "你以为这是 Linux？其实，它跑在 Windows 上。｜Kinakaze",
+  "style": "清亮女声；二次元音乐与动态图形；软件实录；无倒数、无吐槽、无看板娘",
+  "segments": [
+    {"id":"01","scene":"hook","text":"先看这个桌面。熟悉的终端，熟悉的窗口。","speak":"先看这个桌面。熟悉的终端，熟悉的窗口。","hold":0.4},
+    {"id":"02","scene":"guess","text":"你觉得，这是一台什么系统的电脑？","speak":"你觉得，这是一台什么系统的电脑？","hold":1.6},
+    {"id":"03","scene":"reveal","text":"你可能会想到 Linux。但这一次，答案是 Windows。","speak":"你可能会想到里纳克斯。但这一次，答案是温豆斯。","hold":0.7},
+    {"id":"04","scene":"brand","text":"带来这份可能的，叫 Kinakaze。","speak":"带来这份可能的，叫基纳卡泽。","hold":0.5},
+    {"id":"05","scene":"architecture","text":"它是一个实验性兼容层，让 Linux 程序，在 Windows 上运行。","speak":"它是一个实验性兼容层，让里纳克斯程序，在温豆斯上运行。","hold":0.4},
+    {"id":"06","scene":"architecture","text":"无需管理员权限，无需自定义驱动。","speak":"无需管理员权限，无需自定义驱动。","hold":0.5},
+    {"id":"07","scene":"vi","text":"从最熟悉的一行命令开始。Vi，打开文件。","speak":"从最熟悉的一行命令开始。微艾，打开文件。","hold":0.8},
+    {"id":"08","scene":"vim","text":"Vim，编辑，保存，再回到终端。","speak":"维姆，编辑，保存，再回到终端。","hold":1.0},
+    {"id":"09","scene":"ssh","text":"接着，是 SSH。启动服务，连接进来。","speak":"接着，是诶丝，诶丝，诶尺。启动服务，连接进来。","hold":0.5},
+    {"id":"10","scene":"ssh","text":"执行命令，传递数据，结果正常返回。","speak":"执行命令，传递数据，结果正常返回。","hold":0.7},
+    {"id":"11","scene":"desktop_guess","text":"你以为，接下来还只是几行命令？把视野，再放大一点。","speak":"你以为，接下来还只是几行命令？把视野，再放大一点。","hold":0.8},
+    {"id":"12","scene":"gnome","text":"GNOME。顶栏，壁纸，还有熟悉的桌面。","speak":"诺姆。顶栏，壁纸，还有熟悉的桌面。","hold":0.6},
+    {"id":"13","scene":"gnome","text":"Linux 的桌面，在 Windows 上亮起来了。","speak":"里纳克斯的桌面，在温豆斯上亮起来了。","hold":1.4},
+    {"id":"14","scene":"java","text":"再往前一步，是 Linux 版 Java。","speak":"再往前一步，是里纳克斯版加瓦。","hold":0.4},
+    {"id":"15","scene":"java","text":"即时编译，多线程，文件读写，再到启动子进程。","speak":"即时编译，多线程，文件读写，再到启动子进程。","hold":0.7},
+    {"id":"16","scene":"minecraft_guess","text":"看到这里，你想到的下一个应用，会是什么？","speak":"看到这里，你想到的下一个应用，会是什么？","hold":1.1},
+    {"id":"17","scene":"minecraft_guess","text":"这一次，我们打开一个你熟悉的世界。","speak":"这一次，我们打开一个你熟悉的世界。","hold":0.5},
+    {"id":"18","scene":"minecraft","text":"Minecraft。熟悉的背景，熟悉的按钮。","speak":"我的世界。熟悉的背景，熟悉的按钮。","hold":1.0},
+    {"id":"19","scene":"minecraft","text":"Linux 版客户端，主菜单和按钮已经能响应。世界内游玩，还在推进。","speak":"里纳克斯版客户端，主菜单和按钮已经能响应。世界内游玩，还在推进。","hold":0.7},
+    {"id":"20","scene":"montage","text":"从一行命令，到图形桌面，再到更复杂的应用。","speak":"从一行命令，到图形桌面，再到更复杂的应用。","hold":0.5},
+    {"id":"21","scene":"outro","text":"Kinakaze，想让更多 Linux 程序，在 Windows 上跑起来。","speak":"基纳卡泽，想让更多里纳克斯程序，在温豆斯上跑起来。","hold":0.5},
+    {"id":"22","scene":"outro","text":"项目已经开源，欢迎体验，也欢迎一起参与。","speak":"项目已经开源，欢迎体验，也欢迎一起参与。","hold":0.4},
+    {"id":"23","scene":"end","text":"Kinakaze。让熟悉的程序，遇见新的可能。","speak":"基纳卡泽。让熟悉的程序，遇见新的可能。","hold":3.2}
+  ]
+}

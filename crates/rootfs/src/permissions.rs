@@ -3,7 +3,29 @@
 use std::{io, path::Path};
 
 #[cfg(windows)]
+mod acl;
+
+#[cfg(windows)]
 pub(super) fn case_sensitive(path: &Path) -> io::Result<()> {
+    let result = match set_case_sensitive(path) {
+        Err(error) if error.raw_os_error() == Some(5) => {
+            // These are exclusively installer-created staging directories. NTFS
+            // also checks DELETE_CHILD, which a normal inherited Modify ACL lacks.
+            // Add only that right for the owner, preserving all other ACL entries.
+            acl::grant_owner_delete_children(path).and_then(|()| set_case_sensitive(path))
+        }
+        result => result,
+    };
+    result.map_err(|error| {
+        io::Error::other(format!(
+            "cannot enable case-sensitive rootfs directory {}: {error}",
+            path.display()
+        ))
+    })
+}
+
+#[cfg(windows)]
+fn set_case_sensitive(path: &Path) -> io::Result<()> {
     use std::os::windows::{fs::OpenOptionsExt, io::AsRawHandle};
     use windows_sys::Win32::Storage::FileSystem::{
         FILE_FLAG_BACKUP_SEMANTICS, FILE_WRITE_ATTRIBUTES, FileCaseSensitiveInfo,
@@ -23,11 +45,7 @@ pub(super) fn case_sensitive(path: &Path) -> io::Result<()> {
         )
     } == 0
     {
-        return Err(io::Error::other(format!(
-            "rootfs requires filesystem support for case-sensitive directories: {}: {}",
-            path.display(),
-            io::Error::last_os_error()
-        )));
+        return Err(io::Error::last_os_error());
     }
     Ok(())
 }

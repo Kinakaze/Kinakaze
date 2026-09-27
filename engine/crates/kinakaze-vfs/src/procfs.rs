@@ -11,6 +11,7 @@
 //! synthetic at the site that emits it. Nothing is invented silently.
 
 pub mod instance;
+pub mod mount_watch;
 
 use std::ffi::c_void;
 use std::fmt::Write as _;
@@ -2715,10 +2716,12 @@ pub(crate) fn local_fd_link_target(fd: i32) -> Result<String, i32> {
         crate::FdKind::Event => Ok(String::from("anon_inode:[eventpoll]")),
         crate::FdKind::IoRing => Ok(String::from("anon_inode:[io_uring]")),
         crate::FdKind::TimerFd => Ok(String::from("anon_inode:[timerfd]")),
+        crate::FdKind::SignalFd => Ok(String::from("anon_inode:[signalfd]")),
         crate::FdKind::EventFd => Ok(String::from("anon_inode:[eventfd]")),
         crate::FdKind::Inotify => Ok(String::from("anon_inode:inotify")),
         crate::FdKind::BpfProgram => Ok(String::from("anon_inode:bpf-prog")),
         crate::FdKind::Synthetic => crate::synthetic_file_path(fd).and_then(instance::display),
+        crate::FdKind::ProcMounts => mount_watch::path(fd).and_then(instance::display),
         crate::FdKind::Namespace => crate::namespaces::descriptor_link(fd),
         crate::FdKind::UserNamespace => {
             crate::user_namespace::descriptor_inode(fd).map(|ino| format!("user:[{ino}]"))
@@ -3588,6 +3591,7 @@ pub fn descriptor_scope<T>(run: impl FnOnce() -> T) -> T {
 pub fn descriptor_path(fd: i32) -> Result<String, i32> {
     match crate::get(fd)?.kind {
         crate::FdKind::Synthetic => crate::synthetic_file_path(fd),
+        crate::FdKind::ProcMounts => mount_watch::path(fd),
         crate::FdKind::ProcSysctl => crate::proc_sysctl_file_path(fd),
         crate::FdKind::SyntheticDirectory => crate::synthetic_directory_path(fd),
         _ => Err(crate::EINVAL),

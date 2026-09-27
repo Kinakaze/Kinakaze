@@ -28,7 +28,7 @@ impl ReadWait {
         }
         signal::register_waiter();
         let handles = [self.raw(), interrupt];
-        let ready = if signal::pending() & !signal::blocked_mask() != 0 {
+        let ready = if signal::interrupt_pending() {
             WAIT_OBJECT_0 + 1
         } else {
             unsafe { WaitForMultipleObjects(2, handles.as_ptr(), 0, timeout) }
@@ -41,7 +41,7 @@ impl ReadWait {
             }
             windows_sys::Win32::Foundation::WAIT_TIMEOUT => Ok(()),
             value if value == WAIT_OBJECT_0 + 1 => {
-                if signal::pending() & !signal::blocked_mask() != 0 {
+                if signal::interrupt_pending() {
                     Err(EINTR)
                 } else {
                     Ok(()) // a stale/blocked interrupt; the caller rechecks

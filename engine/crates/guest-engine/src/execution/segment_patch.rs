@@ -210,6 +210,7 @@ fn patch_code(
             direct_control_flow_entries.insert(target);
         }
         if instruction.mnemonic() == Mnemonic::Syscall
+            || is_exit_number_load(&instruction)
             || instruction.segment_prefix() == Register::FS
             || super::guest_gs::matches(&instruction)
         {
@@ -249,6 +250,11 @@ fn patch_code(
         }
     }
 
+    let exit_loads: HashSet<_> = decoded
+        .iter()
+        .filter(|(_, instruction, _)| is_exit_number_load(instruction))
+        .map(|(offset, _, _)| *offset)
+        .collect();
     // A syscall detour may need to consume instructions after the two-byte
     // opcode. Every direct control-flow target is therefore an entry boundary,
     // including targets after a syscall.
@@ -326,9 +332,23 @@ fn patch_code(
         .collect::<HashSet<_>>();
     // No other detour may relocate a virtual GS instruction as native code.
     syscall_addresses.extend(gs_sites.iter().map(|(offset, _)| ip as usize + offset));
-    let mut syscall_detour_ranges = Vec::new();
-    for (instruction_offset, length, detour_len) in syscalls {
-        let address = ip as usize + instruction_offset;
+    let mut syscall_detour_ranges: Vec<std::ops::Range<usize>> = Vec::new();
+    for (mut instruction_offset, mut length, detour_len) in syscalls {
+        let mut address = ip as usize + instruction_offset;
+        // musl unmaps its own stack just before SYS_exit. Windows cannot
+        // deliver a UD2 exception on that now-unmapped stack. Use the proven
+        // preceding mov eax,SYS_exit as space for a stack-free near jump.
+        let prefix = instruction_offset.checked_sub(5).filter(|offset| {
+            matches!(syscall_policy, AotSyscallPolicy::Trampoline(_))
+                && exit_loads.contains(offset)
+                && !syscall_detour_ranges
+                    .iter()
+                    .any(|range| range.end > ip as usize + offset)
+                && !(ip as usize + offset + 1..address + length).any(|target| {
+                    independent_entries.is_some_and(|entries| entries.contains(&target))
+                        || direct_control_flow_entries.contains(&target)
+                })
+        });
         let detour_is_safe = detour_len.is_some_and(|overwritten| {
             detour_is_safe(
                 address,
@@ -339,8 +359,13 @@ fn patch_code(
                 &syscall_addresses,
             )
         });
-        let use_trampoline =
-            matches!(syscall_policy, AotSyscallPolicy::Trampoline(_)) && detour_is_safe;
+        let use_trampoline = prefix.is_some()
+            || matches!(syscall_policy, AotSyscallPolicy::Trampoline(_)) && detour_is_safe;
+        if let Some(offset) = prefix {
+            instruction_offset = offset;
+            address -= 5;
+            length += 5;
+        }
         cached_syscalls.push(crate::execution::aot_cache::CachedSyscallSite {
             offset: instruction_offset as u32,
             len: length as u8,
@@ -512,6 +537,14 @@ fn direct_control_flow_target(instruction: &Instruction) -> Option<usize> {
     }
 }
 
+pub(super) fn is_exit_number_load(instruction: &Instruction) -> bool {
+    instruction.mnemonic() == Mnemonic::Mov
+        && instruction.len() == 5
+        && instruction.op0_register() == Register::EAX
+        && instruction.op1_kind() == iced_x86::OpKind::Immediate32
+        && matches!(instruction.immediate32(), 60 | 231)
+}
+
 struct ControlFlowEntries {
     /// Only patch candidates reached at exact instruction boundaries. Ordinary
     /// instructions were already decoded during CFG traversal; decoding them a
@@ -559,6 +592,7 @@ fn protected_instruction_entries(
     // Stripped indirect-call targets still have authoritative unwind roots.
     // Padding alone misses functions aligned after only one to three INT3s.
     queue.extend(super::code_roots::unwind_entries(object)?);
+    queue.extend(super::code_roots::got_entries(object)?);
     if entry != 0 {
         if let Ok(addr) = object.resolve_address(entry) {
             queue.push_back(addr);
@@ -655,7 +689,16 @@ fn trace_control_flow(
                 recent.pop_front();
             }
             recent.push_back(instruction);
+            // Executable segments can contain literals (OpenSSL does this).
+            // A formed address is a callback only if the callee invokes it.
+            for target in super::code_roots::rip_relative_callback_entries(&recent, segments) {
+                protected.insert(target);
+                if !visited.contains(target) {
+                    queue.push_back(target);
+                }
+            }
             if instruction.mnemonic() == Mnemonic::Syscall
+                || is_exit_number_load(&instruction)
                 || instruction.segment_prefix() == Register::FS
                 || super::guest_gs::matches(&instruction)
             {
@@ -667,6 +710,12 @@ fn trace_control_flow(
             // Linux CFG and hide branch targets in the return/error path.
             if instruction.mnemonic() == Mnemonic::Syscall {
                 continue;
+            }
+            if let Some(target) = super::code_roots::rip_relative_branch_entry(&recent) {
+                protected.insert(target);
+                if !visited.contains(target) {
+                    queue.push_back(target);
+                }
             }
             match instruction.flow_control() {
                 FlowControl::Next | FlowControl::IndirectCall => {}
@@ -911,6 +960,103 @@ pub fn safe_get_constant_offsets(
 #[cfg(all(test, windows, target_arch = "x86_64"))]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cfg_follows_address_taken_callbacks_passed_to_another_function() {
+        let code = [
+            0x48u8, 0x8d, 0x3d, 20, 0, 0, 0, // lea rdi,[rip+20]: callback
+            0xe8, 1, 0, 0, 0, 0xc3, // call wrapper; ret
+            0x49, 0x89, 0xfb, // wrapper: mov r11,rdi
+            0x4d, 0x89, 0xd9, // mov r9,r11 (musl clone saves callback across syscall)
+            0x0f, 0x05, 0x75, 3, // syscall; jne return
+            0x41, 0xff, 0xd1, // call r9
+            0xc3, 0xb8, 3, 0, 0, 0, 0x0f, 0x05, 0xc3,
+        ];
+        let start = code.as_ptr() as usize;
+        let control =
+            trace_control_flow(&[(start, code.len())], VecDeque::from([start]), None).unwrap();
+        assert_eq!(control.patch_boundaries, [start + 19, start + 32]);
+        assert!(control.independent_entries.contains(&(start + 27)));
+    }
+
+    #[test]
+    fn cfg_does_not_decode_executable_literals_returned_or_passed_as_data() {
+        for argument in [false, true] {
+            let code = [
+                0x48u8,
+                0x8d,
+                if argument { 0x3d } else { 0x05 },
+                9,
+                0,
+                0,
+                0,
+                0xe8,
+                1,
+                0,
+                0,
+                0,
+                0xc3, // call consumer; ret
+                0x8a,
+                0x07,
+                0xc3, // consumer: mov al,[rdi]; ret
+                0x65,
+                0x48,
+                0x8b,
+                0x00,
+                0x0f,
+                0x05,
+                0xc3, // data resembling GS/syscall
+            ];
+            let start = code.as_ptr() as usize;
+            let control =
+                trace_control_flow(&[(start, code.len())], VecDeque::from([start]), None).unwrap();
+            assert!(control.patch_boundaries.is_empty());
+            assert!(!control.independent_entries.contains(&(start + 16)));
+        }
+    }
+
+    #[test]
+    fn cfg_follows_registered_musl_cleanup_callbacks() {
+        let mut code = vec![
+            0x48u8, 0x8d, 0x35, 0, 0, 0, 0, // lea rsi,callback
+            0xe8, 1, 0, 0, 0, 0xc3, // call cleanup_push; ret
+            0x48, 0x89, 0x37, // mov [rdi],rsi
+            0x48, 0x89, 0x57, 8, // mov [rdi+8],rdx
+            0x64, 0x48, 0x8b, 4, 0x25, 0, 0, 0, 0, // mov rax,fs:0
+            0x48, 0x8b, 0x50, 0x78, // mov rdx,[rax+0x78]
+            0x48, 0x89, 0x57, 16, // mov [rdi+16],rdx
+            0x48, 0x89, 0x78, 0x78, 0xc3, // mov [rax+0x78],rdi; ret
+        ];
+        let callback = code.len();
+        code[3..7].copy_from_slice(&((callback - 7) as i32).to_le_bytes());
+        code.extend_from_slice(&[0xb8, 3, 0, 0, 0, 0x0f, 0x05, 0xc3]);
+        let start = code.as_ptr() as usize;
+        let control =
+            trace_control_flow(&[(start, code.len())], VecDeque::from([start]), None).unwrap();
+        assert_eq!(control.patch_boundaries, [start + 20, start + callback + 5]);
+        assert!(control.independent_entries.contains(&(start + callback)));
+
+        // Storing two arguments to a struct alone is not callback evidence.
+        code[20] = 0xc3;
+        let control =
+            trace_control_flow(&[(start, code.len())], VecDeque::from([start]), None).unwrap();
+        assert!(control.patch_boundaries.is_empty());
+        assert!(!control.independent_entries.contains(&(start + callback)));
+    }
+
+    #[test]
+    fn cfg_follows_static_pie_rip_relative_indirect_entry() {
+        let code = [
+            0x48u8, 0x8d, 0x05, 3, 0, 0, 0, // lea rax,[rip+3]
+            0xff, 0xe0, 0xcc, // jmp rax; unreachable trap
+            0xb8, 9, 0, 0, 0, 0x0f, 0x05, 0xc3, // destination: mmap syscall
+        ];
+        let start = code.as_ptr() as usize;
+        let control =
+            trace_control_flow(&[(start, code.len())], VecDeque::from([start]), None).unwrap();
+        assert_eq!(control.patch_boundaries, [start + 15]);
+        assert!(control.independent_entries.contains(&(start + 10)));
+    }
 
     #[test]
     fn cfg_candidates_preserve_entries_after_syscalls_and_skip_embedded_opcodes() {

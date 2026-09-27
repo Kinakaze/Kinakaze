@@ -546,6 +546,8 @@ pub(crate) fn object_entry(entry: crate::FdEntry) -> Result<Store, i32> {
     if !matches!(
         entry.kind,
         crate::FdKind::EventFd
+            | crate::FdKind::SignalFd
+            | crate::FdKind::ProcMounts
             | crate::FdKind::FsContext
             | crate::FdKind::MountTree
             | crate::FdKind::Namespace

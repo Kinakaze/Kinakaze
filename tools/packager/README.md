@@ -10,10 +10,16 @@ unchanged to `rootfs/lib/<name>.so`; required toolchain DLLs retain their origin
 names in the same directory. The distribution contains `init.exe`, `worker.exe`,
 `rootfs/`, and `rootfs.manifest.json`. The manifest configures directories and
 default guest files on first launch; it is not a native module catalog.
-Existing manifests are preserved when updating native binaries. Release staging
-adds verified `rootfs-seed/` payloads using `tools/prepare-release-rootfs.py`,
-including every native provider, shared runtime dependency, base configuration,
-and the locked guest package closure. A new root is a complete installation.
+Existing manifests are preserved when updating native binaries. Release staging uses `tools/prepare-release-rootfs.py --online` to place native
+providers in `native/` and emit a Debian manifest with package URLs and hashes.
+The runtime ZIP includes the entry points, app-local VC runtime DLLs, native
+providers and manifest. Its built-in installer downloads and unpacks Debian
+packages on first launch; no Python or external unpacker is needed. Debug builds
+retain the offline `rootfs-seed/` layout.
+The ZIP root contains only executable entry points, the manifest, runtime DLLs
+and payload directories. License materials live in `licenses/`. User documentation
+and build/validation reports stay outside the runtime ZIP;
+launch `init.exe` or `worker.exe` directly without CMD wrappers.
 Entry executables link Rust's standard
 library statically; native modules retain their shared standard-library DLL.
 There is no module catalog, image patching, heap redirection or runtime ELF facade.

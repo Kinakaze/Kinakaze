@@ -12,9 +12,16 @@ kinakaze-v2-abi.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2 = "0.10"
+http = "1"
+tar = "0.4"
+lzma-rs = "0.3"
+flate2 = "1"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys.workspace = true
+windows-sys = { workspace = true, features = ["Win32_Networking_WinHttp"] }
+
+[target.'cfg(not(windows))'.dependencies]
+ureq = { version = "3", default-features = false, features = ["rustls"] }
 
 [lints]
 workspace = true

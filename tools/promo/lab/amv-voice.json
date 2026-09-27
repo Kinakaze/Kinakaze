@@ -1,0 +1,9 @@
+{
+  "title": "Kinakaze · 在 Windows 上运行 Linux 程序",
+  "style": "选定的 A 女声，可爱轻快。只保留三句，开场的你好 Windows 仅作画面文字，音乐和实际演示主导剪辑。",
+  "segments": [
+    {"id":"launch","text":"在 Windows 上，运行 Linux 程序。","speak":"在温豆斯上，运行里纳克斯程序。"},
+    {"id":"cli","text":"命令执行完，文件直接读回。","speak":"命令执行完，文件直接读回。"},
+    {"id":"end","text":"Kinakaze，现已开源。","speak":"基纳卡泽，现已开源。"}
+  ]
+}

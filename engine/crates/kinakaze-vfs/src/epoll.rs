@@ -243,6 +243,10 @@ const UNIX_POLL_INTERVAL_MS: u32 = 10;
 
 /// An epoll set.
 struct EpollSet {
+    /// Public aliases share one open file description and one registration set.
+    /// The map key stays private and stable when the original fd is closed.
+    description_id: u64,
+    descriptor: i32,
     registrations: HashMap<RegistrationKey, Registration>,
     /// Manual-reset event signalled whenever the interest list changes.
     ///
@@ -262,10 +266,13 @@ fn supports_epoll(kind: FdKind) -> bool {
     matches!(
         kind,
         FdKind::Socket
+            | FdKind::Event
             | FdKind::UnixSocket
             | FdKind::NetlinkSocket
             | FdKind::EventFd
             | FdKind::TimerFd
+            | FdKind::SignalFd
+            | FdKind::ProcMounts
             | FdKind::MessageQueue
             | FdKind::SysfsFile
             | FdKind::Inotify
@@ -273,6 +280,7 @@ fn supports_epoll(kind: FdKind) -> bool {
             | FdKind::Fifo
             | FdKind::PtyMaster
             | FdKind::PtySlave
+            | FdKind::Console
             | FdKind::Null
             | FdKind::Zero
             | FdKind::Random
@@ -332,13 +340,15 @@ fn lock_sets(owner: usize) -> Result<SetsGuard, ()> {
 pub(crate) fn serialize_fork_state() -> Result<Vec<u8>, i32> {
     let sets = lock_sets(1).map_err(|_| EIO)?;
     let mut payload = Vec::new();
-    payload.extend_from_slice(&(sets.keys().filter(|&&fd| fd >= 0).count() as u32).to_le_bytes());
+    payload.extend_from_slice(
+        &(sets.values().filter(|set| set.descriptor >= 0).count() as u32).to_le_bytes(),
+    );
     payload.extend_from_slice(&0u32.to_le_bytes());
-    for (epoll_fd, set) in sets.iter() {
-        if *epoll_fd < 0 {
+    for set in sets.values() {
+        if set.descriptor < 0 {
             continue;
         }
-        payload.extend_from_slice(&epoll_fd.to_le_bytes());
+        payload.extend_from_slice(&set.descriptor.to_le_bytes());
         payload.extend_from_slice(&(set.registrations.len() as u32).to_le_bytes());
         for (key, registration) in set.registrations.iter() {
             let flags = u32::from(registration.disarmed)
@@ -376,9 +386,12 @@ pub(crate) fn restore_fork_state(payload: &[u8]) -> bool {
                 .try_into()
                 .unwrap_or_default(),
         ) as usize;
-        let epoll_handle = crate::get(epoll_fd).ok().map(|entry| entry.raw);
+        let epoll_entry = crate::get(epoll_fd).ok();
+        let epoll_handle = epoll_entry.map(|entry| entry.raw);
         cursor += 8;
         let mut set = EpollSet {
+            description_id: epoll_entry.map_or(0, |entry| entry.description_id),
+            descriptor: epoll_fd,
             registrations: HashMap::with_capacity(registrations),
             wake_handle: epoll_handle.unwrap_or_default(),
         };
@@ -455,7 +468,10 @@ pub(crate) fn restore_fork_state(payload: &[u8]) -> bool {
                         is_eventfd: matches!(
                             entry.kind,
                             FdKind::EventFd
+                                | FdKind::Event
                                 | FdKind::TimerFd
+                                | FdKind::SignalFd
+                                | FdKind::ProcMounts
                                 | FdKind::MessageQueue
                                 | FdKind::SysfsFile
                         ),
@@ -466,7 +482,10 @@ pub(crate) fn restore_fork_state(payload: &[u8]) -> bool {
                         pipe_readable: entry.flags.contains(FdFlags::PIPE_READ_END),
                         pipe_writable: entry.flags.contains(FdFlags::PIPE_WRITE_END),
                         pipe_overlapped: entry.flags.contains(FdFlags::OVERLAPPED),
-                        is_pty: matches!(entry.kind, FdKind::PtyMaster | FdKind::PtySlave),
+                        is_pty: matches!(
+                            entry.kind,
+                            FdKind::PtyMaster | FdKind::PtySlave | FdKind::Console
+                        ),
                     },
                 );
             }
@@ -622,6 +641,8 @@ impl PollSet {
             sets.insert(
                 key,
                 EpollSet {
+                    description_id: 0,
+                    descriptor: -1,
                     registrations: HashMap::new(),
                     wake_handle: handle as usize,
                 },
@@ -675,16 +696,39 @@ pub fn epoll_create1(flags: i32) -> Result<i32, i32> {
         // SAFETY: installation failed, so this function still owns the event.
         unsafe { CloseHandle(handle) };
     })?;
-    if let Ok(mut sets) = lock_sets(3) {
+    let description_id = crate::get(fd)?.description_id;
+    let result = (|| {
+        let mut sets = lock_sets(3).map_err(|_| EIO)?;
+        let key = (i32::MIN..0)
+            .rev()
+            .find(|key| !sets.contains_key(key))
+            .ok_or(crate::ENOMEM)?;
         sets.insert(
-            fd,
+            key,
             EpollSet {
+                description_id,
+                descriptor: fd,
                 registrations: HashMap::new(),
                 wake_handle: handle as usize,
             },
         );
+        Ok(fd)
+    })();
+    if result.is_err() {
+        let _ = crate::close(fd);
     }
-    Ok(fd)
+    result
+}
+
+fn set_key(fd: i32) -> Result<i32, i32> {
+    let entry = crate::get(fd)?;
+    if entry.kind != FdKind::Event {
+        return Err(EINVAL);
+    }
+    let sets = lock_sets(14).map_err(|_| EIO)?;
+    sets.iter()
+        .find_map(|(key, set)| (set.description_id == entry.description_id).then_some(*key))
+        .ok_or(EBADF)
 }
 
 /// `epoll_create`, whose size argument Linux ignores.
@@ -700,10 +744,17 @@ pub fn forget_set(fd: i32, raw: usize) {
     if let Ok(mut sets) = lock_sets(4) {
         // The old native event stays owned until close returns. A reused fd
         // with a different event is a different set, never ours to tear down.
-        if !sets.get(&fd).is_some_and(|set| set.wake_handle == raw) {
+        let key = if fd < 0 {
+            Some(fd)
+        } else {
+            sets.iter()
+                .find_map(|(key, set)| (set.descriptor == fd).then_some(*key))
+        };
+        let Some(key) = key else { return };
+        if !sets.get(&key).is_some_and(|set| set.wake_handle == raw) {
             return;
         }
-        if let Some(set) = sets.remove(&fd) {
+        if let Some(set) = sets.remove(&key) {
             // SAFETY: the descriptor still owns this event until close returns.
             unsafe { SetEvent(set.wake_handle as HANDLE) };
         }
@@ -734,6 +785,21 @@ pub fn descriptor_closed(description_id: u64, survivor: Option<(i32, crate::FdEn
             survivor.map(|(fd, entry)| (fd, entry.raw))
         );
     }
+    // Closing any alias preserves the set while another fd owns the same
+    // description. Wake in-flight waiters before the old native handle closes.
+    sets.retain(|_, set| {
+        if set.description_id != description_id || description_id == 0 {
+            return true;
+        }
+        unsafe { SetEvent(set.wake_handle as HANDLE) };
+        if let Some((fd, entry)) = survivor {
+            set.descriptor = fd;
+            set.wake_handle = entry.raw;
+            true
+        } else {
+            false
+        }
+    });
     for set in sets.values_mut() {
         let mut changed = false;
         if let Some((poll_fd, base_handle)) = replacement {
@@ -835,7 +901,11 @@ pub fn epoll_ctl(
     if epoll_fd < 0 {
         return Err(EBADF);
     }
-    control_set(epoll_fd, operation, fd, event)
+    let key = set_key(epoll_fd)?;
+    if crate::get(epoll_fd)?.description_id == crate::get(fd)?.description_id {
+        return Err(EINVAL);
+    }
+    control_set(key, operation, fd, event)
 }
 
 fn control_set(
@@ -844,10 +914,6 @@ fn control_set(
     fd: i32,
     event: Option<EpollEvent>,
 ) -> Result<(), i32> {
-    // A set cannot watch itself; Linux reports EINVAL for that.
-    if epoll_fd == fd {
-        return Err(EINVAL);
-    }
     let entry = crate::get(fd)?;
     let key = RegistrationKey {
         fd,
@@ -856,7 +922,10 @@ fn control_set(
     if entry.kind == FdKind::Pipe && !entry.flags.has_pipe_access() {
         return Err(EINVAL);
     }
-    if operation != EPOLL_CTL_DEL && !supports_epoll(entry.kind) {
+    if operation != EPOLL_CTL_DEL
+        && (!supports_epoll(entry.kind)
+            || (entry.kind == FdKind::Console && !crate::tty::is_console(fd)))
+    {
         return Err(EPERM);
     }
     // Resolve every property that may enter Winsock, another subsystem, or the
@@ -870,7 +939,13 @@ fn control_set(
         let is_socket = entry.kind == FdKind::Socket;
         let is_eventfd = matches!(
             entry.kind,
-            FdKind::EventFd | FdKind::TimerFd | FdKind::MessageQueue | FdKind::SysfsFile
+            FdKind::Event
+                | FdKind::EventFd
+                | FdKind::TimerFd
+                | FdKind::SignalFd
+                | FdKind::MessageQueue
+                | FdKind::SysfsFile
+                | FdKind::ProcMounts
         );
         if is_eventfd && crate::eventfd_trace_enabled() {
             eprintln!(
@@ -904,12 +979,19 @@ fn control_set(
             pipe_readable: entry.flags.contains(FdFlags::PIPE_READ_END),
             pipe_writable: entry.flags.contains(FdFlags::PIPE_WRITE_END),
             pipe_overlapped: entry.flags.contains(FdFlags::OVERLAPPED),
-            is_pty: matches!(entry.kind, FdKind::PtyMaster | FdKind::PtySlave),
+            is_pty: matches!(
+                entry.kind,
+                FdKind::PtyMaster | FdKind::PtySlave | FdKind::Console
+            ),
         })
     } else {
         None
     };
     let mut sets = lock_sets(5).map_err(|_| EIO)?;
+    if operation == EPOLL_CTL_ADD && entry.kind == FdKind::Event {
+        let parent = sets.get(&epoll_fd).ok_or(EBADF)?.description_id;
+        validate_nesting(&sets, parent, entry.description_id)?;
+    }
     let set = sets.get_mut(&epoll_fd).ok_or(EBADF)?;
 
     if epoll_trace_enabled() {
@@ -964,6 +1046,38 @@ fn control_set(
 enum AfdPollResult {
     Ready(u32),
     InterestChanged,
+}
+
+/// Reject cycles and excessive nesting before publishing a new epoll edge.
+/// The same registry lock serializes concurrent additions in opposite directions.
+fn validate_nesting(sets: &HashMap<i32, EpollSet>, parent: u64, child: u64) -> Result<(), i32> {
+    fn visit(
+        sets: &HashMap<i32, EpollSet>,
+        id: u64,
+        parent: u64,
+        child: u64,
+        path: &mut Vec<u64>,
+    ) -> Result<(), i32> {
+        let Some(set) = sets.values().find(|set| set.description_id == id) else {
+            return Ok(());
+        };
+        if path.contains(&id) || path.len() >= 5 {
+            return Err(crate::ELOOP);
+        }
+        path.push(id);
+        for key in set.registrations.keys() {
+            visit(sets, key.description_id, parent, child, path)?;
+        }
+        if id == parent {
+            visit(sets, child, parent, child, path)?;
+        }
+        path.pop();
+        Ok(())
+    }
+    for set in sets.values() {
+        visit(sets, set.description_id, parent, child, &mut Vec::new())?;
+    }
+    Ok(())
 }
 
 /// Polls one batch of sockets through AFD.
@@ -1155,14 +1269,18 @@ pub fn epoll_wait(epoll_fd: i32, events: &mut [EpollEvent], timeout_ms: i32) -> 
     if epoll_fd < 0 {
         return Err(EBADF);
     }
-    wait_set(epoll_fd, events, timeout_ms, true, true)
+    let count = wait_set(set_key(epoll_fd)?, events, timeout_ms, true, true)?;
+    if count != 0 {
+        readiness_consumed(crate::get(epoll_fd)?.description_id, EPOLLIN | EPOLLRDNORM);
+    }
+    Ok(count)
 }
 
 /// Observe ready registrations without disarming one-shots or consuming edges.
 /// poll/select use this when another event loop exposes its epoll descriptor.
 pub fn poll_readable(epoll_fd: i32) -> Result<bool, i32> {
     let mut event = [EpollEvent { events: 0, data: 0 }];
-    wait_set(epoll_fd, &mut event, 0, false, false).map(|count| count != 0)
+    wait_set(set_key(epoll_fd)?, &mut event, 0, false, false).map(|count| count != 0)
 }
 
 fn wait_set(
@@ -1525,7 +1643,13 @@ fn epoll_wait_inner(
                         crate::sysfs::poll(fd)? & (registration.interest | EPOLLERR | EPOLLHUP)
                     );
                 }
+                if entry.kind == FdKind::ProcMounts {
+                    return Ok(crate::procfs::mount_watch::poll(fd)?
+                        & (registration.interest | EPOLLERR | EPOLLHUP));
+                }
                 let (readable, writable, overflow) = match entry.kind {
+                    FdKind::Event => (poll_readable(fd)?, false, false),
+                    FdKind::SignalFd => (crate::signalfd::poll(fd)?, false, false),
                     FdKind::TimerFd => {
                         let (r, w) = crate::timerfd::poll(fd)?;
                         (r, w, false)
@@ -2360,6 +2484,56 @@ mod pipe_tests {
     use windows_sys::Win32::System::Pipes::CreatePipe;
 
     #[test]
+    fn duplicated_epoll_shares_registrations_and_survives_original_close() {
+        let original = epoll_create1(0).unwrap();
+        let entry = crate::get(original).unwrap();
+        let pinned = unsafe { native_wait::Source::duplicate(entry.raw as HANDLE) }.unwrap();
+        let alias = crate::install_duplicate(pinned.raw() as usize, entry.kind, entry.flags, entry)
+            .unwrap();
+        core::mem::forget(pinned); // the descriptor table owns the copy
+        let event = crate::eventfd::create_eventfd(1, 0).unwrap();
+        epoll_ctl(
+            alias,
+            EPOLL_CTL_ADD,
+            event,
+            Some(EpollEvent {
+                events: EPOLLIN | EPOLLONESHOT,
+                data: 73,
+            }),
+        )
+        .unwrap();
+        assert_eq!(
+            epoll_ctl(alias, EPOLL_CTL_ADD, original, Some(EpollEvent::default())),
+            Err(EINVAL)
+        );
+        let mut events = [EpollEvent::default(); 1];
+        assert_eq!(epoll_wait(original, &mut events, 0), Ok(1));
+        let data = events[0].data;
+        assert_eq!(data, 73);
+        assert_eq!(epoll_wait(alias, &mut events, 0), Ok(0));
+        crate::close(original).unwrap();
+        // Reuse the original number for a different set; neither may steal
+        // the other's state or private key.
+        let replacement = epoll_create1(0).unwrap();
+        assert_eq!(replacement, original);
+        epoll_ctl(
+            alias,
+            EPOLL_CTL_MOD,
+            event,
+            Some(EpollEvent {
+                events: EPOLLIN,
+                data: 74,
+            }),
+        )
+        .unwrap();
+        assert_eq!(epoll_wait(alias, &mut events, 0), Ok(1));
+        assert_eq!(epoll_wait(replacement, &mut events, 0), Ok(0));
+        for fd in [event, alias, replacement] {
+            crate::close(fd).unwrap();
+        }
+    }
+
+    #[test]
     fn readiness_snapshot_ignores_close_during_query() {
         let fd = crate::eventfd::create_eventfd(0, 0).unwrap();
         let description = crate::get(fd).unwrap().description_id;
@@ -2766,11 +2940,12 @@ mod pipe_tests {
             fd: writer,
             description_id: crate::get(writer).unwrap().description_id,
         };
-        let snapshot = lock_sets(0).unwrap()[&poller].registrations[&key];
+        let poller_key = set_key(poller).unwrap();
+        let snapshot = lock_sets(0).unwrap()[&poller_key].registrations[&key];
         // The old writable edge is still zero. A concurrent full write must
         // nevertheless invalidate this ready sample before it is committed.
         readiness_consumed(key.description_id, EPOLLOUT);
-        finish_delivery(poller, key, EPOLLOUT, snapshot.readiness_revision);
+        finish_delivery(poller_key, key, EPOLLOUT, snapshot.readiness_revision);
         let mut events = [EpollEvent::default(); 1];
         assert_eq!(epoll_wait(poller, &mut events, 0).unwrap(), 1);
         assert_eq!(epoll_wait(poller, &mut events, 0).unwrap(), 0);

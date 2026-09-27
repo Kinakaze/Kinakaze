@@ -626,6 +626,8 @@ fn supported(kind: FdKind) -> bool {
             | FdKind::Random
             | FdKind::Full
             | FdKind::TimerFd
+            | FdKind::SignalFd
+            | FdKind::ProcMounts
             | FdKind::EventFd
             | FdKind::UnixSocket
             | FdKind::Socket
@@ -707,6 +709,12 @@ fn activate(fd: i32, descriptor: &Descriptor, process: HANDLE) -> Result<(), i32
         FdKind::TimerFd => {
             crate::timerfd::gettime(fd)?;
         }
+        FdKind::SignalFd => {
+            crate::signalfd::poll(fd)?;
+        }
+        FdKind::ProcMounts => {
+            crate::procfs::mount_watch::poll(fd)?;
+        }
         FdKind::EventFd => {
             crate::eventfd::poll_eventfd(fd)?;
         }
@@ -761,6 +769,8 @@ fn export(socket: &UnixSocket, rights: &[i32]) -> Result<Record, i32> {
                     | FdKind::PtySlave
                     | FdKind::EventFd
                     | FdKind::TimerFd
+                    | FdKind::SignalFd
+                    | FdKind::ProcMounts
                     | FdKind::UnixSocket
                     | FdKind::Socket
             ) {

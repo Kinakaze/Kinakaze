@@ -1731,22 +1731,10 @@ fn normalize(path: &str) -> String {
 // `<libgen.h>`, and the two disagree on trailing slashes: for "usr/lib/" GNU
 // returns the empty string while POSIX returns "lib".
 //
-// **This implementation is the POSIX/`<libgen.h>` variant**, because that is what
-// the exported symbol name `basename` denotes in the ABI: glibc's GNU spelling is
-// `__xpg_basename`'s counterpart resolved at compile time through a header macro
-// and never appears as a distinct dynamic symbol. It differs from glibc's in one
-// respect, and deliberately: the argument is never modified. POSIX allows
-// modification but does not require it, and a caller passing a string literal or
-// a read-only mapping would fault on the write. Results are returned from
-// per-function static buffers instead.
-//
-// Each function has its own buffer so that the common `printf("%s/%s",
-// dirname(a), basename(b))` idiom, where both are live at once, cannot have one
-// result overwrite the other. As with glibc, a result is valid only until the
-// next call to the same function.
-
-/// Static return storage for [`kinakaze_abi_basename`].
-static BASENAME_BUFFER: Mutex<[u8; PATH_MAX + 1]> = Mutex::new([0; PATH_MAX + 1]);
+// The dynamic `basename` symbol is GNU's non-mutating pointer into the input.
+// `<libgen.h>` redirects the POSIX spelling to `__xpg_basename` in strextra.rs.
+// Sharing return storage here corrupts simultaneous names used by systemd's
+// unit alias and preset comparisons.
 
 /// Static return storage for [`kinakaze_abi_dirname`].
 static DIRNAME_BUFFER: Mutex<[u8; PATH_MAX + 1]> = Mutex::new([0; PATH_MAX + 1]);
@@ -1824,18 +1812,42 @@ fn publish(buffer: &'static Mutex<[u8; PATH_MAX + 1]>, value: &[u8]) -> *mut c_c
     slot.as_mut_ptr().cast::<c_char>()
 }
 
-/// `basename`, the POSIX `<libgen.h>` variant. Does not modify its argument.
+/// GNU `basename`: return the input suffix, including an empty trailing component.
 ///
 /// # Safety
 ///
 /// `path` must be null or a valid null-terminated string.
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn kinakaze_abi_basename(path: *const c_char) -> *mut c_char {
-    // glibc treats a null path as "." rather than faulting, and callers rely on
-    // it when threading an optional argument through.
-    // SAFETY: forwarded from this function's own contract.
+    if path.is_null() {
+        return c".".as_ptr().cast_mut();
+    }
+    let bytes = unsafe { CStr::from_ptr(path) }.to_bytes();
+    let start = bytes
+        .iter()
+        .rposition(|byte| *byte == b'/')
+        .map_or(0, |at| at + 1);
+    unsafe { path.add(start).cast_mut() }
+}
+
+/// POSIX `<libgen.h>` entry: trim trailing separators in the caller's buffer.
+pub(crate) unsafe fn xpg_basename(path: *mut c_char) -> *mut c_char {
     let bytes = unsafe { borrow_bytes(path) }.unwrap_or(b"");
-    publish(&BASENAME_BUFFER, basename_bytes(bytes))
+    if bytes.is_empty() {
+        return c".".as_ptr().cast_mut();
+    }
+    let Some(last) = bytes.iter().rposition(|byte| *byte != b'/') else {
+        unsafe {
+            *path.add(1) = 0;
+        }
+        return path;
+    };
+    let end = last + 1;
+    let start = end - basename_bytes(bytes).len();
+    unsafe {
+        *path.add(end) = 0;
+        path.add(start)
+    }
 }
 
 /// `dirname`. Does not modify its argument.
@@ -4648,9 +4660,8 @@ pub extern "sysv64" fn kinakaze_abi_gettid() -> i32 {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "sysv64" fn kinakaze_abi_umount(_target: *const c_char) -> c_int {
-    crate::set_errno(kinakaze_vfs::EPERM);
-    -1
+pub unsafe extern "sysv64" fn kinakaze_abi_umount(target: *const c_char) -> c_int {
+    unsafe { crate::sysadmin::kinakaze_abi_umount2(target, 0) }
 }
 
 #[unsafe(no_mangle)]

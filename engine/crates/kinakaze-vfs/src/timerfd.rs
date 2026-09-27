@@ -12,16 +12,19 @@ use windows_sys::Win32::System::Memory::{
 use windows_sys::Win32::System::Threading::{
     CreateMutexW, INFINITE, ReleaseMutex, WaitForSingleObject,
 };
-const MAGIC: u64 = u64::from_le_bytes(*b"CYTMR001");
+mod clock_change;
+const MAGIC: u64 = u64::from_le_bytes(*b"CYTMR002");
+const ECANCELED: i32 = 125;
 #[repr(C)]
 struct State {
     magic: u64,
     id: u64,
     clock: i32,
-    _pad: u32,
+    cancel_on_set: u32,
     deadline: i64,
     interval: i64,
     ticks: u64,
+    clock_generation: u64,
 }
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]
@@ -40,10 +43,12 @@ impl Timespec {
         if self.sec < 0 || !(0..1_000_000_000).contains(&self.nsec) {
             return Err(EINVAL);
         }
-        self.sec
-            .checked_mul(1_000_000_000)
-            .and_then(|s| s.checked_add(self.nsec))
-            .ok_or(EINVAL)
+        // Linux timespec64_to_ktime saturates far-future deadlines. systemd
+        // uses TIME_T_MAX for a timer interested only in clock cancellation.
+        Ok(self
+            .sec
+            .saturating_mul(1_000_000_000)
+            .saturating_add(self.nsec))
     }
     fn from_nanos(n: i64) -> Self {
         Self {
@@ -199,10 +204,11 @@ pub fn create(clock: i32, flags: i32) -> Result<i32, i32> {
                 magic: MAGIC,
                 id,
                 clock,
-                _pad: 0,
+                cancel_on_set: 0,
                 deadline: 0,
                 interval: 0,
                 ticks: 0,
+                clock_generation: 0,
             },
         );
         UnmapViewOfFile(view);
@@ -221,15 +227,18 @@ pub fn settime(fd: i32, flags: i32, value: Itimerspec) -> Result<Itimerspec, i32
     if flags & !3 != 0 {
         return Err(EINVAL);
     }
-    // Host-wide wall-clock cancellation needs a clock-change subscription.
-    if flags & 2 != 0 {
-        return Err(crate::EOPNOTSUPP);
-    }
     let interval = value.interval.nanos()?;
     let value = value.value.nanos()?;
     let (timer, _) = Timer::from_fd(fd)?;
     let mut guard = timer.lock()?;
     let state = guard.state();
+    let canceled = canceled(state)?;
+    let cancel_on_set = state.clock == 0 && flags & 3 == 3;
+    let generation = if cancel_on_set {
+        clock_change::generation()?
+    } else {
+        0
+    };
     let now = now(state.clock)?;
     let deadline = if value == 0 {
         0
@@ -239,14 +248,21 @@ pub fn settime(fd: i32, flags: i32, value: Itimerspec) -> Result<Itimerspec, i32
             .ok_or(EINVAL)?
             .max(1)
     } else {
-        now.checked_add(value).ok_or(EINVAL)?
+        now.saturating_add(value)
     };
     refresh(state, now);
     let old = remaining(state, now);
     state.interval = interval;
     state.deadline = deadline;
     state.ticks = 0;
-    Ok(old)
+    state.cancel_on_set = u32::from(cancel_on_set);
+    state.clock_generation = generation;
+    // Linux installs the new timer even when reporting an unread cancellation.
+    if canceled { Err(ECANCELED) } else { Ok(old) }
+}
+
+fn canceled(state: &State) -> Result<bool, i32> {
+    Ok(state.cancel_on_set != 0 && clock_change::generation()? != state.clock_generation)
 }
 pub fn gettime(fd: i32) -> Result<Itimerspec, i32> {
     let (timer, _) = Timer::from_fd(fd)?;
@@ -261,7 +277,7 @@ pub fn poll(fd: i32) -> Result<(bool, bool), i32> {
     let mut guard = timer.lock()?;
     let state = guard.state();
     refresh(state, now(state.clock)?);
-    Ok((state.ticks != 0, false))
+    Ok((state.ticks != 0 || canceled(state)?, false))
 }
 pub fn read(fd: i32, buffer: &mut [u8]) -> Result<usize, i32> {
     if buffer.len() < 8 {
@@ -284,6 +300,11 @@ pub fn read(fd: i32, buffer: &mut [u8]) -> Result<usize, i32> {
         let timeout = {
             let mut guard = timer.lock()?;
             let state = guard.state();
+            if canceled(state)? {
+                state.clock_generation = clock_change::generation()?;
+                state.ticks = 0;
+                return Err(ECANCELED);
+            }
             let now = now(state.clock)?;
             refresh(state, now);
             if state.ticks != 0 {
@@ -328,4 +349,75 @@ pub unsafe fn settime_raw(
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn far_future() -> Itimerspec {
+        Itimerspec {
+            interval: Timespec::default(),
+            value: Timespec {
+                sec: i64::MAX,
+                nsec: 999_999_999,
+            },
+        }
+    }
+
+    #[test]
+    fn clock_notification_cancels_shared_timer_and_rearm_acknowledges_it() {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            FindWindowW, SendMessageW, WM_TIMECHANGE,
+        };
+        let fd = create(0, 0o4000).unwrap();
+        settime(fd, 3, far_future()).unwrap();
+        let duplicate =
+            crate::fs::object::Object::duplicate(crate::get(fd).unwrap().raw as _).unwrap();
+        let alias = crate::install(
+            duplicate.into_raw() as usize,
+            FdKind::TimerFd,
+            FdFlags::NONBLOCK,
+        )
+        .unwrap();
+        let class: Vec<u16> = format!("KinakazeClockChange{}", std::process::id())
+            .encode_utf16()
+            .chain(Some(0))
+            .collect();
+        let window = unsafe { FindWindowW(class.as_ptr(), ptr::null()) };
+        assert!(!window.is_null());
+        let notify = || unsafe {
+            SendMessageW(window, WM_TIMECHANGE, 0, 0);
+        };
+        let mut bytes = [0; 8];
+        assert_eq!(poll(fd).unwrap(), (false, false));
+        notify(); // Only our receiver: no system broadcast or host clock change.
+        assert_eq!(poll(alias).unwrap(), (true, false));
+        assert_eq!(read(alias, &mut bytes), Err(ECANCELED));
+        assert_eq!(read(fd, &mut bytes), Err(EAGAIN));
+        notify();
+        assert_eq!(settime(fd, 3, far_future()).unwrap_err(), ECANCELED);
+        assert!(gettime(fd).unwrap().value.sec > 0);
+        assert_eq!(poll(alias).unwrap(), (false, false));
+        // CANCEL_ON_SET only applies to absolute realtime timers.
+        settime(fd, 2, far_future()).unwrap();
+        notify();
+        assert_eq!(read(fd, &mut bytes), Err(EAGAIN));
+        crate::close(alias).unwrap();
+        crate::close(fd).unwrap();
+    }
+
+    #[test]
+    fn timespec_saturates_but_rejects_invalid_fields() {
+        assert_eq!(far_future().value.nanos(), Ok(i64::MAX));
+        assert_eq!(Timespec { sec: -1, nsec: 0 }.nanos(), Err(EINVAL));
+        assert_eq!(
+            Timespec {
+                sec: 0,
+                nsec: 1_000_000_000
+            }
+            .nanos(),
+            Err(EINVAL)
+        );
+    }
 }

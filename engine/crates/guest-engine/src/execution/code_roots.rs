@@ -4,6 +4,54 @@ use gimli::{BaseAddresses, EhFrameHdr, LittleEndian, Pointer};
 use iced_x86::{Instruction, InstructionInfoFactory, Mnemonic, OpAccess, OpKind, Register};
 use std::collections::VecDeque;
 
+/// Relative relocations into the GOT identify address-taken local routines,
+/// including stripped musl assembly without unwind records. Read the addend
+/// rather than the live slot: static PIE relocates its own GOT after loading.
+pub(super) fn got_entries(object: &Image<'_>) -> Result<Vec<usize>, ExecutionError> {
+    let elf = object.elf()?;
+    let sections = elf.section_headers()?;
+    let Some(strings) = sections.get(elf.header().section_name_index as usize) else {
+        return Ok(Vec::new());
+    };
+    let names = elf.slice(strings.offset as usize, strings.size as usize)?;
+    let tables: Vec<_> = sections
+        .iter()
+        .filter(|section| {
+            let name = names
+                .get(section.name_offset as usize..)
+                .and_then(|rest| rest.split(|byte| *byte == 0).next());
+            matches!(name, Some(b".got" | b".got.plt")) && section.flags & 2 != 0
+        })
+        .collect();
+    if tables.is_empty() {
+        return Ok(Vec::new());
+    }
+    let segments = elf.program_headers()?;
+    let mut entries = Vec::new();
+    for relocation in elf.relocations()? {
+        if relocation.kind != kinakaze_elf::R_X86_64_RELATIVE
+            || relocation.addend < 0
+            || !tables.iter().any(|section| {
+                relocation.offset >= section.virtual_address
+                    && relocation.offset - section.virtual_address <= section.size.saturating_sub(8)
+                    && section.size >= 8
+            })
+        {
+            continue;
+        }
+        let target = relocation.addend as u64;
+        if segments.iter().any(|segment| {
+            segment.kind == kinakaze_elf::PT_LOAD
+                && segment.flags & kinakaze_elf::PF_X != 0
+                && target >= segment.virtual_address
+                && target - segment.virtual_address < segment.file_size
+        }) {
+            entries.push(object.resolve_address(target)?);
+        }
+    }
+    Ok(entries)
+}
+
 pub(super) fn unwind_entries(object: &Image<'_>) -> Result<Vec<usize>, ExecutionError> {
     let mut entries = Vec::new();
     for header in object.elf()?.program_headers()? {
@@ -59,6 +107,255 @@ fn writes(instruction: &Instruction, register: Register) -> bool {
                         | OpAccess::ReadCondWrite
                 )
         })
+}
+
+/// musl's static-PIE entry jumps through a register loaded by RIP-relative
+/// LEA, even though the destination is a fixed local function. Follow that
+/// proven target; scanning arbitrary executable bytes would corrupt literals.
+pub(super) fn rip_relative_branch_entry(recent: &VecDeque<Instruction>) -> Option<usize> {
+    let branch = recent.back()?;
+    if !matches!(
+        branch.flow_control(),
+        iced_x86::FlowControl::IndirectBranch | iced_x86::FlowControl::IndirectCall
+    ) || branch.op0_kind() != OpKind::Register
+    {
+        return None;
+    }
+    let register = branch.op0_register();
+    let source = recent
+        .iter()
+        .rev()
+        .skip(1)
+        .take_while(|instruction| instruction.flow_control() == iced_x86::FlowControl::Next)
+        .find(|instruction| writes(instruction, register))?;
+    (source.mnemonic() == Mnemonic::Lea
+        && source.op0_register() == register
+        && source.is_ip_rel_memory_operand())
+    .then(|| source.ip_rel_memory_address() as usize)
+}
+
+/// Follow local callback arguments when a known callee invokes them or
+/// registers a recognized TLS cleanup record. PF_X alone is not proof:
+/// OpenSSL keeps strings and lookup tables alongside its assembly routines.
+pub(super) fn rip_relative_callback_entries(
+    recent: &VecDeque<Instruction>,
+    segments: &[(usize, usize)],
+) -> Vec<usize> {
+    use iced_x86::FlowControl;
+    let Some(call) = recent.back() else {
+        return Vec::new();
+    };
+    let callee = if call.is_call_near() {
+        call.near_branch_target() as usize
+    } else if call.flow_control() == FlowControl::IndirectCall {
+        let Some(target) = rip_relative_branch_entry(recent) else {
+            return Vec::new();
+        };
+        target
+    } else {
+        return Vec::new();
+    };
+    let mut entries = Vec::new();
+    for (index, source) in recent
+        .iter()
+        .enumerate()
+        .rev()
+        .skip(1)
+        .take_while(|(_, instruction)| instruction.flow_control() == FlowControl::Next)
+    {
+        let register = source.op0_register();
+        if source.mnemonic() != Mnemonic::Lea
+            || !source.is_ip_rel_memory_operand()
+            || !matches!(
+                register,
+                Register::RDI
+                    | Register::RSI
+                    | Register::RDX
+                    | Register::RCX
+                    | Register::R8
+                    | Register::R9
+            )
+        {
+            continue;
+        }
+        let target = source.ip_rel_memory_address() as usize;
+        if segments
+            .iter()
+            .any(|(start, len)| target >= *start && target - start < *len)
+            && !recent
+                .iter()
+                .skip(index + 1)
+                .take(recent.len() - index - 2)
+                .any(|instruction| writes(instruction, register))
+            && (callee_invokes_register(callee, register, segments)
+                || (register == Register::RSI && registers_tls_cleanup(callee, segments)))
+        {
+            entries.push(target);
+        }
+    }
+    entries
+}
+
+/// musl's pthread_cleanup_push does not call its callback immediately: it
+/// publishes {function, argument, next} to the thread's cleanup chain. Require
+/// the entire registration sequence, including the FS thread pointer and the
+/// linked-list update. A data pointer merely stored by a callee is insufficient.
+fn registers_tls_cleanup(entry: usize, segments: &[(usize, usize)]) -> bool {
+    use iced_x86::{Decoder, DecoderOptions, FlowControl};
+    let mut instructions = Vec::new();
+    let mut address = entry;
+    for _ in 0..10 {
+        let Some(&(start, len)) = segments
+            .iter()
+            .find(|(start, len)| address >= *start && address - start < *len)
+        else {
+            return false;
+        };
+        let bytes = unsafe {
+            std::slice::from_raw_parts(address as *const u8, (start + len - address).min(15))
+        };
+        let instruction =
+            Decoder::with_ip(64, bytes, address as u64, DecoderOptions::NONE).decode();
+        if instruction.is_invalid() {
+            return false;
+        }
+        if instruction.is_jmp_short_or_near() {
+            address = instruction.near_branch_target() as usize;
+            continue;
+        }
+        address = instruction.next_ip() as usize;
+        instructions.push(instruction);
+        match instruction.flow_control() {
+            FlowControl::Return => break,
+            FlowControl::Next => {}
+            _ => return false,
+        }
+    }
+    let [function, argument, thread, head, next, publish, ret] = instructions.as_slice() else {
+        return false;
+    };
+    let memory = |instruction: &Instruction, base, displacement| {
+        instruction.mnemonic() == Mnemonic::Mov
+            && instruction.memory_base() == base
+            && instruction.memory_index() == Register::None
+            && instruction.memory_displacement64() == displacement
+            && instruction.segment_prefix() == Register::None
+    };
+    let store = |instruction: &Instruction, base, displacement, source| {
+        memory(instruction, base, displacement)
+            && instruction.op0_kind() == OpKind::Memory
+            && instruction.op1_kind() == OpKind::Register
+            && instruction.op1_register() == source
+    };
+    store(function, Register::RDI, 0, Register::RSI)
+        && store(argument, Register::RDI, 8, Register::RDX)
+        && thread.mnemonic() == Mnemonic::Mov
+        && thread.op0_register() == Register::RAX
+        && thread.op1_kind() == OpKind::Memory
+        && thread.segment_prefix() == Register::FS
+        && thread.memory_base() == Register::None
+        && thread.memory_index() == Register::None
+        && thread.memory_displacement64() == 0
+        && memory(head, Register::RAX, head.memory_displacement64())
+        && head.op0_register() == Register::RDX
+        && head.op1_kind() == OpKind::Memory
+        && store(next, Register::RDI, 16, Register::RDX)
+        && store(
+            publish,
+            Register::RAX,
+            head.memory_displacement64(),
+            Register::RDI,
+        )
+        && ret.flow_control() == FlowControl::Return
+}
+
+fn register_bit(register: Register) -> u16 {
+    let value = register as u32;
+    if value >= Register::RAX as u32 && value <= Register::R15 as u32 {
+        1 << (value - Register::RAX as u32)
+    } else {
+        0
+    }
+}
+
+/// A bounded, register-only provenance walk. Copies preserve the callback;
+/// writes and syscall clobbers discard it. Unknown calls/memory reloads stop
+/// proving anything. This covers musl's clone wrapper without guessing code
+/// from prologues, names or the contents of executable data.
+fn callee_invokes_register(entry: usize, register: Register, segments: &[(usize, usize)]) -> bool {
+    use iced_x86::{Decoder, DecoderOptions, FlowControl};
+    let mut pending = vec![(entry, register_bit(register))];
+    let mut seen = std::collections::HashSet::new();
+    let mut info = InstructionInfoFactory::new();
+    for _ in 0..128 {
+        let Some((address, mut aliases)) = pending.pop() else {
+            break;
+        };
+        if aliases == 0 || !seen.insert((address, aliases)) {
+            continue;
+        }
+        let Some(&(start, len)) = segments
+            .iter()
+            .find(|(start, len)| address >= *start && address - start < *len)
+        else {
+            continue;
+        };
+        let bytes = unsafe {
+            std::slice::from_raw_parts(address as *const u8, (start + len - address).min(15))
+        };
+        let instruction =
+            Decoder::with_ip(64, bytes, address as u64, DecoderOptions::NONE).decode();
+        if instruction.is_invalid() {
+            continue;
+        }
+        let flow = instruction.flow_control();
+        if matches!(
+            flow,
+            FlowControl::IndirectCall | FlowControl::IndirectBranch
+        ) && instruction.op0_kind() == OpKind::Register
+            && aliases & register_bit(instruction.op0_register()) != 0
+        {
+            return true;
+        }
+        let copy = instruction.mnemonic() == Mnemonic::Mov
+            && instruction.op0_kind() == OpKind::Register
+            && instruction.op1_kind() == OpKind::Register
+            && register_bit(instruction.op0_register()) != 0
+            && aliases & register_bit(instruction.op1_register()) != 0;
+        for used in info.info(&instruction).used_registers() {
+            if matches!(
+                used.access(),
+                OpAccess::Write
+                    | OpAccess::CondWrite
+                    | OpAccess::ReadWrite
+                    | OpAccess::ReadCondWrite
+            ) {
+                aliases &= !register_bit(used.register().full_register());
+            }
+        }
+        if copy {
+            aliases |= register_bit(instruction.op0_register());
+        }
+        if instruction.mnemonic() == Mnemonic::Syscall {
+            aliases &= !(register_bit(Register::RAX)
+                | register_bit(Register::RCX)
+                | register_bit(Register::R11));
+            pending.push((instruction.next_ip() as usize, aliases));
+            continue;
+        }
+        match flow {
+            FlowControl::Next => pending.push((instruction.next_ip() as usize, aliases)),
+            FlowControl::ConditionalBranch => {
+                pending.push((instruction.near_branch_target() as usize, aliases));
+                pending.push((instruction.next_ip() as usize, aliases));
+            }
+            FlowControl::UnconditionalBranch if instruction.is_jmp_short_or_near() => {
+                pending.push((instruction.near_branch_target() as usize, aliases));
+            }
+            _ => {}
+        }
+    }
+    false
 }
 
 /// Recognize a bounded compiler switch, not arbitrary pointer-shaped data:
@@ -219,7 +516,7 @@ fn relative_switch_table(
         let compare = &recent[i];
         let branch = &recent[i + 1];
         if compare.mnemonic() != Mnemonic::Cmp
-            || compare.op0_kind() != OpKind::Register
+            || !matches!(compare.op0_kind(), OpKind::Register | OpKind::Memory)
             || !matches!(
                 compare.op1_kind(),
                 OpKind::Immediate8
@@ -240,6 +537,30 @@ fn relative_switch_table(
         let destination = branch.near_branch_target();
         if destination >= branch.next_ip() && destination <= jump.ip() {
             return None;
+        }
+        // GCC's musl posix_spawn dispatch compares the action stored in memory
+        // and loads that same word only after the bounds check. Require the
+        // adjacent load, equal width/address, and a full index definition.
+        if compare.op0_kind() == OpKind::Memory {
+            if i + 3 != load_index {
+                continue;
+            }
+            let read = &recent[i + 2];
+            if read.mnemonic() == Mnemonic::Mov
+                && read.op0_kind() == OpKind::Register
+                && read.op1_kind() == OpKind::Memory
+                && read.op0_register().full_register() == index.full_register()
+                && read.op0_register().size() >= 4
+                && read.memory_size() == compare.memory_size()
+                && read.memory_base() == compare.memory_base()
+                && read.memory_index() == compare.memory_index()
+                && read.memory_index_scale() == compare.memory_index_scale()
+                && read.memory_displacement64() == compare.memory_displacement64()
+                && read.memory_segment() == compare.memory_segment()
+            {
+                return Some((table, count as usize));
+            }
+            continue;
         }
         // Clang can copy the checked index into another register before the
         // table load (Firefox's wasm2c XML tokenizer does this). Follow only
@@ -282,6 +603,65 @@ mod tests {
     use super::*;
 
     #[test]
+    fn static_pie_got_roots_use_relocation_addends_and_exclude_data() {
+        let mut bytes = vec![0u8; 768];
+        bytes[..7].copy_from_slice(b"\x7fELF\x02\x01\x01");
+        bytes[16..18].copy_from_slice(&3u16.to_le_bytes());
+        bytes[18..20].copy_from_slice(&62u16.to_le_bytes());
+        bytes[20..24].copy_from_slice(&1u32.to_le_bytes());
+        bytes[32..40].copy_from_slice(&64u64.to_le_bytes());
+        bytes[40..48].copy_from_slice(&176u64.to_le_bytes());
+        for (at, value) in [(54, 56u16), (56, 2), (58, 64), (60, 4), (62, 1)] {
+            bytes[at..at + 2].copy_from_slice(&value.to_le_bytes());
+        }
+        for (at, flags, offset, size) in [(64, 5u32, 640u64, 16u64), (120, 6, 576, 32)] {
+            bytes[at..at + 4].copy_from_slice(&1u32.to_le_bytes());
+            bytes[at + 4..at + 8].copy_from_slice(&flags.to_le_bytes());
+            for (field, value) in [(8, offset), (16, offset), (32, size), (40, size)] {
+                bytes[at + field..at + field + 8].copy_from_slice(&value.to_le_bytes());
+            }
+        }
+        bytes[432..438].copy_from_slice(b"\0.got\0");
+        for (at, name, kind, flags, offset, size, stride) in [
+            (240, 0u32, 3u32, 0u64, 432u64, 6u64, 0u64),
+            (304, 1, 1, 2, 576, 32, 8),
+            (368, 0, 4, 2, 480, 72, 24),
+        ] {
+            bytes[at..at + 4].copy_from_slice(&name.to_le_bytes());
+            bytes[at + 4..at + 8].copy_from_slice(&kind.to_le_bytes());
+            for (field, value) in [
+                (8, flags),
+                (16, offset),
+                (24, offset),
+                (32, size),
+                (56, stride),
+            ] {
+                bytes[at + field..at + field + 8].copy_from_slice(&value.to_le_bytes());
+            }
+        }
+        for (at, slot, target) in [(480, 576u64, 640u64), (504, 584, 608), (528, 608, 648)] {
+            bytes[at..at + 8].copy_from_slice(&slot.to_le_bytes());
+            bytes[at + 8..at + 16].copy_from_slice(&8u64.to_le_bytes());
+            bytes[at + 16..at + 24].copy_from_slice(&target.to_le_bytes());
+        }
+        let view = kinakaze_runtime::execution::CodeImage {
+            bytes: bytes.as_ptr(),
+            length: bytes.len(),
+            base: 0x10000,
+            mapped_length: bytes.len(),
+            load_bias: 0x10000,
+            content_hash: core::ptr::null(),
+        };
+        let object = Image {
+            bytes: &bytes,
+            dynamic: Default::default(),
+            view: &view,
+        };
+        // The GOT itself is still zero: no self-relocation has run yet.
+        assert_eq!(got_entries(&object).unwrap(), [0x10000 + 640]);
+    }
+
+    #[test]
     fn stripped_functions_use_signed_data_relative_unwind_roots() {
         // An exception index can identify a routine preceded by just one INT3,
         // which the code-island padding heuristic deliberately does not accept.
@@ -313,6 +693,31 @@ mod tests {
         );
         recent.remove(0);
         assert_eq!(relative_switch_table(&recent, |_, _| None), None);
+    }
+
+    #[test]
+    fn relative_switch_accepts_a_checked_memory_index_only_from_the_same_word() {
+        // cmp dword [r8+16],5; ja default; mov eax,[r8+16];
+        // movsxd rax,[r9+rax*4]; add rax,r9; jmp rax.
+        let mut bytes = vec![
+            0x41, 0x83, 0x78, 0x10, 5, 0x77, 0x40, 0x41, 0x8b, 0x40, 0x10, 0x49, 0x63, 0x04, 0x81,
+            0x4c, 0x01, 0xc8, 0xff, 0xe0,
+        ];
+        let decode = |bytes: &[u8]| {
+            iced_x86::Decoder::with_ip(64, bytes, 0x1000, iced_x86::DecoderOptions::NONE)
+                .into_iter()
+                .collect()
+        };
+        let base = |register, _| (register == Register::R9).then_some(0x3000);
+        assert_eq!(
+            relative_switch_table(&decode(&bytes), base),
+            Some((0x3000, 6))
+        );
+        bytes[10] = 0x14;
+        assert_eq!(relative_switch_table(&decode(&bytes), base), None);
+        bytes[10] = 0x10;
+        bytes.insert(7, 0x66); // A partial index load cannot establish the bound.
+        assert_eq!(relative_switch_table(&decode(&bytes), base), None);
     }
 
     #[test]

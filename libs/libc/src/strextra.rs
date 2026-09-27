@@ -1370,7 +1370,7 @@ pub mod windows {
 
     #[unsafe(no_mangle)]
     pub unsafe extern "sysv64" fn kinakaze_abi___xpg_basename(path: *mut c_char) -> *mut c_char {
-        unsafe { crate::fsextra::kinakaze_abi_basename(path) }
+        unsafe { crate::fsextra::xpg_basename(path) }
     }
 
     #[unsafe(no_mangle)]

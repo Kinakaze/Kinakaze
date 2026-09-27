@@ -2,6 +2,8 @@
 //! This is a fork-state transaction, not an implementation of Linux fork().
 
 mod controller;
+#[path = "../../shared/desktop_client.rs"]
+mod desktop_client;
 mod helper;
 mod launch;
 mod process;
@@ -34,9 +36,24 @@ fn main() {
 fn run() -> Result<()> {
     let mut args = std::env::args_os().skip(1);
     let mode = args.next().unwrap_or_else(|| "run".into());
+    if mode == "session" {
+        std::process::exit(desktop_client::run(
+            args.map(|a| a.to_string_lossy().into_owned()).collect(),
+            false,
+        )?);
+    }
     if matches!(
         mode.to_str(),
-        Some("--root" | "--dist" | "--cwd" | "--rootfs-manifest" | "--web" | "--")
+        Some(
+            "--root"
+                | "--dist"
+                | "--cwd"
+                | "--name"
+                | "--no-tray"
+                | "--rootfs-manifest"
+                | "--web"
+                | "--"
+        )
     ) {
         let arguments = std::iter::once(mode).chain(args).collect();
         std::process::exit(launch::dispatch(std::ffi::OsStr::new("run"), arguments)?);
@@ -54,6 +71,7 @@ fn run() -> Result<()> {
         mode.to_str(),
         Some(
             "run"
+                | "oneshot"
                 | "setup"
                 | "guest"
                 | "guest-prewarm"
@@ -71,7 +89,7 @@ fn run() -> Result<()> {
     }
     if mode == "--help" || mode == "-h" {
         println!(
-            "Usage: worker [run] [--root ROOT] [--dist DIST] [--cwd /] [--rootfs-manifest FILE] [--web 127.0.0.1:PORT] [-- /linux/program args...]\n       worker setup [--root ROOT] [--dist DIST] [--rootfs-manifest FILE]\n       worker smoke [--dist DIST]\nWith no program, run opens the default login shell. setup prepares rootfs without starting a guest."
+            "Usage: worker [run] [--root ROOT] [--dist DIST] [--cwd /] [--name NAME] [--rootfs-manifest FILE] [-- /program args...]\n       worker session <start|attach|status|stop> [--root ROOT] [--name NAME]\n       worker setup [--root ROOT] [--dist DIST] [--rootfs-manifest FILE]\nNo program: start/reuse the manifest's environment and reconnect to its default terminal. Ctrl+] detaches. stop shuts down the complete tree."
         );
         return Ok(());
     }

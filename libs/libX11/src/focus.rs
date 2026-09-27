@@ -3,6 +3,8 @@ use crate::{Display, Time, Window, errors};
 use std::sync::Mutex;
 use windows_sys::Win32::UI::WindowsAndMessaging::IsWindowVisible;
 mod lifecycle;
+mod native;
+use native::NativeFocus;
 const FOREIGN: u64 = 1 << 63;
 fn logical(window: usize) -> Option<u64> {
     kinakaze_libdisplay::window::logical_for_native(window)
@@ -44,6 +46,47 @@ pub(crate) fn now() -> u32 {
     }
     unsafe { GetTickCount64() as u32 }
 }
+
+/// Native activation (mapping, clicking or Alt-Tab) does not go through
+/// XSetInputFocus. Keep queries and key routing consistent with the FocusIn /
+/// FocusOut delivered to clients. In particular GLFW queries focus before it
+/// enables disabled-cursor motion, even after receiving FocusIn.
+pub(crate) fn native_changed(window: Window, gained: bool, time: u32) {
+    let Some(id) = logical(window) else {
+        return;
+    };
+    let mut s = FOCUS.lock().unwrap();
+    if s.time != 0 && (time.wrapping_sub(s.time) as i32) < 0 {
+        return;
+    }
+    let previous = NativeFocus {
+        window: if s.mode < 2 {
+            s.mode as usize
+        } else {
+            native(s.window).unwrap_or(0)
+        },
+        revert: s.revert as i32,
+        time: s.time,
+    };
+    let _ = crate::shared::transaction(|tx| {
+        let current = tx
+            .get("focus")
+            .and_then(NativeFocus::decode)
+            .unwrap_or(previous);
+        let Some(next) = current.changed(window, gained, time) else {
+            return Ok(());
+        };
+        s.mode = if gained { 2 } else { 0 };
+        s.window = if gained { id } else { 0 };
+        s.revert = next.revert as u8;
+        s.time = time;
+        tx.set("focus".into(), next.encode());
+        Ok(())
+    });
+}
+
+#[cfg(test)]
+mod tests;
 #[unsafe(export_name = "kinakaze_engine_libX11_XSetInputFocus")]
 pub unsafe extern "sysv64" fn XSetInputFocus(
     d: *mut Display,

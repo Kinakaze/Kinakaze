@@ -19,7 +19,10 @@ use windows_sys::Win32::System::Threading::{
 /// attachment and must not be silently broken by DETACHED_PROCESS.
 pub fn background_creation_flags() -> u32 {
     if io::stdin().is_terminal() || io::stdout().is_terminal() || io::stderr().is_terminal() {
-        0x0800_0000 // CREATE_NO_WINDOW
+        // Inherit the caller's console. CREATE_NO_WINDOW suppresses console
+        // attachment even when console handles are explicitly inherited,
+        // leaving interactive guests unable to read or display their prompt.
+        0
     } else {
         0x0000_0008 // DETACHED_PROCESS: no hidden conhost for pipe/file streams
     }
@@ -128,6 +131,23 @@ impl ProcessHandle {
         self.wait_millis(0)
     }
 
+    /// Force exit of this pinned kernel object, never a process found by PID later.
+    /// The caller must validate ownership and creation identity before calling.
+    pub fn terminate(&self, exit_code: u32) -> io::Result<()> {
+        // SAFETY: The owned handle grants PROCESS_TERMINATE and remains live.
+        if unsafe {
+            windows_sys::Win32::System::Threading::TerminateProcess(
+                self.handle.as_raw_handle(),
+                exit_code,
+            )
+        } == 0
+        {
+            Err(io::Error::last_os_error())
+        } else {
+            Ok(())
+        }
+    }
+
     fn wait_millis(&self, milliseconds: u32) -> io::Result<bool> {
         // SAFETY: The process handle grants SYNCHRONIZE and remains alive.
         match unsafe { WaitForSingleObject(self.handle.as_raw_handle(), milliseconds) } {
@@ -147,6 +167,42 @@ pub struct Job {
 }
 
 impl Job {
+    /// Terminate this domain and wait for kernel accounting to report no members.
+    pub fn terminate_and_wait(&self) -> io::Result<()> {
+        use windows_sys::Win32::System::JobObjects::{
+            JOBOBJECT_BASIC_ACCOUNTING_INFORMATION, JobObjectBasicAccountingInformation,
+            QueryInformationJobObject, TerminateJobObject,
+        };
+        if unsafe { TerminateJobObject(self.handle.as_raw_handle(), 125) } == 0 {
+            return Err(io::Error::last_os_error());
+        }
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+        loop {
+            let mut info: JOBOBJECT_BASIC_ACCOUNTING_INFORMATION = unsafe { zeroed() };
+            if unsafe {
+                QueryInformationJobObject(
+                    self.handle.as_raw_handle(),
+                    JobObjectBasicAccountingInformation,
+                    (&mut info as *mut JOBOBJECT_BASIC_ACCOUNTING_INFORMATION).cast(),
+                    size_of::<JOBOBJECT_BASIC_ACCOUNTING_INFORMATION>() as u32,
+                    std::ptr::null_mut(),
+                )
+            } == 0
+            {
+                return Err(io::Error::last_os_error());
+            }
+            if info.ActiveProcesses == 0 {
+                return Ok(());
+            }
+            if std::time::Instant::now() >= deadline {
+                return Err(io::Error::new(
+                    io::ErrorKind::TimedOut,
+                    "workers did not terminate",
+                ));
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+    }
     pub fn new_kill_on_close() -> io::Result<Self> {
         // SAFETY: Null security attributes/name produce a private non-inheritable handle.
         let handle = unsafe { crate::owned(CreateJobObjectW(null(), null()))? };

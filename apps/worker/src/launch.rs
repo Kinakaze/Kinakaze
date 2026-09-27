@@ -1,7 +1,7 @@
 //! CLI supervisor and one managed native worker per Linux process.
 use crate::{Result, controller::Controller, failure, process::OwnedProcess};
 use kinakaze_v2_abi::*;
-use kinakaze_v2_host_win::{Library, StartupSpan, random_token};
+use kinakaze_v2_host_win::{Library, StartupGate, StartupSpan, random_token};
 use kinakaze_v2_protocol::{Reply, Request, RuntimeOpenConfig};
 use std::{
     ffi::OsString,
@@ -128,6 +128,7 @@ fn parse(arguments: Vec<OsString>, pool: bool, prepare: bool) -> Result<Options>
 }
 
 struct ChildGuard(Child);
+const STARTUP_GATE_ENV: &str = "KINAKAZE_V2_STARTUP_GATE";
 impl Drop for ChildGuard {
     fn drop(&mut self) {
         if !matches!(self.0.try_wait(), Ok(Some(_))) {
@@ -139,7 +140,17 @@ impl Drop for ChildGuard {
 
 pub fn dispatch(mode: &std::ffi::OsStr, arguments: Vec<OsString>) -> Result<i32> {
     match mode.to_str() {
-        Some("run") => supervisor(parse(arguments, false, true)?),
+        Some("run") => crate::desktop_client::run(
+            arguments
+                .into_iter()
+                .map(|a| {
+                    a.into_string()
+                        .map_err(|_| failure("arguments must be UTF-8"))
+                })
+                .collect::<Result<Vec<_>>>()?,
+            false,
+        ),
+        Some("oneshot") => supervisor(parse(arguments, false, true)?),
         Some("setup") => {
             if arguments.iter().any(|argument| argument == "--") {
                 return Err(failure("worker setup does not accept a guest program"));
@@ -202,6 +213,7 @@ fn supervisor(options: Options) -> Result<i32> {
     let startup = StartupSpan::begin("manager-start");
     let endpoint = format!(r"\\.\pipe\kinakaze-v2-{}", random_token()?);
     let token = random_token()?;
+    let gate = StartupGate::new()?;
     let executable = std::env::current_exe()?;
     let mut init_command = Command::new(executable.with_file_name("init.exe"));
     if let Some(address) = &options.web_address {
@@ -216,9 +228,6 @@ fn supervisor(options: Options) -> Result<i32> {
         ])
         .env("KINAKAZE_V2_TOKEN", &token);
     let mut init = OwnedProcess::spawn(&mut init_command, "init")?;
-    init.expect_ready()?;
-    let mut controller = Controller::connect(&endpoint, token.clone())?;
-    drop(startup);
     let spawn = StartupSpan::begin("guest-process-create");
     let mut command = Command::new(executable);
     command
@@ -232,7 +241,8 @@ fn supervisor(options: Options) -> Result<i32> {
         .arg("--")
         .args(&options.arguments)
         .env("KINAKAZE_V2_ENDPOINT", &endpoint)
-        .env("KINAKAZE_V2_TOKEN", token)
+        .env("KINAKAZE_V2_TOKEN", &token)
+        .env(STARTUP_GATE_ENV, gate.name())
         .env("KINAKAZE_V2_ROOT", &options.root)
         .env("KINAKAZE_V2_DIST", &options.dist)
         .env_remove("KINAKAZE_V2_ADOPTION")
@@ -243,6 +253,13 @@ fn supervisor(options: Options) -> Result<i32> {
         .stderr(Stdio::inherit());
     let mut child = ChildGuard(command.spawn()?);
     drop(spawn);
+    // DLL bootstrap can proceed while init starts. The worker must not open
+    // its runtime session until the manager and controller are both ready.
+    // ChildGuard still reaps it if manager startup or the handshake fails.
+    init.expect_ready()?;
+    let mut controller = Controller::connect(&endpoint, token)?;
+    gate.release()?;
+    drop(startup);
     let wait = StartupSpan::begin("guest-process-wait");
     let status = child.0.wait()?;
     drop(wait);
@@ -270,6 +287,10 @@ fn guest(options: Options, executable: Option<PathBuf>, prewarm: bool, pool: boo
     // A reservation is single-use. Consume it before loading providers or
     // starting guest threads, so later exec/fork children cannot replay it.
     unsafe { std::env::remove_var("KINAKAZE_V2_ADOPTION") };
+    let gate = std::env::var_os(STARTUP_GATE_ENV);
+    // Consume before loading the runtime, whose initialization may start
+    // threads. Fork and exec children must never inherit a stale gate name.
+    unsafe { std::env::remove_var(STARTUP_GATE_ENV) };
     let discovery = StartupSpan::begin("worker-discover-modules");
     let runtime = kinakaze_v2_bridge::native::runtime_path(
         &kinakaze_v2_bridge::native::directory(&options.dist),
@@ -287,6 +308,10 @@ fn guest(options: Options, executable: Option<PathBuf>, prewarm: bool, pool: boo
         unsafe { mem::transmute(library.symbol(c"kinakaze_runtime_guest_run_v1")?) };
     let mut api = MaybeUninit::uninit();
     let config = serde_json::to_vec(&config)?;
+    if let Some(gate) = gate {
+        let _waiting = StartupSpan::begin("manager-readiness-wait");
+        StartupGate::wait(&gate, std::time::Duration::from_secs(20))?;
+    }
     let opening = StartupSpan::begin("runtime-session-open");
     let status = unsafe { open(config.as_ptr(), config.len().try_into()?, api.as_mut_ptr()) };
     drop(opening);

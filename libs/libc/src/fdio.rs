@@ -1312,14 +1312,10 @@ pub unsafe extern "sysv64" fn kinakaze_abi_eventfd2(initval: u32, flags: c_int) 
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn kinakaze_abi_signalfd(
     fd: c_int,
-    _mask: *const c_void,
+    mask: *const c_void,
     flags: c_int,
 ) -> c_int {
-    if fd >= 0 {
-        fd
-    } else {
-        unsafe { kinakaze_abi_eventfd(1, flags) }
-    }
+    unsafe { kinakaze_abi_signalfd4(fd, mask, 8, flags) }
 }
 
 #[unsafe(no_mangle)]
@@ -1330,14 +1326,25 @@ pub unsafe extern "sysv64" fn signalfd(fd: c_int, mask: *const c_void, flags: c_
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn kinakaze_abi_signalfd4(
     fd: c_int,
-    _mask: *const c_void,
-    _sizemask: usize,
+    mask: *const c_void,
+    sizemask: usize,
     flags: c_int,
 ) -> c_int {
-    if fd >= 0 {
-        fd
-    } else {
-        unsafe { kinakaze_abi_eventfd(1, flags) }
+    if sizemask != 8 || mask.is_null() {
+        set_errno(if mask.is_null() {
+            kinakaze_vfs::EFAULT
+        } else {
+            kinakaze_vfs::EINVAL
+        });
+        return -1;
+    }
+    match kinakaze_vfs::signalfd::create(fd, unsafe { mask.cast::<u64>().read_unaligned() }, flags)
+    {
+        Ok(fd) => fd,
+        Err(error) => {
+            set_errno(error);
+            -1
+        }
     }
 }
 
@@ -1541,6 +1548,10 @@ fn local_readiness(entry: FdEntry, interest: i16, fd: i32) -> i16 {
             Ok(events) => (events as i16) & (interest | POLLERR | POLLHUP),
             Err(_) => POLLNVAL,
         },
+        FdKind::ProcMounts => match kinakaze_vfs::procfs::mount_watch::poll(fd) {
+            Ok(events) => (events as i16) & (interest | POLLERR | POLLHUP),
+            Err(_) => POLLNVAL,
+        },
         FdKind::MessageQueue => match kinakaze_vfs::mqueue::poll(fd) {
             Ok((r, w)) => {
                 (if r { interest & POLLIN } else { 0 }) | (if w { interest & POLLOUT } else { 0 })
@@ -1550,6 +1561,11 @@ fn local_readiness(entry: FdEntry, interest: i16, fd: i32) -> i16 {
         FdKind::TimerFd => match kinakaze_vfs::timerfd::poll(fd) {
             Ok((true, _)) => interest & POLLIN,
             Ok(_) => 0,
+            Err(_) => POLLERR,
+        },
+        FdKind::SignalFd => match kinakaze_vfs::signalfd::poll(fd) {
+            Ok(true) => interest & POLLIN,
+            Ok(false) => 0,
             Err(_) => POLLERR,
         },
         FdKind::EventFd => {
@@ -4094,6 +4110,7 @@ struct PreparedReplacement {
 }
 
 mod cow_materialize;
+mod parallel_anonymous;
 
 fn protection_runs(start: usize, length: usize, fallback: u32) -> Result<Vec<ProtectionRun>, i32> {
     let end = start.checked_add(length).ok_or(EINVAL)?;
@@ -4705,6 +4722,9 @@ fn replace_placeholder_private(
                         .is_some_and(|limit| end <= limit)
             });
         if placeholder {
+            if parallel_anonymous::replace(address, length, protection)? {
+                return Ok(Some(address));
+            }
             let mut offset = 0;
             while offset < length {
                 let bytes = (length - offset).min(SNAPSHOT_VIEW_BYTES);
@@ -7037,6 +7057,13 @@ pub unsafe extern "sysv64" fn kinakaze_abi_pread64(
 ///
 /// `buffer` must be writable for `count` bytes.
 unsafe fn read_at(fd: c_int, buffer: *mut u8, count: usize, offset: u64) -> Result<usize, i32> {
+    if kinakaze_vfs::get(fd)?.kind == FdKind::ProcMounts {
+        return kinakaze_vfs::procfs::mount_watch::read_at(
+            fd,
+            unsafe { std::slice::from_raw_parts_mut(buffer, count) },
+            offset,
+        );
+    }
     if matches!(
         kinakaze_vfs::get(fd)?.kind,
         FdKind::TmpfsFile | FdKind::TmpfsDirectory | FdKind::MessageQueue | FdKind::SysfsFile

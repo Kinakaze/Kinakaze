@@ -27,6 +27,7 @@ pub struct ModuleSet {
     pub modules: Vec<Module>,
     pub shared_libraries: Vec<String>,
     pub(crate) libraries: Vec<std::sync::Arc<kinakaze_v2_host_win::Library>>,
+    pub(crate) images: Vec<std::sync::Arc<kinakaze_v2_host_win::ReadOnlyFile>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -75,6 +76,13 @@ impl ModuleSet {
     /// Discover native images by their normal PE export table; no sidecar files.
     pub fn discover(directory: &Path) -> Result<Self> {
         crate::native::discover(directory)
+    }
+
+    /// Keep the exact inspected files and layout-query libraries alive until
+    /// every deferred binding is gone. Pending modules cannot be replaced or
+    /// written between discovery and their first use.
+    pub fn retain_images(&self) -> impl Send + Sync + 'static {
+        (self.libraries.clone(), self.images.clone())
     }
 
     pub fn validate(&self) -> Result<()> {
@@ -327,6 +335,7 @@ pub(crate) fn test_modules() -> ModuleSet {
     ModuleSet {
         shared_libraries: Vec::new(),
         libraries: Vec::new(),
+        images: Vec::new(),
         modules: (0..3)
             .map(|id| Module {
                 id,

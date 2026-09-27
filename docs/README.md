@@ -3,6 +3,8 @@
 ## 使用与参与
 
 - [上手指南](getting-started.md)：构建环境、客体准备、运行与常见问题。
+- [WebUI 工作空间](webui.md)：图形化启动程序、进程管理与本机访问边界。
+- [持久会话与托盘](persistent-sessions.md)：单一进程树、可配置 PID 1、终端重连和整树关闭。
 - [贡献指南](../CONTRIBUTING.md)：问题报告、开发检查与 Pull Request。
 - [发布流程](releasing.md)：版本、源码发行包与二进制验收。
 - [安全问题](../SECURITY.md) · [第三方声明](../THIRD_PARTY.md) · [更新记录](../CHANGELOG.md)。
@@ -17,6 +19,7 @@
 ## 兼容性与性能
 
 - [集成验证记录](validation.md) 与 [开发进度](progress.md)。
+- [关闭响应与国内源验收](shutdown-mirror-validation-2026-09-27.md)：托盘退出延迟、整树回收及中科大镜像直连安装。
 - [软件运行边界](software-boundaries-2026-09-22.md) 与 [浏览器启动](browser-startup-2026-09-22.md)。
 - [Minecraft 渲染](minecraft-rendering-2026-09-23.md)、[GNOME](gnome.md) 与 [网易云音乐](netease-cloud-music-2026-09-22.md)。
 - [启动性能基线](startup-performance-2026-09-22.md)、[第二轮](startup-performance-round2-2026-09-22.md)、[第三轮](startup-performance-round3-2026-09-22.md)、[第四轮](startup-performance-round4-2026-09-23.md)、[第五轮](startup-performance-round5-2026-09-23.md)、[第六轮](startup-performance-round6-2026-09-23.md)。

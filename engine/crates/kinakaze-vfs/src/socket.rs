@@ -1696,6 +1696,20 @@ pub unsafe fn getsockopt(
         return unsafe { crate::unix::getsockopt(fd, level, name, value, length) };
     }
     let (socket, _) = socket_of(fd)?;
+    if level == SOL_SOCKET && name == 25 {
+        // SO_BINDTODEVICE: these native sockets have no Linux device binding.
+        // Linux reports a zero-length name for that state, including on TCP.
+        if length.is_null() {
+            return Err(EFAULT);
+        }
+        if unsafe { *length } < 0 {
+            return Err(EINVAL);
+        }
+        unsafe {
+            *length = 0;
+        }
+        return Ok(());
+    }
     if level == IPPROTO_IP && name == 1 {
         // Linux IP_TOS is 1. Default to 0.
         if !value.is_null() && !length.is_null() {

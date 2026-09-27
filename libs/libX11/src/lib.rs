@@ -937,6 +937,7 @@ pub unsafe extern "sysv64" fn XCloseDisplay(_dpy: *mut Display) -> c_int {
     let Some(last) = connection::close(_dpy) else {
         return 0;
     };
+    event_filter::close(_dpy);
     xext::protocol::close(_dpy);
     if let Ok(mut state) = state().lock() {
         state
@@ -1508,6 +1509,11 @@ pub unsafe fn drain_native_events(dpy: *mut Display) {
             continue;
         }
         let _modifiers = keyboard::EventModifiers::enter(modifiers);
+        if ev.kind == kinakaze_libdisplay::event::EVENT_FOCUS
+            && let Some(window) = kinakaze_libdisplay::window::native_handle(ev.window)
+        {
+            focus::native_changed(window, ev.state != 0, ev.time_ms as u32);
+        }
         if ev.kind == kinakaze_libdisplay::event::EVENT_SCROLL {
             queue_scroll_events(dpy, &ev);
             continue;
@@ -2266,7 +2272,9 @@ pub use colormap::*;
 mod screensaver;
 pub mod window_tree;
 pub use window_tree::{XQueryTree, XReparentWindow, XTranslateCoordinates};
+mod event_filter;
 pub mod wm;
+pub use event_filter::{_XRegisterFilterByType, _XUnregisterFilter};
 mod wm_properties;
 pub mod xcursor;
 pub mod xext;

@@ -4,6 +4,8 @@
 
 `connect(Hello, PeerIdentity)` 返回连接 ID 和 Hello 回复。服务端从 pipe/已打开的宿主进程句柄获得 `host_pid` 和 `birth`，不能相信客户端自报的 PID。一个 worker 只能创建一个客体 Process。Controller 不占客体 PID；当前会话 token 是受信任的会话凭证，服务端还须约束 Controller 的宿主身份。
 
+发行入口使用 `StateManager::for_process_tree`：只有第一个 worker 可以无预留创建 PID 1；之后必须采用 fork ticket 或已有 exec 事务，拒绝第二个无父进程的 worker。PID 1 退出后同一代会话不能再创建根进程。宿主 init 随之关闭整树。
+
 模块通过 `RegisterModule` 登记全会话一致的 schema，通过 `DefineState` 创建有名字的 `u64` 状态。定义的初值和 fork 策略不可修改。相同定义可重复登记，状态值不会被重置。Define/Read 返回 `Reply::State`，Write 返回 `Reply::Ok`。
 
 fork 状态事务采用 `Prepared → Adopted → Ready → Committed`，提交之前可以 Abort。Prepare 在互斥锁下冻结 Copy 状态、建立 Reset 初始值、引用 Share 对象。256-bit 随机 ticket 只允许一个新宿主 worker 采用；child 只有在 parent commit 后才能访问状态或再次 fork。Prepare 的 request key、commit 和 abort 有明确的重试规则：相同成功请求返回原事务，已 abort 的 key 不能重开，已 commit 的事务不能 abort。已完成的记录保留至 parent 真正退出，并计入配额。

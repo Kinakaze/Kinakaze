@@ -20,6 +20,11 @@ pub struct ReadOnlyFile {
     _file: File,
 }
 
+// SAFETY: The view is immutable, its file denies writes/deletion, and borrowed
+// slices cannot outlive the owner. Windows file views have no thread affinity.
+unsafe impl Send for ReadOnlyFile {}
+unsafe impl Sync for ReadOnlyFile {}
+
 impl ReadOnlyFile {
     pub fn open(path: &Path, limit: usize) -> io::Result<Self> {
         let file = OpenOptions::new()
@@ -89,6 +94,11 @@ mod tests {
         assert!(ReadOnlyFile::open(&path, 2).is_err());
         let view = ReadOnlyFile::open(&path, 1024).unwrap();
         assert_eq!(view.as_slice(), b"native image");
+        let view = std::sync::Arc::new(view);
+        let retained = std::sync::Arc::clone(&view);
+        std::thread::spawn(move || assert_eq!(retained.as_slice(), b"native image"))
+            .join()
+            .unwrap();
         assert!(OpenOptions::new().write(true).open(&path).is_err());
         assert!(std::fs::remove_file(&path).is_err());
         drop(view);

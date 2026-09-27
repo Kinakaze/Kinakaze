@@ -205,6 +205,10 @@ impl CopiedPointer {
         }
     }
 
+    pub(crate) fn target(&self) -> *mut *mut c_char {
+        self.location.load(Ordering::Acquire)
+    }
+
     fn address(&self) -> *mut *mut c_char {
         let redirect = self.location.load(Ordering::Acquire);
         if redirect.is_null() {
@@ -240,7 +244,7 @@ impl CopiedPointer {
     /// # Safety
     ///
     /// `target` must address a writable pointer-sized slot that outlives the process.
-    unsafe fn redirect(&self, target: *mut *mut c_char) {
+    pub(crate) unsafe fn redirect(&self, target: *mut *mut c_char) {
         self.location.store(target, Ordering::Release);
     }
 
@@ -339,21 +343,27 @@ pub unsafe extern "C" fn kinakaze_copied_redirect(
         "program_invocation_name" => {
             // SAFETY: the caller promises writable pointer-sized storage.
             unsafe { crate::misc::program_invocation_name.redirect(target.cast()) };
+            unsafe { crate::misc::kinakaze_abi_program_invocation_name.redirect(target.cast()) };
             1
         }
         "program_invocation_short_name" => {
             // SAFETY: as above.
             unsafe { crate::misc::program_invocation_short_name.redirect(target.cast()) };
+            unsafe {
+                crate::misc::kinakaze_abi_program_invocation_short_name.redirect(target.cast())
+            };
             1
         }
         "__progname" => {
             // SAFETY: as above.
             unsafe { crate::misc::__progname.redirect(target.cast()) };
+            unsafe { crate::misc::kinakaze_abi___progname.redirect(target.cast()) };
             1
         }
         "__progname_full" => {
             // SAFETY: as above.
             unsafe { crate::misc::__progname_full.redirect(target.cast()) };
+            unsafe { crate::misc::kinakaze_abi___progname_full.redirect(target.cast()) };
             1
         }
         "obstack_alloc_failed_handler" => {

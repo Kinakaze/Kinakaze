@@ -385,7 +385,7 @@ impl Linker {
         runpath: &[PathBuf],
         requested_by: &str,
     ) -> Result<Provider, LinkError> {
-        if let Some(image) = self.registry.get(needed) {
+        if let Some(image) = self.registry.get(needed)? {
             return Ok(Provider::Dll(self.load_registered(image)?));
         }
         if let Some(existing) = self.objects.iter().position(|obj| {
@@ -435,11 +435,11 @@ impl Linker {
         name: &str,
         requested_by: &str,
     ) -> Result<Provider, LinkError> {
-        if let Some(image) = self
-            .registry
-            .by_path(path)
-            .or_else(|| self.registry.get(name))
-        {
+        let image = match self.registry.by_path(path)? {
+            Some(image) => Some(image),
+            None => self.registry.get(name)?,
+        };
+        if let Some(image) = image {
             return Ok(Provider::Dll(self.load_registered(image)?));
         }
         let image = read_elf_candidate(path)?;
@@ -544,6 +544,10 @@ impl Linker {
                     base: object.allocation as usize,
                     mapped_length: object.allocation_len,
                     load_bias: object.load_bias,
+                    content_hash: object
+                        .bytes
+                        .content_hash()
+                        .map_or(core::ptr::null(), |hash| hash.as_ptr()),
                 };
                 let mut result = kinakaze_runtime::execution::CodeResult::default();
                 if unsafe { kinakaze_runtime::execution::prepare(&view, &config, &mut result) } != 0
@@ -1125,12 +1129,8 @@ impl Linker {
             .file_name()
             .map(|n| n.to_string_lossy())
             .unwrap_or_default();
-        if let Some(image) = self
-            .registry
-            .by_path(path)
-            .or_else(|| self.registry.get(&file_name))
-        {
-            return Ok(image.path().to_path_buf());
+        if let Some(path) = self.registry.registered_path(path, &file_name) {
+            return Ok(path);
         }
 
         // A bare SONAME may already be resident through another object's
@@ -1459,8 +1459,8 @@ impl Linker {
     /// `AT_PHDR` has to be the *mapped* address of the program headers, not their
     /// file offset: glibc walks them to find `PT_DYNAMIC` and `PT_TLS`, so a file
     /// offset would send it into unmapped memory. The headers are reachable in
-    /// memory only when a `PT_PHDR` segment declares where they were loaded, which
-    /// is why its absence is reported rather than guessed at.
+    /// memory through PT_PHDR or a file-backed PT_LOAD that contains the whole
+    /// table. Static PIE executables commonly omit PT_PHDR.
     pub fn auxiliary_values(
         &self,
         id: ObjectId,
@@ -1473,7 +1473,24 @@ impl Linker {
         let program_headers = headers
             .iter()
             .find(|entry| entry.kind == kinakaze_elf::PT_PHDR)
-            .and_then(|entry| object.resolve_address(entry.virtual_address).ok());
+            .and_then(|entry| object.resolve_address(entry.virtual_address).ok())
+            .or_else(|| {
+                let size = u64::from(header.program_entry_size) * u64::from(header.program_count);
+                let end = header.program_offset.checked_add(size)?;
+                headers.iter().find_map(|segment| {
+                    if segment.kind != kinakaze_elf::PT_LOAD
+                        || header.program_offset < segment.offset
+                        || end > segment.offset.checked_add(segment.file_size)?
+                        || end > segment.offset.checked_add(segment.memory_size)?
+                    {
+                        return None;
+                    }
+                    let address = segment
+                        .virtual_address
+                        .checked_add(header.program_offset - segment.offset)?;
+                    object.resolve_address(address).ok()
+                })
+            });
 
         Ok(crate::stack::AuxiliaryValues {
             program_headers,

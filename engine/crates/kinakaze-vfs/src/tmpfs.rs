@@ -23,7 +23,9 @@ pub mod cgroupfs;
 pub mod devpts;
 pub mod mqueue;
 mod observation;
+pub(crate) mod socket;
 pub mod sysfs;
+pub(crate) mod watch;
 pub(crate) use observation::Scope as Observation;
 const PAGE: u64 = 4096;
 static VOLUMES: Mutex<BTreeMap<u64, Arc<Volume>>> = Mutex::new(BTreeMap::new());
@@ -64,6 +66,7 @@ struct Node {
     opens: Vec<u64>,
 }
 struct State {
+    watches: Vec<(u64, u64)>,
     limit: u64,
     capacity: u64,
     inodes: u64,
@@ -151,10 +154,11 @@ impl Node {
 impl State {
     fn decode(data: &[u8]) -> Result<Self, i32> {
         let mut r = Reader(data);
-        if r.word()? != 0x4359544d50465337 {
+        if r.word()? != 0x4359544d50465338 {
             return Err(EIO);
         }
         let mut s = Self {
+            watches: Vec::new(),
             limit: r.word()?,
             capacity: r.word()?,
             inodes: r.word()?,
@@ -222,13 +226,20 @@ impl State {
         s.pts = devpts::Instance::decode(&mut r)?;
         s.mq = mqueue::Instance::decode(&mut r)?;
         s.sys = sysfs::Instance::decode(&mut r)?;
+        let count = r.word()?;
+        if count > 65536 {
+            return Err(EIO);
+        }
+        for _ in 0..count {
+            s.watches.push((r.word()?, r.word()?));
+        }
         r.end()?;
         Ok(s)
     }
     fn encode(&self) -> Vec<u8> {
         let mut b = Vec::new();
         for v in [
-            0x4359544d50465337,
+            0x4359544d50465338,
             self.limit,
             self.capacity,
             self.inodes,
@@ -278,6 +289,11 @@ impl State {
         devpts::Instance::encode(&self.pts, &mut b);
         mqueue::Instance::encode(&self.mq, &mut b);
         sysfs::Instance::encode(&self.sys, &mut b);
+        word(&mut b, self.watches.len() as u64);
+        for (record, node) in &self.watches {
+            word(&mut b, *record);
+            word(&mut b, *node);
+        }
         b
     }
     fn used(&self) -> u64 {
@@ -464,12 +480,14 @@ impl Volume {
         };
         let (revision, (state, out)) = self.meta.update_with_revision(|bytes| {
             let mut s = State::decode(bytes)?;
+            let watches = watch::before(&mut s)?;
             if s.sys.is_some() && observation::get(&self.meta, true).is_none() {
                 sysfs::keep_catalog()?;
                 sysfs::refresh(&mut s)?;
             }
             s.collect();
             let out = f(&mut s)?;
+            watch::after(watches, &s)?;
             Ok((s.encode(), (Arc::new(s), out)))
         })?;
         observation::put(&self.meta, revision, &state, true);
@@ -674,6 +692,7 @@ pub(crate) fn prepare(options: &str) -> Result<String, i32> {
 fn prepare_unkept(options: &str) -> Result<String, i32> {
     let total = crate::memory::snapshot()?.total;
     let mut s = State {
+        watches: Vec::new(),
         limit: total / 2,
         capacity: 0,
         inodes: (total / PAGE / 2).max(1),
@@ -776,6 +795,26 @@ pub fn filesystem(id: u64) -> Result<&'static str, i32> {
 }
 pub fn owns(path: &str) -> bool {
     location(path).is_ok_and(|p| p.is_some())
+}
+pub(crate) fn chroot(path: &str) -> Result<bool, i32> {
+    let Some(location) = resolve_location(path, true, 0)? else {
+        return Ok(false);
+    };
+    let state = volume(location.volume)?.snapshot()?;
+    let node = state.nodes.get(&location.node).ok_or(ENOENT)?;
+    if node.mode & S_IFMT != S_IFDIR {
+        return Err(ENOTDIR);
+    }
+    node.access(1)?;
+    let namespace = crate::mount::namespace_path(&location.path)?;
+    // This is a namespace-coordinate anchor, never a native directory lookup.
+    // The covering tmpfs mount remains authoritative for every descendant.
+    let mut anchor = crate::path::default_system_root().to_path_buf();
+    for part in namespace.split('/').filter(|part| !part.is_empty()) {
+        anchor.push(crate::path::escape_component(part).as_ref());
+    }
+    crate::path::set_system_root(anchor);
+    Ok(true)
 }
 fn follow_path(path: &str, follow: bool) -> Result<String, i32> {
     let mut path = fs::absolute_linux(path);
@@ -1445,6 +1484,11 @@ pub fn create(path: &str, mode: u32, device: u64, target: &str) -> Result<bool, 
     let Some(l) = location(path)? else {
         return Ok(false);
     };
+    // The root inode already exists, just like a directory found below it.
+    // systemd calls mkdir on the cgroup mount root and expects EEXIST.
+    if l.tail.is_empty() {
+        return Err(EEXIST);
+    }
     l.writable()?;
     let mut n = Node::new(mode, l.node);
     n.device = device;

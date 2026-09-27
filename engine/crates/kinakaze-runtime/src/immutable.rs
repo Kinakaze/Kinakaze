@@ -10,6 +10,8 @@ pub struct ImmutableBytes {
     slot: *mut std::sync::atomic::AtomicUsize,
     #[cfg(windows)]
     len: usize,
+    #[cfg(windows)]
+    hash: Option<[u8; 32]>,
     #[cfg(not(windows))]
     bytes: Box<[u8]>,
 }
@@ -38,6 +40,7 @@ impl ImmutableBytes {
                 base: core::ptr::NonNull::dangling().as_ptr(),
                 slot: core::ptr::null_mut(),
                 len,
+                hash: None,
             });
         }
         let valid = kinakaze_alloc::shared_mapping(base).is_some_and(|mapping| {
@@ -54,6 +57,7 @@ impl ImmutableBytes {
             base: base as _,
             slot: slot as _,
             len,
+            hash: None,
         })
     }
 
@@ -87,6 +91,82 @@ impl ImmutableBytes {
         #[cfg(not(windows))]
         {
             Self::initialize(len, initialize)
+        }
+    }
+
+    /// Adopt a private read/execute capability for immutable pagefile bytes.
+    /// # Safety
+    /// No process may retain or subsequently create a writable shared view.
+    /// `hash` must be the complete BLAKE3 of these exact `len` bytes. The caller
+    /// must hold the fork transaction while receiving and registering the handle.
+    #[cfg(windows)]
+    pub unsafe fn from_readonly_section(
+        section: std::os::windows::io::OwnedHandle,
+        len: usize,
+        hash: [u8; 32],
+    ) -> io::Result<Self> {
+        use core::alloc::{GlobalAlloc, Layout};
+        use std::os::windows::io::{AsRawHandle, IntoRawHandle};
+        use std::sync::atomic::AtomicUsize;
+        use windows_sys::Win32::System::Memory::*;
+        if len == 0 {
+            return Err(io::Error::other("empty shared image"));
+        }
+        let mapped_len = len
+            .checked_add(4095)
+            .map(|v| v & !4095)
+            .filter(|&v| v <= isize::MAX as usize)
+            .ok_or_else(|| io::Error::other("shared image too large"))?;
+        let _transaction = crate::begin_fork_mapping_transaction()
+            .ok_or_else(|| io::Error::other("mapping transaction"))?;
+        let slot = unsafe { kinakaze_alloc::ManagedAllocator.alloc(Layout::new::<AtomicUsize>()) }
+            .cast::<AtomicUsize>();
+        if slot.is_null() {
+            return Err(io::Error::from(io::ErrorKind::OutOfMemory));
+        }
+        unsafe { slot.write(AtomicUsize::new(section.as_raw_handle() as usize)) };
+        if !unsafe { crate::register_fork_handle_slot(slot) } {
+            unsafe {
+                kinakaze_alloc::ManagedAllocator.dealloc(slot.cast(), Layout::new::<AtomicUsize>());
+            }
+            return Err(io::Error::other("shared image handle registration"));
+        }
+        let handle = section.into_raw_handle();
+        let mut owned = Self {
+            base: core::ptr::null_mut(),
+            slot,
+            len,
+            hash: Some(hash),
+        };
+        let view = unsafe { MapViewOfFile(handle, FILE_MAP_READ, 0, 0, mapped_len) };
+        if view.Value.is_null() {
+            return Err(io::Error::last_os_error());
+        }
+        owned.base = view.Value.cast();
+        if !crate::register_fork_mapping(crate::ForkMapping {
+            base: owned.base as usize,
+            len: mapped_len,
+            behavior: crate::ForkMappingBehavior::Copy,
+            storage: crate::ForkMappingStorage::RetainedSection,
+            backing_slot: slot as usize,
+            backing_offset: 0,
+            view_protection: PAGE_READONLY,
+            domain: crate::ForkMappingDomain::HostPrivate,
+        }) {
+            return Err(io::Error::other("shared image mapping registration"));
+        }
+        Ok(owned)
+    }
+
+    /// Complete BLAKE3 of these exact immutable bytes, if computed by init.
+    pub fn content_hash(&self) -> Option<&[u8; 32]> {
+        #[cfg(windows)]
+        {
+            self.hash.as_ref()
+        }
+        #[cfg(not(windows))]
+        {
+            None
         }
     }
 
@@ -142,6 +222,7 @@ impl ImmutableBytes {
                 base: core::ptr::NonNull::dangling().as_ptr(),
                 slot: core::ptr::null_mut(),
                 len,
+                hash: None,
             });
         }
         let mapped_len = len
@@ -192,13 +273,15 @@ impl ImmutableBytes {
             base: core::ptr::null_mut(),
             slot,
             len,
+            hash: None,
         };
         let staging = unsafe { MapViewOfFile(handle, FILE_MAP_WRITE, 0, 0, mapped_len) };
         if staging.Value.is_null() {
             return Err(io::Error::last_os_error());
         }
         owned.base = staging.Value.cast();
-        initialize(unsafe { core::slice::from_raw_parts_mut(owned.base, len) })?;
+        let bytes = unsafe { core::slice::from_raw_parts_mut(owned.base, len) };
+        initialize(bytes)?;
         // Publish this same populated view read-only. Unmapping and mapping a
         // second view discards its resident page-table entries, forcing the
         // loader's parse/hash/copy passes to fault every image page in again.

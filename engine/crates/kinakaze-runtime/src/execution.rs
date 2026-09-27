@@ -9,6 +9,9 @@ pub struct CodeImage {
     pub base: usize,
     pub mapped_length: usize,
     pub load_bias: i128,
+    /// Null, or 32 borrowed bytes of the complete BLAKE3 for `bytes[..length]`.
+    /// Supplied only by the owner of an immutable, init-created snapshot.
+    pub content_hash: *const u8,
 }
 
 #[repr(C)]
@@ -55,6 +58,8 @@ pub fn install(processor: PrepareCode) {
 ///
 /// # Safety
 /// The file bytes and writable mapped image must stay valid for this call.
+/// A non-null `image.content_hash` must point to a live 32-byte full BLAKE3
+/// computed from the same immutable bytes. It is never guest-supplied metadata.
 pub unsafe fn prepare(image: &CodeImage, config: &CodeConfig, result: &mut CodeResult) -> i32 {
     match PROCESSOR.get() {
         Some(processor) => unsafe { processor(image, config, result) },

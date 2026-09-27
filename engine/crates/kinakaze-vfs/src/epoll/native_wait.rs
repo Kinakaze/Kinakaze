@@ -53,6 +53,13 @@ impl Source {
         if entry.description_id != description {
             return Err(crate::EBADF);
         }
+        if entry.kind == crate::FdKind::Console {
+            drop(table);
+            // Wait for cooked bytes, not native input records such as window
+            // resize events. The console owns this event until process exit.
+            let event = crate::tty::console_event().ok_or(crate::ENOTTY)?;
+            return unsafe { Self::duplicate(event) };
+        }
         unsafe { Self::duplicate(entry.raw as HANDLE) }
     }
 

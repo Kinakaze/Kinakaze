@@ -1,4 +1,4 @@
-"""Build an offline first-run image, including APT, from reviewed package locks."""
+"""Build a first-run Debian manifest; release images fetch locked packages online."""
 import argparse
 import hashlib
 import json
@@ -15,20 +15,25 @@ from rootfs_bootstrap import configure_packages, configure_standard
 from debian_standard import load as load_standard, stored_path
 
 
-def prepare(dist, cache, preset_path):
+def prepare(dist, cache, preset_path, online=False):
     preset = json.loads(preset_path.read_text(encoding='utf-8'))
     if preset.get('schema') != 1:
         raise ValueError('unsupported rootfs package preset')
     manifest = json.loads((WORKSPACE / 'config/rootfs.manifest.json').read_text(encoding='utf-8'))
+    # Keep the editable guest service source authoritative in release seeds.
+    for entry in manifest['files']:
+        if entry['path'] == 'usr/lib/kinakaze/session.py':
+            entry['content'] = (WORKSPACE / 'config/session.py').read_text(encoding='utf-8')
     payloads = {entry['path']: entry['content'].encode() for entry in manifest['files']}
     version = tomllib.loads((WORKSPACE / 'Cargo.toml').read_text(encoding='utf-8'))['workspace']['package']['version']
     links, modes, package_directories = {}, {}, set()
     locked = cache.packages
+    sources = {}
     if 'debian_standard_lock' in preset:
         manifest['case_sensitive'] = True
         lock_path = preset_path.parent / preset['debian_standard_lock']
         base, links, modes, package_directories, records, adaptations = load_standard(
-            lock_path, cache.directory, set(modules(dist)), cache.offline)
+            lock_path, cache.directory, set(modules(dist)), cache.offline, sources=sources)
         # Config overlays are explicit Kinakaze policy; package data is retained
         # in the locked original archives and all other payloads are installed.
         base.update(payloads)
@@ -45,6 +50,8 @@ def prepare(dist, cache, preset_path):
         configure_standard(payloads, links, preset)
         modes['etc/gshadow'] = 0o600
     else:
+        if online:
+            raise ValueError('online installation requires a Debian standard package lock')
         with tempfile.TemporaryDirectory(prefix='kinakaze-release-source-') as temporary:
             plan = preparer['RootPlan'](Path(temporary), dist / 'rootfs', cache, set(modules(dist)), None)
             for package in preset['packages']:
@@ -56,6 +63,10 @@ def prepare(dist, cache, preset_path):
                 payloads[target] = source.read_bytes()
             packages = sorted(plan.packages)
             edges = len(plan.edges)
+    # Explicit manifest modes also apply to generated/overlaid configuration.
+    modes.update(manifest.get('permissions', {}))
+    links.update(manifest.get('links', {}))
+    modes['etc/shadow'] = 0o600
     for name in preset['busybox_applets']:
         if '/' in name or preparer['relative_path'](name) != name:
             raise ValueError(f'invalid BusyBox applet: {name}')
@@ -71,10 +82,14 @@ def prepare(dist, cache, preset_path):
         if target in payloads:
             raise ValueError(f'package would replace native provider: {target}')
         payloads[target] = source.read_bytes()
+        if online and source.parent == dist / 'rootfs/lib':
+            preparer['atomic_write'](dist / 'native' / source.name, payloads[target])
     configure_packages(payloads, locked, packages, preset['native_packages'], version, links)
     for name in payloads:
         links.pop(name, None)
     payloads = {stored_path(name): data for name, data in payloads.items()}
+    sources = {stored_path(name): entry for name, entry in sources.items()}
+    by_hash = {entry['sha256']: entry for entry in sources.values()}
     links = {stored_path(name): target for name, target in links.items()}
     modes = {stored_path(name): mode for name, mode in modes.items()}
     # Never overwrite package-manager state when rebuilding a used image.
@@ -98,13 +113,33 @@ def prepare(dist, cache, preset_path):
     manifest['permissions'].update({'/': 0o755, 'root': 0o700, 'tmp': 0o1777, 'var/tmp': 0o1777, 'dev/shm': 0o1777})
     for target, data in sorted(payloads.items()):
         digest = hashlib.sha256(data).hexdigest()
-        seed = f'rootfs-seed/{digest}'
-        preparer['atomic_write'](dist / seed, data)
-        manifest['files'].append(dict(path=target, source=seed, sha256=digest))
+        if online:
+            if target.startswith('lib/') and (dist / 'native' / Path(target).name).is_file():
+                entry = dict(source='native/' + Path(target).name, sha256=digest)
+            elif digest in by_hash:
+                entry = by_hash[digest]
+            else:
+                entry = dict(content=data.decode('utf-8'))
+            manifest['files'].append(dict(path=target, **entry))
+        else:
+            seed = f'rootfs-seed/{digest}'
+            preparer['atomic_write'](dist / seed, data)
+            manifest['files'].append(dict(path=target, source=seed, sha256=digest))
         manifest['permissions'][target] = modes.get(target, 0o755 if data.startswith((b'\x7fELF', b'#!', b'MZ')) else 0o644)
     manifest['links'] = links
+    if online:
+        manifest['archives'] = {record['package']: {key: record[key] for key in ('url', 'sha256', 'size')}
+                                for record in records}
     preparer['atomic_write'](dist / 'rootfs.manifest.json', (json.dumps(manifest, indent=2) + '\n').encode())
-    preparer['atomic_write'](dist / 'kinakaze.cmd', (WORKSPACE / 'config/kinakaze.cmd').read_bytes())
+    if online:
+        # The verified build-owned native root is already copied to native/.
+        # Keep the default destination absent so first launch runs the installer.
+        if root.resolve().parent != dist.resolve():
+            raise ValueError('native staging root escaped distribution')
+        with tempfile.TemporaryDirectory(prefix='kinakaze-native-', dir=dist) as temporary:
+            root.rename(Path(temporary) / 'rootfs')
+        print(f'Prepared online Debian manifest: {len(payloads)} files, {len(packages)} packages; rootfs is created on first launch')
+        return
     # Use the same offline installer as end users so NTFS inode permissions are
     # identical. RootPlan has finished reading every native file above.
     with tempfile.TemporaryDirectory(prefix='kinakaze-image-', dir=dist) as temporary:
@@ -127,11 +162,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--dist', type=Path, required=True)
     parser.add_argument('--offline', action='store_true')
+    parser.add_argument('--online', action='store_true', help='generate a small release that downloads Debian packages on first launch')
     parser.add_argument('--cache', type=Path, default=WORKSPACE / 'artifacts/guest-deps')
     parser.add_argument('--preset', type=Path, default=WORKSPACE / 'config/rootfs.packages.json')
     args = parser.parse_args()
     cache = preparer['PackageCache'](WORKSPACE / 'tools/guest-deps/dependencies.lock.json', args.cache, args.offline)
-    prepare(args.dist.resolve(), cache, args.preset)
+    prepare(args.dist.resolve(), cache, args.preset, args.online)
 
 
 if __name__ == '__main__':

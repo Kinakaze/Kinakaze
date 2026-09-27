@@ -34,6 +34,7 @@ mod ancillary;
 #[cfg(test)]
 mod connect_tests;
 pub mod credentials;
+mod datagram;
 mod listener;
 pub(crate) mod procnet;
 pub(crate) mod readiness;
@@ -105,7 +106,11 @@ pub unsafe fn send_control(
 ) -> Result<usize, i32> {
     restart_transfer(|| {
         let description = get(fd)?.description_id;
-        let result = unsafe { ancillary::send(fd, buffer, len, flags, rights, credentials) };
+        let result = if datagram::selected(fd)? {
+            unsafe { datagram::send(fd, buffer, len, flags, rights, credentials, None) }
+        } else {
+            unsafe { ancillary::send(fd, buffer, len, flags, rights, credentials) }
+        };
         if result == Err(EAGAIN) {
             crate::epoll::readiness_consumed(
                 description,
@@ -134,9 +139,48 @@ pub unsafe fn recv_control(
     control: usize,
     recvmsg: bool,
 ) -> Result<(usize, Vec<i32>, i32, Option<credentials::Ucred>), i32> {
+    unsafe {
+        recv_control_from(
+            fd,
+            buffer,
+            len,
+            flags,
+            control,
+            recvmsg,
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+        )
+    }
+}
+/// Receive ancillary data and the address of this message's sender.
+/// Safety: the buffers and optional address pair must be writable.
+pub unsafe fn recv_control_from(
+    fd: i32,
+    buffer: *mut u8,
+    len: usize,
+    flags: i32,
+    control: usize,
+    recvmsg: bool,
+    address: *mut u8,
+    address_length: *mut i32,
+) -> Result<(usize, Vec<i32>, i32, Option<credentials::Ucred>), i32> {
     restart_transfer(|| {
         let description = get(fd)?.description_id;
-        let result = unsafe { ancillary::recv(fd, buffer, len, flags, control, recvmsg) };
+        let result = if datagram::selected(fd)? {
+            unsafe { datagram::recv(fd, buffer, len, flags, control, recvmsg) }.and_then(
+                |(n, flags, credentials, source)| {
+                    unsafe { write_address(&source, address, address_length) }?;
+                    Ok((n, Vec::new(), flags, credentials))
+                },
+            )
+        } else {
+            unsafe { ancillary::recv(fd, buffer, len, flags, control, recvmsg) }.and_then(
+                |result| {
+                    unsafe { write_address(&snapshot(fd)?.peer, address, address_length) }?;
+                    Ok(result)
+                },
+            )
+        };
         if result == Err(EAGAIN) {
             // This includes an empty ancillary peek and temporary serialization
             // contention, which return before recv_payload can retire an old edge.
@@ -543,6 +587,10 @@ impl Drop for SocketInode {
 
 fn inode_pipe_name(handle: HANDLE) -> Result<String, i32> {
     let stat = crate::fs::stat_handle(handle, false)?;
+    stat_pipe_name(&stat)
+}
+
+fn stat_pipe_name(stat: &crate::fs::Stat) -> Result<String, i32> {
     if stat.st_mode & crate::fs::S_IFMT != crate::fs::S_IFSOCK {
         return Err(ECONNREFUSED);
     }
@@ -1338,31 +1386,40 @@ pub unsafe fn bind(fd: i32, address: *const u8, length: i32) -> Result<(), i32> 
     // the transport. Bind aliases and chroots therefore reach the same inode,
     // while identical names in independent roots reach different endpoints.
     let mut owns_file = false;
+    let mut memory_inode = None;
     let inode = if let Some(path) = parsed.filesystem_path() {
-        let pin = crate::fs::create_socket_inode(&path)
-            .map_err(|error| if error == EEXIST { EADDRINUSE } else { error })?;
         owns_file = true;
-        Some(pin)
+        memory_inode = crate::tmpfs::socket::bind(&path)
+            .map_err(|error| if error == EEXIST { EADDRINUSE } else { error })?;
+        if memory_inode.is_some() {
+            None
+        } else {
+            Some(
+                crate::fs::create_socket_inode(&path)
+                    .map_err(|error| if error == EEXIST { EADDRINUSE } else { error })?,
+            )
+        }
     } else {
         None
     };
     let pipe_name = match &inode {
         Some(pin) => inode_pipe_name(pin.as_raw_handle().cast())?,
-        None => parsed.pipe_name_in(current.network),
+        None => match &memory_inode {
+            Some(pin) => stat_pipe_name(&pin.stat)?,
+            None => parsed.pipe_name_in(current.network),
+        },
     };
     let _publication = InstancePublication::acquire(&pipe_name)?;
-    let instance = if current.socket_type == SOCK_DGRAM {
-        create_instance(&pipe_name, current.message_mode(), true)
-            .map(|(handle, state)| (handle, Some(state)))
-    } else {
-        create_native_instance(&pipe_name, current.message_mode(), true)
-            .map(|handle| (handle, None))
-    };
+    let instance = create_native_instance(&pipe_name, current.message_mode(), true)
+        .map(|handle| (handle, None));
     let (handle, ancillary) = match instance {
         Ok(handle) => handle,
         Err(error) => {
             if let Some(pin) = &inode {
                 crate::fs::unlink_inode(pin.as_raw_handle().cast())?;
+            }
+            if let Some(pin) = &memory_inode {
+                pin.rollback()?;
             }
             return Err(error);
         }
@@ -1386,22 +1443,51 @@ pub unsafe fn bind(fd: i32, address: *const u8, length: i32) -> Result<(), i32> 
                 if let Some(inode) = &inode {
                     let _ = crate::fs::unlink_inode(inode.0 as HANDLE);
                 }
+                if let Some(pin) = &memory_inode {
+                    let _ = pin.rollback();
+                }
                 return Err(error);
             }
         }
     };
+    let memory_pin = memory_inode
+        .as_ref()
+        .map(|pin| {
+            crate::fs::object::Object::duplicate(pin.pin.raw()).and_then(|object| {
+                crate::platform::try_set_inheritable(object.raw() as usize, true)?;
+                Ok(Arc::new(SocketInode(object.into_raw() as usize)))
+            })
+        })
+        .transpose()?;
+    let published_inode = inode.clone().or(memory_pin);
+    if current.socket_type == SOCK_DGRAM {
+        datagram::bind(&current.record, &pipe_name)?;
+    }
     let published = publish_socket(fd, entry, owned, |socket| {
         socket.state = State::Bound;
         socket.ancillary = ancillary;
         socket.listener = listener;
         socket.local = parsed;
         socket.owns_file = owns_file;
-        socket.inode = inode.clone();
+        socket.inode = published_inode;
     });
     if published.is_err()
         && let Some(pin) = &inode
     {
         crate::fs::unlink_inode(pin.0 as HANDLE)?;
+    }
+    if published.is_err()
+        && let Some(pin) = &memory_inode
+    {
+        pin.rollback()?;
+    }
+    if published.is_err() && current.socket_type == SOCK_DGRAM {
+        let _ = datagram::bind(&current.record, "");
+    }
+    if published.is_ok()
+        && let Some(pin) = &mut memory_inode
+    {
+        pin.commit();
     }
     published.and_then(|()| publish_existing_filter(fd))
 }
@@ -1581,23 +1667,36 @@ unsafe fn connect_inner(fd: i32, address: *const u8, length: i32) -> Result<(), 
         return Err(EINVAL);
     }
 
+    if datagram::selected(fd)? {
+        return datagram::connect(fd, &parsed);
+    }
+
     let (entry, current, _pin) = ancillary::pin_socket(fd)?;
     if current.state == State::Connected {
         return Err(EISCONN);
     }
     let non_blocking = entry.flags.contains(FdFlags::NONBLOCK);
 
+    let mut memory_stat = None;
     let path_pin = if let Some(path) = parsed.filesystem_path() {
-        let native = crate::fs::resolve(&path)?;
-        Some(crate::fs::object::Object::open(
-            &native,
-            windows_sys::Win32::Storage::FileSystem::FILE_READ_ATTRIBUTES,
-        )?)
+        if let Some((stat, pin)) = crate::tmpfs::socket::lookup(&path)? {
+            memory_stat = Some(stat);
+            Some(pin)
+        } else {
+            let native = crate::fs::resolve(&path)?;
+            Some(crate::fs::object::Object::open(
+                &native,
+                windows_sys::Win32::Storage::FileSystem::FILE_READ_ATTRIBUTES,
+            )?)
+        }
     } else {
         None
     };
     let pipe_name = match &path_pin {
-        Some(pin) => inode_pipe_name(pin.raw())?,
+        Some(pin) => match &memory_stat {
+            Some(stat) => stat_pipe_name(stat)?,
+            None => inode_pipe_name(pin.raw())?,
+        },
         None => parsed.pipe_name_in(current.network),
     };
     if current.socket_type != SOCK_DGRAM {
@@ -2264,8 +2363,7 @@ fn drain_message(handle: HANDLE) {
     }
 }
 
-/// `sendto`. An address is only meaningful for an unconnected datagram socket,
-/// which this emulation does not support, so a null address forwards to `send`.
+/// `sendto`, including unconnected named datagram sockets.
 ///
 /// # Safety
 ///
@@ -2279,9 +2377,29 @@ pub unsafe fn sendto(
     address: *const u8,
     address_length: i32,
 ) -> Result<usize, i32> {
+    unsafe { send_control_to(fd, buffer, len, flags, &[], None, address, address_length) }
+}
+/// Send one message, ancillary data and an optional destination atomically.
+/// Safety: buffer and address must be readable for their stated lengths.
+pub unsafe fn send_control_to(
+    fd: i32,
+    buffer: *const u8,
+    len: usize,
+    flags: i32,
+    rights: &[i32],
+    credentials: Option<&credentials::Sender>,
+    address: *const u8,
+    address_length: i32,
+) -> Result<usize, i32> {
+    if datagram::selected(fd)? && !address.is_null() && address_length > 0 {
+        let target = unsafe { parse_address(address, address_length) }?;
+        return restart_transfer(|| unsafe {
+            datagram::send(fd, buffer, len, flags, rights, credentials, Some(&target))
+        });
+    }
     unsafe {
         validate_destination(fd, address, address_length)?;
-        send(fd, buffer, len, flags)
+        send_control(fd, buffer, len, flags, rights, credentials)
     }
 }
 /// Validate the destination before publishing any ancillary references.
@@ -2325,20 +2443,17 @@ pub unsafe fn recvfrom(
     address: *mut u8,
     address_length: *mut i32,
 ) -> Result<usize, i32> {
-    // SAFETY: forwarded from this function's contract.
-    let read = unsafe { recv(fd, buffer, len, flags) }?;
-    let peer = snapshot(fd)
-        .map(|socket| socket.peer)
-        .unwrap_or_else(|_| UnixAddress::unnamed());
-    // SAFETY: forwarded from this function's contract.
-    unsafe { write_address(&peer, address, address_length) }?;
-    Ok(read)
+    unsafe { recv_control_from(fd, buffer, len, flags, 0, false, address, address_length) }
+        .map(|(n, _, _, _)| n)
 }
 
 /// `shutdown`.
 ///
 /// Half-close state is shared by every inherited or transferred endpoint.
 pub fn shutdown(fd: i32, how: i32) -> Result<(), i32> {
+    if datagram::selected(fd)? {
+        return datagram::shutdown(fd, how);
+    }
     let socket = snapshot(fd)?;
     if !matches!(socket.state, State::Connected | State::Disconnected) {
         return Err(ENOTCONN);
@@ -2379,6 +2494,9 @@ pub unsafe fn getsockname(fd: i32, address: *mut u8, length: *mut i32) -> Result
 ///
 /// The address pair must be null or writable.
 pub unsafe fn getpeername(fd: i32, address: *mut u8, length: *mut i32) -> Result<(), i32> {
+    if datagram::selected(fd)? {
+        return unsafe { write_address(&datagram::peer(fd)?, address, length) };
+    }
     let socket = snapshot(fd)?;
     if socket.state != State::Connected {
         return Err(ENOTCONN);
@@ -2664,6 +2782,9 @@ pub fn socketpair(socket_type: i32) -> Result<(i32, i32), i32> {
 /// rather than waited on. A listening socket is readable when a client is
 /// waiting, and a connected one when bytes are buffered.
 pub fn poll_readiness(fd: i32) -> Result<Readiness, i32> {
+    if datagram::selected(fd)? {
+        return datagram::poll(fd);
+    }
     let (_, socket, _pin) = ancillary::pin_socket(fd)?;
     let mut readiness = Readiness(0);
 

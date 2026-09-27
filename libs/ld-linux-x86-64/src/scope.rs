@@ -127,23 +127,30 @@ impl DllProvider {
         if !self.is_loaded() {
             return Ok(None);
         }
-        Ok(self
+        let Some((index, symbol)) = self
             .symbol_indices
             .get(name)
-            .and_then(|index| self.image.symbols().get(*index))
-            .filter(|symbol| symbol.matches_version(version))
-            .map(|symbol| {
-                let mut resolved = Resolution {
-                    size: symbol.size,
-                    ..Resolution::from_address(symbol.address)
-                };
-                if let crate::ProviderSymbolKind::Tls { module, offset } = symbol.kind {
-                    resolved.address = None;
-                    resolved.tls_module = Some(module);
-                    resolved.tls_offset = Some(offset);
-                }
-                resolved
-            }))
+            .and_then(|index| {
+                self.image
+                    .symbols()
+                    .get(*index)
+                    .map(|symbol| (*index, symbol))
+            })
+            .filter(|(_, symbol)| symbol.matches_version(version))
+        else {
+            return Ok(None);
+        };
+        let mut resolved = match symbol.kind {
+            crate::ProviderSymbolKind::Tls { module, offset } => Resolution {
+                address: None,
+                tls_module: Some(module),
+                tls_offset: Some(offset),
+                ..Resolution::from_address(0)
+            },
+            _ => Resolution::from_address(self.image.symbol_address(index)?),
+        };
+        resolved.size = symbol.size;
+        Ok(Some(resolved))
     }
 
     pub fn redirect_copy(
@@ -153,12 +160,15 @@ impl DllProvider {
         size: u64,
         source: usize,
     ) -> Result<(), LinkError> {
-        if let Some(symbol) = self
-            .symbol_indices
-            .get(name)
-            .and_then(|index| self.image.symbols().get(*index))
-            .filter(|symbol| symbol.address == source)
-        {
+        if let Some((index, symbol)) = self.symbol_indices.get(name).and_then(|index| {
+            self.image
+                .symbols()
+                .get(*index)
+                .map(|symbol| (*index, symbol))
+        }) {
+            if self.image.symbol_address(index)? != source {
+                return Ok(());
+            }
             if symbol.kind != crate::ProviderSymbolKind::Object {
                 return Err(LinkError::BadCopyRelocation {
                     symbol: name.to_owned(),

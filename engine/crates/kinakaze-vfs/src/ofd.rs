@@ -274,6 +274,8 @@ pub(crate) fn serialize(keep: impl Fn(i32) -> bool) -> Result<Vec<u8>, i32> {
                                 | crate::FdKind::Socket
                                 | crate::FdKind::NetlinkSocket
                                 | crate::FdKind::TimerFd
+                                | crate::FdKind::SignalFd
+                                | crate::FdKind::ProcMounts
                         ))
             })
             .map(|_| fd as i32)

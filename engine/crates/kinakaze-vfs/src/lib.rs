@@ -37,6 +37,7 @@ pub mod inotify;
 pub mod namespaces;
 #[cfg(windows)]
 mod ofd;
+pub mod signalfd;
 pub mod time_namespace;
 pub mod timerfd;
 pub mod user_namespace;
@@ -212,6 +213,8 @@ pub enum FdKind {
     UnixSocket,
     /// A file whose contents are generated rather than backed by a handle.
     Synthetic,
+    /// A proc mount table with namespace-change readiness.
+    ProcMounts,
     /// A directory whose listing is generated rather than read from the host.
     SyntheticDirectory,
     /// `/dev/null`: writes discard, reads return EOF.
@@ -250,6 +253,7 @@ pub enum FdKind {
     Namespace,
     UserNamespace,
     TimerFd,
+    SignalFd,
     /// A shared Linux filesystem configuration context.
     FsContext,
     /// A mount tree retained independently of a namespace attachment.
@@ -279,6 +283,7 @@ impl FdKind {
             Self::EventFd => 6,
             Self::UnixSocket => 7,
             Self::Synthetic => 8,
+            Self::ProcMounts => 36,
             Self::SyntheticDirectory => 9,
             Self::Null => 10,
             Self::Zero => 11,
@@ -302,6 +307,7 @@ impl FdKind {
             Self::Namespace => 30,
             Self::UserNamespace => 29,
             Self::TimerFd => 28,
+            Self::SignalFd => 35,
             Self::FsContext => 25,
             Self::MountTree => 26,
             Self::TmpfsFile => 31,
@@ -323,6 +329,7 @@ impl FdKind {
             6 => Self::EventFd,
             7 => Self::UnixSocket,
             8 => Self::Synthetic,
+            36 => Self::ProcMounts,
             9 => Self::SyntheticDirectory,
             10 => Self::Null,
             11 => Self::Zero,
@@ -342,6 +349,7 @@ impl FdKind {
             30 => Self::Namespace,
             29 => Self::UserNamespace,
             28 => Self::TimerFd,
+            35 => Self::SignalFd,
             25 => Self::FsContext,
             26 => Self::MountTree,
             31 => Self::TmpfsFile,
@@ -730,6 +738,9 @@ fn synthetic() -> &'static RwLock<SyntheticTable> {
 pub fn install_procfs_file(path: &str, contents: Vec<u8>, flags: FdFlags) -> Result<i32, i32> {
     if path.is_empty() || path.contains('\0') {
         return Err(EINVAL);
+    }
+    if procfs::mount_watch::supports(path) {
+        return procfs::mount_watch::open(path, flags);
     }
     let mut descriptions = synthetic().write().map_err(|_| EIO)?;
     let mut paths = proc_sysctl_paths().lock().map_err(|_| EIO)?;
@@ -3035,6 +3046,14 @@ fn read_inner(fd: i32, buffer: &mut [u8]) -> Result<usize, i32> {
     if entry.kind == FdKind::TimerFd {
         return timerfd::read(fd, buffer);
     }
+    if entry.kind == FdKind::SignalFd {
+        return signalfd::read(fd, buffer);
+    }
+    if entry.kind == FdKind::ProcMounts {
+        let count = procfs::mount_watch::read_at(fd, buffer, entry.offset)?;
+        advance_offset(fd, entry.generation, count);
+        return Ok(count);
+    }
     if entry.kind == FdKind::EventFd {
         let result = eventfd::read_eventfd(fd, buffer, entry.flags.contains(FdFlags::NONBLOCK));
         #[cfg(windows)]
@@ -3218,7 +3237,7 @@ fn write_inner(fd: i32, buffer: &[u8]) -> Result<usize, i32> {
         return unsafe { unix::send(fd, buffer.as_ptr(), buffer.len(), 0) };
     }
     #[cfg(windows)]
-    if entry.kind == FdKind::TimerFd {
+    if matches!(entry.kind, FdKind::TimerFd | FdKind::SignalFd) {
         return Err(EINVAL);
     }
     if entry.kind == FdKind::EventFd {
@@ -3262,7 +3281,10 @@ fn write_inner(fd: i32, buffer: &[u8]) -> Result<usize, i32> {
     }
     // procfs is read-only, so a write is refused rather than silently dropped.
     #[cfg(windows)]
-    if matches!(entry.kind, FdKind::Synthetic | FdKind::SyntheticDirectory) {
+    if matches!(
+        entry.kind,
+        FdKind::Synthetic | FdKind::SyntheticDirectory | FdKind::ProcMounts
+    ) {
         return Err(EACCES);
     }
     #[cfg(windows)]

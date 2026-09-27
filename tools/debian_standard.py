@@ -54,7 +54,7 @@ def fetch(package, cache, offline=False):
             time.sleep(attempt + 1)
 
 
-def load(lock_path, cache, provided, offline=False):
+def load(lock_path, cache, provided, offline=False, sources=None):
     lock = json.loads(Path(lock_path).read_text(encoding='utf-8'))
     if lock.get('schema') != 1 or lock.get('architecture') != 'amd64':
         raise ValueError('unsupported Debian installation lock')
@@ -98,6 +98,9 @@ def load(lock_path, cache, provided, offline=False):
                                                 provider=elf_info(data).soname, reason='native ABI provider'))
                     else:
                         files[name] = data
+                        if sources is not None:
+                            sources[name] = dict(archive=package['package'], member=member.name,
+                                                 sha256=hashlib.sha256(data).hexdigest())
                 elif member.issym():
                     links[name] = member.linkname
                 elif member.islnk():
@@ -112,4 +115,6 @@ def load(lock_path, cache, provided, offline=False):
             seen.add(target)
             target = hardlinks[target]
         files[name] = files[target]
+        if sources is not None:
+            sources[name] = sources[target]
     return files, links, modes, directories, packages, adaptations

@@ -1,0 +1,23 @@
+{
+  "title": "看起来是 Linux，运行在 Windows。｜Kinakaze",
+  "style": "雾白冰蓝、清透日系、少女 VITS 女声、SUMMER TRIANGLE、无人物",
+  "segments": [
+    {"id":"01","scene":"hook","text":"看一眼，这个桌面。你觉得，它运行在哪里？","speak":"看一眼，这个桌面。你觉得，它运行在哪里？","hold":0.9},
+    {"id":"02","scene":"reveal","text":"这一次，答案是 Windows。","speak":"这一次，答案是温豆斯。","hold":1.0},
+    {"id":"03","scene":"brand","text":"认识一下，Kinakaze。","speak":"认识一下，基纳卡泽。","hold":1.4},
+    {"id":"04","scene":"architecture","text":"一个让 Linux 程序，在 Windows 上运行的实验性兼容层。","speak":"一个让里纳克斯程序，在温豆斯上运行的实验性兼容层。","hold":0.4},
+    {"id":"05","scene":"architecture","text":"无需管理员权限，也无需自定义驱动。","speak":"无需管理员权限，也无需自定义驱动。","hold":0.4},
+    {"id":"06","scene":"vi","text":"从一行命令开始。Vi，打开文件。","speak":"从一行命令开始。微艾，打开文件。","hold":0.8},
+    {"id":"07","scene":"vim","text":"Vim，写下你的想法，保存。熟悉的操作，在这里继续。","speak":"维姆，写下你的想法，保存。熟悉的操作，在这里继续。","hold":0.8},
+    {"id":"08","scene":"ssh","text":"启动 sshd，用 SSH 连进来。执行命令，数据顺利返回。","speak":"启动远程服务，连接进来。执行命令，数据顺利返回。","hold":0.8},
+    {"id":"09","scene":"desktop_guess","text":"不过，这里能打开的，可不只有终端。","speak":"不过，这里能打开的，可不只有终端。","hold":0.6},
+    {"id":"10","scene":"gnome","text":"GNOME。Linux 的桌面，在 Windows 上亮起来了。","speak":"诺姆。里纳克斯的桌面，在温豆斯上亮起来了。","hold":1.6},
+    {"id":"11","scene":"java","text":"接着，交给 Linux 版 Java。即时编译、多线程、文件，还有子进程。","speak":"接着，交给里纳克斯版加瓦。即时编译，多线程，文件，还有子进程。","hold":1.0},
+    {"id":"12","scene":"minecraft_guess","text":"有了这些，你想到的下一个应用，会是什么？","speak":"有了这些，你想到的下一个应用，会是什么？","hold":0.8},
+    {"id":"13","scene":"minecraft","text":"是 Minecraft。这个熟悉的主菜单，现在也能在这里打开。","speak":"是，我的世界。这个熟悉的主菜单，现在也能在这里打开。","hold":1.2},
+    {"id":"14","scene":"minecraft","text":"菜单和按钮已经能响应，世界内游玩，还在推进。","speak":"菜单和按钮已经能响应，世界内游玩，还在推进。","hold":1.2},
+    {"id":"15","scene":"montage","text":"从一行命令，到图形桌面，再到新的可能。","speak":"从一行命令，到图形桌面，再到新的可能。","hold":0.6},
+    {"id":"16","scene":"outro","text":"Kinakaze 已经开源。来试试看，也欢迎一起参与。","speak":"基纳卡泽，已经开源。来试试看，也欢迎一起参与。","hold":1.2},
+    {"id":"17","scene":"end","text":"让熟悉的程序，遇见新的可能。","speak":"让熟悉的程序，遇见新的可能。","hold":4.0}
+  ]
+}

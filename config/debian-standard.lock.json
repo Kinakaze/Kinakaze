@@ -118,6 +118,7 @@
     "extra_packages": [
       "busybox",
       "curl",
+      "openssh-server",
       "tree",
       "unzip",
       "zip"
@@ -2808,6 +2809,19 @@
       "sha256": "204f0e13354b44e6d19317887a53dab6f26696e8d95838db970b81f2a393f7fd"
     },
     {
+      "package": "libwrap0",
+      "version": "7.6.q-32",
+      "architecture": "amd64",
+      "priority": "optional",
+      "source_package": "tcp-wrappers",
+      "source_version": "7.6.q-32",
+      "source_directory": "pool/main/t/tcp-wrappers",
+      "url": "https://deb.debian.org/debian/pool/main/t/tcp-wrappers/libwrap0_7.6.q-32_amd64.deb",
+      "filename": "libwrap0_7.6.q-32_amd64.deb",
+      "size": 54936,
+      "sha256": "cbce2669a3ba4d74cfdc52b14f38014893e23d85a33d109a3422c342eefc55f8"
+    },
+    {
       "package": "libx11-6",
       "version": "2:1.8.4-2+deb12u2",
       "architecture": "amd64",
@@ -3222,6 +3236,32 @@
       "filename": "openssh-client_9.2p1-2+deb12u10_amd64.deb",
       "size": 993532,
       "sha256": "42c250b8b9110382488c53c066a960bc564ddac2cb9e449f47b6cdbb5fc1cb60"
+    },
+    {
+      "package": "openssh-server",
+      "version": "1:9.2p1-2+deb12u10",
+      "architecture": "amd64",
+      "priority": "optional",
+      "source_package": "openssh",
+      "source_version": "1:9.2p1-2+deb12u10",
+      "source_directory": "pool/main/o/openssh",
+      "url": "https://deb.debian.org/debian/pool/main/o/openssh/openssh-server_9.2p1-2+deb12u10_amd64.deb",
+      "filename": "openssh-server_9.2p1-2+deb12u10_amd64.deb",
+      "size": 456584,
+      "sha256": "933cd92a2329f9bf26d22660a834ae18ebdbe8df9c6127e4d9fcb098dac9cf72"
+    },
+    {
+      "package": "openssh-sftp-server",
+      "version": "1:9.2p1-2+deb12u10",
+      "architecture": "amd64",
+      "priority": "optional",
+      "source_package": "openssh",
+      "source_version": "1:9.2p1-2+deb12u10",
+      "source_directory": "pool/main/o/openssh",
+      "url": "https://deb.debian.org/debian/pool/main/o/openssh/openssh-sftp-server_9.2p1-2+deb12u10_amd64.deb",
+      "filename": "openssh-sftp-server_9.2p1-2+deb12u10_amd64.deb",
+      "size": 65928,
+      "sha256": "18d7ef7873861272b43b764295cbd8c04f439108fc3a4cecb3fe6e095f8ee2a8"
     },
     {
       "package": "openssl",
@@ -3664,6 +3704,19 @@
       "filename": "reportbug_12.0.0_all.deb",
       "size": 64452,
       "sha256": "d93efa92a61b5e60cf5dbb6728bf28a9e27d46d2a7e1fc886b3a58c6fe6fbcb8"
+    },
+    {
+      "package": "runit-helper",
+      "version": "2.15.2",
+      "architecture": "all",
+      "priority": "optional",
+      "source_package": "dh-runit",
+      "source_version": "2.15.2",
+      "source_directory": "pool/main/d/dh-runit",
+      "url": "https://deb.debian.org/debian/pool/main/d/dh-runit/runit-helper_2.15.2_all.deb",
+      "filename": "runit-helper_2.15.2_all.deb",
+      "size": 6520,
+      "sha256": "fd08121947a1ea340d07e1b523591035419552ac151dfe6e241e8a748e15c36b"
     },
     {
       "package": "sed",

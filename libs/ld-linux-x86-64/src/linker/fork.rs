@@ -333,7 +333,7 @@ impl Linker {
         for _ in 0..input.count()? {
             let name = input.text()?;
             let base = input.word()?;
-            let image = linker.registry.get(&name).ok_or_else(invalid)?;
+            let image = linker.registry.get(&name)?.ok_or_else(invalid)?;
             if image.base() != base {
                 return Err(invalid());
             }

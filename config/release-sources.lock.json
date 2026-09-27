@@ -770,6 +770,24 @@
       ]
     },
     {
+      "package": "dh-runit",
+      "version": "2.15.2",
+      "files": [
+        {
+          "filename": "dh-runit_2.15.2.dsc",
+          "url": "https://deb.debian.org/debian/pool/main/d/dh-runit/dh-runit_2.15.2.dsc",
+          "size": 1786,
+          "sha256": "ca31fc0bdc83f0bcd865588b7f4e2b56553859fccdd1967105e1f9633495e883"
+        },
+        {
+          "filename": "dh-runit_2.15.2.tar.xz",
+          "url": "https://deb.debian.org/debian/pool/main/d/dh-runit/dh-runit_2.15.2.tar.xz",
+          "size": 17164,
+          "sha256": "e04ff2c496ad4fc1dc2070bfa9ae6f88cbc6aff90039b8992f1cf28cd02a8b67"
+        }
+      ]
+    },
+    {
       "package": "diffutils",
       "version": "1:3.8-4",
       "files": [
@@ -4588,6 +4606,30 @@
           "url": "https://deb.debian.org/debian/pool/main/t/tasksel/tasksel_3.73.tar.xz",
           "size": 296900,
           "sha256": "ebe44e77ed1f8435a382f8db7b1fa7448f9a28e2fd926794d954173f3084c40f"
+        }
+      ]
+    },
+    {
+      "package": "tcp-wrappers",
+      "version": "7.6.q-32",
+      "files": [
+        {
+          "filename": "tcp-wrappers_7.6.q-32.dsc",
+          "url": "https://deb.debian.org/debian/pool/main/t/tcp-wrappers/tcp-wrappers_7.6.q-32.dsc",
+          "size": 1390,
+          "sha256": "c9620a45e897c786b99890b54c6ea916df2380b6f3260e1e6442a1f8b5066997"
+        },
+        {
+          "filename": "tcp-wrappers_7.6.q.orig.tar.gz",
+          "url": "https://deb.debian.org/debian/pool/main/t/tcp-wrappers/tcp-wrappers_7.6.q.orig.tar.gz",
+          "size": 99438,
+          "sha256": "9543d7adedf78a6de0b221ccbbd1952e08b5138717f4ade814039bb489a4315d"
+        },
+        {
+          "filename": "tcp-wrappers_7.6.q-32.debian.tar.xz",
+          "url": "https://deb.debian.org/debian/pool/main/t/tcp-wrappers/tcp-wrappers_7.6.q-32.debian.tar.xz",
+          "size": 38040,
+          "sha256": "deec7966808407ddcb11581380c7253c348bd8780da6c9ee17fa9e7a729539fe"
         }
       ]
     },

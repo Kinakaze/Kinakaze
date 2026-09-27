@@ -207,10 +207,8 @@ mod kernel_entry_tests {
 #[cfg(all(windows, target_arch = "x86_64"))]
 fn init_console_modes() {
     use windows_sys::Win32::System::Console::{
-        ENABLE_EXTENDED_FLAGS, ENABLE_PROCESSED_INPUT, ENABLE_PROCESSED_OUTPUT,
-        ENABLE_QUICK_EDIT_MODE, ENABLE_VIRTUAL_TERMINAL_INPUT, ENABLE_VIRTUAL_TERMINAL_PROCESSING,
-        GetConsoleMode, GetStdHandle, STD_ERROR_HANDLE, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE,
-        SetConsoleCP, SetConsoleMode, SetConsoleOutputCP,
+        ENABLE_PROCESSED_OUTPUT, ENABLE_VIRTUAL_TERMINAL_PROCESSING, GetConsoleMode, GetStdHandle,
+        STD_ERROR_HANDLE, STD_OUTPUT_HANDLE, SetConsoleCP, SetConsoleMode, SetConsoleOutputCP,
     };
     if std::env::var_os("TERM").is_none() {
         unsafe { std::env::set_var("TERM", "xterm-256color") };
@@ -238,22 +236,9 @@ fn init_console_modes() {
                 );
             }
         }
-        let h_in = GetStdHandle(STD_INPUT_HANDLE);
-        if !h_in.is_null() && h_in as isize != -1 {
-            let mut mode = 0u32;
-            if GetConsoleMode(h_in, &raw mut mode) != 0 {
-                use windows_sys::Win32::System::Console::{
-                    ENABLE_MOUSE_INPUT, ENABLE_WINDOW_INPUT,
-                };
-                let clean_mode = (mode | ENABLE_PROCESSED_INPUT)
-                    & !(ENABLE_MOUSE_INPUT
-                        | ENABLE_WINDOW_INPUT
-                        | ENABLE_QUICK_EDIT_MODE
-                        | ENABLE_VIRTUAL_TERMINAL_INPUT)
-                    | ENABLE_EXTENDED_FLAGS;
-                let _ = SetConsoleMode(h_in, clean_mode);
-            }
-        }
+        // Input mode belongs to the terminal's reader/line discipline. A child
+        // shares its parent's Windows console: resetting stdin here disables
+        // the parent's raw VT input whenever a TUI starts a helper process.
     }
 }
 

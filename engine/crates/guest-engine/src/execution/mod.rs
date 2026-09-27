@@ -2,6 +2,7 @@
 //! The dynamic linker lends an already relocated, writable image through runtime.
 pub mod aot_cache;
 mod code_roots;
+mod content_hash;
 pub(crate) mod guest_gs;
 pub mod instruction_trampoline;
 mod profile;
@@ -124,7 +125,12 @@ unsafe fn prepare_image(
         .root
         .join("var/cache/kinakaze/aot");
     let hashing = profile::begin("hash", bytes.len());
-    let key = aot_cache::compute_cache_key("image", bytes);
+    let key = if view.content_hash.is_null() {
+        aot_cache::compute_cache_key("image", bytes)
+    } else {
+        let hash = unsafe { view.content_hash.cast::<[u8; 32]>().read_unaligned() };
+        aot_cache::cache_key("image", blake3::Hash::from_bytes(hash))
+    };
     drop(hashing);
     let loading = profile::begin("cache-read", bytes.len());
     let cached = aot_cache::load_aot_cache(&directory, &key);

@@ -13,9 +13,9 @@ use std::path::Path;
 use super::ExecutionError;
 use super::Image;
 
-// Version 26 also follows a checked switch index copied to another register.
-// Old plans can otherwise leave reachable GS accesses untranslated.
-const CACHE_MAGIC: &[u8; 8] = b"CRYAOT26";
+// Version 33 requires a proven callee invocation or TLS cleanup registration;
+// executable-segment literals must never become instruction patch sites.
+const CACHE_MAGIC: &[u8; 8] = b"CRYAOT33";
 const ARCH_X86_64: u32 = 1;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -69,7 +69,10 @@ pub struct CachedObjectAot {
 pub fn compute_cache_key(name: &str, data: &[u8]) -> String {
     // SIMD-dispatched full-content hashing removes the serial multiply per byte
     // without weakening invalidation to file timestamps or sampled pages.
-    let hash = blake3::hash(data);
+    cache_key(name, super::content_hash::hash(data))
+}
+
+pub(super) fn cache_key(name: &str, hash: blake3::Hash) -> String {
     let sanitized_name: String = name
         .chars()
         .map(|c| {
@@ -302,10 +305,19 @@ pub(super) fn validate_cached_aot(
                 (segment_base + offset) as u64,
                 iced_x86::DecoderOptions::NONE,
             );
-            let instruction = decoder.decode();
+            let mut instruction = decoder.decode();
+            let prefix_len = if site.trampoline
+                && site.len == 7
+                && super::segment_patch::is_exit_number_load(&instruction)
+            {
+                instruction = decoder.decode();
+                5
+            } else {
+                0
+            };
             if instruction.is_invalid()
                 || instruction.mnemonic() != iced_x86::Mnemonic::Syscall
-                || instruction.len() != site.len as usize
+                || prefix_len + instruction.len() != site.len as usize
             {
                 return Err(ExecutionError::AddressOverflow);
             }

@@ -40,7 +40,7 @@ use core::ptr;
 use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle, RawHandle};
 
 use windows_sys::Win32::Foundation::{CloseHandle, GetLastError};
-use windows_sys::Win32::System::Threading::{CREATE_NO_WINDOW, ResumeThread};
+use windows_sys::Win32::System::Threading::ResumeThread;
 
 use crate::set_errno;
 
@@ -321,6 +321,11 @@ fn spawn_suspended_exec(
     si.hStdInput = stdin_handle;
     si.hStdOutput = stdout_handle;
     si.hStdError = stderr_handle;
+    let creation_flags = kinakaze_runtime::child_creation_flags([
+        stdin_handle as usize,
+        stdout_handle as usize,
+        stderr_handle as usize,
+    ]);
 
     // Only this child sees the reservation: never mutate a multithreaded
     // parent's process environment around CreateProcessW.
@@ -350,8 +355,8 @@ fn spawn_suspended_exec(
             cmd_line.as_mut_ptr(),
             std::ptr::null(),
             std::ptr::null(),
-            1,                                           // bInheritHandles = TRUE!
-            CREATE_SUSPENDED | CREATE_NO_WINDOW | 0x400, // CREATE_UNICODE_ENVIRONMENT
+            1,                                         // bInheritHandles = TRUE!
+            CREATE_SUSPENDED | creation_flags | 0x400, // CREATE_UNICODE_ENVIRONMENT
             environment
                 .as_ref()
                 .map_or(std::ptr::null(), |block| block.as_ptr().cast()),

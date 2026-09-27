@@ -3,25 +3,88 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kinakaze · 运行状态</title>
+  <meta name="color-scheme" content="light dark">
+  <title>Kinakaze · 进程</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/style.css">
   <script src="/app.js" defer></script>
 </head>
 <body>
-  <main>
-    <header><div><p class="eyebrow">KINAKAZE V2</p><h1>运行状态</h1><p id="summary">正在连接 init…</p></div><button id="refresh" type="button">刷新</button></header>
-    <p id="connection" role="status">等待首次采样</p>
-    <section class="cards" aria-label="会话概览">
-      <article><span>Linux 进程</span><strong id="processes">—</strong></article>
-      <article><span>管理连接</span><strong id="clients">—</strong></article>
-      <article><span>状态对象</span><strong id="objects">—</strong></article>
-      <article><span>进程事务</span><strong id="transactions">—</strong></article>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+  <header class="app-header">
+    <a class="brand" href="#main" aria-label="Kinakaze"><img src="/favicon.svg" alt="" width="22" height="22"><span>Kinakaze</span></a>
+    <span class="session-label">本机会话</span>
+    <div class="header-actions">
+      <span id="connection" class="connection" role="status"><span class="status-dot"></span><span id="connection-text">正在连接</span></span>
+      <span class="header-divider" aria-hidden="true"></span>
+      <button id="art-toggle" class="header-button" type="button" aria-pressed="true">插画</button>
+      <button id="help" class="header-button" type="button">帮助</button>
+      <button id="theme" class="header-button" type="button">深色</button>
+    </div>
+  </header>
+  <div class="workspace">
+  <aside class="art-rail" aria-label="Kinakaze 原创插画">
+    <div class="rail-heading"><span class="rail-mark" aria-hidden="true"></span><span>Kinakaze</span></div>
+    <img class="character-art" src="/character.png" alt="银发蓝眼的原创角色，身着白色外套，手持笔记本站在晴空下" width="1024" height="1536">
+    <div class="rail-caption"><span>本地运行环境</span><strong>Windows x86-64</strong><span id="art-version">Kinakaze</span></div>
+  </aside>
+  <main id="main">
+    <div class="page-heading">
+      <div class="page-title"><h1 id="page-title">进程</h1><span id="process-count" class="count">0</span></div>
+      <div class="page-actions"><button id="try-example" class="button quiet" type="button" disabled>运行示例</button><button id="open-launch" class="button primary" type="button" disabled><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>启动程序</button></div>
+    </div>
+    <div id="notice" class="notice" role="status" hidden></div>
+    <section class="metrics" aria-label="会话资源">
+      <div class="metric"><div class="metric-label">运行程序</div><div class="metric-value" id="running">—</div><p id="running-hint">等待连接</p></div>
+      <div class="metric"><div class="metric-label">内存工作集</div><div class="metric-value" id="memory">—</div><p id="memory-hint">应用进程合计</p></div>
+      <div class="metric"><div class="metric-label">CPU</div><div class="metric-value" id="cpu">—</div><p id="cpu-hint">等待连续采样</p></div>
+      <div class="metric"><div class="metric-label">运行环境</div><div class="metric-value text-value" id="pool-status">连接中</div><p id="pool-hint">正在读取状态</p></div>
     </section>
-    <section><h2>进程</h2><p>当前会话的 Linux 进程与 Windows worker。内存为宿主工作集和私有提交量；CPU 为累计时间。</p>
-      <div class="table-wrap"><table><thead><tr><th>PID / 父 PID</th><th>执行代次</th><th>宿主 PID</th><th>状态</th><th>工作集</th><th>私有内存</th><th>CPU</th></tr></thead><tbody id="rows"></tbody></table></div>
-      <p id="empty">暂无进程</p>
+    <section id="process-section" class="processes-panel" aria-labelledby="page-title">
+      <div class="table-toolbar">
+        <div class="filter-group" role="group" aria-label="进程筛选"><button type="button" data-filter="all" class="filter active" aria-pressed="true">全部</button><button type="button" data-filter="running" class="filter" aria-pressed="false">运行中</button><button type="button" data-filter="standby" class="filter" aria-pressed="false">待命</button></div>
+        <div class="table-tools">
+          <label class="search"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.25"/><path d="m10.25 10.25 3 3"/></svg><input id="search" type="search" placeholder="搜索程序或 PID" aria-label="搜索程序、Linux PID 或宿主 PID" maxlength="160"></label>
+          <div class="sampling-controls"><label class="sr-only" for="interval">自动刷新间隔</label><select id="interval"><option value="2000">2 秒刷新</option><option value="5000">5 秒刷新</option><option value="10000">10 秒刷新</option></select><button id="pause" class="button quiet" type="button" aria-pressed="false">暂停</button><button id="refresh" class="icon-button" type="button" aria-label="立即刷新" title="立即刷新"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.1 6A5.3 5.3 0 1 0 13 10M13.2 2v4.2H9"/></svg></button></div>
+        </div>
+      </div>
+      <div class="process-list">
+        <div class="table-wrap"><table><caption class="sr-only">当前会话进程列表，点击程序名查看详情</caption><thead><tr><th scope="col">程序 / Linux PID</th><th scope="col">状态</th><th scope="col" class="numeric"><button type="button" class="sort" data-sort="memory">内存工作集 <span aria-hidden="true">↕</span></button></th><th scope="col" class="numeric"><button type="button" class="sort" data-sort="cpu">CPU <span aria-hidden="true">↕</span></button></th><th scope="col" class="numeric">宿主 PID</th><th scope="col"><span class="sr-only">操作</span></th></tr></thead><tbody id="rows"></tbody></table></div>
+        <div id="empty" class="empty-state"><h2 id="empty-title">正在连接</h2><p id="empty-description">读取当前会话的进程。</p><button id="empty-action" type="button" class="button secondary" hidden>启动程序</button></div>
+      </div>
+      <div class="table-footer"><span id="list-summary">等待数据</span><span id="updated">尚未更新</span></div>
     </section>
-    <footer>只读监控 · 每 2 秒按需采样 · 页面隐藏时暂停 · — 表示本次采样不可用</footer>
+    <section class="activity-panel" aria-labelledby="activity-title">
+      <div class="section-heading"><h2 id="activity-title">操作记录</h2><span>仅当前页面 · 最多 20 条</span></div>
+      <ol id="activity"><li class="activity-empty">暂无操作记录</li></ol>
+    </section>
+    <footer><span id="session-info">本地会话</span><span id="footer-version">Kinakaze</span></footer>
   </main>
+  </div>
+  <dialog id="help-dialog" aria-labelledby="help-title">
+    <div class="dialog-heading"><h2 id="help-title">使用说明</h2><button type="button" class="icon-button close-dialog" aria-label="关闭使用说明">×</button></div>
+    <div class="help-content">
+      <h3>启动程序</h3><p>输入 Linux 绝对路径，如 <code>/bin/sleep</code>。参数分别添加，含空格时无需再加引号。首页的“运行示例”会填入 <code>/bin/sleep 60</code>。</p>
+      <h3>查看输出</h3><p>程序输出与错误信息显示在启动 Kinakaze 的终端。此入口不接收交互输入；交互式 shell 请使用 <code>worker.exe run -- /bin/sh</code>。</p>
+      <h3>运行环境</h3><p>待命进程用于启动新程序，由 Kinakaze 自动管理。需要完整的启动入口时，在发行目录运行：</p><code class="command">.\init.exe --session-file .\session.json --web 127.0.0.1:0</code><p>打开终端显示的地址。关闭 init 会结束本会话的所有程序。</p>
+      <h3>资源采样</h3><p>内存来自 Windows 宿主；CPU 以单核为 100%，多核可超过 100%。<code>—</code> 表示采样不可用。页面隐藏时暂停自动采样。</p>
+    </div>
+    <div class="dialog-actions"><button type="button" class="button secondary close-dialog">关闭</button></div>
+  </dialog>
+  <dialog id="launch-dialog" aria-labelledby="launch-title">
+    <form id="launch-form">
+      <div class="dialog-heading"><div><h2 id="launch-title">启动程序</h2></div><button type="button" class="icon-button close-dialog" aria-label="关闭启动窗口">×</button></div>
+      <p class="dialog-intro">从当前 Linux 文件系统启动一个程序。</p>
+      <label class="field">程序路径 <span class="required">必填</span><input id="program" name="program" placeholder="例如 /bin/sleep" required pattern="/.*" maxlength="4096" autocomplete="off" spellcheck="false" aria-describedby="program-help"><small id="program-help">填写 Linux 绝对路径，而非 Windows 文件路径。</small></label>
+      <div class="field"><div class="field-heading"><span id="arguments-label">启动参数</span><button id="add-argument" type="button" class="text-button">＋ 添加参数</button></div><div id="arguments" role="group" aria-labelledby="arguments-label"></div><small>每项是一个完整参数；含空格时无需额外加引号。</small></div>
+      <details class="advanced"><summary>高级设置</summary><label class="field">工作目录<input id="cwd" value="/" required pattern="/.*" maxlength="4096" autocomplete="off" spellcheck="false"></label><label class="field">环境变量<textarea id="environment" rows="3" placeholder="每行一个 NAME=VALUE，例如 LANG=C.UTF-8" spellcheck="false" maxlength="12000"></textarea><small>留空使用默认环境；填写后会替换客体环境列表。</small></label></details>
+      <div class="inline-note">程序输出显示在启动终端中。此入口适合后台与非交互程序。</div><p id="launch-error" class="form-error" role="alert" hidden></p>
+      <div class="dialog-actions"><button type="button" class="button secondary close-dialog">取消</button><button id="launch-submit" type="submit" class="button primary">启动程序</button></div>
+    </form>
+  </dialog>
+  <dialog id="detail-dialog" aria-labelledby="detail-title"><div class="dialog-heading"><div><h2 id="detail-title">进程详情</h2></div><button type="button" class="icon-button close-dialog" aria-label="关闭进程详情">×</button></div><p id="detail-subtitle" class="dialog-intro"></p><dl id="detail-values" class="detail-grid"></dl><p id="detail-note" class="inline-note"></p><div class="dialog-actions"><button type="button" class="button secondary close-dialog">关闭</button><button id="detail-terminate" type="button" class="button danger">结束进程</button></div></dialog>
+  <dialog id="terminate-dialog" aria-labelledby="terminate-title"><div class="dialog-heading"><h2 id="terminate-title">结束这个进程？</h2><button type="button" class="icon-button close-dialog" aria-label="关闭确认窗口">×</button></div><p id="terminate-target" class="terminate-target"></p><p class="dialog-intro">这会强制结束所选进程，未保存的数据可能丢失。其子进程不会自动结束。</p><p id="terminate-error" class="form-error" role="alert" hidden></p><div class="dialog-actions"><button id="cancel-terminate" type="button" class="button secondary close-dialog" autofocus>取消</button><button id="confirm-terminate" type="button" class="button danger">确认结束</button></div></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <noscript><div class="noscript">请启用 JavaScript，以连接本地会话并管理程序。</div></noscript>
 </body>
 </html>

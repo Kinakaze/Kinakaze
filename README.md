@@ -29,7 +29,9 @@ Kinakaze 在用户态实现 Linux 程序所需的装载器、系统调用与基�
 
 v0.1.0 增加可选 rootfs 清单和可重新连接的 init 启动客户端。外部清单优先，仅在目标 rootfs 不存在或为空时初始化；已有非空 rootfs 保持原样。发行包内置经过哈希校验的基础 shell，启动方式及 `init launch --parent` 示例见 [v0.1.0 运行说明](docs/runtime-release-v0.1.0.md)。
 
-当前源码的默认构建预装 Debian bookworm 无桌面的基础与标准命令行环境，共锁定 302 个软件包，包含 Bash、补全、man、编辑器、Python、Perl、APT、dpkg、签名密钥和证书。执行生成目录中的 `kinakaze.cmd` 即可进入 shell；`kinakaze.cmd setup --root <目录>` 可离线初始化。详见 [首次安装与包管理](docs/first-run.md)。这部分改进尚未进入已发布的 v0.1.0 二进制。
+当前源码的默认构建预装 Debian bookworm 无桌面的基础与标准命令行环境，共锁定 306 个软件包，包含 Bash、补全、man、编辑器、Python、Perl、APT、dpkg、签名密钥、证书和 OpenSSH 服务端。执行生成目录中的 `worker.exe` 即可进入 shell；默认 SSH 同时监听 `127.0.0.1:2222`，账号 `root`、密码 `kinakaze`。`worker.exe setup --root <目录>` 可单独初始化。Release 只带程序、依赖 DLL 与 Debian 默认清单，首次启动由 EXE 自动联网下载和配置 rootfs，用户无需 Python。详见 [首次安装与包管理](docs/first-run.md)。这部分改进尚未进入已发布的 v0.1.0 二进制。
+
+默认入口现在复用一个常驻 `init.exe`，托盘支持返回已有终端、打开 WebUI 和关闭整棵进程树。PID 1 与开机/关机命令由 manifest 指定，默认 Debian 使用 systemd；Bash 和其他 ELF 共用真实派生与 PTY 重连机制。见 [持久会话配置](docs/persistent-sessions.md)。默认目标仍是托管服务配置，完整开机服务链的边界见 [systemd 验证记录](docs/systemd-validation-2026-09-27.md)。
 
 ### 构建环境
 
@@ -47,11 +49,11 @@ Set-Location Kinakaze
 ./tools/build.ps1 -DistDirectory artifacts/kinakaze-dist
 ```
 
-构建脚本检查原生导出、格式、Rust/Python 测试，并生成入口程序、完整默认清单、离线种子与 rootfs。`-Offline` 使用已验证缓存，`-NativeOnly` 仅构建原生模块。环境配置、快速编译检查及 Release 构建见 [上手指南](docs/getting-started.md)。
+构建脚本检查原生导出、格式、Rust/Python 测试，并生成入口程序与完整默认清单；Release 首次启动联网配置 rootfs，调试构建保留离线种子。`-Offline` 使用已验证缓存，`-NativeOnly` 仅构建原生模块。环境配置、快速编译检查及 Release 构建见 [上手指南](docs/getting-started.md)。
 
 ### 准备并运行 Linux 程序
 
-基础环境已经预制，可直接执行 `./artifacts/kinakaze-dist/kinakaze.cmd`，再用 APT 安装其他程序。需要导入已有 Linux 文件树时，可以使用下面的方式；输入目录应与本仓库的输出目录分开，并包含 `usr/bin/busybox`、`usr/bin/curl` 及其依赖。
+基础环境已经预制，可直接执行 `./artifacts/kinakaze-dist/worker.exe`，再用 APT 安装其他程序。需要导入已有 Linux 文件树时，可以使用下面的方式；输入目录应与本仓库的输出目录分开，并包含 `usr/bin/busybox`、`usr/bin/curl` 及其依赖。
 
 ```powershell
 # 将此路径改为你自己的 Linux 文件树。
@@ -63,6 +65,16 @@ python tools/prepare-root.py --source "$GuestSource" --root artifacts/guest-root
 ```
 
 准备工具验证 ELF 依赖闭包；缺少的已登记依赖按锁文件下载并校验。它不会自动提供完整 Linux 发行版。更多程序、离线缓存和 JRE 配置见 [客体依赖说明](tools/guest-deps/README.md)。
+
+## WebUI 工作空间
+
+当前源码中的 WebUI 支持图形化启动程序、查看进程详情、搜索筛选和确认结束进程。在完整运行目录中执行：
+
+```powershell
+.\init.exe --session-file .\session.json --web 127.0.0.1:0
+```
+
+打开终端显示的本地地址，即可从“填入示例”开始使用。程序输出仍显示在启动终端中。使用方法、采样说明与访问边界见 [WebUI 指南](docs/webui.md)；已发布的 v0.1.0 二进制仍是旧版监控页。
 
 ## 项目结构
 

@@ -25,6 +25,7 @@ static AUTHORITY: ProcessAuthority = ProcessAuthority {
     commit_exec,
     abort_exec,
     memory_target,
+    image_snapshot,
 };
 
 pub(super) fn bootstrap() -> Result<(), i32> {
@@ -56,6 +57,26 @@ fn request(request: Request) -> Result<Reply, i32> {
         ErrorCode::Aborted => 125,
         _ => 5,
     })
+}
+
+fn image_snapshot(
+    file: std::os::windows::io::BorrowedHandle<'_>,
+    length: usize,
+) -> Option<(std::os::windows::io::OwnedHandle, [u8; 32])> {
+    use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
+    match request(Request::ImageSnapshot {
+        source: file.as_raw_handle() as u64,
+        length: length as u64,
+    })
+    .ok()?
+    {
+        Reply::ImageSnapshot {
+            section: Some((section, hash)),
+        } if section != 0 && section <= isize::MAX as u64 => {
+            Some((unsafe { OwnedHandle::from_raw_handle(section as _) }, hash))
+        }
+        _ => None,
+    }
 }
 
 fn ok(request_value: Request) -> Result<(), i32> {

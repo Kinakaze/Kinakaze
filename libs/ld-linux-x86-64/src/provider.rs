@@ -3,7 +3,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, OnceLock};
 
 use crate::LinkError;
 
@@ -17,6 +17,8 @@ pub enum ProviderSymbolKind {
 #[derive(Clone, Debug)]
 pub struct ProviderSymbol {
     pub name: String,
+    /// Zero denotes an unresolved declaration only for adapters opting into
+    /// deferred addresses. Consumers obtain addresses through symbol_address.
     pub address: usize,
     pub kind: ProviderSymbolKind,
     pub size: u64,
@@ -44,8 +46,31 @@ impl ProviderSymbol {
 pub trait ProviderImage: Send + Sync {
     fn soname(&self) -> &str;
     fn path(&self) -> &Path;
+    /// Canonical file identity already obtained while opening this owned image.
+    /// Adapters without a pinned canonical identity use the default filesystem
+    /// lookup. This must identify the same file as `path()`.
+    fn canonical_path(&self) -> Option<&Path> {
+        None
+    }
     fn base(&self) -> usize;
     fn symbols(&self) -> &[ProviderSymbol];
+    /// An unbound address in metadata is permitted only when this adapter
+    /// resolves and validates it on the first actual symbol lookup.
+    fn has_deferred_addresses(&self) -> bool {
+        false
+    }
+    fn symbol_address(&self, index: usize) -> Result<usize, LinkError> {
+        self.symbols()
+            .get(index)
+            .map(|symbol| symbol.address)
+            .filter(|address| *address != 0)
+            .ok_or_else(|| LinkError::InvalidProvider("invalid provider symbol address".into()))
+    }
+    /// Reverse lookup may inspect declarations while searching for an address.
+    /// Deferred adapters need not publish bindings for those incidental probes.
+    fn inspect_symbol_address(&self, index: usize) -> Result<usize, LinkError> {
+        self.symbol_address(index)
+    }
     fn mapped_len(&self) -> usize {
         0
     }
@@ -61,9 +86,104 @@ pub trait ProviderImage: Send + Sync {
 
 #[derive(Default)]
 pub struct ProviderRegistry {
-    images: HashMap<String, Arc<dyn ProviderImage>>,
+    images: HashMap<String, ProviderEntry>,
     paths: HashMap<std::path::PathBuf, String>,
     pub(crate) restore_source: Option<std::path::PathBuf>,
+}
+
+type Factory = Box<dyn FnOnce() -> Result<Arc<dyn ProviderImage>, LinkError> + Send>;
+
+enum ProviderEntry {
+    Ready(Arc<dyn ProviderImage>),
+    Deferred {
+        factory: Mutex<Option<Factory>>,
+        image: OnceLock<Result<Arc<dyn ProviderImage>, String>>,
+        path: std::path::PathBuf,
+    },
+}
+
+impl ProviderEntry {
+    fn path(&self) -> &Path {
+        match self {
+            Self::Ready(image) => image.path(),
+            Self::Deferred { path, .. } => path,
+        }
+    }
+    fn get(&self, name: &str) -> Result<Arc<dyn ProviderImage>, LinkError> {
+        let Self::Deferred {
+            factory,
+            image,
+            path,
+        } = self
+        else {
+            let Self::Ready(image) = self else {
+                unreachable!()
+            };
+            return Ok(Arc::clone(image));
+        };
+        // One initialization owns the factory, including on failure. Other
+        // threads observe the same validated image or the same load error.
+        let result = image.get_or_init(|| {
+            let load = factory
+                .lock()
+                .map_err(|_| "provider factory poisoned".to_owned())?
+                .take()
+                .ok_or_else(|| "provider factory consumed".to_owned())?;
+            let image = load().map_err(|error| error.to_string())?;
+            if image.soname() != name || canonical_path(image.as_ref()) != *path {
+                return Err("deferred provider changed its registered identity".into());
+            }
+            validate_symbols(image.as_ref()).map_err(|error| error.to_string())?;
+            Ok(image)
+        });
+        match result {
+            Ok(image) => Ok(Arc::clone(image)),
+            Err(error) => Err(LinkError::InvalidProvider(format!("load {name}: {error}"))),
+        }
+    }
+}
+
+fn canonical_path(image: &dyn ProviderImage) -> std::path::PathBuf {
+    image
+        .canonical_path()
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| {
+            std::fs::canonicalize(image.path()).unwrap_or_else(|_| image.path().to_path_buf())
+        })
+}
+
+fn validate_symbols(image: &dyn ProviderImage) -> Result<(), LinkError> {
+    let name = image.soname();
+    let mut names = HashSet::new();
+    for symbol in image.symbols() {
+        if symbol.name.is_empty() || symbol.name.contains('\0') || !names.insert(&symbol.name) {
+            return Err(LinkError::InvalidProvider(format!(
+                "invalid or duplicate symbol in {name}"
+            )));
+        }
+        if symbol.address == 0 && !image.has_deferred_addresses()
+            || (symbol.kind != ProviderSymbolKind::Function && symbol.size == 0)
+        {
+            return Err(LinkError::InvalidProvider(format!(
+                "invalid address or object size for {}",
+                symbol.name
+            )));
+        }
+        let mut versions = HashSet::new();
+        if symbol.versions.iter().any(|version| {
+            version.is_empty() || version.contains('\0') || !versions.insert(version)
+        }) || symbol
+            .default_version
+            .as_ref()
+            .is_some_and(|version| !versions.contains(version))
+        {
+            return Err(LinkError::InvalidProvider(format!(
+                "invalid ABI versions for {}",
+                symbol.name
+            )));
+        }
+    }
+    Ok(())
 }
 
 type RegistryLoader = fn(&Path) -> Result<Arc<ProviderRegistry>, LinkError>;
@@ -107,44 +227,21 @@ impl ProviderRegistry {
         }
         // A registered image owns and pins this mapping. Resolve its identity
         // once; dependency lookup must not reopen every registered DLL.
-        let path =
-            std::fs::canonicalize(image.path()).unwrap_or_else(|_| image.path().to_path_buf());
+        let path = image
+            .canonical_path()
+            .map(Path::to_path_buf)
+            .unwrap_or_else(|| {
+                std::fs::canonicalize(image.path()).unwrap_or_else(|_| image.path().to_path_buf())
+            });
         if self.paths.contains_key(&path) {
             return Err(LinkError::InvalidProvider(
                 "one facade cannot own multiple SONAMEs".into(),
             ));
         }
-        let mut names = HashSet::new();
-        for symbol in image.symbols() {
-            if symbol.name.is_empty() || symbol.name.contains('\0') || !names.insert(&symbol.name) {
-                return Err(LinkError::InvalidProvider(format!(
-                    "invalid or duplicate symbol in {name}"
-                )));
-            }
-            if symbol.address == 0
-                || (symbol.kind != ProviderSymbolKind::Function && symbol.size == 0)
-            {
-                return Err(LinkError::InvalidProvider(format!(
-                    "invalid address or object size for {}",
-                    symbol.name
-                )));
-            }
-            let mut versions = HashSet::new();
-            if symbol.versions.iter().any(|version| {
-                version.is_empty() || version.contains('\0') || !versions.insert(version)
-            }) || symbol
-                .default_version
-                .as_ref()
-                .is_some_and(|version| !versions.contains(version))
-            {
-                return Err(LinkError::InvalidProvider(format!(
-                    "invalid ABI versions for {}",
-                    symbol.name
-                )));
-            }
-        }
+        validate_symbols(image.as_ref())?;
         self.paths.insert(path, name.to_owned());
-        self.images.insert(name.to_owned(), image);
+        self.images
+            .insert(name.to_owned(), ProviderEntry::Ready(image));
         Ok(())
     }
 
@@ -152,15 +249,71 @@ impl ProviderRegistry {
         self.images.contains_key(soname)
     }
 
-    pub fn get(&self, soname: &str) -> Option<Arc<dyn ProviderImage>> {
-        self.images.get(soname).cloned()
+    /// Resolve identity without opening an image, in particular for RTLD_NOLOAD.
+    pub(crate) fn registered_path(&self, path: &Path, soname: &str) -> Option<std::path::PathBuf> {
+        let canonical = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+        let name = self
+            .paths
+            .get(&canonical)
+            .map(String::as_str)
+            .unwrap_or(soname);
+        self.images
+            .get(name)
+            .map(|entry| entry.path().to_path_buf())
     }
 
-    pub(crate) fn by_path(&self, path: &Path) -> Option<Arc<dyn ProviderImage>> {
+    /// Reserve an exact SONAME and canonical file identity without invoking
+    /// its factory. The owner must pin the inspected file until the factory
+    /// is released. Loading errors are propagated by `get`, never hidden as
+    /// an absent dependency or silently retried through ELF search paths.
+    pub fn register_deferred(
+        &mut self,
+        name: String,
+        path: std::path::PathBuf,
+        factory: impl FnOnce() -> Result<Arc<dyn ProviderImage>, LinkError> + Send + 'static,
+    ) -> Result<(), LinkError> {
+        if name.is_empty() || name.contains(['/', '\\', '\0']) || self.images.contains_key(&name) {
+            return Err(LinkError::InvalidProvider(
+                "invalid or duplicate provider SONAME".into(),
+            ));
+        }
+        let path = std::fs::canonicalize(&path).unwrap_or(path);
+        if self.paths.contains_key(&path) {
+            return Err(LinkError::InvalidProvider(
+                "one facade cannot own multiple SONAMEs".into(),
+            ));
+        }
+        self.paths.insert(path.clone(), name.clone());
+        self.images.insert(
+            name,
+            ProviderEntry::Deferred {
+                factory: Mutex::new(Some(Box::new(factory))),
+                image: OnceLock::new(),
+                path,
+            },
+        );
+        Ok(())
+    }
+
+    pub fn get(&self, soname: &str) -> Result<Option<Arc<dyn ProviderImage>>, LinkError> {
+        self.images
+            .get(soname)
+            .map(|entry| entry.get(soname))
+            .transpose()
+    }
+
+    pub(crate) fn by_path(&self, path: &Path) -> Result<Option<Arc<dyn ProviderImage>>, LinkError> {
         let canonical = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
-        self.paths.get(&canonical).and_then(|name| self.get(name))
+        match self.paths.get(&canonical) {
+            Some(name) => self.get(name),
+            None => Ok(None),
+        }
     }
 }
+
+#[cfg(test)]
+#[path = "provider_deferred_tests.rs"]
+mod deferred_tests;
 
 #[cfg(test)]
 mod tests {
@@ -172,6 +325,7 @@ mod tests {
     struct Image {
         name: String,
         path: PathBuf,
+        canonical_path: Option<PathBuf>,
         symbols: Vec<ProviderSymbol>,
         copied: Arc<AtomicUsize>,
     }
@@ -182,6 +336,9 @@ mod tests {
         }
         fn path(&self) -> &Path {
             &self.path
+        }
+        fn canonical_path(&self) -> Option<&Path> {
+            self.canonical_path.as_deref()
         }
         fn base(&self) -> usize {
             0x1000
@@ -204,6 +361,7 @@ mod tests {
         Image {
             name: "libtest.so.1".into(),
             path: PathBuf::from("libtest.so.1"),
+            canonical_path: None,
             symbols: vec![ProviderSymbol {
                 name: "counter".into(),
                 address: 0x1230,
@@ -223,7 +381,7 @@ mod tests {
         registry.register(image).unwrap();
         let mut scope = Scope::default();
         scope.dlls.push(DllProvider::from_registered(
-            registry.get("libtest.so.1").unwrap(),
+            registry.get("libtest.so.1").unwrap().unwrap(),
         ));
         scope.push_provider(Provider::Dll(0));
         for version in [None, Some("TEST_1.0"), Some("TEST_2.0")] {
@@ -309,22 +467,35 @@ mod tests {
         std::fs::create_dir_all(root.join("child")).unwrap();
         let path = root.join("libtest.so.1");
         std::fs::write(&path, b"provider identity fixture").unwrap();
-        let mut original = image();
-        original.path = path.clone();
-        let mut registry = ProviderRegistry::new();
-        registry.register(Arc::new(original)).unwrap();
         let alternate = root.join("child/../libtest.so.1");
-        assert!(Arc::ptr_eq(
-            &registry.get("libtest.so.1").unwrap(),
-            &registry.by_path(&alternate).unwrap(),
-        ));
-        let mut alias = image();
-        alias.name = "libalias.so.1".into();
-        alias.path = alternate;
-        assert!(registry.register(Arc::new(alias)).is_err());
-        assert!(registry.by_path(&root.join("missing.so")).is_none());
-        assert!(registry.by_path(&root.join("child/libtest.so.1")).is_none());
-        drop(registry);
+        for cached in [false, true] {
+            let mut original = image();
+            original.path = path.clone();
+            original.canonical_path = cached.then(|| path.canonicalize().unwrap());
+            let mut registry = ProviderRegistry::new();
+            registry.register(Arc::new(original)).unwrap();
+            assert!(Arc::ptr_eq(
+                &registry.get("libtest.so.1").unwrap().unwrap(),
+                &registry.by_path(&alternate).unwrap().unwrap(),
+            ));
+            let mut alias = image();
+            alias.name = "libalias.so.1".into();
+            alias.path = alternate.clone();
+            alias.canonical_path = cached.then(|| alternate.canonicalize().unwrap());
+            assert!(registry.register(Arc::new(alias)).is_err());
+            assert!(
+                registry
+                    .by_path(&root.join("missing.so"))
+                    .unwrap()
+                    .is_none()
+            );
+            assert!(
+                registry
+                    .by_path(&root.join("child/libtest.so.1"))
+                    .unwrap()
+                    .is_none()
+            );
+        }
         std::fs::remove_file(path).unwrap();
         std::fs::remove_dir(root.join("child")).unwrap();
         std::fs::remove_dir(root).unwrap();
@@ -336,9 +507,19 @@ mod tests {
         let mut bad = image();
         bad.symbols[0].address = 0;
         assert!(registry.register(Arc::new(bad)).is_err());
-        assert!(registry.by_path(Path::new("libtest.so.1")).is_none());
+        assert!(
+            registry
+                .by_path(Path::new("libtest.so.1"))
+                .unwrap()
+                .is_none()
+        );
         registry.register(Arc::new(image())).unwrap();
-        assert!(registry.by_path(Path::new("libtest.so.1")).is_some());
+        assert!(
+            registry
+                .by_path(Path::new("libtest.so.1"))
+                .unwrap()
+                .is_some()
+        );
     }
 
     #[test]

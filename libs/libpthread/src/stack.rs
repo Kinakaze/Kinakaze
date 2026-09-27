@@ -16,6 +16,156 @@ const PAGE: usize = 4096;
 
 thread_local! {
     static REGISTERED: Cell<(usize, usize)> = const { Cell::new((0, 0)) };
+    static CUSTOM: Cell<Option<CustomStack>> = const { Cell::new(None) };
+}
+
+#[derive(Clone, Copy)]
+struct CustomStack {
+    return_stack: *const usize,
+    native_base: usize,
+    native_limit: usize,
+    low: usize,
+    size: usize,
+}
+
+unsafe fn set_bounds(base: usize, limit: usize) {
+    unsafe {
+        core::arch::asm!(
+            "mov gs:[0x08], {}", "mov gs:[0x10], {}",
+            in(reg) base, in(reg) limit, options(nostack, preserves_flags),
+        )
+    };
+}
+
+/// Run on caller-owned memory, retaining the native entry frame for both
+/// ordinary return and pthread_exit/cancellation. The caller owns the mapping.
+pub(super) unsafe fn invoke(
+    start: super::StartRoutine,
+    argument: usize,
+    low: usize,
+    size: usize,
+) -> usize {
+    let native_base: usize;
+    let native_limit: usize;
+    unsafe {
+        core::arch::asm!(
+            "mov {}, gs:[0x08]", "mov {}, gs:[0x10]",
+            out(reg) native_base, out(reg) native_limit,
+            options(nostack, preserves_flags, readonly),
+        )
+    };
+    let mut return_stack = 0usize;
+    CUSTOM.with(|slot| {
+        slot.set(Some(CustomStack {
+            return_stack: &raw const return_stack,
+            native_base,
+            native_limit,
+            low,
+            size,
+        }))
+    });
+    unsafe { set_bounds(low + size, low) };
+    let result = unsafe { call_on_stack(start, argument, low + size, &raw mut return_stack) };
+    unsafe { set_bounds(native_base, native_limit) };
+    CUSTOM.with(|slot| slot.set(None));
+    result
+}
+
+pub(super) fn return_from_custom(result: usize) {
+    if let Some(saved) = CUSTOM.with(Cell::get) {
+        unsafe {
+            set_bounds(saved.native_base, saved.native_limit);
+            resume_native(*saved.return_stack, result);
+        }
+    }
+}
+
+pub(super) fn custom_bounds() -> Option<(usize, usize)> {
+    CUSTOM.with(Cell::get).map(|stack| (stack.low, stack.size))
+}
+
+pub(super) fn snapshot() -> [u64; 5] {
+    CUSTOM.with(Cell::get).map_or([0; 5], |stack| {
+        [
+            stack.return_stack as u64,
+            stack.native_base as u64,
+            stack.native_limit as u64,
+            stack.low as u64,
+            stack.size as u64,
+        ]
+    })
+}
+
+pub(super) fn valid_snapshot(words: [u64; 5]) -> bool {
+    words == [0; 5]
+        || (words[2] != 0
+            && words[0] >= words[2]
+            && words[0].checked_add(8).is_some_and(|end| end <= words[1])
+            && words[3] != 0
+            && words[4] >= super::PTHREAD_STACK_MIN as u64
+            && words[3].checked_add(words[4]).is_some())
+}
+
+pub(super) fn restore_snapshot(words: [u64; 5]) {
+    // Fork preserves both stacks at their original addresses. Execution's
+    // context restore handles the active TEB bounds; retain the return frame
+    // so pthread_exit in the child can still leave a caller-owned stack.
+    CUSTOM.with(|slot| {
+        slot.set((words != [0; 5]).then_some(CustomStack {
+            return_stack: words[0] as *const usize,
+            native_base: words[1] as usize,
+            native_limit: words[2] as usize,
+            low: words[3] as usize,
+            size: words[4] as usize,
+        }))
+    });
+}
+
+#[unsafe(naked)]
+unsafe extern "sysv64" fn call_on_stack(
+    _start: super::StartRoutine,
+    _argument: usize,
+    _top: usize,
+    _saved: *mut usize,
+) -> usize {
+    core::arch::naked_asm!(
+        "push rbp",
+        "push rbx",
+        "push r12",
+        "push r13",
+        "push r14",
+        "push r15",
+        "mov [rcx], rsp",
+        "mov r12, rcx",
+        "mov rax, rdi",
+        "mov rdi, rsi",
+        "mov rsp, rdx",
+        "and rsp, -16",
+        "call rax",
+        "mov rsp, [r12]",
+        "pop r15",
+        "pop r14",
+        "pop r13",
+        "pop r12",
+        "pop rbx",
+        "pop rbp",
+        "ret",
+    );
+}
+
+#[unsafe(naked)]
+unsafe extern "sysv64" fn resume_native(_saved: usize, _result: usize) -> ! {
+    core::arch::naked_asm!(
+        "mov rsp, rdi",
+        "mov rax, rsi",
+        "pop r15",
+        "pop r14",
+        "pop r13",
+        "pop r12",
+        "pop rbx",
+        "pop rbp",
+        "ret",
+    );
 }
 
 fn query(address: usize) -> Option<MEMORY_BASIC_INFORMATION> {
@@ -157,6 +307,76 @@ pub(super) fn retire_current() -> Option<(usize, usize)> {
 mod tests {
     use super::*;
     use windows_sys::Win32::System::Memory::{MEM_RELEASE, PAGE_NOACCESS};
+
+    struct Probe {
+        low: usize,
+        size: usize,
+        exit: bool,
+    }
+
+    unsafe extern "sysv64" fn probe_custom_stack(argument: *mut c_void) -> *mut c_void {
+        let probe = unsafe { &*argument.cast::<Probe>() };
+        let local = 1usize;
+        let address = &raw const local as usize;
+        let mut attr = unsafe { core::mem::zeroed() };
+        let valid = address >= probe.low
+            && address < probe.low + probe.size
+            && unsafe { super::super::pthread_getattr_np(super::super::pthread_self(), &mut attr) }
+                == 0
+            && attr.stack_address == probe.low
+            && attr.stack_size == probe.size;
+        let result = if valid { 42usize } else { 0 } as *mut c_void;
+        if probe.exit {
+            super::super::pthread_exit(result);
+        }
+        result
+    }
+
+    #[test]
+    fn caller_owned_stack_runs_and_survives_return_and_pthread_exit() {
+        for exit in [false, true] {
+            let size = 1024 * 1024;
+            let allocation = unsafe {
+                VirtualAlloc(
+                    core::ptr::null(),
+                    size,
+                    MEM_RESERVE | MEM_COMMIT,
+                    PAGE_READWRITE,
+                )
+            };
+            assert!(!allocation.is_null());
+            let mut attr = unsafe { core::mem::zeroed() };
+            let mut probe = Probe {
+                low: allocation as usize,
+                size,
+                exit,
+            };
+            let mut thread = 0;
+            let mut result = core::ptr::null_mut();
+            unsafe {
+                assert_eq!(super::super::pthread_attr_init(&mut attr), 0);
+                assert_eq!(
+                    super::super::pthread_attr_setstack(&mut attr, allocation, size),
+                    0
+                );
+                assert_eq!(
+                    super::super::pthread_create(
+                        &mut thread,
+                        &attr,
+                        Some(probe_custom_stack),
+                        (&raw mut probe).cast()
+                    ),
+                    0
+                );
+                assert_eq!(super::super::pthread_join(thread, &mut result), 0);
+                assert_eq!(result as usize, 42);
+                // Caller still owns writable storage after either exit path.
+                allocation.cast::<u8>().write(0xa5);
+                assert_eq!(allocation.cast::<u8>().read(), 0xa5);
+                assert_ne!(VirtualFree(allocation, 0, MEM_RELEASE), 0);
+            }
+        }
+    }
 
     #[test]
     fn commits_usable_stack_and_preserves_full_guard_and_bottom_page() {

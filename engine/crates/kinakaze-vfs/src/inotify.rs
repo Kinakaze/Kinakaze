@@ -37,7 +37,7 @@ use windows_sys::Win32::Storage::FileSystem::{
     FILE_NOTIFY_CHANGE_FILE_NAME, FILE_NOTIFY_CHANGE_LAST_WRITE, FILE_NOTIFY_CHANGE_SIZE,
     FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING, ReadDirectoryChangesW,
 };
-use windows_sys::Win32::System::IO::{GetOverlappedResult, OVERLAPPED};
+use windows_sys::Win32::System::IO::{CancelIoEx, GetOverlappedResult, OVERLAPPED};
 use windows_sys::Win32::System::Threading::{
     CreateEventW, INFINITE, SetEvent, WaitForMultipleObjects,
 };
@@ -80,6 +80,7 @@ const FILE_ACTION_RENAMED_NEW_NAME: u32 = 5;
 // ---------------------------------------------------------------------------
 
 struct Watch {
+    memory: Option<crate::tmpfs::watch::Watch>,
     path: PathBuf,
     mask: Arc<AtomicU32>,
     cancel_event: HANDLE,
@@ -145,8 +146,91 @@ pub fn create_inotify(flags: i32) -> Result<i32, i32> {
 /// Resolves a guest pathname with the same cwd/root/symlink rules as the rest
 /// of the VFS, then installs a watch on the resolved object.
 pub fn add_watch_linux(fd: i32, path: &str, mask: u32) -> Result<i32, i32> {
-    let resolved = crate::fs::resolve(path)?;
+    let absolute = crate::fs::absolute_linux(path);
+    if let Some((pid, target)) = crate::procfs::fd_magic_link(&absolute) {
+        if pid != crate::job::process_id() || mask & IN_DONT_FOLLOW != 0 {
+            return Err(crate::EOPNOTSUPP);
+        }
+        // sd-event uses O_PATH fds to watch symlink inodes themselves. Resolve
+        // the pinned native object, not the textual target of that symlink.
+        if matches!(
+            crate::get(target)?.kind,
+            crate::FdKind::TmpfsFile | crate::FdKind::TmpfsDirectory | crate::FdKind::SysfsFile
+        ) {
+            return add_memory_watch(fd, crate::tmpfs::watch::locate_fd(target)?, mask);
+        }
+        let object = crate::fs::object::Object::from_fd(target)?;
+        return add_watch(fd, object.path()?, mask);
+    }
+    if let Some(location) = crate::tmpfs::watch::locate(path, mask & IN_DONT_FOLLOW == 0)? {
+        return add_memory_watch(fd, location, mask);
+    }
+    let resolved = if mask & IN_DONT_FOLLOW != 0 {
+        crate::fs::resolve_no_follow(path)?
+    } else {
+        crate::fs::resolve(path)?
+    };
     add_watch(fd, resolved, mask)
+}
+
+fn add_memory_watch(fd: i32, (volume, node, mode): (u64, u64, u32), mask: u32) -> Result<i32, i32> {
+    if mask & IN_ALL_EVENTS == 0 || mask & IN_MASK_ADD != 0 && mask & IN_MASK_CREATE != 0 {
+        return Err(crate::EINVAL);
+    }
+    if mask & IN_ONLYDIR != 0 && mode & crate::fs::S_IFMT != crate::fs::S_IFDIR {
+        return Err(crate::ENOTDIR);
+    }
+    let ifd = inotify_map()
+        .lock()
+        .map_err(|_| crate::EIO)?
+        .get(&fd)
+        .cloned()
+        .ok_or(crate::EBADF)?;
+    let mut state = ifd.state.lock().map_err(|_| crate::EIO)?;
+    for (wd, watch) in &state.watches {
+        if let Some(memory) = &watch.memory
+            && memory.volume == volume
+            && memory.node == node
+        {
+            if mask & IN_MASK_CREATE != 0 {
+                return Err(crate::EEXIST);
+            }
+            memory.mask(mask)?;
+            return Ok(*wd);
+        }
+    }
+    let memory = crate::tmpfs::watch::Watch::new(volume, node, mask)?;
+    let wd = state.next_wd;
+    state.next_wd = state.next_wd.checked_add(1).ok_or(crate::ENOSPC)?;
+    state.watches.insert(
+        wd,
+        Watch {
+            memory: Some(memory),
+            path: PathBuf::new(),
+            mask: Arc::new(AtomicU32::new(mask)),
+            cancel_event: core::ptr::null_mut(),
+            thread: None,
+        },
+    );
+    Ok(wd)
+}
+
+fn collect_memory(state: &mut InotifyState) -> Result<(), i32> {
+    let mut ignored = Vec::new();
+    for (&wd, watch) in &state.watches {
+        if let Some(memory) = &watch.memory {
+            for event in memory.drain(wd)? {
+                if u32::from_ne_bytes(event[4..8].try_into().unwrap()) & IN_IGNORED != 0 {
+                    ignored.push(wd);
+                }
+                state.queue.push_back(event);
+            }
+        }
+    }
+    for wd in ignored {
+        state.watches.remove(&wd);
+    }
+    Ok(())
 }
 
 pub fn add_watch(fd: i32, path: PathBuf, mask: u32) -> Result<i32, i32> {
@@ -231,6 +315,7 @@ pub fn add_watch(fd: i32, path: PathBuf, mask: u32) -> Result<i32, i32> {
     state.watches.insert(
         wd,
         Watch {
+            memory: None,
             path: path.clone(),
             mask: effective_mask,
             cancel_event,
@@ -252,13 +337,17 @@ pub fn rm_watch(fd: i32, wd: i32) -> Result<(), i32> {
     };
     state.watches_by_path.remove(&watch.path);
     // SAFETY: cancel_event is valid and owned by this watch.
-    unsafe { SetEvent(watch.cancel_event) };
+    if !watch.cancel_event.is_null() {
+        unsafe { SetEvent(watch.cancel_event) };
+    }
     drop(state);
     if let Some(thread) = watch.thread.take() {
         let _ = thread.join();
     }
     // SAFETY: thread no longer running; safe to close.
-    unsafe { CloseHandle(watch.cancel_event) };
+    if !watch.cancel_event.is_null() {
+        unsafe { CloseHandle(watch.cancel_event) };
+    }
     let mut state = ifd.state.lock().map_err(|_| crate::EIO)?;
     let event = encode_event(wd, IN_IGNORED, 0, &[]);
     state.queue.push_back(event);
@@ -273,6 +362,7 @@ pub fn read_inotify(fd: i32, buf: &mut [u8], nonblock: bool) -> Result<usize, i3
     };
     let mut state = ifd.state.lock().map_err(|_| crate::EIO)?;
     loop {
+        collect_memory(&mut state)?;
         if !state.queue.is_empty() {
             let mut written = 0usize;
             while let Some(event) = state.queue.front() {
@@ -291,7 +381,19 @@ pub fn read_inotify(fd: i32, buf: &mut [u8], nonblock: bool) -> Result<usize, i3
         if nonblock || state.nonblock {
             return Err(crate::EAGAIN);
         }
-        state = ifd.readable.wait(state).map_err(|_| crate::EIO)?;
+        state = ifd
+            .readable
+            .wait_timeout(state, std::time::Duration::from_millis(10))
+            .map_err(|_| crate::EIO)?
+            .0;
+        drop(state);
+        if matches!(
+            crate::signal::deliver_pending(),
+            crate::signal::Delivery::Interrupted
+        ) {
+            return Err(crate::EINTR);
+        }
+        state = ifd.state.lock().map_err(|_| crate::EIO)?;
     }
 }
 
@@ -300,7 +402,8 @@ pub fn poll_inotify(fd: i32) -> Result<bool, i32> {
         let map = inotify_map().lock().map_err(|_| crate::EIO)?;
         map.get(&fd).cloned().ok_or(crate::EBADF)?
     };
-    let state = ifd.state.lock().map_err(|_| crate::EIO)?;
+    let mut state = ifd.state.lock().map_err(|_| crate::EIO)?;
+    collect_memory(&mut state)?;
     Ok(!state.queue.is_empty())
 }
 
@@ -319,13 +422,17 @@ pub fn close_inotify(fd: i32) {
     for wd in watches {
         if let Some(mut watch) = state.watches.remove(&wd) {
             // SAFETY: cancel_event is valid and owned.
-            unsafe { SetEvent(watch.cancel_event) };
+            if !watch.cancel_event.is_null() {
+                unsafe { SetEvent(watch.cancel_event) };
+            }
             drop(state);
             if let Some(thread) = watch.thread.take() {
                 let _ = thread.join();
             }
             // SAFETY: thread exited.
-            unsafe { CloseHandle(watch.cancel_event) };
+            if !watch.cancel_event.is_null() {
+                unsafe { CloseHandle(watch.cancel_event) };
+            }
             state = ifd.state.lock().unwrap();
         }
     }
@@ -335,7 +442,7 @@ pub fn close_inotify(fd: i32) {
 // Helpers.
 // ---------------------------------------------------------------------------
 
-fn encode_event(wd: i32, mask: u32, cookie: u32, name: &[u8]) -> Vec<u8> {
+pub(crate) fn encode_event(wd: i32, mask: u32, cookie: u32, name: &[u8]) -> Vec<u8> {
     let name_len = if name.is_empty() {
         0u32
     } else {
@@ -477,7 +584,14 @@ fn run_watch(
         let wr = unsafe { WaitForMultipleObjects(2, wait_handles.as_ptr(), 0, INFINITE) };
 
         if wr != WAIT_OBJECT_0 {
-            unsafe { CloseHandle(io_event) };
+            // OVERLAPPED and the buffer remain owned until cancellation has
+            // completed. Closing just the event leaves Windows writing to a
+            // returned stack frame when a watch is removed.
+            unsafe {
+                CancelIoEx(dir_handle, &overlapped);
+                GetOverlappedResult(dir_handle, &overlapped, &mut bytes_returned, 1);
+                CloseHandle(io_event);
+            }
             break;
         }
 
@@ -498,8 +612,8 @@ fn run_watch(
             if offset + 12 > transferred as usize {
                 break;
             }
-            let action = u32::from_ne_bytes(buf[offset..offset + 4].try_into().unwrap());
-            let next_offset = u32::from_ne_bytes(buf[offset + 4..offset + 8].try_into().unwrap());
+            let next_offset = u32::from_ne_bytes(buf[offset..offset + 4].try_into().unwrap());
+            let action = u32::from_ne_bytes(buf[offset + 4..offset + 8].try_into().unwrap());
             let name_len_bytes =
                 u32::from_ne_bytes(buf[offset + 8..offset + 12].try_into().unwrap()) as usize;
 

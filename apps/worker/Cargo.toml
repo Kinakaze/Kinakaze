@@ -18,6 +18,7 @@ kinakaze-v2-host-win.workspace = true
 kinakaze-v2-rootfs.workspace = true
 kinakaze-v2-bridge.workspace = true
 serde_json.workspace = true
+windows-sys = { workspace = true, features = ["Win32_System_Console"] }
 
 [lints]
 workspace = true

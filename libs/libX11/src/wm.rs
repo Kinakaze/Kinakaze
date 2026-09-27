@@ -861,8 +861,8 @@ pub unsafe extern "sysv64" fn XCheckIfEvent(
 }
 
 #[unsafe(export_name = "kinakaze_engine_libX11_XFilterEvent")]
-pub unsafe extern "sysv64" fn XFilterEvent(_event: *mut XEvent, _w: Window) -> Bool {
-    0
+pub unsafe extern "sysv64" fn XFilterEvent(event: *mut XEvent, window: Window) -> Bool {
+    unsafe { crate::event_filter::filter(event, window) }
 }
 
 #[unsafe(export_name = "kinakaze_engine_libX11_XkbLookupKeySym")]

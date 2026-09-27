@@ -1552,6 +1552,8 @@ pub unsafe extern "sysv64" fn kinakaze_abi_getloadavg(loadavg: *mut f64, nelem: 
     count as c_int
 }
 
+mod program_name_fork;
+
 static PROGNAME: [c_char; 8] = [
     b'p' as c_char,
     b'r' as c_char,

@@ -9,9 +9,25 @@ import json
 
 
 def configure_standard(files, links, preset):
-    # Use Debian's own base account database, including the APT sandbox user.
+    # Retain Debian's account IDs/shells, plus service accounts from the manifest.
     for name in ('passwd', 'group'):
-        files['etc/' + name] = files['usr/share/base-passwd/' + name + '.master']
+        path = 'etc/' + name
+        base = files['usr/share/base-passwd/' + name + '.master']
+        names = {line.split(b':', 1)[0] for line in base.splitlines()}
+        extra = b''.join(line + b'\n' for line in files.get(path, b'').splitlines()
+                         if line.split(b':', 1)[0] not in names)
+        files[path] = base + extra
+    # Base-passwd ships '*' in passwd. Move authentication to the actual shadow
+    # database, preserving the manifest's chosen password and locking others.
+    configured = {line.split(b':', 1)[0]: line for line in files.get('etc/shadow', b'').splitlines()}
+    accounts = [line.split(b':') for line in files['etc/passwd'].splitlines()]
+    for fields in accounts:
+        if len(fields) != 7:
+            raise ValueError('invalid base passwd entry')
+        fields[1] = b'x'
+    files['etc/passwd'] = b''.join(b':'.join(fields) + b'\n' for fields in accounts)
+    files['etc/shadow'] = b''.join(configured.get(fields[0], fields[0] + b':!:20000:0:99999:7:::') + b'\n'
+                                for fields in accounts)
     # Package postinst normally creates this database. Preserve locked passwords
     # and the base-passwd member lists in the offline image.
     files['etc/gshadow'] = b''.join(fields[0] + b':!::' + fields[3] + b'\n'

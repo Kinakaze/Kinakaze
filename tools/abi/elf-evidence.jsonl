@@ -4499,3 +4499,4 @@
 {"path":"artifacts/debian-standard-dev/rootfs/usr/sbin/vipw","sha256":"def13298eae570eefb09dfd9fa5e56c56859df8d11b6d5b069c35b803e546f16"}
 {"path":"artifacts/debian-standard-dev/rootfs/usr/sbin/vpddecode","sha256":"9d68cd376b8bfe19e4b03fd30f4d68761bb2dd0e040037deb165dd4202d65c3e"}
 {"path":"artifacts/debian-standard-dev/rootfs/usr/sbin/zic","sha256":"846e87bfa456801913aa03f775c8fbc5690322bdecaff73d7a48a718ccbca22b"}
+{"path":"artifacts/full-first-launch-final-20260927/Kinakaze/rootfs/root/cli-smoke/claude/package/claude","sha256":"1859583ce32920595c61ef868bee52e1b1594f7486db209935e01f1e5e804ae2"}

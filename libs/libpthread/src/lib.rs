@@ -475,6 +475,8 @@ struct ThreadStart {
     inheritance: FsInheritance,
     cancel: Arc<CancelState>,
     published: Arc<(Mutex<ThreadStartup>, Condvar)>,
+    stack_address: usize,
+    stack_size: usize,
 }
 
 #[cfg(all(windows, target_arch = "x86_64"))]
@@ -490,6 +492,8 @@ unsafe extern "system" fn native_thread_start(packet: *mut c_void) -> u32 {
         inheritance,
         cancel,
         published,
+        stack_address,
+        stack_size,
     } = *unsafe { Box::from_raw(packet.cast::<ThreadStart>()) };
     {
         let (ready, changed) = &*published;
@@ -524,7 +528,11 @@ unsafe extern "system" fn native_thread_start(packet: *mut c_void) -> u32 {
     if trace_enabled() {
         eprintln!("kinakaze: [THREAD] child {id:#x} start={start:p} arg={argument:#x}");
     }
-    let result = unsafe { start(argument as *mut c_void) } as usize;
+    let result = if stack_address == 0 {
+        (unsafe { start(argument as *mut c_void) }) as usize
+    } else {
+        unsafe { stack::invoke(start, argument, stack_address, stack_size) }
+    };
     finish_current_thread(result);
     0
 }
@@ -678,6 +686,8 @@ pub unsafe extern "sysv64" fn pthread_create(
         inheritance,
         cancel,
         published: Arc::clone(&published),
+        stack_address: attributes.stack_address,
+        stack_size: attributes.stack_size,
     }));
     let native = unsafe {
         CreateThread(
@@ -1037,6 +1047,32 @@ pub unsafe extern "sysv64" fn pthread_attr_setstacksize(
 
 #[cfg(all(windows, target_arch = "x86_64"))]
 #[unsafe(no_mangle)]
+/// Selects caller-owned stack memory for a subsequently created thread.
+/// # Safety
+/// The initialized attribute must be writable. The stack must remain mapped
+/// and writable until the created thread has been joined.
+pub unsafe extern "sysv64" fn pthread_attr_setstack(
+    attr: *mut PthreadAttr,
+    address: *mut c_void,
+    size: usize,
+) -> i32 {
+    if attr.is_null()
+        || address.is_null()
+        || size < PTHREAD_STACK_MIN
+        || (address as usize).checked_add(size).is_none()
+    {
+        return EINVAL;
+    }
+    unsafe {
+        (*attr).stack_address = address as usize;
+        (*attr).stack_size = size;
+        (*attr).guard_size = 0;
+    }
+    0
+}
+
+#[cfg(all(windows, target_arch = "x86_64"))]
+#[unsafe(no_mangle)]
 /// Selects joinable or detached creation.
 ///
 /// # Safety
@@ -1110,7 +1146,12 @@ pub unsafe extern "sysv64" fn pthread_getattr_np(thread: usize, attr: *mut Pthre
     }
     let mut low = 0usize;
     let mut high = 0usize;
-    unsafe { GetCurrentThreadStackLimits(&raw mut low, &raw mut high) };
+    if let Some((base, size)) = stack::custom_bounds() {
+        low = base;
+        high = base + size;
+    } else {
+        unsafe { GetCurrentThreadStackLimits(&raw mut low, &raw mut high) };
+    }
     if low == 0 || high <= low {
         return EINVAL;
     }
@@ -3253,6 +3294,9 @@ fn serialize_pthread_fork() -> Option<Vec<u8>> {
     for word in cleanup::snapshot() {
         out.extend_from_slice(&word.to_le_bytes());
     }
+    for word in stack::snapshot() {
+        out.extend_from_slice(&word.to_le_bytes());
+    }
     Some(out)
 }
 
@@ -3423,12 +3467,25 @@ unsafe extern "system" fn fork_child(payload: *const u8, len: usize) -> i32 {
         };
         [head, active, result]
     };
+    let mut stack_state = [0; 5];
+    if reader.at != bytes.len() {
+        for word in &mut stack_state {
+            let Some(value) = reader.u64() else {
+                return EINVAL;
+            };
+            *word = value;
+        }
+        if !stack::valid_snapshot(stack_state) {
+            return EINVAL;
+        }
+    }
     if reader.at != bytes.len() {
         return EINVAL;
     }
 
     let _ = SELF_ID.try_with(|slot| slot.set(self_id));
     cleanup::restore_snapshot(cleanup_state);
+    stack::restore_snapshot(stack_state);
     if let Err(error) = sched::reset_after_fork(self_id) {
         return error;
     }

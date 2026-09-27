@@ -986,6 +986,8 @@ EXPORTS
   "_XReadEvents"=kinakaze_engine_libX11__XReadEvents PRIVATE
   kinakaze_engine_libX11__XReadPad
   "_XReadPad"=kinakaze_engine_libX11__XReadPad PRIVATE
+  kinakaze_engine_libX11__XRegisterFilterByType
+  "_XRegisterFilterByType"=kinakaze_engine_libX11__XRegisterFilterByType PRIVATE
   kinakaze_engine_libX11__XReply
   "_XReply"=kinakaze_engine_libX11__XReply PRIVATE
   kinakaze_engine_libX11__XSend
@@ -996,6 +998,8 @@ EXPORTS
   "_XUnknownNativeEvent"=kinakaze_engine_libX11__XUnknownNativeEvent PRIVATE
   kinakaze_engine_libX11__XUnlockMutex_fn DATA
   "_XUnlockMutex_fn"=kinakaze_engine_libX11__XUnlockMutex_fn DATA PRIVATE
+  kinakaze_engine_libX11__XUnregisterFilter
+  "_XUnregisterFilter"=kinakaze_engine_libX11__XUnregisterFilter PRIVATE
   kinakaze_engine_libX11__XVIDtoVisual
   "_XVIDtoVisual"=kinakaze_engine_libX11__XVIDtoVisual PRIVATE
   kinakaze_engine_libX11__XWireToEvent

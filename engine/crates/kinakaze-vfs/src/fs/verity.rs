@@ -471,6 +471,33 @@ pub(crate) fn read_object(
     read_verified_record(object, &record, offset, &mut bytes[..length]).map(Some)
 }
 
+/// Fill one unpublished executable snapshot without exposing the hidden tail.
+/// The inode lock covers metadata validation and every parallel request. Only
+/// ordinary bytes use parallel I/O; enabled verity retains block verification.
+pub(crate) fn read_image_object(object: &Object, bytes: &mut [u8]) -> Result<(), i32> {
+    let _lock = crate::xattr::InodeLock::acquire(object.raw())?;
+    let record = read_record(object)?;
+    let size = match &record {
+        Some(record) => record.descriptor.data_size(),
+        None => native_size(object)?,
+    };
+    if size < bytes.len() as u64 {
+        return Err(EIO);
+    }
+    if let Some(record) = record.filter(|record| record.state == ENABLED) {
+        let count = read_verified_record(object, &record, 0, bytes)?;
+        return if count == bytes.len() {
+            Ok(())
+        } else {
+            Err(EIO)
+        };
+    }
+    if let Some(result) = crate::image_io::parallel::read(object, bytes) {
+        return result;
+    }
+    exact_read(object, 0, bytes)
+}
+
 /// Read a completed but not necessarily published descriptor using a retained
 /// native inode and serialized transaction identity. No process-local owner is
 /// required. A stale identity is ESTALE; PREPARING is EBUSY, never a fake root.
@@ -609,3 +636,23 @@ mod tests;
 
 #[cfg(test)]
 mod ads_probe;
+
+/// Enabled and in-progress verity files always retain the verified local path.
+/// Inode and fork locks cover transfer and registration of the cached section.
+pub(crate) fn cached_image_object(
+    object: &Object,
+    length: usize,
+) -> Option<kinakaze_runtime::immutable::ImmutableBytes> {
+    let authority = kinakaze_runtime::authority::get()?;
+    let _transaction = kinakaze_runtime::begin_fork_mapping_transaction()?;
+    let _lock = crate::xattr::InodeLock::acquire(object.raw()).ok()?;
+    if read_record(object).ok()?.is_some() {
+        return None;
+    }
+    let file = unsafe { std::os::windows::io::BorrowedHandle::borrow_raw(object.raw()) };
+    let (section, hash) = (authority.image_snapshot)(file, length)?;
+    unsafe {
+        kinakaze_runtime::immutable::ImmutableBytes::from_readonly_section(section, length, hash)
+            .ok()
+    }
+}

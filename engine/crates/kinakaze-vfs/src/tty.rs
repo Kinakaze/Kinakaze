@@ -1240,6 +1240,48 @@ pub fn open_controlling(open_flags: i32) -> Result<i32, i32> {
     install_end(&attachment, Side::Slave, descriptor_flags(open_flags))
 }
 
+/// The host console remains accessible after PID 1 detaches its controlling
+/// terminal and redirects stdio to /dev/null.
+pub fn open_console(open_flags: i32) -> Result<i32, i32> {
+    use windows_sys::Win32::Foundation::{DUPLICATE_SAME_ACCESS, DuplicateHandle};
+    use windows_sys::Win32::System::Threading::GetCurrentProcess;
+    let console = console().ok_or(6)?; // ENXIO: no console attached
+    let source = if open_flags & 3 == 0 {
+        console.input
+    } else {
+        console.output
+    };
+    let process = unsafe { GetCurrentProcess() };
+    let mut handle = std::ptr::null_mut();
+    if unsafe {
+        DuplicateHandle(
+            process,
+            source,
+            process,
+            &mut handle,
+            0,
+            0,
+            DUPLICATE_SAME_ACCESS,
+        )
+    } == 0
+    {
+        return Err(EIO);
+    }
+    match crate::install(
+        handle as usize,
+        FdKind::Console,
+        descriptor_flags(open_flags),
+    ) {
+        Ok(fd) => Ok(fd),
+        Err(error) => {
+            unsafe {
+                CloseHandle(handle);
+            }
+            Err(error)
+        }
+    }
+}
+
 /// Terminal numbers that currently exist, for listing `/dev/pts`.
 pub fn live_terminals() -> Vec<u32> {
     (0..MAX_PTYS)
@@ -1835,6 +1877,15 @@ pub struct Readiness {
 
 /// Reports whether a terminal descriptor would block.
 pub fn readiness(fd: i32) -> Result<Readiness, i32> {
+    if is_console(fd) {
+        let console = console().ok_or(ENOTTY)?;
+        console.start_pump();
+        return Ok(Readiness {
+            readable: console_readable(),
+            writable: true,
+            hangup: false,
+        });
+    }
     let (attachment, side) = resolve(fd)?;
     Ok(attachment.with(|shared| match side {
         Side::Master => Readiness {
@@ -1928,6 +1979,9 @@ struct Console {
     ready: Owned,
     /// Whether the reader thread has been started.
     pumping: std::sync::atomic::AtomicBool,
+    /// Only the process which changed the host mode may restore it. A forked
+    /// helper can inherit these globals while its parent's UI still owns input.
+    mode_owner: std::sync::atomic::AtomicU32,
     /// The foreground process group, for `TIOCGPGRP` on the console.
     foreground: AtomicI32,
     session: AtomicI32,
@@ -2017,6 +2071,7 @@ fn console() -> Option<&'static Console> {
                 discipline: Mutex::new(Ldisc::new(ldisc::default_termios())),
                 ready: Owned(ready),
                 pumping: std::sync::atomic::AtomicBool::new(false),
+                mode_owner: std::sync::atomic::AtomicU32::new(0),
                 foreground: AtomicI32::new(0),
                 session: AtomicI32::new(0),
             })
@@ -2027,6 +2082,7 @@ fn console() -> Option<&'static Console> {
 impl Console {
     /// Puts conhost into raw mode so this layer can do the cooking.
     fn take_over(&self) {
+        self.mode_owner.store(std::process::id(), Ordering::Release);
         // Everything conhost would interpret is turned off. VT input is turned
         // on so arrow keys and function keys arrive as escape sequences, which
         // is what a Unix program expects from a terminal; conhost's key records
@@ -2045,6 +2101,13 @@ impl Console {
 
     /// Puts the console modes back the way they were found.
     fn restore(&self) {
+        if self
+            .mode_owner
+            .compare_exchange(std::process::id(), 0, Ordering::AcqRel, Ordering::Acquire)
+            .is_err()
+        {
+            return;
+        }
         // SAFETY: both handles are live and the modes are the ones read from
         // them at open time.
         unsafe {
@@ -2151,7 +2214,7 @@ impl Console {
 /// the same hole every terminal program has and the reason `reset` exists.
 mod console_teardown {
     extern "C" fn restore() {
-        if let Some(console) = super::console() {
+        if let Some(Some(console)) = super::CONSOLE.get() {
             console.restore();
         }
     }

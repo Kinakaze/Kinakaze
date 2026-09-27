@@ -1,7 +1,20 @@
 //! Read normal PE names and exports. There is no module descriptor or sidecar.
 use crate::{Export, ExportKind, Module, ModuleLifecycle, ModuleSet, Result, invalid};
 use kinakaze_v2_host_win::{Library, ReadOnlyFile};
-use std::{collections::BTreeMap, fs, path::Path, sync::Arc};
+use std::{
+    collections::{BTreeMap, HashSet},
+    fs,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
+
+#[cfg(test)]
+#[path = "native_tests.rs"]
+mod export_tests;
+
+#[cfg(test)]
+#[path = "native_catalog_tests.rs"]
+mod catalog_tests;
 
 /// Portable archives keep native images outside the writable guest root, so a
 /// caller can select any new root on its very first launch. Developer and older
@@ -26,6 +39,16 @@ pub struct NativeExports {
     pub symbols: Vec<NativeExport>,
 }
 
+struct BorrowedExport<'a> {
+    name: &'a str,
+    object: Option<bool>,
+}
+
+struct BorrowedExports<'a> {
+    name: &'a str,
+    symbols: Vec<BorrowedExport<'a>>,
+}
+
 fn span(bytes: &[u8], start: usize, length: usize) -> Result<&[u8]> {
     bytes
         .get(
@@ -47,6 +70,24 @@ fn dword(bytes: &[u8], at: usize) -> Result<u32> {
 
 /// Read-only inspection; no initializers are invoked by this operation.
 pub fn exports(bytes: &[u8]) -> Result<NativeExports> {
+    let image = borrowed_exports(bytes)?;
+    Ok(NativeExports {
+        name: image.name.to_owned(),
+        symbols: image
+            .symbols
+            .into_iter()
+            .map(|symbol| NativeExport {
+                name: symbol.name.to_owned(),
+                object: symbol.object,
+            })
+            .collect(),
+    })
+}
+
+// Validate every export, including Rust-only names. Discovery only needs to
+// own the guest ABI subset; borrow the remaining names from the pinned file
+// instead of allocating and then discarding thousands of mangled strings.
+fn borrowed_exports(bytes: &[u8]) -> Result<BorrowedExports<'_>> {
     if span(bytes, 0, 2)? != b"MZ" {
         return Err(invalid("expected PE image"));
     }
@@ -100,7 +141,7 @@ pub fn exports(bytes: &[u8]) -> Result<NativeExports> {
         }
         Err(invalid("unbacked PE RVA"))
     };
-    let string = |rva: u32| -> Result<String> {
+    let string = |rva: u32| -> Result<&str> {
         let at = offset(rva, 1)?;
         let length = bytes[at..]
             .iter()
@@ -108,9 +149,7 @@ pub fn exports(bytes: &[u8]) -> Result<NativeExports> {
             .position(|&byte| byte == 0)
             .ok_or_else(|| invalid("unterminated PE string"))?;
         offset(rva, length + 1)?;
-        Ok(std::str::from_utf8(&bytes[at..at + length])
-            .map_err(|_| invalid("non-UTF8 PE name"))?
-            .into())
+        std::str::from_utf8(&bytes[at..at + length]).map_err(|_| invalid("non-UTF8 PE name"))
     };
     let rva = dword(bytes, optional + 112)?;
     let length = dword(bytes, optional + 116)?;
@@ -134,10 +173,10 @@ pub fn exports(bytes: &[u8]) -> Result<NativeExports> {
     let mut previous = None;
     for index in 0..names {
         let name = string(dword(bytes, pointers + index * 4)?)?;
-        if previous.as_ref().is_some_and(|old: &String| old >= &name) {
+        if previous.is_some_and(|old: &str| old >= name) {
             return Err(invalid("unsorted or duplicate PE exports"));
         }
-        previous = Some(name.clone());
+        previous = Some(name);
         let ordinal = word(bytes, ordinals + index * 2)? as usize;
         if ordinal >= functions {
             return Err(invalid("PE ordinal exceeds address table"));
@@ -159,9 +198,9 @@ pub fn exports(bytes: &[u8]) -> Result<NativeExports> {
             }
             Some(flags & 0x2000_0000 == 0)
         };
-        symbols.push(NativeExport { name, object });
+        symbols.push(BorrowedExport { name, object });
     }
-    Ok(NativeExports { name, symbols })
+    Ok(BorrowedExports { name, symbols })
 }
 
 pub fn read(path: &Path) -> Result<ReadOnlyFile> {
@@ -180,7 +219,7 @@ pub fn runtime_path(directory: &Path) -> Result<std::path::PathBuf> {
     if conventional.is_file() {
         let bytes = read(&conventional)?;
         if !bytes.starts_with(b"\x7fELF") {
-            let image = exports(&bytes)?;
+            let image = borrowed_exports(&bytes)?;
             if image
                 .symbols
                 .iter()
@@ -307,49 +346,151 @@ fn module_id(name: &str) -> u32 {
 }
 
 pub(crate) fn discover(directory: &Path) -> Result<ModuleSet> {
-    let directory = directory.canonicalize()?;
-    let mut paths = fs::read_dir(&directory)?
-        .map(|entry| entry.map(|entry| entry.path()))
-        .collect::<std::io::Result<Vec<_>>>()?;
-    paths.sort();
+    let catalog = ModuleCatalog::discover(directory)?;
     let mut set = ModuleSet {
-        modules: Vec::new(),
-        shared_libraries: Vec::new(),
+        modules: Vec::with_capacity(catalog.modules.len()),
+        shared_libraries: catalog.shared_libraries,
         libraries: Vec::new(),
+        images: catalog
+            .images
+            .iter()
+            .map(|image| Arc::clone(&image.file))
+            .collect(),
     };
-    for path in paths {
-        let Some(filename) = path.file_name().and_then(|name| name.to_str()) else {
-            continue;
+    for discovered in catalog.modules {
+        let (module, library) = discovered.materialize()?;
+        set.modules.push(module);
+        set.libraries.extend(library);
+    }
+    set.validate()?;
+    Ok(set)
+}
+
+/// Validated PE identities and pinned files. Guest declarations and object
+/// layouts are materialized only when a provider is actually requested.
+pub struct ModuleCatalog {
+    pub modules: Vec<DiscoveredModule>,
+    pub shared_libraries: Vec<String>,
+    images: Vec<Arc<NativeImage>>,
+}
+
+pub struct DiscoveredModule {
+    pub id: u32,
+    pub soname: String,
+    pub lifecycle: ModuleLifecycle,
+    image: Arc<NativeImage>,
+}
+
+struct NativeImage {
+    path: PathBuf,
+    file: Arc<ReadOnlyFile>,
+}
+
+impl ModuleCatalog {
+    pub fn discover(directory: &Path) -> Result<Self> {
+        let directory = directory.canonicalize()?;
+        let mut paths = fs::read_dir(&directory)?
+            .map(|entry| entry.map(|entry| entry.path()))
+            .collect::<std::io::Result<Vec<_>>>()?;
+        paths.sort();
+        let mut set = Self {
+            modules: Vec::new(),
+            shared_libraries: Vec::new(),
+            images: Vec::new(),
         };
-        if !is_shared_object(filename) || !path.is_file() {
-            continue;
+        for path in paths {
+            let Some(filename) = path.file_name().and_then(|name| name.to_str()) else {
+                continue;
+            };
+            if !is_shared_object(filename) || !path.is_file() {
+                continue;
+            }
+            let bytes = read(&path)?;
+            if bytes.starts_with(b"\x7fELF") {
+                continue;
+            } // The ELF linker owns ordinary guest libraries.
+            let native = borrowed_exports(&bytes)?;
+            let runtime = native
+                .symbols
+                .iter()
+                .any(|symbol| symbol.name == "kinakaze_runtime_open_v1");
+            let lifecycle = if native
+                .symbols
+                .iter()
+                .any(|symbol| symbol.name == "kinakaze_provider_initialize_v1")
+            {
+                ModuleLifecycle::RuntimeApiV1
+            } else {
+                ModuleLifecycle::None
+            };
+            let has_layout = native
+                .symbols
+                .iter()
+                .any(|symbol| symbol.name == "kinakaze_module_object_v1");
+            let image = Arc::new(NativeImage {
+                path: path.clone(),
+                file: Arc::new(bytes),
+            });
+            set.images.push(Arc::clone(&image));
+            if !has_layout && !runtime {
+                set.shared_libraries.push(filename.to_owned());
+                continue;
+            }
+            set.modules.push(DiscoveredModule {
+                id: if runtime { 0 } else { module_id(filename) },
+                soname: filename.into(),
+                lifecycle,
+                image,
+            });
         }
-        let bytes = read(&path)?;
-        if bytes.starts_with(b"\x7fELF") {
-            continue;
-        } // The ELF linker owns ordinary guest libraries.
-        let native = exports(&bytes)?;
-        let runtime = native
-            .symbols
-            .iter()
-            .any(|symbol| symbol.name == "kinakaze_runtime_open_v1");
-        let lifecycle = if native
-            .symbols
-            .iter()
-            .any(|symbol| symbol.name == "kinakaze_provider_initialize_v1")
-        {
-            ModuleLifecycle::RuntimeApiV1
-        } else {
-            ModuleLifecycle::None
-        };
+        set.modules.sort_by_key(|module| module.id);
+        if set.modules.is_empty() || set.modules.len() > crate::module::MAX_MODULES {
+            return Err(invalid("module set must have 1..=128 modules"));
+        }
+        let mut names = HashSet::new();
+        for name in &set.shared_libraries {
+            crate::module::validate_filename(name)?;
+            if !names.insert(name.to_ascii_lowercase()) {
+                return Err(invalid("invalid or duplicate shared native library"));
+            }
+        }
+        let mut ids = HashSet::new();
+        for module in &set.modules {
+            crate::module::validate_filename(&module.soname)?;
+            if !names.insert(module.soname.to_ascii_lowercase()) || !ids.insert(module.id) {
+                return Err(invalid("duplicate module identity"));
+            }
+            if module.id == 0 && module.lifecycle != ModuleLifecycle::None {
+                return Err(invalid("runtime cannot require provider initialization"));
+            }
+        }
+        if !ids.contains(&0) {
+            return Err(invalid("module set must include runtime module id 0"));
+        }
+        Ok(set)
+    }
+
+    /// Keep validation bytes alive across all deferred factories, including
+    /// providers opened after fork. This operation does not load any DLLs.
+    pub fn retain_images(&self) -> impl Send + Sync + 'static {
+        self.images.clone()
+    }
+}
+
+impl DiscoveredModule {
+    /// Validate complete guest declarations on demand. Transfer the optional
+    /// layout-query DLL owner along with its metadata so it cannot unload in
+    /// between querying an object's shape and binding the provider.
+    pub fn materialize(&self) -> Result<(Module, Option<Arc<Library>>)> {
+        // Reparse the same immutable view; discovery already checked all PE
+        // names, ordinals and sections, including unused Rust-only exports.
+        let native = borrowed_exports(&self.image.file)?;
+        let runtime = self.id == 0;
+        let filename = &self.soname;
         let has_layout = native
             .symbols
             .iter()
             .any(|symbol| symbol.name == "kinakaze_module_object_v1");
-        if !has_layout && !runtime {
-            set.shared_libraries.push(filename.to_owned());
-            continue;
-        }
         let aliases: std::collections::HashSet<_> = native
             .symbols
             .iter()
@@ -361,19 +502,19 @@ pub(crate) fn discover(directory: &Path) -> Result<ModuleSet> {
                     .map(|(_, name)| name)
             })
             .collect();
-        let mut library = None;
-        let mut symbols: BTreeMap<String, Export> = BTreeMap::new();
+        type ObjectLayout = unsafe extern "C" fn(*const u8, usize) -> u64;
+        let mut query: Option<ObjectLayout> = None;
+        let mut owner = None;
+        let mut symbols: BTreeMap<&str, Export> = BTreeMap::new();
         for symbol in native.symbols.iter().filter(|symbol| {
-            guest_symbol(&symbol.name)
-                || aliases.contains(symbol.name.as_str())
+            guest_symbol(symbol.name)
+                || aliases.contains(symbol.name)
                 || runtime && symbol.name == "kinakaze_runtime_abi_version"
         }) {
             let (name, version) = symbol
                 .name
                 .split_once('@')
-                .map_or((symbol.name.as_str(), None), |(name, version)| {
-                    (name, Some(version))
-                });
+                .map_or((symbol.name, None), |(name, version)| (name, Some(version)));
             if let Some(export) = symbols.get_mut(name) {
                 if let Some(version) = version {
                     export.versions.push(version.into());
@@ -382,18 +523,21 @@ pub(crate) fn discover(directory: &Path) -> Result<ModuleSet> {
             }
             let mut export = Export::function(name, name);
             if symbol.object != Some(false) && has_layout {
-                if library.is_none() {
-                    library = Some(Arc::new(Library::open(&path)?));
-                }
-                type ObjectLayout = unsafe extern "C" fn(*const u8, usize) -> u64;
-                // SAFETY: project module implements the fixed, borrowed-buffer C ABI.
-                let query: ObjectLayout = unsafe {
-                    std::mem::transmute(
-                        library
-                            .as_ref()
-                            .unwrap()
-                            .symbol(c"kinakaze_module_object_v1")?,
-                    )
+                let query = match query {
+                    Some(query) => query,
+                    None => {
+                        let library = Arc::new(Library::open(&self.image.path)?);
+                        // SAFETY: project module implements this fixed C ABI;
+                        // the returned owner retains it for these declarations.
+                        let function = unsafe {
+                            std::mem::transmute::<*mut std::ffi::c_void, ObjectLayout>(
+                                library.symbol(c"kinakaze_module_object_v1")?,
+                            )
+                        };
+                        owner = Some(library);
+                        query = Some(function);
+                        function
+                    }
                 };
                 let layout = unsafe { query(name.as_ptr(), name.len()) };
                 if layout != 0 {
@@ -411,22 +555,18 @@ pub(crate) fn discover(directory: &Path) -> Result<ModuleSet> {
             if let Some(version) = version {
                 export.versions.push(version.into());
             }
-            symbols.insert(name.into(), export);
+            symbols.insert(name, export);
         }
         for export in symbols.values_mut() {
             export.default_version = export.versions.last().cloned();
         }
-        if let Some(library) = library {
-            set.libraries.push(library);
-        }
-        set.modules.push(Module {
-            id: if runtime { 0 } else { module_id(filename) },
-            soname: filename.into(),
-            lifecycle,
+        let module = Module {
+            id: self.id,
+            soname: self.soname.clone(),
+            lifecycle: self.lifecycle,
             exports: symbols.into_values().collect(),
-        });
+        };
+        module.validate()?;
+        Ok((module, owner))
     }
-    set.modules.sort_by_key(|module| module.id);
-    set.validate()?;
-    Ok(set)
 }

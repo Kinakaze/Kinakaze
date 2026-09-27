@@ -40,6 +40,9 @@ EXPORTS
   kinakaze_abi___curbrk DATA
   "__curbrk"=kinakaze_abi___curbrk DATA PRIVATE
   "__curbrk@GLIBC_2.2.5"=kinakaze_abi___curbrk DATA PRIVATE
+  kinakaze_abi___cxa_at_quick_exit
+  "__cxa_at_quick_exit"=kinakaze_abi___cxa_at_quick_exit PRIVATE
+  "__cxa_at_quick_exit@GLIBC_2.10"=kinakaze_abi___cxa_at_quick_exit PRIVATE
   kinakaze_abi___cxa_atexit
   "__cxa_atexit"=kinakaze_abi___cxa_atexit PRIVATE
   "__cxa_atexit@GLIBC_2.2.5"=kinakaze_abi___cxa_atexit PRIVATE
@@ -216,6 +219,7 @@ EXPORTS
   "__isoc99_vfscanf@GLIBC_2.7"=kinakaze_abi_vfscanf PRIVATE
   kinakaze_abi_vscanf
   "__isoc99_vscanf"=kinakaze_abi_vscanf PRIVATE
+  "__isoc99_vscanf@GLIBC_2.7"=kinakaze_abi_vscanf PRIVATE
   kinakaze_abi_vsscanf
   "__isoc99_vsscanf"=kinakaze_abi_vsscanf PRIVATE
   "__isoc99_vsscanf@GLIBC_2.7"=kinakaze_abi_vsscanf PRIVATE
@@ -765,6 +769,8 @@ EXPORTS
   kinakaze_abi_asprintf
   "asprintf"=kinakaze_abi_asprintf PRIVATE
   "asprintf@GLIBC_2.2.5"=kinakaze_abi_asprintf PRIVATE
+  kinakaze_abi_at_quick_exit
+  "at_quick_exit"=kinakaze_abi_at_quick_exit PRIVATE
   kinakaze_abi_atexit
   "atexit"=kinakaze_abi_atexit PRIVATE
   kinakaze_abi_atof
@@ -2611,6 +2617,7 @@ EXPORTS
   "ntohl"=kinakaze_abi_ntohl PRIVATE
   kinakaze_abi_ntohs
   "ntohs"=kinakaze_abi_ntohs PRIVATE
+  "ntohs@GLIBC_2.2.5"=kinakaze_abi_ntohs PRIVATE
   kinakaze_abi_ntp_gettimex
   "ntp_gettimex"=kinakaze_abi_ntp_gettimex PRIVATE
   "ntp_gettimex@GLIBC_2.12"=kinakaze_abi_ntp_gettimex PRIVATE
@@ -3173,6 +3180,8 @@ EXPORTS
   kinakaze_abi_qsort_r
   "qsort_r"=kinakaze_abi_qsort_r PRIVATE
   "qsort_r@GLIBC_2.8"=kinakaze_abi_qsort_r PRIVATE
+  kinakaze_abi_quick_exit
+  "quick_exit"=kinakaze_abi_quick_exit PRIVATE
   kinakaze_abi_quotactl
   "quotactl"=kinakaze_abi_quotactl PRIVATE
   "quotactl@GLIBC_2.2.5"=kinakaze_abi_quotactl PRIVATE
@@ -4227,6 +4236,7 @@ EXPORTS
   "vasprintf@GLIBC_2.2.5"=kinakaze_abi_vasprintf PRIVATE
   kinakaze_abi_vdprintf
   "vdprintf"=kinakaze_abi_vdprintf PRIVATE
+  "vdprintf@GLIBC_2.2.5"=kinakaze_abi_vdprintf PRIVATE
   kinakaze_abi_verr
   "verr"=kinakaze_abi_verr PRIVATE
   kinakaze_abi_verrx

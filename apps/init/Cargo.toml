@@ -18,6 +18,8 @@ kinakaze-v2-host-win.workspace = true
 kinakaze-v2-rootfs.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+windows-sys = { workspace = true, features = ["Win32_System_Ioctl", "Win32_System_Console", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Gdi"] }
+blake3 = "1.8.7"
 
 [lints]
 workspace = true

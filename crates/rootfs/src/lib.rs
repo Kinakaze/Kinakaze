@@ -10,14 +10,25 @@ use std::{
 };
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+mod archives;
+mod download;
 mod permissions;
+pub mod startup;
 const MAX_MANIFEST: u64 = 32 * 1024 * 1024;
 const STATE: &str = ".kinakaze-rootfs.sha256";
+
+/// Protect a newly created runtime credential in the guest inode format as well
+/// as its Windows ACL. Call before starting any guest in this process domain.
+pub fn protect_session_config(path: &Path) -> io::Result<()> {
+    permissions::initialize(path, 0o600)
+}
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Manifest {
     schema: u32,
+    #[serde(default)]
+    startup: startup::Startup,
     directories: Vec<String>,
     files: Vec<Entry>,
     #[serde(default)]
@@ -26,6 +37,10 @@ struct Manifest {
     links: BTreeMap<String, String>,
     #[serde(default)]
     case_sensitive: bool,
+    #[serde(default)]
+    archives: BTreeMap<String, archives::Archive>,
+    #[serde(default)]
+    download: download::Settings,
 }
 
 #[derive(Deserialize)]
@@ -38,8 +53,18 @@ struct Entry {
 #[derive(Deserialize)]
 #[serde(untagged, deny_unknown_fields)]
 enum Payload {
-    Text { content: String },
-    Copy { source: String, sha256: String },
+    Text {
+        content: String,
+    },
+    Copy {
+        source: String,
+        sha256: String,
+    },
+    Archive {
+        archive: String,
+        member: String,
+        sha256: String,
+    },
 }
 
 fn digest(bytes: &[u8]) -> String {
@@ -167,7 +192,7 @@ fn checked_path(base: &Path, value: &str) -> Result<PathBuf> {
 fn exclusive_lock(path: &Path) -> Result<File> {
     // A complete distribution can contain tens of thousands of files. Wait
     // for its transaction instead of failing a concurrent first launch early.
-    let deadline = Instant::now() + Duration::from_secs(300);
+    let deadline = Instant::now() + Duration::from_secs(1800);
     loop {
         reject_redirect(path)?;
         let mut options = OpenOptions::new();
@@ -260,9 +285,12 @@ pub fn prepare(root: &Path, dist: &Path, explicit: Option<&Path>) -> Result<()> 
     let staging = Staging::new(&parent)?;
     let root = &staging.0;
     let manifest: Manifest = serde_json::from_slice(&bytes)?;
+    manifest.startup.validate()?;
     if manifest.schema != 1 {
         return Err("unsupported rootfs manifest schema".into());
     }
+    eprintln!("Installing rootfs into {}", destination.display());
+    eprintln!("Validating the installation manifest...");
     let key = |name: &str| {
         if manifest.case_sensitive {
             name.to_owned()
@@ -293,20 +321,6 @@ pub fn prepare(root: &Path, dist: &Path, explicit: Option<&Path>) -> Result<()> 
         }
         files.push((path, &entry.payload));
     }
-    let files = parallel(&files, |(path, payload)| {
-        let content = match payload {
-            Payload::Text { content } => content.as_bytes().to_vec(),
-            Payload::Copy { source, sha256 } => {
-                let source = checked_path(&source_base, source)?;
-                let bytes = fs::read(&source)?;
-                if digest(&bytes) != *sha256 {
-                    return Err(format!("rootfs source hash mismatch: {}", source.display()).into());
-                }
-                bytes
-            }
-        };
-        Ok((path.clone(), content))
-    })?;
     let mut links = Vec::new();
     for (name, target) in &manifest.links {
         relative(name)?;
@@ -351,9 +365,47 @@ pub fn prepare(root: &Path, dist: &Path, explicit: Option<&Path>) -> Result<()> 
             permissions.push((path, *mode));
         }
     }
+    // Establish the staging directory's required filesystem behavior before
+    // spending time downloading packages. Descendants inherit the owner rights.
     if manifest.case_sensitive {
         permissions::case_sensitive(root)?;
     }
+    let downloaded = archives::load(
+        &manifest.archives,
+        &manifest.files,
+        &parent,
+        &manifest.download,
+    )?;
+    eprintln!("Verifying {} file payloads...", files.len());
+    let files = parallel(&files, |(path, payload)| {
+        let content = match payload {
+            Payload::Text { content } => content.as_bytes().to_vec(),
+            Payload::Copy { source, sha256 } => {
+                let source = checked_path(&source_base, source)?;
+                let bytes = fs::read(&source)?;
+                if digest(&bytes) != *sha256 {
+                    return Err(format!("rootfs source hash mismatch: {}", source.display()).into());
+                }
+                bytes
+            }
+            Payload::Archive {
+                archive,
+                member,
+                sha256,
+            } => {
+                let bytes = downloaded
+                    .get(&(archive.clone(), member.clone()))
+                    .ok_or_else(|| format!("missing Debian payload: {archive}: {member}"))?;
+                if digest(bytes) != *sha256 {
+                    return Err(format!("Debian payload hash mismatch: {archive}: {member}").into());
+                }
+                bytes.clone()
+            }
+        };
+        Ok((path.clone(), content))
+    })?;
+    drop(downloaded);
+    eprintln!("Creating {} directories...", directories.len());
     directories.sort();
     for directory in directories {
         fs::create_dir_all(&directory)?;
@@ -361,20 +413,23 @@ pub fn prepare(root: &Path, dist: &Path, explicit: Option<&Path>) -> Result<()> 
             permissions::case_sensitive(&directory)?;
         }
     }
+    eprintln!("Writing {} files...", files.len());
     parallel(&files, |(path, content)| {
         fs::create_dir_all(path.parent().unwrap())?;
         // Every staged file is new. Let the filesystem reject aliases that its
         // case rules consider identical even beyond ASCII preflight checks.
-        let mut file = OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&path)?;
+        let mut file = OpenOptions::new().write(true).create_new(true).open(path)?;
         file.write_all(content)?;
         // Closing each file completes its writes. Atomic directory publication
         // is the transaction boundary; flushing the whole volume per file would
         // turn a standard image into thousands of serialized disk barriers.
         Ok(())
     })?;
+    eprintln!(
+        "Applying {} permissions and {} links...",
+        permissions.len(),
+        links.len()
+    );
     parallel(&permissions, |(path, mode)| {
         permissions::initialize(path, *mode)
             .map_err(|e| format!("cannot set rootfs permissions on {}: {e}", path.display()))?;
@@ -397,5 +452,6 @@ pub fn prepare(root: &Path, dist: &Path, explicit: Option<&Path>) -> Result<()> 
         Err(error) => return Err(error.into()),
     }
     fs::rename(root, &destination)?;
+    eprintln!("Rootfs installation complete: {}", destination.display());
     Ok(())
 }

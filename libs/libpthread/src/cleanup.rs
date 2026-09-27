@@ -90,6 +90,9 @@ fn advance() -> ! {
         unsafe { resume_cleanup(buffer) }
     }
     let result = EXIT_RESULT.with(|slot| slot.get().unwrap_or(PTHREAD_CANCELED));
+    // A caller-owned stack must not become Windows' teardown stack. Resume
+    // the native entry frame, which performs the same finalization as return.
+    stack::return_from_custom(result);
     finish_current_thread(result);
     unsafe { ExitThread(0) }
 }

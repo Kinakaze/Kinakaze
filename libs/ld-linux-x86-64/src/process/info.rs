@@ -99,13 +99,6 @@ pub unsafe extern "sysv64" fn kinakaze_process_dladdr(
         let linker = unsafe { &*linker };
         let target = address as usize;
         for provider in linker.provider_images() {
-            let symbol = provider.symbols().iter().find(|symbol| {
-                symbol.address <= target
-                    && symbol
-                        .address
-                        .checked_add(symbol.size.max(1) as usize)
-                        .is_some_and(|end| target < end)
-            });
             let inside = provider.base() <= target
                 && provider
                     .base()
@@ -116,10 +109,25 @@ pub unsafe extern "sysv64" fn kinakaze_process_dladdr(
             if !inside {
                 continue;
             }
+            // Reverse lookup is itself an explicit demand for symbol addresses.
+            // Do not resolve symbols in unrelated providers while finding the
+            // owning mapping, including compatibility forwarders.
+            let symbol = provider
+                .symbols()
+                .iter()
+                .enumerate()
+                .find_map(|(index, symbol)| {
+                    let address = provider.inspect_symbol_address(index).ok()?;
+                    (address <= target
+                        && address
+                            .checked_add(symbol.size.max(1) as usize)
+                            .is_some_and(|end| target < end))
+                    .then_some((symbol, address))
+                });
             let path = CString::new(kinakaze_vfs::to_guest_path(provider.path()))
                 .unwrap_or_else(|_| c"<invalid>".to_owned());
-            let symbol_address = symbol.map_or(0, |symbol| symbol.address);
-            let name = symbol.and_then(|symbol| CString::new(symbol.name.as_str()).ok());
+            let symbol_address = symbol.map_or(0, |(_, address)| address);
+            let name = symbol.and_then(|(symbol, _)| CString::new(symbol.name.as_str()).ok());
             return DLADDR_STRINGS.with(|slot| {
                 *slot.borrow_mut() = DlAddrStrings {
                     path: Some(path),

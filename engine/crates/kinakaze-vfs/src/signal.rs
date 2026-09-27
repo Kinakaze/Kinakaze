@@ -1149,16 +1149,10 @@ pub fn raise_signal(signal: i32) -> Result<(), i32> {
     {
         return Ok(());
     }
-    // A default-ignored signal with no handler is likewise dropped.
-    if let Ok(state) = state().lock()
-        && matches!(
-            state.actions[signal as usize].disposition,
-            Disposition::Default
-        )
-        && default_is_ignore(signal)
-    {
-        return Ok(());
-    }
+    // Apply default dispositions when a guest thread accepts the signal. This
+    // function also runs on the native signal pump, whose mask is unrelated to
+    // the guest's. Dropping default-ignored signals here loses blocked SIGCHLD
+    // before signalfd/sigwait can consume it (notably in a service manager).
 
     PENDING.fetch_or(bit, Ordering::AcqRel);
 

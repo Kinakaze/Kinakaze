@@ -3,7 +3,13 @@
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::io::{self, Read, Write};
 
-pub const PROTOCOL_VERSION: u32 = 1;
+// V2 adds worker-owned image snapshot capabilities. V1 control/launch messages
+// remain accepted so existing controllers can operate a newly built init.
+pub const PROTOCOL_VERSION: u32 = 2;
+pub const CONTROL_PROTOCOL_VERSION: u32 = 1;
+pub fn supported_version(version: u32) -> bool {
+    (CONTROL_PROTOCOL_VERSION..=PROTOCOL_VERSION).contains(&version)
+}
 pub const MAX_FRAME_SIZE: usize = 65_536;
 pub const MAX_STATE_NAME_BYTES: usize = 128;
 
@@ -71,6 +77,11 @@ pub enum ForkPolicy {
 pub enum Request {
     Hello(Hello),
     Identity,
+    /// Read-only file capability owned by this authenticated native peer.
+    ImageSnapshot {
+        source: u64,
+        length: u64,
+    },
     /// Resolve an authorized logical process for process_vm_readv/writev.
     ProcessMemoryTarget {
         pid: u32,
@@ -201,6 +212,10 @@ pub enum Reply {
         process: Option<ProcessIdentity>,
     },
     Identity(ProcessIdentity),
+    /// Read/execute-only section capability transferred into the requesting peer.
+    ImageSnapshot {
+        section: Option<(u64, [u8; 32])>,
+    },
     ProcessMemoryTarget {
         host_pid: u32,
         birth: u64,

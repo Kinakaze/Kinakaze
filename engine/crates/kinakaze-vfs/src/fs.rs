@@ -220,7 +220,7 @@ pub(crate) fn resolve(path: &str) -> Result<std::path::PathBuf, i32> {
 }
 
 /// Resolves intermediate symlinks but retains a link in the last component.
-fn resolve_no_follow(path: &str) -> Result<std::path::PathBuf, i32> {
+pub(crate) fn resolve_no_follow(path: &str) -> Result<std::path::PathBuf, i32> {
     let root = crate::path::system_root().map_err(|_| ENOENT)?;
     resolve_linux_path_from_no_follow(&root, &absolute_linux(path)).map_err(path_errno)
 }
@@ -511,7 +511,10 @@ fn reopen_local_fd(fd: i32, flags: i32) -> Result<i32, i32> {
         }
         return crate::install_cgroup_file(path, fd_flags);
     }
-    if matches!(source.kind, FdKind::ProcSysctl | FdKind::Synthetic) {
+    if matches!(
+        source.kind,
+        FdKind::ProcSysctl | FdKind::Synthetic | FdKind::ProcMounts
+    ) {
         let path = pinned.synthetic_path.take().ok_or(EIO)?;
         // Retain the original proc view and process identity, but perform a new
         // open with its own access flags and offset. Resolving /proc/self again
@@ -756,7 +759,10 @@ impl ProcFdReference {
         drop(table);
         let synthetic_path = if matches!(
             entry.kind,
-            FdKind::SyntheticDirectory | FdKind::ProcSysctl | FdKind::Synthetic
+            FdKind::SyntheticDirectory
+                | FdKind::ProcSysctl
+                | FdKind::Synthetic
+                | FdKind::ProcMounts
         ) {
             let path = crate::procfs::descriptor_path(fd)?;
             if crate::get(fd)?.generation != entry.generation {
@@ -984,6 +990,10 @@ pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32>
         "/dev/tty" => {
             check_character_device_open(flags, 5, 0)?;
             return crate::tty::open_controlling(flags);
+        }
+        "/dev/console" => {
+            check_character_device_open(flags, 5, 1)?;
+            return crate::tty::open_console(flags);
         }
         "/dev/stdin" => return openat(AT_FDCWD, "/proc/self/fd/0", flags, mode),
         "/dev/stdout" => return openat(AT_FDCWD, "/proc/self/fd/1", flags, mode),
@@ -1365,6 +1375,7 @@ fn lseek_inner(fd: i32, offset: i64, whence: i32) -> Result<u64, i32> {
         SEEK_CUR => entry.offset,
         // A synthetic file has no handle to query for its length.
         SEEK_END if entry.kind == FdKind::Synthetic => crate::synthetic_size(fd)?,
+        SEEK_END if entry.kind == FdKind::ProcMounts => return Err(EINVAL),
         SEEK_END => file_size(entry.raw as HANDLE)?,
         _ => return Err(EINVAL),
     };
@@ -2309,10 +2320,10 @@ fn stat_path_resolved(
                 ..Stat::default()
             });
         }
-        "/dev/tty" => {
+        "/dev/tty" | "/dev/console" => {
             return Ok(Stat {
                 st_mode: S_IFCHR | 0o666,
-                st_rdev: (5 << 8),
+                st_rdev: (5 << 8) | u64::from(absolute == "/dev/console"),
                 st_blksize: 1024,
                 st_nlink: 1,
                 ..Stat::default()
@@ -2480,6 +2491,9 @@ pub fn fstat(fd: i32) -> Result<Stat, i32> {
     }
     match entry.kind {
         FdKind::FsContext | FdKind::MountTree => crate::mount::api::stat(fd),
+        FdKind::ProcMounts => {
+            crate::procfs::pinned(|| stat_procfs(&crate::procfs::mount_watch::path(fd)?, true))
+        }
         // Pipes, consoles and sockets have no file information to query, so
         // synthesize the character-device or FIFO shape the guest expects.
         FdKind::Console => Ok(Stat {
@@ -2554,7 +2568,7 @@ pub fn fstat(fd: i32) -> Result<Stat, i32> {
             ..Stat::default()
         }),
         // A synthetic file's size lives in the side table, not in a handle.
-        FdKind::TimerFd => Ok(Stat {
+        FdKind::TimerFd | FdKind::SignalFd => Ok(Stat {
             st_mode: 0o600,
             st_nlink: 1,
             ..Stat::default()
@@ -3312,6 +3326,9 @@ pub fn chdir(path: &str) -> Result<(), i32> {
 
 /// Changes the root directory for this process.
 pub fn chroot(path: &str) -> Result<(), i32> {
+    if crate::tmpfs::chroot(path)? {
+        return Ok(());
+    }
     if crate::mount::overlay::chroot(path)? {
         return Ok(());
     }
@@ -3601,12 +3618,18 @@ pub fn ftruncate(fd: i32, length: i64) -> Result<(), i32> {
 }
 
 fn truncate_handle(handle: HANDLE, length: i64) -> Result<(), i32> {
-    // A private asynchronous inode handle gives EOF updates their own request
-    // status without changing the caller's native or Linux file position.
-    // The writer also excludes a concurrent verity enable through native share
-    // access. O_TRUNC may request this temporary right on an O_RDONLY open;
-    // ftruncate validates the original descriptor's write rights above.
-    let writer = object::Object::reopen(handle, FILE_WRITE_DATA | FILE_READ_ATTRIBUTES)?;
+    // EOF updates do not change the native or Linux file position. O_TRUNC
+    // may need a temporary writer for an O_RDONLY open; ftruncate validates
+    // the original descriptor's write rights above.
+    // An already writable open retains its rights after chmod removes write
+    // permission. Reopening it would consult the new Windows READONLY bit and
+    // incorrectly reject systemd's open(O_RDWR), fchmod(0444), ftruncate flow.
+    // This open also prevents verity's exclusive writer reservation.
+    let writer = if object::Object::granted_access(handle)? & FILE_WRITE_DATA != 0 {
+        object::Object::duplicate(handle)?
+    } else {
+        object::Object::reopen(handle, FILE_WRITE_DATA | FILE_READ_ATTRIBUTES)?
+    };
     verity::ensure_writable(writer.raw())?;
     writer.set_length(length as u64)
 }

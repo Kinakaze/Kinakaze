@@ -1,12 +1,16 @@
 //! Session-scoped common process manager. No guest code runs in this process.
 mod client;
+mod desktop;
+#[path = "../../shared/desktop_client.rs"]
+mod desktop_client;
+mod image_cache;
 mod pool;
+mod tray;
 mod web;
 use kinakaze_v2_host_win::{Job, PipeConnection, PipeListener, ProcessHandle, random_token};
 use kinakaze_v2_manager::{PeerIdentity, StateManager};
 use kinakaze_v2_protocol::{
-    ClientRole, ErrorCode, PROTOCOL_VERSION, Request, RpcError, WireRequest, WireResponse,
-    read_frame, write_frame,
+    ClientRole, ErrorCode, Request, RpcError, WireRequest, WireResponse, read_frame, write_frame,
 };
 use std::io::{self, Write};
 use std::sync::{
@@ -18,6 +22,7 @@ const MAX_CONNECTIONS: usize = 128;
 
 struct Service {
     manager: Mutex<StateManager>,
+    images: Mutex<image_cache::Cache>,
     changed: Condvar,
     stopping: AtomicBool,
     connections: AtomicUsize,
@@ -28,6 +33,7 @@ struct Service {
     job: Job,
     prewarm_process: Option<ProcessHandle>,
     pool: Option<pool::Pool>,
+    desktop: Option<Arc<desktop::Desktop>>,
 }
 
 impl Service {
@@ -81,7 +87,7 @@ fn serve(mut pipe: PipeConnection, service: Arc<Service>, _slot: ConnectionSlot)
             "request id must be positive",
         );
     }
-    if hello.version != PROTOCOL_VERSION {
+    if !kinakaze_v2_protocol::supported_version(hello.version) {
         return reject(
             &mut pipe,
             first.id,
@@ -158,12 +164,16 @@ fn serve(mut pipe: PipeConnection, service: Arc<Service>, _slot: ConnectionSlot)
             .spawn(move || match process.wait() {
                 Ok(()) => {
                     let status = process.exit_code().unwrap_or(1) as i32;
-                    watcher
-                        .manager
-                        .lock()
-                        .unwrap()
-                        .process_exited_with_status(peer, status);
+                    let mut manager = watcher.manager.lock().unwrap();
+                    let had_init = manager.process_peer(1).is_some();
+                    manager.process_exited_with_status(peer, status);
+                    let init_exited = had_init && manager.process_peer(1).is_none();
+                    drop(manager);
                     watcher.changed.notify_all();
+                    // Observe the logical PID, not a retiring exec worker.
+                    if init_exited && watcher.desktop.is_some() {
+                        watcher.stop();
+                    }
                 }
                 Err(error) => {
                     eprintln!("native process wait failed: {error}");
@@ -288,6 +298,15 @@ fn serve(mut pipe: PipeConnection, service: Arc<Service>, _slot: ConnectionSlot)
                         break result;
                     }
                 }
+            };
+            let result = match (&wire.request, result) {
+                (Request::ImageSnapshot { source, length }, Ok(_)) => {
+                    let section = service.images.try_lock().ok().and_then(|mut images| {
+                        images.get(peer.host_pid, peer.birth, *source, *length)
+                    });
+                    Ok(kinakaze_v2_protocol::Reply::ImageSnapshot { section })
+                }
+                (_, result) => result,
             };
             service.changed.notify_all();
             let stop = shutdown && result.is_ok();
@@ -463,6 +482,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let epoch = u64::from_str_radix(&random_token()?[..16], 16)?.max(1);
     let service = Arc::new(Service {
         manager: Mutex::new(StateManager::new(epoch, token.clone())),
+        images: Mutex::new(image_cache::Cache::default()),
         changed: Condvar::new(),
         stopping: AtomicBool::new(false),
         connections: AtomicUsize::new(0),
@@ -476,6 +496,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         job,
         prewarm_process,
         pool,
+        desktop: None,
     });
     let _web = web_address
         .map(|address| web::Server::start(&address, Arc::clone(&service)))
@@ -547,6 +568,40 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn main() {
+    let mode = std::env::args().nth(1);
+    let desktop_options = matches!(
+        mode.as_deref(),
+        Some("--root" | "--dist" | "--rootfs-manifest" | "--no-tray" | "--web")
+    ) && !std::env::args().any(|a| {
+        matches!(
+            a.as_str(),
+            "--pipe" | "--session-file" | "--controller-pid" | "--prewarm-pool"
+        )
+    });
+    if mode.is_none()
+        || desktop_options
+        || matches!(mode.as_deref(), Some("boot" | "daemon" | "session"))
+    {
+        let arguments = std::env::args()
+            .skip(if mode.is_some() && !desktop_options {
+                2
+            } else {
+                1
+            })
+            .collect();
+        let result = if mode.as_deref() == Some("daemon") {
+            desktop::run(arguments)
+        } else {
+            desktop_client::run(arguments, true)
+        };
+        match result {
+            Ok(status) => std::process::exit(status),
+            Err(error) => {
+                eprintln!("init: {error}");
+                std::process::exit(1);
+            }
+        }
+    }
     match std::env::args().nth(1).as_deref() {
         Some("--version") => {
             println!("Kinakaze {}", env!("CARGO_PKG_VERSION"));
@@ -554,7 +609,7 @@ fn main() {
         }
         Some("--help" | "-h") => {
             println!(
-                "Usage: init --session-file FILE [--root ROOT] [--dist DIST] [--rootfs-manifest FILE] [--prewarm-pool N] [--web 127.0.0.1:PORT]\n       init launch --session-file FILE [--parent PID] [--wait] [--cwd /] [--env NAME=VALUE] -- /program [args...]\n       init --pipe ENDPOINT --controller-pid PID (internal session)"
+                "Usage: init [boot] [--root ROOT] [--dist DIST] [--rootfs-manifest FILE] [--no-tray]\n       init session <start|attach|status|stop> [--root ROOT] [--name NAME]\nNo arguments: boot/reuse the manifest's environment, open its terminal and keep one manager in the tray.\nDeveloper RPC: init --session-file FILE; init launch --session-file FILE -- /program; init --pipe ENDPOINT --controller-pid PID."
             );
             return;
         }
