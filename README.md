@@ -27,9 +27,9 @@ Kinakaze 在用户态实现 Linux 程序所需的装载器、系统调用与基�
 
 ## 快速开始
 
-v0.1.0 增加可选 rootfs 清单和可重新连接的 init 启动客户端。外部清单优先，仅在目标 rootfs 不存在或为空时初始化；已有非空 rootfs 保持原样。发行包内置经过哈希校验的基础 shell，启动方式及 `init launch --parent` 示例见 [v0.1.0 运行说明](docs/runtime-release-v0.1.0.md)。
+v0.2.0 提供首次联网安装 Debian、常驻托盘与可重新连接的交互终端。双击 `init.exe` 或 `worker.exe` 即可启动；外部清单优先，已有非空 rootfs 保持原样。见 [v0.2.0 发布说明](docs/releases/v0.2.0.md)。
 
-当前源码的默认构建预装 Debian bookworm 无桌面的基础与标准命令行环境，共锁定 306 个软件包，包含 Bash、补全、man、编辑器、Python、Perl、APT、dpkg、签名密钥、证书和 OpenSSH 服务端。执行生成目录中的 `worker.exe` 即可进入 shell；默认 SSH 同时监听 `127.0.0.1:2222`，账号 `root`、密码 `kinakaze`。`worker.exe setup --root <目录>` 可单独初始化。Release 只带程序、依赖 DLL 与 Debian 默认清单，首次启动由 EXE 自动联网下载和配置 rootfs，用户无需 Python。详见 [首次安装与包管理](docs/first-run.md)。这部分改进尚未进入已发布的 v0.1.0 二进制。
+v0.2.0 首次启动默认安装 Debian bookworm 无桌面的基础与标准命令行环境，共锁定 306 个软件包，包含 Bash、补全、man、编辑器、Python、Perl、APT、dpkg、签名密钥、证书和 OpenSSH 服务端。执行生成目录中的 `worker.exe` 即可进入 shell；默认 SSH 同时监听 `127.0.0.1:2222`，账号 `root`、密码 `kinakaze`。`worker.exe setup --root <目录>` 可单独初始化。Release 只带程序、依赖 DLL 与 Debian 默认清单，首次启动由 EXE 自动联网下载和配置 rootfs，用户无需 Python。详见 [首次安装与包管理](docs/first-run.md)。
 
 默认入口现在复用一个常驻 `init.exe`，托盘支持返回已有终端、打开 WebUI 和关闭整棵进程树。PID 1 与开机/关机命令由 manifest 指定，默认 Debian 使用 systemd；Bash 和其他 ELF 共用真实派生与 PTY 重连机制。见 [持久会话配置](docs/persistent-sessions.md)。默认目标仍是托管服务配置，完整开机服务链的边界见 [systemd 验证记录](docs/systemd-validation-2026-09-27.md)。
 
@@ -74,7 +74,7 @@ python tools/prepare-root.py --source "$GuestSource" --root artifacts/guest-root
 .\init.exe --session-file .\session.json --web 127.0.0.1:0
 ```
 
-打开终端显示的本地地址，即可从“填入示例”开始使用。程序输出仍显示在启动终端中。使用方法、采样说明与访问边界见 [WebUI 指南](docs/webui.md)；已发布的 v0.1.0 二进制仍是旧版监控页。
+打开终端显示的本地地址，即可从“填入示例”开始使用。程序输出仍显示在启动终端中。使用方法、采样说明与访问边界见 [WebUI 指南](docs/webui.md)。
 
 ## 项目结构
 

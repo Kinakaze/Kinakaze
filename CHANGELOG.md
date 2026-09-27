@@ -1,6 +1,13 @@
 # 更新记录
 
-## 未发布
+## 0.2.0 — 2026-09-27
+
+- Windows 运行包携带 EXE、依赖 DLL 和 Debian 清单，首次启动自动联网安装，无需宿主 Python；默认使用中科大镜像，支持系统代理、清单配置与环境变量覆盖，实时显示下载和安装进度。
+- 默认 Debian bookworm 环境包含 306 个锁定软件包；内置 OpenSSH 服务，默认监听 `127.0.0.1:2222`，账号 `root`、密码 `kinakaze`。
+- 同一 rootfs 共用一个常驻进程树，客体 PID 1、启动流程与关机命令由清单指定；默认配置由 systemd 启动 SSH 和会话服务，支持自定义 init。
+- 增加托盘管理、可断开重连的 Bash/ELF 交互终端与 WebUI 入口；修复鼠标控制序列污染终端输入，缩短关闭进程树时的等待。
+- 改进原生镜像加载与启动性能，补齐 libc 正则、文件系统、socket、定时器、信号与 X11 行为，并扩充回归验证。
+- 精简运行包布局，移除说明文档、构建/验证报告和重复 CMD 入口；第三方许可集中保留在 `licenses/`。
 
 - 默认清单预制 APT/dpkg、签名源、密钥、证书、基础命令和 dpkg 文件所有权；增加离线 setup、默认登录 shell 和 Windows 启动入口，原子初始化恢复 Linux 权限。
 - 补齐宽字符 printf 文件流和 checked/va_list 入口，修复 Debian hello 的 `__wprintf_chk@GLIBC_2.4` 装载缺口，增加真实 ELF Unicode、浮点与可变参数回归。
@@ -9,9 +16,9 @@
 - 重做桌面与移动布局，增加搜索筛选、资源排序、采样暂停、断线恢复和深浅主题；变更接口校验同源令牌，结束操作核对完整进程身份。
 - 增加真实运行时的浏览器回归脚本与 [WebUI 使用说明](docs/webui.md)。
 
-- 默认预装 Debian bookworm 的 Essential/required/important/standard 软件及依赖和推荐，共 302 个锁定包；完整保留文件、链接、权限与大小写，支持 Bash 登录、补全、man、编辑器和 Python/Perl。
+- 默认安装 Debian bookworm 的 Essential/required/important/standard 软件及依赖和推荐，共 306 个锁定包；完整保留文件、链接、权限与大小写，支持 Bash 登录、补全、man、编辑器和 Python/Perl。
 - 补齐数据库枚举、可变参数输出、COPY 数据与 4 字节自旋锁 ABI，以及 getent 所需 NSS、aliases、gshadow、ethers 入口；修复 netlink 缓冲区选项和内核默认目的地址，补齐跨进程 cwd/root 链接。
-- 首次安装使用有界并发校验与写入，增加真实 Debian 命令行和 ELF 回归；当前构建作为 preview 验证。详见 [Debian 验证记录](docs/debian-standard-validation.md)。
+- 首次安装使用有界并发校验与写入，增加真实 Debian 命令行和 ELF 回归。详见 [Debian 验证记录](docs/debian-standard-validation.md) 和 [v0.2.0 发布说明](docs/releases/v0.2.0.md)。
 
 ## 0.1.0 — 2026-09-26
 
