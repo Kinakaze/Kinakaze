@@ -1,5 +1,11 @@
 # 更新记录
 
+## 0.4.0 — 2026-09-28
+
+- 修复托盘“回到终端”打开的窗口一片空白、输入无回显：常驻 init 的标准句柄指向日志与空设备，终端客户端不再继承它们，改为使用新控制台自身的输入输出。
+- 修复 `apt install curl`、`wget` 等已预装工具时 dpkg 报错“trying to overwrite ..., which is also in package kinakaze-base”：manifest 新增 `/etc/apt/preferences.d/kinakaze-base`，APT 改为提示 `kinakaze-base` 已是最新版本；构建时校验该名单与基础包 Provides 一致。
+- 运行时升级后，rootfs 中重新构建的 `ld-linux-x86-64.so.2` 解释器仍可直接执行：按内部 DLL 名与原生命令导出识别，不再依赖构建时间戳；缺少导出或截断的镜像仍被拒绝。
+
 ## 0.3.0 — 2026-09-28
 
 - 将跨进程资源、挂载与命名空间等共享状态集中交给 init 保管，补齐进程退出、句柄复制、fork/exec、监听 socket 和排队消息的生命周期处理。

@@ -27,7 +27,7 @@ Kinakaze 在用户态实现 Linux 程序所需的装载器、系统调用与基�
 
 ## 快速开始
 
-v0.3.0 提供首次联网安装 Debian、常驻托盘与可重新连接的交互终端，并完善共享资源管理、tmpfs 映射和 systemd 服务兼容性。运行包支持 Windows 11 24H2 / Windows Server 2025 及以上的 x86-64 系统。双击 `init.exe` 或 `worker.exe` 即可启动；外部清单优先，已有非空 rootfs 保持原样。见 [v0.3.0 发布说明](https://github.com/Kinakaze/Kinakaze/releases/tag/v0.3.0)。
+v0.4.0 提供首次联网安装 Debian、常驻托盘与可重新连接的交互终端，完善共享资源管理、tmpfs 映射和 systemd 服务兼容性，并修复托盘返回终端和重复安装预装工具的问题。运行包支持 Windows 11 24H2 / Windows Server 2025 及以上的 x86-64 系统。双击 `init.exe` 或 `worker.exe` 即可启动；外部清单优先，已有非空 rootfs 保持原样。见 [v0.4.0 发布说明](https://github.com/Kinakaze/Kinakaze/releases/tag/v0.4.0)。
 
 首次启动默认安装 Debian bookworm 无桌面的基础与标准命令行环境，共锁定 306 个软件包，包含 Bash、补全、man、编辑器、Python、Perl、APT、dpkg、签名密钥、证书和 OpenSSH 服务端。执行生成目录中的 `worker.exe` 即可进入 shell；默认 SSH 同时监听 `127.0.0.1:2222`，账号 `root`、密码 `kinakaze`。`worker.exe setup --root <目录>` 可单独初始化。Release 只带程序、依赖 DLL 与 Debian 默认清单，首次启动由 EXE 自动联网下载和配置 rootfs，用户无需 Python。详见 [首次安装与包管理](docs/first-run.md)。
 
