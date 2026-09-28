@@ -233,12 +233,17 @@ fn parent(dist: &Path) -> Result<()> {
             })?,
             "fork commit",
         )?;
-        expect_ok(
-            session.runtime.call(Request::CommitFork {
-                transaction: ticket.transaction,
-            })?,
-            "fork commit replay",
-        )?;
+        // The next runtime request acknowledges the successful commit and
+        // releases its replay record. Replaying before acknowledgement is
+        // covered by the manager tests; a second high-level commit is stale.
+        match session.runtime.call(Request::Stats)? {
+            Reply::Stats(stats) if stats.transactions == 0 => {}
+            reply => {
+                return Err(failure(format!(
+                    "fork acknowledgement leaked state: {reply:?}"
+                )));
+            }
+        }
         child.finish()?;
         session.libc.expect("copy", 11)?;
         session.libc.expect("share", 121)?;

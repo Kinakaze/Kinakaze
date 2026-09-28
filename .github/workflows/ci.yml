@@ -13,7 +13,7 @@ permissions:
 jobs:
   windows:
     name: Windows x86-64
-    runs-on: windows-2022
+    runs-on: windows-2025
     timeout-minutes: 30
     defaults:
       run:
@@ -66,8 +66,8 @@ jobs:
       - name: Test guest dependency tooling
         run: python -m unittest discover -s tools/guest-deps
       - name: Build native modules and entry points
-        run: cargo build --workspace --locked --features kinakaze-v2-runtime/guest-engine
-      - name: Verify native exports
-        run: python tools/native-exports/generate.py --image-dir target/debug --check
+        run: ./tools/build.ps1 -NativeOnly -SkipTests -DistDirectory artifacts/native-check
+      - name: Test native worker handshake and cleanup
+        run: ./artifacts/native-check/worker.exe smoke --dist artifacts/native-check
       - name: Verify source packaging
         run: python tools/package-source.py --ref HEAD --output-dir artifacts/source-check
