@@ -111,6 +111,11 @@ def configure_packages(files, locked, packages, native_packages, version, links=
     files['usr/share/kinakaze/bootstrap-packages.json'] = (json.dumps(dict(schema=1, packages=records, native_packages=native_packages), indent=2) + '\n').encode()
     provided = sorted(set(packages) | set(native_packages))
     provides = ', '.join(f'{name} (= {locked[name]["version"]})' for name in provided)
+    # The manifest pin hides these real packages from APT so explicit installs
+    # select kinakaze-base; a stale list would let dpkg collide with its files.
+    pin = files.get('etc/apt/preferences.d/kinakaze-base')
+    if pin is not None and pin.split(b'\n', 1)[0].split()[1:] != [name.encode() for name in provided]:
+        raise ValueError('etc/apt/preferences.d/kinakaze-base must pin exactly the kinakaze-base Provides')
     owned = sorted(name for name in set(files) | set(links) if not name.startswith(('var/lib/dpkg/', 'var/cache/', 'var/log/')))
     conffiles = [name for name in owned if name.startswith('etc/') and name in files]
     digest = lambda name: hashlib.md5(files[name], usedforsecurity=False).hexdigest()

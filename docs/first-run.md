@@ -126,6 +126,14 @@ Kinakaze 原生 ABI 和锁定 Debian 软件包的文件统一登记为 Essential
 
 预装软件文件不等于启用了所有 Debian 服务。`policy-rc.d` 阻止安装包时自动启动守护进程；systemd、内核、设备和硬件工具仍受运行时能力限制。含字面反斜杠的一个 systemd slice 文件暂不安装，具体路径记录在适配清单。这是一套适配 Kinakaze 的基础环境，未将上游维护脚本没有执行过的组件冒充为独立安装完成的 Debian 包。基础环境随 Kinakaze 发行包更新；不要强制卸载 `kinakaze-base` 或强制覆盖其文件。后续通过 APT 安装的包由 dpkg 正常记录、配置和卸载。
 
+清单 `files` 中的 `etc/apt/preferences.d/kinakaze-base` 将这些已提供的包名固定为 `Pin-Priority: -1`（更新锁定包后须同步该名单，构建器会校验），因此 `apt install curl wget` 等请求会选择 `kinakaze-base` 并提示已是最新版本，不会再下载上游包覆盖基础文件；依赖这些包的新软件仍通过版本化 Provides 满足。v0.3.0 及更早创建的 rootfs 没有该文件，可在客体中执行一次：
+
+```sh
+printf 'Package: %s\nPin: version *\nPin-Priority: -1\n' \
+  "$(dpkg-query -W -f='${Provides}' kinakaze-base | sed 's/ ([^)]*)//g; s/,//g')" \
+  > /etc/apt/preferences.d/kinakaze-base
+```
+
 ## 从源码构建
 
 ```powershell

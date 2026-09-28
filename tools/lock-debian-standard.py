@@ -1,7 +1,8 @@
 """Lock Debian's standard installation using a real APT solver and signed indexes.
 
 The selected root must already have successfully run apt-get update. Resolution
-uses an empty, temporary status file, never the root's installed package state.
+uses an empty, temporary status file, never the root's installed package state
+or the pins that hide packages already bundled in kinakaze-base.
 """
 import argparse
 import hashlib
@@ -49,7 +50,7 @@ def main():
         status_path = Path(status.name)
     try:
         plan = run('/usr/bin/apt-get', '-o', 'Dir::State::status=/tmp/' + status_path.name,
-                   '--print-uris', '--yes', '--download-only', '--install-recommends',
+                   '-o', 'Dir::Etc::PreferencesParts=/dev/null', '--print-uris', '--yes', '--download-only', '--install-recommends',
                    'install', *sorted(set(seeds) | set(args.extra)))
     finally:
         status_path.unlink()

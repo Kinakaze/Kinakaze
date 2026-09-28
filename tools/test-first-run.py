@@ -112,12 +112,14 @@ def main():
             # bzip2 is part of Debian's standard preset; preserve that base tool.
             has_bzip2 = (root / 'bin/bzip2').is_file()
             shell('apt-get -o APT::Update::Error-Mode=any update\napt-get -y install hello\nhello\n'
-                  + ('' if has_bzip2 else 'apt-get -y install bzip2\n') +
+                  + ('apt-get -y install bzip2 | grep -q "^kinakaze-base is already the newest version"\n'
+                     if has_bzip2 else 'apt-get -y install bzip2\n') +
                   'printf package-roundtrip > /tmp/roundtrip\nbzip2 -k /tmp/roundtrip\n'
                   'bzip2 -dc /tmp/roundtrip.bz2 > /tmp/restored\ncmp /tmp/roundtrip /tmp/restored\n'
                   'apt-get -y purge hello\ntest ! -e /usr/bin/hello\n'
                   + ('' if has_bzip2 else 'apt-get -y purge bzip2\ntest ! -e /bin/bzip2\n') + 'dpkg --audit', timeout=600)
-            checks.append('signed HTTPS Debian index, hello execution, bzip2 compression roundtrip and removal')
+            checks.append('signed HTTPS Debian index, hello execution, bundled bzip2 reinstall request, '
+                          'bzip2 compression roundtrip and removal')
         (root / 'etc/hostname').write_text('preserved\n', encoding='utf-8', newline='\n')
         invoke(['setup', '--root', str(root), '--rootfs-manifest', str(root / 'missing.json')])
         assert (root / 'etc/hostname').read_text() == 'preserved\n'
