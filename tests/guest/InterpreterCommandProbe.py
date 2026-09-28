@@ -2,6 +2,7 @@
 import os
 from pathlib import Path
 import shutil
+import struct
 import subprocess
 
 loader = '/lib64/ld-linux-x86-64.so.2'
@@ -71,6 +72,36 @@ Path('constructor-ran').unlink()
 shutil.copyfile(loader, 'interpreter-copy')
 Path('interpreter-copy').chmod(0o755)
 run(['./interpreter-copy', '--verify', './program'])
+# A rebuilt interpreter facade is executed by the active runtime, even if its
+# COFF timestamp differs from the rootfs copy. No host DLL code is loaded here.
+image = bytearray(Path(loader).read_bytes())
+assert image[:2] == b'MZ'
+pe = struct.unpack_from('<I', image, 0x3c)[0]
+assert image[pe:pe+4] == b'PE\0\0'
+image[pe+8:pe+12] = bytes(value ^ 0xff for value in image[pe+8:pe+12])
+Path('interpreter-rebuilt').write_bytes(image)
+Path('interpreter-rebuilt').chmod(0o755)
+assert 'Kinakaze' in run(['./interpreter-rebuilt', '--version'])
+run(['./interpreter-rebuilt', '--verify', './program'])
+
+def rejected(path):
+    global count
+    Path(path).chmod(0o755)
+    try:
+        result = subprocess.run(['./'+path, '--version'], stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, timeout=20)
+        assert result.returncode != 0, (path, result.stdout, result.stderr)
+    except OSError as error:
+        import errno
+        assert error.errno == errno.ENOEXEC, (path, error)
+    count += 1
+
+marker = b'kinakaze_process_dlopen\0'
+assert marker in image
+Path('interpreter-missing-abi').write_bytes(image.replace(marker, b'kinakaze_process_dlopem\0'))
+rejected('interpreter-missing-abi')
+Path('interpreter-truncated').write_bytes(image[:pe+24])
+rejected('interpreter-truncated')
 Path('pretend').mkdir()
 shutil.copyfile('/lib/libc.so.6', 'pretend/ld-linux-x86-64.so.2')
 Path('pretend/ld-linux-x86-64.so.2').chmod(0o755)

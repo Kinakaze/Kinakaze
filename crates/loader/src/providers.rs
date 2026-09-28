@@ -54,6 +54,7 @@ struct BoundProvider {
     _shared: Arc<SharedModules>,
     path: PathBuf,
     soname: String,
+    native_name: String,
     symbols: Vec<ProviderSymbol>,
     bindings: Vec<NativeBinding>,
     module_base: usize,
@@ -139,6 +140,21 @@ impl ProviderImage for BoundProvider {
     }
     fn program_headers(&self) -> Option<(usize, u16)> {
         None
+    }
+    fn compatible_command_image(&self, bytes: &[u8]) -> bool {
+        // These native entry points identify the interpreter across builds.
+        // Validate its internal DLL name, export table and executable entries;
+        // a renamed libc or a data/forwarder-only imitation is not a facade.
+        kinakaze_v2_bridge::native::matches_command_facade(
+            bytes,
+            &self.native_name,
+            &[
+                "kinakaze_process_dl_iterate_phdr",
+                "kinakaze_process_dlopen",
+                "kinakaze_process_dlsym",
+                "kinakaze_module_object_v1",
+            ],
+        )
     }
     fn redirect_copy(
         &self,
@@ -316,6 +332,7 @@ fn bind_module(
         _shared: Arc::clone(&shared),
         path,
         soname,
+        native_name: discovered.native_name,
         symbols,
         bindings,
         module_base,

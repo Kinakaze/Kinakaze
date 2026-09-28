@@ -109,6 +109,8 @@ fn catalog_defers_layout_loading_and_pins_pending_files() {
         .iter()
         .find(|module| module.id == 0)
         .unwrap();
+    assert_eq!(runtime.soname, "libruntime.so");
+    assert_eq!(runtime.native_name, "libfixture.so");
     let (metadata, owner) = runtime.materialize().unwrap();
     assert!(owner.is_none());
     assert_eq!(metadata.exports[0].name, "kinakaze_runtime_abi_version");
@@ -117,6 +119,7 @@ fn catalog_defers_layout_loading_and_pins_pending_files() {
         .iter()
         .find(|module| module.soname == "liblate.so")
         .unwrap();
+    assert_eq!(late.native_name, "libfixture.so");
     // Invalid executable headers are encountered only when its object layout
     // is needed; all read-only export validation already passed at discovery.
     assert!(late.materialize().is_err());

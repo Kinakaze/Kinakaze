@@ -84,6 +84,21 @@ pub fn exports(bytes: &[u8]) -> Result<NativeExports> {
     })
 }
 
+/// Identify a command facade without loading its code. Build timestamps, Rust
+/// exports and debug paths may change while its native command ABI stays valid.
+pub fn matches_command_facade(bytes: &[u8], native_name: &str, functions: &[&str]) -> bool {
+    !functions.is_empty()
+        && borrowed_exports(bytes).is_ok_and(|image| {
+            image.name == native_name
+                && functions.iter().all(|name| {
+                    image
+                        .symbols
+                        .binary_search_by_key(name, |symbol| symbol.name)
+                        .is_ok_and(|index| image.symbols[index].object == Some(false))
+                })
+        })
+}
+
 // Validate every export, including Rust-only names. Discovery only needs to
 // own the guest ABI subset; borrow the remaining names from the pinned file
 // instead of allocating and then discarding thousands of mangled strings.
@@ -377,6 +392,7 @@ pub struct ModuleCatalog {
 pub struct DiscoveredModule {
     pub id: u32,
     pub soname: String,
+    pub native_name: String,
     pub lifecycle: ModuleLifecycle,
     image: Arc<NativeImage>,
 }
@@ -427,6 +443,7 @@ impl ModuleCatalog {
                 .symbols
                 .iter()
                 .any(|symbol| symbol.name == "kinakaze_module_object_v1");
+            let native_name = native.name.to_owned();
             let image = Arc::new(NativeImage {
                 path: path.clone(),
                 file: Arc::new(bytes),
@@ -439,6 +456,7 @@ impl ModuleCatalog {
             set.modules.push(DiscoveredModule {
                 id: if runtime { 0 } else { module_id(filename) },
                 soname: filename.into(),
+                native_name,
                 lifecycle,
                 image,
             });

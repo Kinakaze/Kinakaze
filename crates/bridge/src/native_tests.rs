@@ -109,3 +109,36 @@ fn malformed_exports_are_rejected_even_when_the_name_is_rust_only() {
         assert!(exports(&bad).is_err(), "variant={variant}");
     }
 }
+
+#[test]
+fn command_facade_identity_survives_rebuilds_but_rejects_noncode_exports() {
+    let mut bytes = fixture();
+    assert!(matches_command_facade(
+        &bytes,
+        "libfixture.so",
+        &["_Rinternal"]
+    ));
+    put32(&mut bytes, 0x88, 123456789); // COFF timestamp from another build.
+    assert!(matches_command_facade(
+        &bytes,
+        "libfixture.so",
+        &["_Rinternal"]
+    ));
+    for names in [&[][..], &["missing"], &["object"], &["forwarded"]] {
+        assert!(!matches_command_facade(&bytes, "libfixture.so", names));
+    }
+    assert!(!matches_command_facade(&bytes, "other.so", &["_Rinternal"]));
+    for length in 0..bytes.len() {
+        assert!(!matches_command_facade(
+            &bytes[..length],
+            "libfixture.so",
+            &["_Rinternal"]
+        ));
+    }
+    put16(&mut bytes, 0x260, 3); // Malformed ordinal in an otherwise matching DLL.
+    assert!(!matches_command_facade(
+        &bytes,
+        "libfixture.so",
+        &["_Rinternal"]
+    ));
+}

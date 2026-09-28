@@ -79,6 +79,12 @@ pub trait ProviderImage: Send + Sync {
         None
     }
 
+    /// Recognize another build of this command facade. Recognition delegates to
+    /// the registered provider; it never authorizes mapping the supplied code.
+    fn compatible_command_image(&self, _bytes: &[u8]) -> bool {
+        false
+    }
+
     /// Redirect provider accesses to the executable's COPY-relocation storage.
     /// Failure must be reported if the provider cannot preserve shared storage.
     fn redirect_copy(&self, name: &str, address: usize, size: u64) -> Result<(), LinkError>;
@@ -250,19 +256,23 @@ impl ProviderRegistry {
         self.images.contains_key(soname)
     }
 
-    /// Only the registered interpreter can act as a native guest command.
-    /// Compare immutable bytes so aliases and copied rootfs images work without
-    /// accepting arbitrary PE files or trusting the executable's basename.
+    /// Use the active interpreter for a matching native command facade. Old
+    /// rootfs copies can retain their compatible identity after a distribution
+    /// upgrade; neither their code nor their initializers are loaded.
     pub fn is_interpreter_image(&self, bytes: &[u8]) -> bool {
-        bytes.starts_with(b"MZ")
-            && self
-                .interpreter_image
-                .get_or_init(|| {
-                    let entry = self.images.get("ld-linux-x86-64.so.2")?;
-                    crate::snapshot_guest_image(entry.path()).ok()
-                })
-                .as_ref()
-                .is_some_and(|image| image.as_slice() == bytes)
+        if !bytes.starts_with(b"MZ") {
+            return false;
+        }
+        let Some(entry) = self.images.get("ld-linux-x86-64.so.2") else {
+            return false;
+        };
+        self.interpreter_image
+            .get_or_init(|| crate::snapshot_guest_image(entry.path()).ok())
+            .as_ref()
+            .is_some_and(|image| image.as_slice() == bytes)
+            || entry
+                .get("ld-linux-x86-64.so.2")
+                .is_ok_and(|image| image.compatible_command_image(bytes))
     }
 
     /// Resolve identity without opening an image, in particular for RTLD_NOLOAD.
