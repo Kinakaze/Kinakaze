@@ -316,18 +316,84 @@ pub fn request(stream: &mut TcpStream, value: Value) -> Result<Value> {
     }
     Ok(reply)
 }
+fn push_argument(line: &mut Vec<u16>, argument: &std::ffi::OsStr) {
+    use std::os::windows::ffi::OsStrExt;
+    const SPACE: u16 = b' ' as u16;
+    const TAB: u16 = b'\t' as u16;
+    const QUOTE: u16 = b'"' as u16;
+    const BACKSLASH: u16 = b'\\' as u16;
+    let units: Vec<u16> = argument.encode_wide().collect();
+    if !line.is_empty() {
+        line.push(SPACE);
+    }
+    if !units.is_empty() && !units.iter().any(|c| matches!(*c, SPACE | TAB | QUOTE)) {
+        line.extend(units);
+        return;
+    }
+    line.push(QUOTE);
+    let mut backslashes = 0;
+    for c in units {
+        if c == BACKSLASH {
+            backslashes += 1;
+            continue;
+        }
+        let escaped = if c == QUOTE {
+            backslashes * 2 + 1
+        } else {
+            backslashes
+        };
+        line.extend(std::iter::repeat_n(BACKSLASH, escaped));
+        line.push(c);
+        backslashes = 0;
+    }
+    line.extend(std::iter::repeat_n(BACKSLASH, backslashes * 2));
+    line.push(QUOTE);
+}
 pub fn open_terminal(options: &Options, name: &str) -> io::Result<()> {
-    Command::new(options.dist.join("worker.exe"))
-        .arg("session")
-        .arg("attach")
-        .arg("--root")
-        .arg(&options.root)
-        .arg("--dist")
-        .arg(&options.dist)
-        .arg("--name")
-        .arg(name)
-        .creation_flags(0x10)
-        .spawn()?;
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::{Foundation::CloseHandle, System::Threading::*};
+    let program = options.dist.join("worker.exe");
+    let mut line = Vec::new();
+    for argument in [
+        program.as_os_str(),
+        "session".as_ref(),
+        "attach".as_ref(),
+        "--root".as_ref(),
+        options.root.as_os_str(),
+        "--dist".as_ref(),
+        options.dist.as_os_str(),
+        "--name".as_ref(),
+        name.as_ref(),
+    ] {
+        push_argument(&mut line, argument);
+    }
+    line.push(0);
+    let application: Vec<u16> = program.as_os_str().encode_wide().chain(Some(0)).collect();
+    // std::process::Command always sets STARTF_USESTDHANDLES. From the tray's
+    // detached daemon that hands the new window init.log and NUL instead of
+    // its own console, leaving an empty terminal that ignores input.
+    unsafe {
+        let mut startup: STARTUPINFOW = std::mem::zeroed();
+        startup.cb = std::mem::size_of::<STARTUPINFOW>() as u32;
+        let mut process: PROCESS_INFORMATION = std::mem::zeroed();
+        if CreateProcessW(
+            application.as_ptr(),
+            line.as_mut_ptr(),
+            std::ptr::null(),
+            std::ptr::null(),
+            0,
+            CREATE_NEW_CONSOLE,
+            std::ptr::null(),
+            std::ptr::null(),
+            &startup,
+            &mut process,
+        ) == 0
+        {
+            return Err(io::Error::last_os_error());
+        }
+        CloseHandle(process.hThread);
+        CloseHandle(process.hProcess);
+    }
     Ok(())
 }
 pub fn run(arguments: Vec<String>, window: bool) -> Result<i32> {
