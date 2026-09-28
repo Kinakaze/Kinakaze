@@ -78,6 +78,18 @@ mod tests {
         if std::io::stdin().read(&mut byte).unwrap() == 0 {
             return;
         }
+        if byte[0] == 125 {
+            let mut payload = Vec::new();
+            for _ in 0..3 {
+                let event = unsafe { CreateEventW(core::ptr::null(), 1, 0, core::ptr::null()) };
+                assert!(!event.is_null());
+                payload.extend_from_slice(&(event as u64).to_le_bytes());
+            }
+            assert!(crate::windows::restore_vfork_state(&payload));
+            println!("published");
+            std::io::stdout().flush().unwrap();
+            unsafe { crate::windows::terminate_failed_fork_child(22) };
+        }
         if byte[0] != 1 {
             super::super::namespaces::set_fork_error(u32::from(byte[0]));
         }
@@ -190,6 +202,18 @@ mod tests {
         let mut f = Fixture::new();
         f.publish_error(22);
         assert_eq!(f.wait(0), Ok(Completion::Restored(22)));
+    }
+
+    #[test]
+    fn failed_vfork_restoration_never_waits_for_the_later_exit_rendezvous() {
+        let mut f = Fixture::new();
+        f.publish_error(125);
+        assert_eq!(f.wait(2000), Ok(Completion::Restored(22)));
+        assert_eq!(
+            unsafe { WaitForSingleObject(f.child.as_raw_handle(), 2000) },
+            WAIT_OBJECT_0
+        );
+        assert_eq!(f.child.wait().unwrap().code(), Some(125));
     }
 
     #[test]

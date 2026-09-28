@@ -41,7 +41,6 @@ pub const ENOLCK: i32 = 37;
 const LOCK_CAPACITY: usize = 32_768;
 const WAITER_CAPACITY: usize = 4_096;
 const MAGIC: u64 = u64::from_le_bytes(*b"CYRECLK1");
-const EVENT_PREFIX: &str = r"Local\kinakaze.record-lock.wait.v1";
 
 /// Both endpoints are inclusive, including the byte at OFF_MAX.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -176,7 +175,7 @@ struct Waiter {
 
 impl Waiter {
     fn name(self) -> Vec<u16> {
-        wide(&format!("{EVENT_PREFIX}.{}.{}", self.host, self.thread))
+        object_name(&format!("wait.{}.{}", self.host, self.thread))
     }
 
     fn same_thread(self, other: Self) -> bool {
@@ -205,6 +204,13 @@ static CACHE: AtomicUsize = AtomicUsize::new(0);
 
 fn wide(value: &str) -> Vec<u16> {
     value.encode_utf16().chain(Some(0)).collect()
+}
+
+fn object_name(kind: &str) -> Vec<u16> {
+    // Owner liveness is resolved in this kernel's PID registry. Sharing the
+    // lock table with another init would let its sweep discard our live locks.
+    let domain = kinakaze_runtime::authority::domain_id();
+    wide(&format!("Local\\kinakaze.record-lock.v2.{domain}.{kind}"))
 }
 
 struct Handle(HANDLE);
@@ -326,13 +332,8 @@ fn shared() -> Result<&'static Shared, i32> {
     if cached != 0 {
         return Ok(unsafe { &*(cached as *const Shared) });
     }
-    let mutex = Handle::new(unsafe {
-        CreateMutexW(
-            ptr::null(),
-            0,
-            wide(r"Local\kinakaze.record-lock.guard.v1").as_ptr(),
-        )
-    })?;
+    let mutex =
+        Handle::new(unsafe { CreateMutexW(ptr::null(), 0, object_name("guard").as_ptr()) })?;
     let section = Handle::new(unsafe {
         CreateFileMappingW(
             INVALID_HANDLE_VALUE,
@@ -340,7 +341,7 @@ fn shared() -> Result<&'static Shared, i32> {
             PAGE_READWRITE,
             0,
             SECTION_SIZE as u32,
-            wide(r"Local\kinakaze.record-lock.v1").as_ptr(),
+            object_name("state").as_ptr(),
         )
     })?;
     let view = unsafe { MapViewOfFile(section.0, FILE_MAP_ALL_ACCESS, 0, 0, SECTION_SIZE) };

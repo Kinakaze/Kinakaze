@@ -5,23 +5,28 @@ use crate::mount::shared::Store;
 use crate::state_codec::{Reader, bytes, word};
 
 pub(super) fn notification(id: u64) -> Result<Object, i32> {
+    let domain = kinakaze_runtime::authority::domain_id();
     Object::owned(unsafe {
         CreateEventW(
             std::ptr::null(),
             0,
             0,
-            wide(&format!("Local\\kinakaze-rights-rpc-{id:x}")).as_ptr(),
+            wide(&format!("Local\\kinakaze-rights-rpc-{domain:x}-{id:x}")).as_ptr(),
         )
     })
 }
 
 fn completion(token: u64) -> Result<Object, i32> {
+    let domain = kinakaze_runtime::authority::domain_id();
     Object::owned(unsafe {
         CreateEventW(
             std::ptr::null(),
             1,
             0,
-            wide(&format!("Local\\kinakaze-rights-reply-{token:x}")).as_ptr(),
+            wide(&format!(
+                "Local\\kinakaze-rights-reply-{domain:x}-{token:x}"
+            ))
+            .as_ptr(),
         )
     })
 }

@@ -58,7 +58,9 @@ fn snapshot(path: &str, namespace: &shared::Store) -> Result<Vec<u8>, i32> {
 
 pub(crate) fn open(path: &str, flags: FdFlags) -> Result<i32, i32> {
     let object = shared::new_object()?;
-    object.replace(&snapshot(path, &*shared::get()?)?)?;
+    let namespace = shared::get()?;
+    namespace.lease_kernel(object.kernel_key())?;
+    object.replace(&snapshot(path, &namespace)?)?;
     object.descriptor_kind(FdKind::ProcMounts, flags.union(FdFlags::SEEKABLE))
 }
 

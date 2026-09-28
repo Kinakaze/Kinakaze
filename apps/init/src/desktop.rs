@@ -505,6 +505,7 @@ pub(super) fn run(arguments: Vec<String>) -> wire::Result<i32> {
     let service = Arc::new(Service {
         manager: Mutex::new(StateManager::for_process_tree(epoch, token.clone())),
         images: Mutex::new(crate::image_cache::Cache::default()),
+        kernel: Mutex::new(crate::kernel::Kernel::new(epoch)),
         changed: Condvar::new(),
         stopping: AtomicBool::new(false),
         connections: AtomicUsize::new(0),
@@ -520,6 +521,7 @@ pub(super) fn run(arguments: Vec<String>) -> wire::Result<i32> {
         pool: None,
         desktop: Some(desktop.clone()),
     });
+    crate::kernel::start_collection(&service)?;
     desktop.service.set(Arc::downgrade(&service)).ok();
     let web = crate::web::Server::start(&desktop.startup.web, service.clone())?;
     desktop.web_url.set(web.url()).ok();

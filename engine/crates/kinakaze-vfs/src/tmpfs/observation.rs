@@ -77,6 +77,39 @@ mod tests {
     }
 
     #[test]
+    fn description_mapping_follows_dup_lifetime_and_not_fd_reuse() {
+        use crate::tmpfs::{Location, descriptor, open_pinned};
+        let volume = fixture();
+        let location = Location {
+            volume: volume.meta.id(),
+            node: 1,
+            tail: String::new(),
+            namespace: crate::mount::namespace_id().unwrap(),
+            mount: 1,
+            flags: 0,
+            path: "/tmp/mapping-lifetime".into(),
+        };
+        let fd = open_pinned(location.clone(), crate::fs::O_RDONLY, 0).unwrap();
+        let alias = crate::duplicate_descriptor(fd, crate::DuplicateTarget::Lowest, false).unwrap();
+        let first = descriptor(fd).unwrap().0;
+        assert!(Arc::ptr_eq(&first, &descriptor(alias).unwrap().0));
+        let weak = Arc::downgrade(&first);
+        drop(first);
+        crate::close(fd).unwrap();
+        assert!(weak.upgrade().is_some());
+        let replacement = open_pinned(location, crate::fs::O_RDONLY, 0).unwrap();
+        assert_eq!(replacement, fd);
+        let next = descriptor(replacement).unwrap().0;
+        assert_ne!(next.id(), descriptor(alias).unwrap().0.id());
+        crate::close(alias).unwrap();
+        assert!(weak.upgrade().is_none());
+        let weak_next = Arc::downgrade(&next);
+        drop(next);
+        crate::close(replacement).unwrap();
+        assert!(weak_next.upgrade().is_none());
+    }
+
+    #[test]
     fn nested_reads_reuse_one_observation_and_outer_exit_releases_it() {
         let volume = fixture();
         let first;

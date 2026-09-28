@@ -14,6 +14,7 @@ pub(crate) struct View {
     pub mount: u64,
     pub flags: u64,
     pub target: String,
+    pub root: String,
 }
 thread_local! { static ACTIVE: RefCell<Option<View>> = const { RefCell::new(None) }; }
 pub(crate) struct Scope(Option<View>);
@@ -64,6 +65,7 @@ pub(crate) fn parse(source: &str) -> Result<(View, &str), i32> {
             mount: 0,
             flags: 0,
             target: String::new(),
+            root: mount::normalize(&format!("/proc/{tail}"))?,
         },
         tail,
     ))
@@ -97,6 +99,7 @@ pub(crate) fn prepare(options: &str) -> Result<String, i32> {
         mount: 0,
         flags: 0,
         target: String::new(),
+        root: "/proc".into(),
     }))
 }
 impl View {
@@ -111,7 +114,7 @@ impl View {
     }
     pub(crate) fn pinned_path(&self, path: &str) -> String {
         format!(
-            "/proc/.mount/{}/{}/{}/{}/{}/{}/{}/{}/{}",
+            "/proc/.mount/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
             self.namespace,
             self.mount,
             self.flags,
@@ -120,6 +123,7 @@ impl View {
             self.owner,
             u8::from(self.subset_pid),
             hex(&self.target),
+            hex(&self.root),
             path.strip_prefix("/proc")
                 .unwrap_or(path)
                 .trim_start_matches('/')
@@ -133,7 +137,7 @@ fn decode(path: &str) -> Result<(View, String), i32> {
     let mut parts = path
         .strip_prefix("/proc/.mount/")
         .ok_or(ENOENT)?
-        .splitn(9, '/');
+        .splitn(10, '/');
     let mut words = [0u64; 7];
     for word in &mut words {
         *word = parts.next().ok_or(EIO)?.parse().map_err(|_| EIO)?;
@@ -147,6 +151,7 @@ fn decode(path: &str) -> Result<(View, String), i32> {
         return Err(EIO);
     }
     let target = unhex(parts.next().ok_or(EIO)?)?;
+    let root = unhex(parts.next().ok_or(EIO)?)?;
     let tail = parts.next().unwrap_or("");
     Ok((
         View {
@@ -158,6 +163,7 @@ fn decode(path: &str) -> Result<(View, String), i32> {
             owner: words[5],
             subset_pid: words[6] != 0,
             target,
+            root,
         },
         format!("/proc/{tail}"),
     ))
@@ -250,13 +256,15 @@ pub(crate) fn display(path: String) -> Result<String, i32> {
     }
     let (view, inside) = decode(&path)?;
     let mut parts: Vec<_> = inside
-        .strip_prefix("/proc")
+        .strip_prefix(&view.root)
         .ok_or(EIO)?
         .split('/')
         .filter(|p| !p.is_empty())
         .map(str::to_owned)
         .collect();
-    if let Some(pid) = parts.first().and_then(|p| p.parse::<u32>().ok()) {
+    if view.root == "/proc"
+        && let Some(pid) = parts.first().and_then(|p| p.parse::<u32>().ok())
+    {
         if let Some(visible) = kinakaze_runtime::job::namespaces::visible_in(pid, view.pidns) {
             parts[0] = visible.to_string();
         }

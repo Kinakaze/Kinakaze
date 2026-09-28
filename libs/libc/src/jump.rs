@@ -249,6 +249,7 @@ unsafe fn restore_mask(env: *const JmpBuf) {
 pub unsafe extern "sysv64" fn kinakaze_abi_longjmp(env: *const JmpBuf, value: c_int) -> ! {
     // SAFETY: the caller guarantees a readable buffer.
     unsafe { restore_mask(env) };
+    signal::synchronous_jump(unsafe { &(*env).registers }, value);
     // SAFETY: the contract is the caller's; nothing after this point runs.
     unsafe { restore(env, value) }
 }
@@ -275,6 +276,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_siglongjmp(env: *const JmpBuf, value:
 /// As [`kinakaze_abi_longjmp`].
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn kinakaze_abi__longjmp(env: *const JmpBuf, value: c_int) -> ! {
+    signal::synchronous_jump(unsafe { &(*env).registers }, value);
     // SAFETY: the contract is the caller's; the mask is deliberately untouched.
     unsafe { restore(env, value) }
 }
@@ -291,9 +293,9 @@ pub unsafe extern "sysv64" fn kinakaze_abi__longjmp(env: *const JmpBuf, value: c
 ///
 /// 1. Neither the resume address nor the stack pointer may be zero. A zeroed or
 ///    never-initialised buffer fails here.
-/// 2. The target stack pointer must be *above* the current one. Stacks grow
-///    down, so the frame that called `setjmp` is always at a higher address than
-///    the frame jumping back to it.
+/// 2. The target must be above the current stack pointer, or a live outer
+///    frame on the interrupted guest stack of a synchronous signal. The native
+///    exception dispatcher runs callbacks on a separate private stack.
 /// 3. The target must be committed, readable memory, which `VirtualQuery`
 ///    answers directly. This catches a wild pointer that happens to satisfy (2).
 ///
@@ -322,6 +324,12 @@ pub unsafe extern "sysv64" fn kinakaze_abi___longjmp_chk(env: *const JmpBuf, val
     let target = buffer.registers[JB_RSP / 8] as usize;
     let resume = buffer.registers[JB_PC / 8] as usize;
     if target == 0 || resume == 0 || !target_is_live(target) {
+        if std::env::var_os("KINAKAZE_TRACE_JUMP").is_some() {
+            eprintln!(
+                "kinakaze: rejected longjmp target={target:#x} current={:#x} resume={resume:#x}",
+                current_stack_pointer()
+            );
+        }
         fail();
     }
     // SAFETY: the buffer passed the checks above.
@@ -334,7 +342,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi___longjmp_chk(env: *const JmpBuf, val
 /// path aborts the process and cannot be reached from a test.
 fn target_is_live(target: usize) -> bool {
     let current = current_stack_pointer();
-    if target <= current {
+    if target <= current && !signal::synchronous_jump_target(target) {
         return false;
     }
     let mut info = MemoryBasicInformation::default();

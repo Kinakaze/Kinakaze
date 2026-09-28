@@ -17,7 +17,7 @@ pub use runtime::{
 };
 pub(crate) use runtime::{
     Pinned, disable_inheritance_locked, import_rights, open_shared_marker as open_marker,
-    pin_entry_locked, reopen_pinned, rights_reference,
+    pin_entry_locked, prepare_duplicate, reopen_pinned, rights_reference,
 };
 pub use shared::{Readiness, WaitRegistration};
 

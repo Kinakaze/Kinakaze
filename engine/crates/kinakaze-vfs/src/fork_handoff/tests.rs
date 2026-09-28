@@ -108,6 +108,50 @@ fn a_short_buffer_discards_its_frame_and_requires_a_new_query() {
 }
 
 #[test]
+fn final_fence_rejects_changed_slots_and_holds_native_ownership_until_thaw() {
+    let _prepared = Prepared::new();
+    copy(query());
+    let added = fs::open("/dev/null", fs::O_RDONLY, 0).unwrap();
+    assert_eq!(freeze(), crate::EAGAIN);
+    copy(query());
+    assert_eq!(freeze(), 0);
+    let (started_tx, started_rx) = std::sync::mpsc::channel();
+    let (closed_tx, closed_rx) = std::sync::mpsc::channel();
+    let closing = std::thread::spawn(move || {
+        started_tx.send(()).unwrap();
+        closed_tx.send(crate::close(added)).unwrap();
+    });
+    started_rx.recv().unwrap();
+    let held = closed_rx
+        .recv_timeout(std::time::Duration::from_millis(20))
+        .is_err();
+    thaw();
+    assert!(
+        held,
+        "descriptor closed before native inheritance completed"
+    );
+    assert_eq!(
+        closed_rx
+            .recv_timeout(std::time::Duration::from_secs(2))
+            .unwrap(),
+        Ok(())
+    );
+    closing.join().unwrap();
+}
+
+#[test]
+fn final_fence_detects_a_transient_descriptor_even_after_it_is_closed() {
+    let _prepared = Prepared::new();
+    copy(query());
+    let transient = fs::open("/dev/null", fs::O_RDONLY, 0).unwrap();
+    crate::close(transient).unwrap();
+    assert_eq!(freeze(), crate::EAGAIN);
+    copy(query());
+    assert_eq!(freeze(), 0);
+    thaw();
+}
+
+#[test]
 #[ignore = "serial fork participant benchmark; stop the live service stack first"]
 fn fork_frame_benchmark() {
     let path = crate::to_guest_path(&std::env::current_exe().unwrap());

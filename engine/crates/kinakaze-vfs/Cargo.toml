@@ -8,6 +8,8 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+kinakaze-v2-host-win.workspace = true
+kinakaze-v2-protocol.workspace = true
 kinakaze-v2-abi.workspace = true
 kinakaze-runtime.workspace = true
 kinakaze-tls.workspace = true

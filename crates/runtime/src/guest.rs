@@ -14,6 +14,10 @@ pub(super) fn bind_session() {
 }
 
 static AUTHORITY: ProcessAuthority = ProcessAuthority {
+    kernel: |command| match request(Request::Kernel(command))? {
+        Reply::KernelObjects(objects) => Ok(objects),
+        _ => Err(5),
+    },
     identity,
     prepare_fork,
     adopt_fork,
@@ -233,9 +237,14 @@ pub unsafe extern "C" fn kinakaze_runtime_guest_run_v1(
                 ok(Request::MarkPoolReady)
                     .map_err(|errno| format!("pool readiness failed: {errno}"))?;
                 let waiting = kinakaze_v2_host_win::StartupSpan::begin("init-pool-wait");
-                let Reply::PoolLaunch(launch) = request(Request::AwaitPoolActivation)
-                    .map_err(|errno| format!("pool activation failed: {errno}"))?
-                else {
+                let activated = match request(Request::AwaitPoolActivation) {
+                    Ok(reply) => reply,
+                    // An unused worker has no guest failure to report when
+                    // init cancels the pool during shutdown or preparation.
+                    Err(125) => return Ok(0),
+                    Err(errno) => return Err(format!("pool activation failed: {errno}").into()),
+                };
+                let Reply::PoolLaunch(launch) = activated else {
                     return Err("pool activation returned no launch".into());
                 };
                 drop(waiting);
@@ -255,8 +264,11 @@ pub unsafe extern "C" fn kinakaze_runtime_guest_run_v1(
                 ok(Request::MarkPrewarmReady)
                     .map_err(|errno| format!("prewarm readiness failed: {errno}"))?;
                 let _waiting = kinakaze_v2_host_win::StartupSpan::begin("init-prewarm-wait");
-                ok(Request::AwaitPrewarmActivation)
-                    .map_err(|errno| format!("prewarm activation failed: {errno}"))?;
+                match ok(Request::AwaitPrewarmActivation) {
+                    Ok(()) => {}
+                    Err(125) => return Ok(0),
+                    Err(errno) => return Err(format!("prewarm activation failed: {errno}").into()),
+                }
             }
             Ok(kinakaze_guest_engine::run(GuestConfig {
                 executable: config.executable,

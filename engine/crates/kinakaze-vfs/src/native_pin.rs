@@ -53,6 +53,12 @@ impl AsRawHandle for NativePin {
     }
 }
 impl NativePin {
+    pub(crate) fn native_mount_flags(&self) -> Option<u64> {
+        self._native
+            .as_ref()
+            .map(|description| description.policy.flags())
+    }
+
     /// # Safety
     /// `buffer` must contain `len` writable bytes; `entry` belongs to this pin.
     pub unsafe fn read_once(

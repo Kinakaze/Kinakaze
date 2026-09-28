@@ -3,6 +3,26 @@
 use crate::{EAGAIN, EINVAL, EIO, EOPNOTSUPP, EPERM};
 pub const FSIZE: u32 = 1;
 pub const NPROC: u32 = 6;
+// The ELF loader reserves a separate 8 MiB guest stack.
+pub const STACK_BYTES: u64 = 8 * 1024 * 1024;
+
+/// One source for getrlimit/prlimit and /proc/<pid>/limits. In particular, PAM
+/// reads PID 1's proc file when preparing a login; invented proc defaults would
+/// make it request unsupported changes even with an empty limits.conf.
+pub fn get(pid: u32, resource: u32) -> Result<(u64, u64), i32> {
+    match resource {
+        FSIZE | NPROC => limits(pid, resource, None),
+        3 => Ok((STACK_BYTES, u64::MAX)),
+        4 => Ok((0, 0)), // Linux core files are not generated.
+        7 => crate::job::nofile_limits(pid),
+        12 => crate::mqueue::limits(pid, None),
+        // The native scheduler rejects FIFO/RR. Advertise the enforced zero
+        // ceiling so RestrictRealtime= can apply its existing restriction.
+        14 => Ok((0, 0)),
+        0..16 => Ok((u64::MAX, u64::MAX)),
+        _ => Err(EINVAL),
+    }
+}
 
 pub fn limits(pid: u32, resource: u32, value: Option<(u64, u64)>) -> Result<(u64, u64), i32> {
     crate::job::ensure_registered();

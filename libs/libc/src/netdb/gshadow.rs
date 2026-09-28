@@ -269,6 +269,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_fgetsgent(file: *mut crate::stdio::Fi
             return ptr::null_mut();
         }
         if line.is_empty() && crate::stdio::feof(file) != 0 {
+            crate::set_errno(kinakaze_vfs::ENOENT);
             return ptr::null_mut();
         }
         match next(&mut line.as_slice()) {

@@ -128,10 +128,10 @@ impl Target {
     unsafe fn open(self, write: bool) -> Result<Opened, i32> {
         match self {
             Self::Fd(fd) => {
-                let overlay = kinakaze_vfs::mount::overlay::descriptor_path(fd)?.is_some();
+                let attributes = Attributes::from_fd(fd, write)?;
                 Ok(Opened {
-                    attributes: Attributes::from_fd(fd, write)?,
-                    overlay,
+                    overlay: attributes.is_overlay(),
+                    attributes,
                     _write: None,
                 })
             }
@@ -147,6 +147,13 @@ impl Target {
                     return Err(ENAMETOOLONG);
                 }
                 let absolute = fs::absolute_linux(core::str::from_utf8(bytes).map_err(|_| EINVAL)?);
+                if let Some(attributes) = Attributes::from_fd_link(&absolute, follow, write)? {
+                    return Ok(Opened {
+                        overlay: attributes.is_overlay(),
+                        attributes,
+                        _write: None,
+                    });
+                }
                 let overlay =
                     kinakaze_vfs::mount::overlay::is_overlay_path(&absolute, follow, false)?;
                 if write {

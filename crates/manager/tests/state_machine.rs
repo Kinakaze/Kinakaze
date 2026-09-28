@@ -207,6 +207,75 @@ fn activate(manager: &mut StateManager, parent: ClientId, child: ClientId, ticke
 }
 
 #[test]
+fn terminal_acknowledgements_bound_replay_state_without_releasing_children() {
+    let mut manager = StateManager::with_limits(
+        17,
+        SECRET.into(),
+        Limits {
+            max_request_keys_per_process: 1,
+            max_transactions: 1,
+            ..Limits::default()
+        },
+    );
+    let parent = worker(&mut manager, 1);
+    let foreign = worker(&mut manager, 2);
+    for key in 1..=1100 {
+        let ticket = prepare(&mut manager, parent, key);
+        assert_eq!(
+            manager
+                .acknowledge(parent, ticket.transaction)
+                .unwrap_err()
+                .code,
+            ErrorCode::NotReady
+        );
+        assert_eq!(
+            manager
+                .acknowledge(foreign, ticket.transaction)
+                .unwrap_err()
+                .code,
+            ErrorCode::Unauthorized
+        );
+        let child = adopt(&mut manager, &ticket, key as u32 + 10);
+        activate(&mut manager, parent, child, &ticket);
+        assert_eq!(prepare(&mut manager, parent, key), ticket);
+        assert_eq!(
+            manager
+                .handle(
+                    parent,
+                    Request::PrepareFork {
+                        request_key: key + 1
+                    }
+                )
+                .unwrap_err()
+                .code,
+            ErrorCode::LimitExceeded
+        );
+        manager.acknowledge(parent, ticket.transaction).unwrap();
+        manager.acknowledge(parent, ticket.transaction).unwrap();
+        assert_eq!(manager.stats().transactions, 0);
+        assert_eq!(identity(&mut manager, child).pid, ticket.child.pid);
+        assert!(
+            manager
+                .connect(hello(ClientRole::Worker, Some(ticket.token)), peer(5000))
+                .is_err()
+        );
+        manager.process_exited(peer(key as u32 + 10));
+    }
+    let ticket = prepare(&mut manager, parent, 1200);
+    manager
+        .handle(
+            parent,
+            Request::AbortFork {
+                transaction: ticket.transaction,
+            },
+        )
+        .unwrap();
+    manager.acknowledge(parent, ticket.transaction).unwrap();
+    assert_eq!(manager.stats().transactions, 0);
+    prepare(&mut manager, parent, 1201);
+}
+
+#[test]
 fn all_fork_policies_snapshot_at_prepare_and_publish_only_after_commit() {
     let mut manager = manager();
     let parent = worker(&mut manager, 100);

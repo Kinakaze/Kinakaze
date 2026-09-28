@@ -303,7 +303,7 @@ mod windows {
             text(function),
             text(assertion)
         );
-        std::process::abort()
+        crate::process::kinakaze_abi_abort()
     }
 
     #[unsafe(no_mangle)]
@@ -444,19 +444,14 @@ mod windows {
                 }
             }
         }
-        std::process::abort()
+        crate::process::kinakaze_abi_abort()
     }
 
     /// `__chk_fail`: the fortified functions' failure path.
     #[unsafe(no_mangle)]
     pub extern "sysv64" fn kinakaze_abi___chk_fail() -> ! {
         eprintln!("kinakaze: *** buffer overflow detected ***: terminated");
-        // Fortify failures belong to the guest process: deliver SIGABRT and
-        // publish signal termination so its parent can reap it normally.
-        let _ = kinakaze_vfs::signal::sigprocmask(kinakaze_vfs::signal::SIG_UNBLOCK, 1 << 5);
-        crate::signal::kinakaze_abi_raise(6);
-        crate::process::terminate_from_signal(6);
-        unreachable!()
+        crate::process::kinakaze_abi_abort()
     }
 
     #[unsafe(no_mangle)]

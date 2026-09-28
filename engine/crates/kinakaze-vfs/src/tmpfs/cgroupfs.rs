@@ -8,6 +8,7 @@ fn catalog() -> Result<Arc<Store>, i32> {
         return Ok(s.clone());
     }
     let s = Arc::new(Store::user_object(u64::MAX - 27, true)?);
+    s.retain_kernel(false, Vec::new())?;
     let _ = STORE.set(s.clone());
     Ok(s)
 }
@@ -45,7 +46,7 @@ pub(crate) fn prepare(options: &str) -> Result<String, i32> {
                 s.sys = Some(sysfs::cgroup_instance());
                 sysfs::refresh(s)
             })?;
-            start_keeper(id)?;
+            retain_volume(id)?;
             id
         };
         let v = volume(id)?;

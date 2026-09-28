@@ -43,6 +43,7 @@ struct Description {
     gate: Mutex<()>,
     shared: Mutex<Option<Arc<Shared>>>,
     object: Mutex<Option<Arc<Store>>>,
+    directory: Mutex<Option<Arc<Vec<crate::fs::NativeDirectoryEntry>>>>,
 }
 fn descriptions() -> &'static Mutex<HashMap<u64, Arc<Description>>> {
     static ITEMS: OnceLock<Mutex<HashMap<u64, Arc<Description>>>> = OnceLock::new();
@@ -71,6 +72,7 @@ fn local(id: u64) -> Result<Arc<Description>, i32> {
                 gate: Mutex::new(()),
                 shared: Mutex::new(None),
                 object: Mutex::new(None),
+                directory: Mutex::new(None),
             })
         })
         .clone())
@@ -204,6 +206,10 @@ pub(crate) fn promote(fd: i32) -> Result<Arc<Shared>, i32> {
     }
     let store = Shared::new(shared::new_object()?)?;
     store.update(|_| Ok((encode(current), ())))?;
+    if let Some(description) = crate::mount::native::reference(current)? {
+        description.policy.lease_kernel(store.kernel_key())?;
+    }
+    crate::mount::overlay::lease_policies(current, store.kernel_key())?;
     *item.shared.lock().map_err(|_| EIO)? = Some(store.clone());
     Ok(store)
 }
@@ -243,6 +249,24 @@ pub(crate) fn object_store(entry: FdEntry) -> Result<Arc<Store>, i32> {
     }
     Ok(object.as_ref().unwrap().clone())
 }
+/// An enumeration cache belongs to the open description and owns no handles.
+/// The authoritative cursor is the ordinary shared OFD offset. Call under
+/// `with`: dup aliases serialize here, while fork/exec rebuild only the cache.
+pub(crate) fn directory_snapshot(
+    entry: FdEntry,
+    read: impl FnOnce() -> Result<Vec<crate::fs::NativeDirectoryEntry>, i32>,
+) -> Result<Arc<Vec<crate::fs::NativeDirectoryEntry>>, i32> {
+    let item = local(entry.description_id)?;
+    if entry.offset != 0
+        && let Some(entries) = item.directory.lock().map_err(|_| EIO)?.clone()
+    {
+        return Ok(entries);
+    }
+    // No cache lock crosses filesystem I/O or signal delivery.
+    let entries = Arc::new(read()?);
+    *item.directory.lock().map_err(|_| EIO)? = Some(entries.clone());
+    Ok(entries)
+}
 pub(crate) fn auxiliary_handles() -> Result<Vec<(u64, Arc<crate::fs::object::Object>)>, i32> {
     let items = descriptions().lock().map_err(|_| EIO)?.clone();
     let mut result = Vec::new();
@@ -267,12 +291,14 @@ pub(crate) fn serialize(keep: impl Fn(i32) -> bool) -> Result<Vec<u8>, i32> {
                             e.kind,
                             crate::FdKind::File
                                 | crate::FdKind::Directory
+                                | crate::FdKind::SyntheticDirectory
                                 | crate::FdKind::Pipe
                                 | crate::FdKind::PtyMaster
                                 | crate::FdKind::PtySlave
                                 | crate::FdKind::UnixSocket
                                 | crate::FdKind::Socket
                                 | crate::FdKind::NetlinkSocket
+                                | crate::FdKind::Inotify
                                 | crate::FdKind::TimerFd
                                 | crate::FdKind::SignalFd
                                 | crate::FdKind::ProcMounts
@@ -314,8 +340,13 @@ pub(crate) fn restore(bytes: &[u8]) -> bool {
         while !r.0.is_empty() {
             let id = r.word()?;
             let store_id = r.word()?;
-            let inherited = crate::fs::object::Object::owned(r.word()? as _)?;
-            let store = Shared::new(Store::user_object(store_id, false)?)?;
+            let raw = r.word()?;
+            let inherited = crate::fs::object::Object::owned(raw as _)?;
+            let store = Store::user_object(store_id, false).and_then(Shared::new).inspect_err(|error| {
+                kinakaze_runtime::fork_diagnostic(format_args!(
+                    "kinakaze: OFD restore failed description={id} store={store_id} inherited={raw:#x} errno={error}"
+                ));
+            })?;
             drop(inherited);
             items.insert(
                 id,
@@ -323,6 +354,7 @@ pub(crate) fn restore(bytes: &[u8]) -> bool {
                     gate: Mutex::new(()),
                     shared: Mutex::new(Some(store)),
                     object: Mutex::new(None),
+                    directory: Mutex::new(None),
                 }),
             );
         }

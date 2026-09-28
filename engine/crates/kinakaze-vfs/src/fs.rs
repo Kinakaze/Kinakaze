@@ -48,6 +48,9 @@ use crate::{
 
 mod allocation;
 mod confined;
+mod directory;
+pub use directory::{NativeDirectoryEntry, read_directory_bytes, read_native_directory_fd};
+mod permissions;
 pub use allocation::fallocate;
 pub(crate) mod cwd;
 pub use cwd::fchdir;
@@ -150,7 +153,10 @@ pub(crate) fn restore_cwd(payload: &[u8]) -> bool {
         .flatten()
         .is_some_and(|s| s.st_mode & S_IFMT == S_IFDIR)
     {
-        crate::fs_context::update(|s| s.cwd = Some(value.to_owned()));
+        crate::fs_context::update(|s| {
+            s.cwd = Some(value.to_owned());
+            s.cwd_object = None;
+        });
         return true;
     }
     let Ok(resolved) = resolve(value) else {
@@ -159,7 +165,10 @@ pub(crate) fn restore_cwd(payload: &[u8]) -> bool {
     if std::env::set_current_dir(&resolved).is_err() {
         return false;
     }
-    crate::fs_context::update(|s| s.cwd = Some(value.to_owned()));
+    crate::fs_context::update(|s| {
+        s.cwd = Some(value.to_owned());
+        s.cwd_object = None;
+    });
     true
 }
 
@@ -658,7 +667,7 @@ fn reopen_local_fd(fd: i32, flags: i32) -> Result<i32, i32> {
     let actual = overlay_object
         .as_ref()
         .map_or(pinned.handle, |(object, _)| object.raw());
-    let reopened = object::Object::reopen(actual, access)?;
+    let reopened = permissions::reopen(actual, access, flags)?;
     let handle = reopened.raw();
     if !directory && !path_only && flags & O_ACCMODE != O_RDONLY {
         // ensure_writable obtains its own metadata-capable query handle; a
@@ -891,6 +900,18 @@ pub(crate) fn open_device_value(device: u64, mode: u32, flags: i32) -> Result<i3
 /// The `openat` form. See [`resolve_at`] for the supported `dirfd` values.
 pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32> {
     let _observation = crate::tmpfs::Observation::enter();
+    // O_PATH acquires an inode reference; create/truncate/access and status
+    // flags must not turn that reference into a data open on any backend.
+    let flags = if flags & O_PATH != 0 {
+        flags & (O_PATH | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+    } else {
+        flags
+    };
+    let parent = if dirfd != AT_FDCWD && !path.starts_with('/') {
+        Some(get(dirfd)?)
+    } else {
+        None
+    };
     if !path.starts_with("/")
         && dirfd != AT_FDCWD
         && crate::get(dirfd)?.kind == FdKind::TmpfsDirectory
@@ -1036,77 +1057,61 @@ pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32>
         check_character_device_open(flags, 136, number)?;
         return crate::tty::open_slave(number, flags);
     }
+    let fallback = synthetic_configuration(&absolute);
+    if fallback.is_none()
+        && let Some(fd) = confined::open_path_child(dirfd, parent, path, &absolute, flags)?
+    {
+        return Ok(fd);
+    }
     let no_follow_final =
         flags & O_NOFOLLOW != 0 || flags & (O_CREAT | O_EXCL) == (O_CREAT | O_EXCL);
+    let mut resolved_native = None;
+    let mut prepared_native = None;
     let mut overlay_path = match crate::mount::overlay::open_path(&absolute, flags)? {
         crate::mount::overlay::OpenPath::Native(path) => path,
+        crate::mount::overlay::OpenPath::ResolvedNative { path, description } => {
+            resolved_native = Some(path);
+            prepared_native = description;
+            None
+        }
         crate::mount::overlay::OpenPath::Virtual => {
             // Continue through real backend descriptors. A symlink from an
             // image layer into /dev or /proc has no native Windows pathname.
             return confined::open(dirfd, path, flags, mode, 0);
         }
     };
-    let native_description = if overlay_path.is_some() {
+    let native_description = if resolved_native.is_some() {
+        prepared_native
+    } else if overlay_path.is_some() {
         None
     } else {
         crate::mount::native::prepare_open(&absolute, flags)?
     };
-    let resolved = if let Some(overlay) = &overlay_path {
+    let resolved = if let Some(native) = resolved_native {
+        native
+    } else if let Some(overlay) = &overlay_path {
         overlay.to_path_buf()
     } else if no_follow_final {
         resolve_at_no_follow(dirfd, path)?
     } else {
         resolve_at(dirfd, path)?
     };
-    let final_is_symlink = emulated_symlink_target(&resolved)?.is_some()
-        || std::fs::symlink_metadata(&resolved)
-            .map(|metadata| metadata.file_type().is_symlink())
-            .unwrap_or(false);
-    if flags & O_NOFOLLOW != 0 && flags & O_PATH == 0 && final_is_symlink {
-        return Err(ELOOP);
+    if flags & O_PATH != 0 && overlay_path.is_none() && fallback.is_none() {
+        return confined::open_native_path(&resolved, flags, native_description);
     }
-    if absolute == "/etc/resolv.conf" && !resolved.exists() {
-        return crate::install_procfs_file(
-            &absolute,
-            synthetic_resolv_conf(),
-            special_fd_flags(flags),
-        );
+    if flags & O_NOFOLLOW != 0 && flags & O_PATH == 0 {
+        let final_is_symlink = emulated_symlink_target(&resolved)?.is_some()
+            || std::fs::symlink_metadata(&resolved)
+                .map(|metadata| metadata.file_type().is_symlink())
+                .unwrap_or(false);
+        if final_is_symlink {
+            return Err(ELOOP);
+        }
     }
-    if absolute == "/etc/environment" && !resolved.exists() {
-        return crate::install_procfs_file(
-            &absolute,
-            synthetic_environment(),
-            special_fd_flags(flags),
-        );
-    }
-    if absolute == "/etc/hosts" && !resolved.exists() {
-        return crate::install_procfs_file(
-            &absolute,
-            b"127.0.0.1 localhost\n::1 localhost\n".to_vec(),
-            special_fd_flags(flags),
-        );
-    }
-    if absolute == "/etc/passwd" && !resolved.exists() {
-        return crate::install_procfs_file(
-            &absolute,
-            b"root:x:0:0:root:/root:/bin/sh\nnobody:x:65534:65534:nobody:/nonexistent:/bin/false\n"
-                .to_vec(),
-            special_fd_flags(flags),
-        );
-    }
-    if absolute == "/etc/group" && !resolved.exists() {
-        return crate::install_procfs_file(
-            &absolute,
-            b"root:x:0:\nnogroup:x:65534:\n".to_vec(),
-            special_fd_flags(flags),
-        );
-    }
-    if absolute == "/etc/nsswitch.conf" && !resolved.exists() {
-        return crate::install_procfs_file(
-            &absolute,
-            b"hosts: files dns\n".to_vec(),
-            special_fd_flags(flags),
-        );
+    if let Some(content) = fallback
+        && !resolved.exists()
+    {
+        return crate::install_procfs_file(&absolute, content, special_fd_flags(flags));
     }
 
     let is_tmpfile = (flags & 0o20000000) != 0;
@@ -1123,7 +1128,9 @@ pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32>
         (resolved, wide)
     };
 
-    let stored = if is_tmpfile {
+    // O_DIRECTORY can only yield a directory, and O_PATH never opens a device
+    // or FIFO. Their backing-file markers need no separate pathname EA lookup.
+    let stored = if is_tmpfile || flags & (O_DIRECTORY | O_PATH) != 0 {
         None
     } else {
         stored_mode(&resolved)?
@@ -1198,7 +1205,7 @@ pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32>
     }
 
     // SAFETY: `wide_path` is a null-terminated wide string that outlives the call.
-    let handle = unsafe {
+    let mut handle = unsafe {
         CreateFileW(
             wide_path.as_ptr(),
             access,
@@ -1211,7 +1218,19 @@ pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32>
             ptr::null_mut(),
         )
     };
-    let open_status = unsafe { GetLastError() };
+    let mut open_status = unsafe { GetLastError() };
+    if (handle.is_null() || handle as isize == -1)
+        && open_status == ERROR_ACCESS_DENIED
+        && !directory
+        && !is_path
+        && !is_tmpfile
+        && accmode != O_RDONLY
+        && disposition != CREATE_NEW
+    {
+        let pinned = object::Object::open(&resolved, FILE_READ_ATTRIBUTES)?;
+        handle = permissions::reopen_readonly(pinned.raw(), access, flags)?.into_raw();
+        open_status = 183; // the pinned inode already existed
+    }
     if handle.is_null() || handle as isize == -1 {
         // SAFETY: GetLastError has no preconditions.
         let error = unsafe { GetLastError() };
@@ -1223,7 +1242,43 @@ pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32>
         return Err(errno_from_win32(error));
     }
 
-    if !directory && !is_path && (accmode != O_RDONLY || flags & O_TRUNC != 0) {
+    // The opened inode determines the descriptor's type. Re-querying its name
+    // both reopens the same directory repeatedly and can classify a replacement
+    // installed after CreateFileW instead. A write-only open may lack metadata
+    // rights; keep its data access unchanged and use a private query in that case.
+    let opened_directory = (|| {
+        let query;
+        let metadata_handle = if access & (GENERIC_READ | FILE_READ_ATTRIBUTES) != 0 {
+            handle
+        } else {
+            query = object::Object::reopen(handle, FILE_READ_ATTRIBUTES)?;
+            query.raw()
+        };
+        let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
+        if unsafe { GetFileInformationByHandle(metadata_handle, &mut info) } == 0 {
+            return Err(errno_from_win32(unsafe { GetLastError() }));
+        }
+        Ok(info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY != 0)
+    })()
+    .inspect_err(|_| unsafe {
+        CloseHandle(handle);
+    })?;
+    if flags & O_DIRECTORY != 0 && !opened_directory && !is_tmpfile {
+        unsafe { CloseHandle(handle) };
+        return Err(ENOTDIR);
+    }
+    if opened_directory && !is_path && (accmode != O_RDONLY || flags & O_TRUNC != 0) {
+        unsafe { CloseHandle(handle) };
+        return Err(EISDIR);
+    }
+
+    if !is_path && !(is_tmpfile || flags & O_CREAT != 0 && open_status != 183) {
+        if let Err(error) = permissions::check(handle, flags) {
+            unsafe { CloseHandle(handle) };
+            return Err(error);
+        }
+    }
+    if !opened_directory && !is_path && (accmode != O_RDONLY || flags & O_TRUNC != 0) {
         let policy = verity::ensure_writable(handle).and_then(|()| {
             if flags & O_TRUNC != 0 {
                 truncate_handle(handle, 0)
@@ -1235,12 +1290,6 @@ pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32>
             unsafe { CloseHandle(handle) };
             return Err(error);
         }
-    }
-
-    if !is_tmpfile && (flags & O_DIRECTORY != 0) && !resolved.is_dir() {
-        // SAFETY: the handle was just opened and is owned here.
-        unsafe { CloseHandle(handle) };
-        return Err(ENOTDIR);
     }
 
     if is_tmpfile || flags & O_CREAT != 0 && open_status != 183 {
@@ -1265,7 +1314,7 @@ pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32>
     }
 
     let mut fd_flags = FdFlags::NONE;
-    let kind = if resolved.is_dir() {
+    let kind = if opened_directory {
         FdKind::Directory
     } else {
         fd_flags = fd_flags.union(FdFlags::OVERLAPPED).union(FdFlags::SEEKABLE);
@@ -1337,6 +1386,22 @@ pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32>
     Ok(fd)
 }
 
+/// Default configuration for roots that do not contain their own files.
+fn synthetic_configuration(path: &str) -> Option<Vec<u8>> {
+    Some(match path {
+        "/etc/resolv.conf" => synthetic_resolv_conf(),
+        "/etc/environment" => synthetic_environment(),
+        "/etc/hosts" => b"127.0.0.1 localhost\n::1 localhost\n".to_vec(),
+        "/etc/passwd" => {
+            b"root:x:0:0:root:/root:/bin/sh\nnobody:x:65534:65534:nobody:/nonexistent:/bin/false\n"
+                .to_vec()
+        }
+        "/etc/group" => b"root:x:0:\nnogroup:x:65534:\n".to_vec(),
+        "/etc/nsswitch.conf" => b"hosts: files dns\n".to_vec(),
+        _ => return None,
+    })
+}
+
 /// Returns the size of an open file in bytes.
 fn file_size(handle: HANDLE) -> Result<u64, i32> {
     verity::authoritative_size(handle)
@@ -1350,6 +1415,9 @@ pub fn lseek(fd: i32, offset: i64, whence: i32) -> Result<u64, i32> {
     crate::ofd::with(fd, || lseek_inner(fd, offset, whence))
 }
 fn lseek_inner(fd: i32, offset: i64, whence: i32) -> Result<u64, i32> {
+    if get(fd)?.flags.contains(FdFlags::PATH_ONLY) {
+        return Err(EBADF);
+    }
     if matches!(
         get(fd)?.kind,
         FdKind::TmpfsFile | FdKind::TmpfsDirectory | FdKind::MessageQueue | FdKind::SysfsFile
@@ -1367,12 +1435,14 @@ fn lseek_inner(fd: i32, offset: i64, whence: i32) -> Result<u64, i32> {
         return Ok(0);
     }
     // Pipes, sockets and consoles have no file position.
-    if !entry.flags.contains(FdFlags::SEEKABLE) {
+    let directory = matches!(entry.kind, FdKind::Directory | FdKind::SyntheticDirectory);
+    if !entry.flags.contains(FdFlags::SEEKABLE) && !directory {
         return Err(ESPIPE);
     }
     let base = match whence {
         SEEK_SET => 0,
         SEEK_CUR => entry.offset,
+        SEEK_END if directory => return Err(EINVAL),
         // A synthetic file has no handle to query for its length.
         SEEK_END if entry.kind == FdKind::Synthetic => crate::synthetic_size(fd)?,
         SEEK_END if entry.kind == FdKind::ProcMounts => return Err(EINVAL),
@@ -1387,6 +1457,9 @@ fn lseek_inner(fd: i32, offset: i64, whence: i32) -> Result<u64, i32> {
     } else {
         base.checked_sub(offset.unsigned_abs()).ok_or(EINVAL)?
     };
+    if target > i64::MAX as u64 {
+        return Err(EINVAL);
+    }
 
     let mut table = table().write().map_err(|_| crate::EIO)?;
     let slot = table.slots.get_mut(fd as usize).ok_or(EBADF)?;
@@ -2102,8 +2175,11 @@ fn native_symlink_target_handle(handle: HANDLE) -> Result<Option<String>, i32> {
 
 /// Read a final link from its opened inode, including native Windows links.
 pub fn read_link_host_path(path: &Path) -> Result<String, i32> {
-    let object = object::Object::open(path, FILE_READ_ATTRIBUTES)?;
-    readlink_handle(object.raw())
+    let object = object::Object::open(path, FILE_READ_ATTRIBUTES | FILE_READ_EA)?;
+    if let Some(target) = inode::read_object(&object)?.symlink {
+        return Ok(target);
+    }
+    native_symlink_target_handle(object.raw())?.ok_or(EINVAL)
 }
 
 /// The empty-path form of Linux readlinkat. O_PATH is valid here. A valid
@@ -2213,11 +2289,15 @@ fn stat_procfs(path: &str, follow_symlinks: bool) -> Result<Stat, i32> {
 /// across calls, which is what callers caching by inode need.
 fn procfs_inode(path: &str) -> u64 {
     let canonical = crate::procfs::canonical_path(path);
-    let path = canonical.as_str();
+    // Descriptor paths include mount/namespace policy and a display target.
+    // Those identify an attachment, not an inode: bind aliases and retained
+    // descriptors must report the same inode within this proc superblock.
+    let logical =
+        crate::procfs::pinned(|| crate::procfs::instance::enter(&canonical).map(|(path, _)| path))
+            .unwrap_or(canonical);
+    let path = logical.as_str();
     // PROC_ROOT_INO is an ABI invariant of the live procfs root.
-    if path.trim_end_matches('/') == "/proc"
-        || crate::procfs::instance::enter(path).is_ok_and(|(p, _)| p == "/proc")
-    {
+    if path.trim_end_matches('/') == "/proc" {
         return 1;
     }
     // FNV-1a: small, deterministic, and adequate for identity here.
@@ -2434,6 +2514,9 @@ fn stat_path_resolved(
 
 /// `stat`: follows symlinks.
 pub fn stat(path: &str) -> Result<Stat, i32> {
+    if path.is_empty() {
+        return Err(ENOENT);
+    }
     let _observation = crate::tmpfs::Observation::enter();
     if let Some(stat) = crate::tmpfs::stat(path, true)? {
         return Ok(stat);
@@ -2446,6 +2529,7 @@ pub fn stat(path: &str) -> Result<Stat, i32> {
     }
     match crate::mount::overlay::stat_resolution(path, true)? {
         Some(crate::mount::overlay::StatResolution::Overlay(stat)) => return Ok(stat),
+        Some(crate::mount::overlay::StatResolution::Virtual) => return confined::stat(path, true),
         Some(crate::mount::overlay::StatResolution::Native(native)) => {
             return stat_path_resolved(path, true, Some(native));
         }
@@ -2454,8 +2538,17 @@ pub fn stat(path: &str) -> Result<Stat, i32> {
     stat_path(path, true)
 }
 
+/// Resolve through retained backend descriptors when a pathname crosses a
+/// virtual parent into a native attachment.
+pub(crate) fn canonical_guest(path: &str, follow: bool) -> Result<String, i32> {
+    confined::canonical_guest(path, follow)
+}
+
 /// `lstat`: reports the symlink itself.
 pub fn lstat(path: &str) -> Result<Stat, i32> {
+    if path.is_empty() {
+        return Err(ENOENT);
+    }
     let _observation = crate::tmpfs::Observation::enter();
     if let Some(stat) = crate::tmpfs::stat(path, false)? {
         return Ok(stat);
@@ -2465,6 +2558,7 @@ pub fn lstat(path: &str) -> Result<Stat, i32> {
     }
     match crate::mount::overlay::stat_resolution(path, false)? {
         Some(crate::mount::overlay::StatResolution::Overlay(stat)) => return Ok(stat),
+        Some(crate::mount::overlay::StatResolution::Virtual) => return confined::stat(path, false),
         Some(crate::mount::overlay::StatResolution::Native(native)) => {
             return stat_path_resolved(path, false, Some(native));
         }
@@ -2973,6 +3067,86 @@ pub(crate) struct NativeIoStatus {
     pub(crate) information: usize,
 }
 
+pub struct VolumeTotals {
+    pub available: u64,
+    pub total: u64,
+    pub free: u64,
+    pub mount_flags: Option<u64>,
+}
+
+/// Query bytes on the pinned file's volume, including after unlink. The mount
+/// policy belongs to the same descriptor snapshot even during close/dup2 races.
+pub fn descriptor_volume_totals(fd: i32) -> Result<VolumeTotals, i32> {
+    use std::os::windows::io::AsRawHandle;
+    #[repr(C)]
+    #[derive(Default)]
+    struct FullSize {
+        total: i64,
+        available: i64,
+        free: i64,
+        sectors_per_unit: u32,
+        bytes_per_sector: u32,
+    }
+    #[link(name = "ntdll")]
+    unsafe extern "system" {
+        fn NtQueryVolumeInformationFile(
+            file: HANDLE,
+            io: *mut NativeIoStatus,
+            buffer: *mut core::ffi::c_void,
+            length: u32,
+            class: u32,
+        ) -> i32;
+        fn RtlNtStatusToDosError(status: i32) -> u32;
+    }
+    let (_, pin) = crate::pin_native_fd(fd, |_| Ok(()))?;
+    let handle = pin.as_raw_handle();
+    let mut size = FullSize::default();
+    let mut io = NativeIoStatus {
+        status: 0x103,
+        information: 0,
+    };
+    let mut status = unsafe {
+        NtQueryVolumeInformationFile(
+            handle,
+            &mut io,
+            (&raw mut size).cast(),
+            std::mem::size_of_val(&size) as u32,
+            7,
+        )
+    };
+    // The pin can share the file object's event with unrelated reads/writes.
+    // Only our own status block establishes completion; keep both buffers and
+    // the pin alive even when a different request signals that event first.
+    while status == 0x103 {
+        unsafe {
+            windows_sys::Win32::System::Threading::WaitForSingleObject(handle, 1);
+            status = ptr::read_volatile(&io.status) as i32;
+        }
+        if status == 0x103 {
+            std::thread::yield_now();
+        }
+    }
+    if status < 0 {
+        return Err(errno_from_win32(unsafe { RtlNtStatusToDosError(status) }));
+    }
+    let unit = u64::from(size.sectors_per_unit) * u64::from(size.bytes_per_sector);
+    if unit == 0 {
+        return Err(EIO);
+    }
+    let bytes = |units: i64| {
+        u64::try_from(units)
+            .ok()
+            .and_then(|units| units.checked_mul(unit))
+            .ok_or(EIO)
+    };
+    Ok(VolumeTotals {
+        available: bytes(size.available)?,
+        total: bytes(size.total)?,
+        free: bytes(size.free)?,
+        mount_flags: pin.native_mount_flags(),
+    })
+}
+
 /// Retire a native file request before its caller releases any kernel buffers.
 /// # Safety
 /// `file` is a private, live SYNCHRONIZE-capable handle with no other pending
@@ -3206,6 +3380,9 @@ mod native_io_tests {
 /// appended to the destination. Include the NUL in both allocation and supplied
 /// buffer size; FileNameLength itself still excludes that terminating WCHAR.
 fn rename_information(target: &[u16], replace: bool) -> Result<(Vec<usize>, u32), i32> {
+    // ntifs.h: replacing a directory entry is independent of the destination
+    // file's DOS readonly bit. Preserve the old inode's mode and open handles.
+    const FILE_RENAME_IGNORE_READONLY_ATTRIBUTE: u32 = 0x40;
     if target.len() < 2 || target.last() != Some(&0) || target[..target.len() - 1].contains(&0) {
         return Err(EINVAL);
     }
@@ -3225,7 +3402,7 @@ fn rename_information(target: &[u16], replace: bool) -> Result<(Vec<usize>, u32)
     unsafe {
         (*info).Anonymous.Flags = FILE_RENAME_FLAG_POSIX_SEMANTICS
             | if replace {
-                FILE_RENAME_FLAG_REPLACE_IF_EXISTS
+                FILE_RENAME_FLAG_REPLACE_IF_EXISTS | FILE_RENAME_IGNORE_READONLY_ATTRIBUTE
             } else {
                 0
             };

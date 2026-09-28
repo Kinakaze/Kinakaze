@@ -554,11 +554,11 @@ fn notice_exited_children() {
     if !REGISTERED.load(Ordering::Relaxed) || !crate::fork_handoff::is_owner() {
         return;
     }
-    match table::reap_dead_children(current_pid()) {
-        Ok(true) => {
-            let _ = signal::raise_signal(SIGCHLD);
-        }
-        Ok(false) => {}
+    match table::reap_dead_children_with(current_pid(), |report| {
+        queued::child(current_pid(), report)
+            .unwrap_or_else(|_| pump_failed("publish child signal"));
+    }) {
+        Ok(_) => {}
         Err(()) => {
             // The shared process table is the only authoritative PID/wait
             // state. Losing it cannot be treated as "no child exited".
@@ -1122,15 +1122,15 @@ fn notify_parent(change: StateChange) {
     };
     // The report is filed against this process's namespace slot; `waitpid`
     // looks it up by the same child pid.
-    match change {
-        StateChange::Stopped(signal) => table::post_stop(pid, signal),
-        _ => table::post_report(pid, change),
-    }
+    let uid = crate::credentials::real_uid();
+    table::post_child_report(pid, change, uid);
     if entry.ppid != 0
         && let Some(parent) = table::lookup(entry.ppid)
     {
         if matches!(change, StateChange::Stopped(_) | StateChange::Continued) {
-            deliver_to(entry.ppid, SIGCHLD);
+            let visible = table::namespaces::visible_from(pid, entry.ppid).unwrap_or(0);
+            queued::child(entry.ppid, table::ChildSignal::new(visible, uid, change))
+                .unwrap_or_else(|_| pump_failed("publish child state change"));
         } else {
             // Wake the observer, but let it establish kernel completion before
             // publishing SIGCHLD. Its pinned process handle wakes at teardown.

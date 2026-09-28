@@ -32,7 +32,14 @@ impl Controller {
         self.next_id = id
             .checked_add(1)
             .ok_or_else(|| failure("RPC id exhausted"))?;
-        write_frame(&mut self.pipe, &WireRequest { id, request })?;
+        write_frame(
+            &mut self.pipe,
+            &WireRequest {
+                id,
+                request,
+                completed: None,
+            },
+        )?;
         let response: WireResponse = read_frame(&mut self.pipe)?;
         if response.id != id {
             return Err(failure("controller RPC response id mismatch"));

@@ -133,12 +133,17 @@ fn identity(marker: HANDLE) -> Result<String, i32> {
         .iter()
         .map(|byte| format!("{byte:02x}"))
         .collect::<String>();
-    Ok(format!("{:016x}-{file}", info.VolumeSerialNumber))
+    Ok(format!(
+        "{:016x}-{:016x}-{file}",
+        kinakaze_runtime::authority::domain_id(),
+        info.VolumeSerialNumber
+    ))
 }
 
 fn name(key: &str, suffix: &str) -> Vec<u16> {
-    // The backing inode can be opened in different Windows sessions (including
-    // session-zero services). Its lock and wakeups must not be session-local.
+    // The key includes the kernel domain as well as the backing inode. Two
+    // independent init sessions may share disk files, never a FIFO byte queue.
+    // Members of one domain can run in different Windows sessions.
     // Global event/mutex objects do not require the named-section privilege;
     // the actual file mapping below is unnamed.
     format!("Global\\kinakaze.fifo.v3.{key}.{suffix}")
@@ -264,7 +269,13 @@ impl Channel {
                 .and_then(|name| name.to_str())
                 .ok_or(EIO)?
                 .to_owned();
-            if key.len() != 49 || !key.chars().all(|c| c.is_ascii_hexdigit() || c == '-') {
+            if key.len() != 66
+                || !key.chars().all(|c| c.is_ascii_hexdigit() || c == '-')
+                || key.as_bytes()[16] != b'-'
+                || key.as_bytes()[33] != b'-'
+                || u64::from_str_radix(&key[..16], 16)
+                    != Ok(kinakaze_runtime::authority::domain_id())
+            {
                 return Err(EIO);
             }
             let channel = Self::attach_directory(directory, key)?;

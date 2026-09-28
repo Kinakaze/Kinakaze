@@ -9,7 +9,7 @@
 
 use crate::EDESTADDRREQ;
 use std::collections::{HashMap, VecDeque};
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex, OnceLock};
 
 use windows_sys::Win32::Foundation::{CloseHandle, HANDLE};
@@ -49,6 +49,7 @@ const MSG_TRUNC: i32 = 0x20;
 const MSG_DONTWAIT: i32 = 0x40;
 
 const SOL_SOCKET: i32 = 1;
+const SO_REUSEADDR: i32 = 2;
 const SO_TYPE: i32 = 3;
 const SO_ERROR: i32 = 4;
 const SO_SNDBUF: i32 = 7;
@@ -217,6 +218,8 @@ struct Datagram {
     source: NetlinkAddress,
 }
 
+mod shared;
+
 struct EndpointState {
     multicast_cursor: u64,
     multicast_overflow: bool,
@@ -226,6 +229,7 @@ struct EndpointState {
     receive_timeout_us: Option<u64>,
     send_timeout_us: Option<u64>,
     pass_credentials: bool,
+    reuse_address: bool,
     packet_info: bool,
     receive_buffer: i32,
     send_buffer: i32,
@@ -238,7 +242,7 @@ struct Endpoint {
     protocol: i32,
     socket_type: i32,
     event: HANDLE,
-    state: Mutex<EndpointState>,
+    state: shared::Shared,
 }
 
 // HANDLE is an opaque kernel-object pointer. Access is synchronized by `state`,
@@ -248,60 +252,71 @@ unsafe impl Sync for Endpoint {}
 
 impl Endpoint {
     fn new(protocol: i32, socket_type: i32) -> Result<Self, i32> {
-        // Manual-reset and initially nonsignalled. It represents queue nonempty.
-        // SAFETY: null security attributes and name request a private event.
-        let event = unsafe { CreateEventW(core::ptr::null(), 1, 0, core::ptr::null()) };
-        if event.is_null() {
-            return Err(EIO);
-        }
         let namespace = crate::usernet::current()?;
+        Self::from_shared(shared::Shared::new(namespace, protocol, socket_type)?)
+    }
+    fn from_shared(state: shared::Shared) -> Result<Self, i32> {
+        let namespace = state.namespace;
+        let namespace_pin = crate::namespaces::pin_network(namespace)?;
+        let name: Vec<u16> = format!(
+            "Local\\kinakaze.netlink-ready.v1.{}.{}",
+            kinakaze_runtime::authority::domain_id(),
+            state.store.id()
+        )
+        .encode_utf16()
+        .chain(Some(0))
+        .collect();
+        let event = state.update(|s| {
+            let event = unsafe {
+                CreateEventW(
+                    core::ptr::null(),
+                    1,
+                    i32::from(!s.queue.is_empty() || s.multicast_overflow),
+                    name.as_ptr(),
+                )
+            };
+            crate::fs::object::Object::owned(event)
+        })?;
         Ok(Self {
             description: std::sync::atomic::AtomicU64::new(0),
             namespace,
-            _namespace_pin: crate::namespaces::pin_network(namespace)?,
-            protocol,
-            socket_type,
-            event,
-            state: Mutex::new(EndpointState {
-                multicast_cursor: 0,
-                multicast_overflow: false,
-                bound: None,
-                peer: None,
-                queue: VecDeque::new(),
-                receive_timeout_us: None,
-                send_timeout_us: None,
-                pass_credentials: false,
-                packet_info: false,
-                receive_buffer: 212_992,
-                send_buffer: 212_992,
-            }),
+            _namespace_pin: namespace_pin,
+            protocol: state.protocol,
+            socket_type: state.socket_type,
+            state,
+            event: event.into_raw(),
         })
     }
 
     fn enqueue(&self, mut datagram: Datagram) -> Result<(), i32> {
-        let mut state = self.state.lock().map_err(|_| EIO)?;
-        if let Some(filter) = crate::socket::filter::for_description(
-            self.description.load(std::sync::atomic::Ordering::Acquire),
-        )? {
-            let Some(length) = filter.run(&crate::socket::filter::LocalPacket(&datagram.bytes), 0)
-            else {
-                return Ok(());
-            };
-            datagram.bytes.truncate(length);
-        }
-        let queued: usize = state.queue.iter().map(|d| d.bytes.len()).sum();
-        if queued.saturating_add(datagram.bytes.len()) > state.receive_buffer as usize {
-            state.multicast_overflow = true;
-            unsafe { SetEvent(self.event) };
-            return Err(crate::ENOBUFS);
-        }
-        state.queue.push_back(datagram);
-        // SAFETY: `event` is live for this Endpoint's lifetime.
-        if unsafe { SetEvent(self.event) } == 0 {
-            state.queue.pop_back();
-            return Err(EIO);
-        }
-        Ok(())
+        self.state.update(|state| {
+            if let Some(filter) = crate::socket::filter::for_description(
+                self.description.load(std::sync::atomic::Ordering::Acquire),
+            )? {
+                let Some(length) =
+                    filter.run(&crate::socket::filter::LocalPacket(&datagram.bytes), 0)
+                else {
+                    return Ok(());
+                };
+                datagram.bytes.truncate(length);
+            }
+            let queued: usize = state.queue.iter().map(|d| d.bytes.len() + 32).sum();
+            if queued.saturating_add(datagram.bytes.len() + 32)
+                > (state.receive_buffer as usize)
+                    .min(kinakaze_v2_protocol::kernel::BANK_SIZE - 4096)
+            {
+                state.multicast_overflow = true;
+                unsafe { SetEvent(self.event) };
+                return Err(crate::ENOBUFS);
+            }
+            state.queue.push_back(datagram);
+            // SAFETY: `event` is live for this Endpoint's lifetime.
+            if unsafe { SetEvent(self.event) } == 0 {
+                state.queue.pop_back();
+                return Err(EIO);
+            }
+            Ok(())
+        })
     }
 }
 
@@ -318,15 +333,28 @@ fn endpoints() -> &'static Mutex<HashMap<i32, Arc<Endpoint>>> {
 }
 
 fn endpoint(fd: i32) -> Result<Arc<Endpoint>, i32> {
-    if crate::get(fd)?.kind != FdKind::NetlinkSocket {
+    let table = crate::table().read().map_err(|_| EIO)?;
+    let entry = table
+        .slots
+        .get(usize::try_from(fd).map_err(|_| crate::EBADF)?)
+        .and_then(|entry| *entry)
+        .ok_or(crate::EBADF)?;
+    if entry.kind != FdKind::NetlinkSocket {
         return Err(crate::ENOTSOCK);
     }
-    endpoints()
-        .lock()
-        .map_err(|_| EIO)?
-        .get(&fd)
-        .cloned()
-        .ok_or(crate::EBADF)
+    let mut local = endpoints().lock().map_err(|_| EIO)?;
+    if let Some(item) = local.get(&fd) {
+        if item.description.load(Ordering::Acquire) == entry.description_id {
+            return Ok(item.clone());
+        }
+    }
+    let item = Arc::new(Endpoint::from_shared(shared::Shared::open(
+        crate::mount::shared::object_entry(entry)?,
+    )?)?);
+    item.description
+        .store(entry.description_id, Ordering::Release);
+    local.insert(fd, item.clone());
+    Ok(item)
 }
 
 pub fn is_netlink_socket(fd: i32) -> bool {
@@ -351,57 +379,17 @@ pub fn socket(socket_type: i32, protocol: i32) -> Result<i32, i32> {
     if socket_type & SOCK_CLOEXEC != 0 {
         flags = flags.union(FdFlags::CLOSE_ON_EXEC);
     }
-    let item = Arc::new(Endpoint::new(protocol, base_type)?);
-    let fd = crate::install_handleless_with(FdKind::NetlinkSocket, flags, |fd| {
-        endpoints()
-            .lock()
-            .map_err(|_| EIO)?
-            .insert(fd, item.clone());
-        Ok(())
-    })?;
-    item.description.store(
-        crate::get(fd)?.description_id,
-        std::sync::atomic::Ordering::Release,
-    );
+    let item = Endpoint::new(protocol, base_type)?;
+    let fd = item
+        .state
+        .store
+        .descriptor_kind(FdKind::NetlinkSocket, flags)?;
     crate::pipe_inode::finish_created(fd)
 }
 
 pub(crate) fn filter_boundary(fd: i32) -> Result<(), i32> {
     let item = endpoint(fd)?;
-    let mut state = item.state.lock().map_err(|_| EIO)?;
-    multicast::refresh(&item, &mut state)
-}
-
-fn allocate_port(state: &HashMap<i32, Arc<Endpoint>>, item: &Endpoint) -> Result<u32, i32> {
-    let process_port = crate::job::process_id();
-    let used = |candidate| -> Result<bool, i32> {
-        for endpoint in state.values() {
-            if endpoint.namespace != item.namespace || endpoint.protocol != item.protocol {
-                continue;
-            }
-            if endpoint
-                .state
-                .lock()
-                .map_err(|_| EIO)?
-                .bound
-                .is_some_and(|address| address.port == candidate)
-            {
-                return Ok(true);
-            }
-        }
-        Ok(false)
-    };
-    if process_port != 0 && !used(process_port)? {
-        return Ok(process_port);
-    }
-    static NEXT_PORT: AtomicU32 = AtomicU32::new(0x8000_0000);
-    for _ in 0..u16::MAX {
-        let candidate = NEXT_PORT.fetch_add(1, Ordering::Relaxed).max(1);
-        if !used(candidate)? {
-            return Ok(candidate);
-        }
-    }
-    Err(ENOBUFS)
+    item.state.update(|state| multicast::refresh(&item, state))
 }
 
 pub unsafe fn bind(fd: i32, address: *const u8, length: i32) -> Result<(), i32> {
@@ -419,38 +407,7 @@ pub unsafe fn bind(fd: i32, address: *const u8, length: i32) -> Result<(), i32> 
     if requested.groups & !allowed_groups != 0 {
         return Err(EOPNOTSUPP);
     }
-    let table = endpoints().lock().map_err(|_| EIO)?;
-    if item.state.lock().map_err(|_| EIO)?.bound.is_some() {
-        return Err(EINVAL);
-    }
-    if requested.port == 0 {
-        requested.port = allocate_port(&table, &item)?;
-    } else {
-        for (other_fd, other) in table.iter() {
-            if *other_fd != fd
-                && other.namespace == item.namespace
-                && other.protocol == item.protocol
-                && other
-                    .state
-                    .lock()
-                    .map_err(|_| EIO)?
-                    .bound
-                    .is_some_and(|bound| bound.port == requested.port)
-            {
-                return Err(EADDRINUSE);
-            }
-        }
-    }
-    let mut state = item.state.lock().map_err(|_| EIO)?;
-    if state.bound.is_some() {
-        return Err(EINVAL);
-    }
-    if requested.groups != 0 && item.protocol == NETLINK_ROUTE {
-        state.multicast_cursor = crate::route_state::snapshot_for(item.namespace)?
-            .notifications
-            .sequence;
-    }
-    state.bound = Some(requested);
+    requested = shared::bind(&item, requested, false)?;
     if trace_enabled() {
         eprintln!(
             "kinakaze netlink: bind fd={fd} port={} groups={:#x}",
@@ -462,7 +419,7 @@ pub unsafe fn bind(fd: i32, address: *const u8, length: i32) -> Result<(), i32> 
 
 pub unsafe fn getsockname(fd: i32, address: *mut u8, length: *mut i32) -> Result<(), i32> {
     let item = endpoint(fd)?;
-    let bound = item.state.lock().map_err(|_| EIO)?.bound;
+    let bound = item.state.read()?.bound.filter(|b| b.port != 0);
     let bound = match bound {
         Some(bound) => bound,
         None => auto_bind(fd, &item)?,
@@ -473,12 +430,7 @@ pub unsafe fn getsockname(fd: i32, address: *mut u8, length: *mut i32) -> Result
 
 pub unsafe fn getpeername(fd: i32, address: *mut u8, length: *mut i32) -> Result<(), i32> {
     let item = endpoint(fd)?;
-    let peer = item
-        .state
-        .lock()
-        .map_err(|_| EIO)?
-        .peer
-        .ok_or(crate::ENOTCONN)?;
+    let peer = item.state.read()?.peer.ok_or(crate::ENOTCONN)?;
     // SAFETY: forwarded from this function's contract.
     unsafe { peer.write(address, length) }
 }
@@ -487,29 +439,20 @@ pub unsafe fn connect(fd: i32, address: *const u8, length: i32) -> Result<(), i3
     // SAFETY: forwarded from this function's contract.
     let peer = unsafe { NetlinkAddress::read(address, length)? };
     let item = endpoint(fd)?;
-    if item.state.lock().map_err(|_| EIO)?.bound.is_none() {
+    if item.state.read()?.bound.is_none_or(|b| b.port == 0) {
         auto_bind(fd, &item)?;
     }
-    item.state.lock().map_err(|_| EIO)?.peer = Some(peer);
-    Ok(())
+    item.state.update(|state| {
+        state.peer = Some(peer);
+        Ok(())
+    })
 }
 
-fn auto_bind(fd: i32, item: &Arc<Endpoint>) -> Result<NetlinkAddress, i32> {
-    if let Some(bound) = item.state.lock().map_err(|_| EIO)?.bound {
+fn auto_bind(_fd: i32, item: &Arc<Endpoint>) -> Result<NetlinkAddress, i32> {
+    if let Some(bound) = item.state.read()?.bound.filter(|b| b.port != 0) {
         return Ok(bound);
     }
-    let table = endpoints().lock().map_err(|_| EIO)?;
-    let bound = NetlinkAddress {
-        port: allocate_port(&table, item)?,
-        groups: 0,
-    };
-    let mut state = item.state.lock().map_err(|_| EIO)?;
-    if let Some(existing) = state.bound {
-        return Ok(existing);
-    }
-    state.bound = Some(bound);
-    let _ = fd;
-    Ok(bound)
+    shared::bind(item, NetlinkAddress::KERNEL, true)
 }
 
 #[derive(Clone, Copy)]
@@ -2330,7 +2273,7 @@ fn handle_route_message(
 fn dispatch(item: &Arc<Endpoint>, request: &[u8]) -> Result<(), i32> {
     let _namespace = crate::usernet::scope(item.namespace);
     let local = {
-        let state = item.state.lock().map_err(|_| EIO)?;
+        let state = item.state.read()?;
         state.bound.ok_or(EDESTADDRREQ)?
     };
     if item.protocol == NETLINK_NETFILTER {
@@ -2414,20 +2357,12 @@ pub unsafe fn sendto(
     }
     let item = endpoint(fd)?;
     // Requests are consumed synchronously; the send budget bounds each datagram.
-    if length
-        > item
-            .state
-            .lock()
-            .map_err(|_| EIO)?
-            .send_buffer
-            .saturating_sub(32) as usize
-    {
+    if length > item.state.read()?.send_buffer.saturating_sub(32) as usize {
         return Err(EMSGSIZE);
     }
     let target = if address.is_null() {
         item.state
-            .lock()
-            .map_err(|_| EIO)?
+            .read()?
             .peer
             .unwrap_or(NetlinkAddress { port: 0, groups: 0 })
     } else {
@@ -2444,7 +2379,7 @@ pub unsafe fn sendto(
     {
         return Err(crate::EPERM);
     }
-    if item.state.lock().map_err(|_| EIO)?.bound.is_none() {
+    if item.state.read()?.bound.is_none_or(|b| b.port == 0) {
         auto_bind(fd, &item)?;
     }
     // SAFETY: the caller guarantees `length` readable bytes when nonzero.
@@ -2455,7 +2390,7 @@ pub unsafe fn sendto(
         unsafe { core::slice::from_raw_parts(buffer, length) }
     };
     if target.groups != 0 {
-        let source = item.state.lock().map_err(|_| EIO)?.bound.ok_or(EIO)?.port;
+        let source = item.state.read()?.bound.ok_or(EIO)?.port;
         crate::route_state::broadcast_link(item.namespace, source, request.to_vec())?;
     }
     dispatch(&item, request)?;
@@ -2518,28 +2453,28 @@ pub unsafe fn recvfrom(
     let nonblocking =
         crate::get(fd)?.flags.contains(FdFlags::NONBLOCK) || flags & MSG_DONTWAIT != 0;
     loop {
-        let mut state = item.state.lock().map_err(|_| EIO)?;
-        multicast::refresh(&item, &mut state)?;
-        if std::mem::take(&mut state.multicast_overflow) {
+        let datagram = item.state.update(|state| {
+            multicast::refresh(&item, state)?;
+            if std::mem::take(&mut state.multicast_overflow) {
+                if state.queue.is_empty() {
+                    unsafe { ResetEvent(item.event) };
+                }
+                return Err(ENOBUFS);
+            }
+            let datagram = if flags & MSG_PEEK != 0 {
+                state.queue.front().map(|d| Datagram {
+                    bytes: d.bytes.clone(),
+                    source: d.source,
+                })
+            } else {
+                state.queue.pop_front()
+            };
             if state.queue.is_empty() {
                 unsafe { ResetEvent(item.event) };
             }
-            return Err(ENOBUFS);
-        }
-        let datagram = if flags & MSG_PEEK != 0 {
-            state.queue.front().map(|datagram| Datagram {
-                bytes: datagram.bytes.clone(),
-                source: datagram.source,
-            })
-        } else {
-            state.queue.pop_front()
-        };
+            Ok(datagram)
+        })?;
         if let Some(datagram) = datagram {
-            if state.queue.is_empty() {
-                // SAFETY: event is live and queue emptiness is serialized here.
-                unsafe { ResetEvent(item.event) };
-            }
-            drop(state);
             if !address.is_null() {
                 // SAFETY: forwarded from this function's contract.
                 unsafe { datagram.source.write(address, address_length)? };
@@ -2563,11 +2498,10 @@ pub unsafe fn recvfrom(
                 Ok(copied)
             };
         }
-        drop(state);
         if nonblocking {
             return Err(EAGAIN);
         }
-        let timeout = item.state.lock().map_err(|_| EIO)?.receive_timeout_us;
+        let timeout = item.state.read()?.receive_timeout_us;
         wait_for_datagram(&item, timeout)?;
     }
 }
@@ -2588,9 +2522,29 @@ pub unsafe fn recv(fd: i32, buffer: *mut u8, length: usize, flags: i32) -> Resul
 
 pub fn poll(fd: i32) -> Result<(bool, bool), i32> {
     let item = endpoint(fd)?;
-    let mut state = item.state.lock().map_err(|_| EIO)?;
-    multicast::refresh(&item, &mut state)?;
-    Ok((!state.queue.is_empty() || state.multicast_overflow, true))
+    poll_endpoint(&item)
+}
+
+pub(crate) fn poll_store(
+    store: crate::mount::shared::Store,
+    description: &crate::mount::shared::Store,
+) -> Result<(bool, bool), i32> {
+    let item = Endpoint::from_shared(shared::Shared::open(store)?)?;
+    item.state.update(|state| {
+        // The waiter need not have a local alias of this socket. Read its
+        // actual shared filter rather than consulting the local OFD cache.
+        let filter = description
+            .read_with(|bytes| crate::socket::filter::State::decode(bytes.get(16..).ok_or(EIO)?))?;
+        multicast::refresh_filtered(&item, state, Some(&filter))?;
+        Ok((!state.queue.is_empty() || state.multicast_overflow, true))
+    })
+}
+
+fn poll_endpoint(item: &Endpoint) -> Result<(bool, bool), i32> {
+    item.state.update(|state| {
+        multicast::refresh(item, state)?;
+        Ok((!state.queue.is_empty() || state.multicast_overflow, true))
+    })
 }
 
 pub unsafe fn setsockopt(
@@ -2610,8 +2564,10 @@ pub unsafe fn setsockopt(
         }
         let setting = unsafe { value.cast::<u32>().read_unaligned() };
         if name == 3 {
-            item.state.lock().map_err(|_| EIO)?.packet_info = setting != 0;
-            return Ok(());
+            return item.state.update(|state| {
+                state.packet_info = setting != 0;
+                Ok(())
+            });
         }
         if setting == 0 || setting > 32 {
             return Err(EINVAL);
@@ -2625,28 +2581,31 @@ pub unsafe fn setsockopt(
         if group & !allowed != 0 {
             return Err(EOPNOTSUPP);
         }
-        let mut state = item.state.lock().map_err(|_| EIO)?;
-        if name == 1 && item.protocol == NETLINK_ROUTE && state.bound.is_none_or(|b| b.groups == 0)
-        {
-            state.multicast_cursor = crate::route_state::snapshot_for(item.namespace)?
-                .notifications
-                .sequence;
-        }
-        let bound = state
-            .bound
-            .get_or_insert(NetlinkAddress { port: 0, groups: 0 });
-        if name == 1 {
-            bound.groups |= group;
-        } else {
-            bound.groups &= !group;
-        }
-        return Ok(());
+        return item.state.update(|state| {
+            if name == 1
+                && item.protocol == NETLINK_ROUTE
+                && state.bound.is_none_or(|b| b.groups == 0)
+            {
+                state.multicast_cursor = crate::route_state::snapshot_for(item.namespace)?
+                    .notifications
+                    .sequence;
+            }
+            let bound = state
+                .bound
+                .get_or_insert(NetlinkAddress { port: 0, groups: 0 });
+            if name == 1 {
+                bound.groups |= group;
+            } else {
+                bound.groups &= !group;
+            }
+            Ok(())
+        });
     }
     if trace_enabled() {
         eprintln!("kinakaze netlink: setsockopt fd={fd} level={level} name={name}");
     }
     if level == SOL_SOCKET
-        && (matches!(name, SO_SNDBUF | SO_RCVBUF)
+        && (matches!(name, SO_SNDBUF | SO_RCVBUF | SO_REUSEADDR)
             || name == SO_PASSCRED && item.protocol == NETLINK_KOBJECT_UEVENT)
     {
         if value.is_null() {
@@ -2656,16 +2615,21 @@ pub unsafe fn setsockopt(
             return Err(EINVAL);
         }
         let setting = unsafe { value.cast::<i32>().read_unaligned() };
-        let mut state = item.state.lock().map_err(|_| EIO)?;
-        if name == SO_PASSCRED {
-            state.pass_credentials = setting != 0;
-        } else if name == SO_RCVBUF {
-            // Linux reports twice the requested size for bookkeeping overhead.
-            state.receive_buffer = setting.clamp(128, 16 * 1024 * 1024) * 2;
-        } else {
-            state.send_buffer = setting.clamp(2304, 16 * 1024 * 1024) * 2;
-        }
-        return Ok(());
+        return item.state.update(|state| {
+            if name == SO_PASSCRED {
+                state.pass_credentials = setting != 0;
+            } else if name == SO_REUSEADDR {
+                // This generic socket setting is observable but does not
+                // relax netlink's unique port-ID rule.
+                state.reuse_address = setting != 0;
+            } else if name == SO_RCVBUF {
+                // Linux reports twice the requested size for bookkeeping overhead.
+                state.receive_buffer = setting.clamp(128, 16 * 1024 * 1024) * 2;
+            } else {
+                state.send_buffer = setting.clamp(2304, 16 * 1024 * 1024) * 2;
+            }
+            Ok(())
+        });
     }
     if level != SOL_SOCKET || !matches!(name, SO_RCVTIMEO | SO_SNDTIMEO) {
         return Err(ENOPROTOOPT);
@@ -2687,13 +2651,14 @@ pub unsafe fn setsockopt(
         .and_then(|value| value.checked_add(microseconds as u64))
         .ok_or(EDOM)?;
     let timeout = (total != 0).then_some(total);
-    let mut state = item.state.lock().map_err(|_| EIO)?;
-    if name == SO_RCVTIMEO {
-        state.receive_timeout_us = timeout;
-    } else {
-        state.send_timeout_us = timeout;
-    }
-    Ok(())
+    item.state.update(|state| {
+        if name == SO_RCVTIMEO {
+            state.receive_timeout_us = timeout;
+        } else {
+            state.send_timeout_us = timeout;
+        }
+        Ok(())
+    })
 }
 
 pub unsafe fn getsockopt(
@@ -2712,7 +2677,7 @@ pub unsafe fn getsockopt(
         if capacity < 0 {
             return Err(EINVAL);
         }
-        let state = item.state.lock().map_err(|_| EIO)?;
+        let state = item.state.read()?;
         let value_bytes = if name == 3 {
             u32::from(state.packet_info)
         } else {
@@ -2746,11 +2711,12 @@ pub unsafe fn getsockopt(
         SO_TYPE => Some(item.socket_type),
         SO_ERROR => Some(0),
         SO_PROTOCOL => Some(item.protocol),
-        SO_PASSCRED if item.protocol == NETLINK_KOBJECT_UEVENT => Some(i32::from(
-            item.state.lock().map_err(|_| EIO)?.pass_credentials,
-        )),
-        SO_RCVBUF => Some(item.state.lock().map_err(|_| EIO)?.receive_buffer),
-        SO_SNDBUF => Some(item.state.lock().map_err(|_| EIO)?.send_buffer),
+        SO_REUSEADDR => Some(i32::from(item.state.read()?.reuse_address)),
+        SO_PASSCRED if item.protocol == NETLINK_KOBJECT_UEVENT => {
+            Some(i32::from(item.state.read()?.pass_credentials))
+        }
+        SO_RCVBUF => Some(item.state.read()?.receive_buffer),
+        SO_SNDBUF => Some(item.state.read()?.send_buffer),
         _ => None,
     };
     if let Some(scalar) = scalar {
@@ -2769,7 +2735,7 @@ pub unsafe fn getsockopt(
     if unsafe { *length } < 16 {
         return Err(EINVAL);
     }
-    let state = item.state.lock().map_err(|_| EIO)?;
+    let state = item.state.read()?;
     let total = if name == SO_RCVTIMEO {
         state.receive_timeout_us
     } else {
@@ -2794,7 +2760,7 @@ pub fn shutdown(fd: i32, _how: i32) -> Result<(), i32> {
     Err(EOPNOTSUPP)
 }
 pub fn packet_info(fd: i32) -> Result<bool, i32> {
-    Ok(endpoint(fd)?.state.lock().map_err(|_| EIO)?.packet_info)
+    Ok(endpoint(fd)?.state.read()?.packet_info)
 }
 
 pub fn close(fd: i32) {
@@ -2817,180 +2783,62 @@ pub fn duplicate(oldfd: i32, newfd: i32) -> Result<(), i32> {
     Ok(())
 }
 
-pub fn serialize_matching(mut keep: impl FnMut(i32) -> bool) -> Result<Vec<u8>, i32> {
-    let table = endpoints().lock().map_err(|_| EIO)?;
-    let mut payload = Vec::new();
-    payload.extend_from_slice(&0u32.to_le_bytes());
-    let mut count = 0u32;
-    for (fd, item) in table.iter() {
-        if !keep(*fd) {
-            continue;
-        }
-        let state = item.state.lock().map_err(|_| EIO)?;
-        let bound = state.bound.unwrap_or(NetlinkAddress { port: 0, groups: 0 });
-        let peer = state.peer.unwrap_or(NetlinkAddress {
-            port: u32::MAX,
-            groups: 0,
-        });
-        payload.extend_from_slice(&fd.to_le_bytes());
-        payload.extend_from_slice(&item.protocol.to_le_bytes());
-        payload.extend_from_slice(&item.socket_type.to_le_bytes());
-        payload.extend_from_slice(&bound.port.to_le_bytes());
-        payload.extend_from_slice(&bound.groups.to_le_bytes());
-        payload.extend_from_slice(&peer.port.to_le_bytes());
-        payload.extend_from_slice(&peer.groups.to_le_bytes());
-        payload.extend_from_slice(&state.receive_timeout_us.unwrap_or(0).to_le_bytes());
-        payload.extend_from_slice(&state.send_timeout_us.unwrap_or(0).to_le_bytes());
-        payload.extend_from_slice(&(state.queue.len() as u32).to_le_bytes());
-        payload.extend_from_slice(&item.namespace.to_le_bytes());
-        payload.extend_from_slice(&state.multicast_cursor.to_le_bytes());
-        payload.extend_from_slice(&u32::from(state.multicast_overflow).to_le_bytes());
-        payload.extend_from_slice(
-            &(u32::from(state.pass_credentials) | u32::from(state.packet_info) << 1).to_le_bytes(),
-        );
-        payload.extend_from_slice(&state.receive_buffer.to_le_bytes());
-        payload.extend_from_slice(&state.send_buffer.to_le_bytes());
-        for datagram in &state.queue {
-            payload.extend_from_slice(&datagram.source.port.to_le_bytes());
-            payload.extend_from_slice(&datagram.source.groups.to_le_bytes());
-            let length = u32::try_from(datagram.bytes.len()).map_err(|_| EMSGSIZE)?;
-            payload.extend_from_slice(&length.to_le_bytes());
-            payload.extend_from_slice(&datagram.bytes);
-            while !payload.len().is_multiple_of(4) {
-                payload.push(0);
-            }
-        }
-        count += 1;
-    }
-    payload[..4].copy_from_slice(&count.to_le_bytes());
-    Ok(payload)
-}
-
-pub fn restore(payload: &[u8]) -> bool {
-    let Some(count_bytes) = payload.get(..4) else {
-        return false;
-    };
-    let count = u32::from_le_bytes(match count_bytes.try_into() {
-        Ok(bytes) => bytes,
-        Err(_) => return false,
-    }) as usize;
-    let mut cursor = 4usize;
-    let mut restored = HashMap::new();
-    for _ in 0..count {
-        let Some(header) = payload.get(cursor..cursor + 80) else {
-            return false;
-        };
-        let read_i32 = |at| i32::from_le_bytes(header[at..at + 4].try_into().unwrap());
-        let read_u32 = |at| u32::from_le_bytes(header[at..at + 4].try_into().unwrap());
-        let fd = read_i32(0);
-        let protocol = read_i32(4);
-        let socket_type = read_i32(8);
-        let bound_port = read_u32(12);
-        let bound_groups = read_u32(16);
-        let peer_port = read_u32(20);
-        let peer_groups = read_u32(24);
-        let receive_timeout_us = u64::from_le_bytes(header[28..36].try_into().unwrap());
-        let send_timeout_us = u64::from_le_bytes(header[36..44].try_into().unwrap());
-        let queued = read_u32(44) as usize;
-        let namespace = u64::from_le_bytes(header[48..56].try_into().unwrap());
-        let multicast_cursor = u64::from_le_bytes(header[56..64].try_into().unwrap());
-        let multicast_overflow = read_u32(64) != 0;
-        let pass_credentials = read_u32(68) & 1 != 0;
-        let packet_info = read_u32(68) & 2 != 0;
-        let receive_buffer = read_i32(72);
-        let send_buffer = read_i32(76);
-        cursor += 80;
-        if restored.contains_key(&fd)
-            || !(256..=32 * 1024 * 1024).contains(&receive_buffer)
-            || !(4608..=32 * 1024 * 1024).contains(&send_buffer)
-            || crate::get(fd).is_err()
-            || crate::get(fd).is_ok_and(|entry| entry.kind != FdKind::NetlinkSocket)
-            || !matches!(
-                protocol,
-                NETLINK_ROUTE | NETLINK_NETFILTER | NETLINK_XFRM | NETLINK_KOBJECT_UEVENT
-            )
-            || !matches!(socket_type, SOCK_RAW | SOCK_DGRAM)
-        {
-            return false;
-        }
-        let mut queue = VecDeque::new();
-        for _ in 0..queued {
-            let Some(datagram_header) = payload.get(cursor..cursor + 12) else {
-                return false;
-            };
-            let source_port = u32::from_le_bytes(datagram_header[0..4].try_into().unwrap());
-            let source_groups = u32::from_le_bytes(datagram_header[4..8].try_into().unwrap());
-            let length = u32::from_le_bytes(datagram_header[8..12].try_into().unwrap()) as usize;
-            cursor += 12;
-            let Some(bytes) = payload.get(cursor..cursor.checked_add(length).unwrap_or(usize::MAX))
-            else {
-                return false;
-            };
-            queue.push_back(Datagram {
-                bytes: bytes.to_vec(),
-                source: NetlinkAddress {
-                    port: source_port,
-                    groups: source_groups,
-                },
-            });
-            cursor = match cursor
-                .checked_add(length)
-                .and_then(|value| value.checked_next_multiple_of(4))
-            {
-                Some(cursor) => cursor,
-                None => return false,
-            };
-        }
-        let _namespace = crate::usernet::scope(namespace);
-        let Ok(item) = Endpoint::new(protocol, socket_type) else {
-            return false;
-        };
-        let item = Arc::new(item);
-        {
-            let Ok(mut state) = item.state.lock() else {
-                return false;
-            };
-            state.bound = (bound_port != 0 || bound_groups != 0).then_some(NetlinkAddress {
-                port: bound_port,
-                groups: bound_groups,
-            });
-            state.peer = (peer_port != u32::MAX).then_some(NetlinkAddress {
-                port: peer_port,
-                groups: peer_groups,
-            });
-            state.receive_timeout_us = (receive_timeout_us != 0).then_some(receive_timeout_us);
-            state.multicast_cursor = multicast_cursor;
-            state.multicast_overflow = multicast_overflow;
-            state.send_timeout_us = (send_timeout_us != 0).then_some(send_timeout_us);
-            state.pass_credentials = pass_credentials;
-            state.packet_info = packet_info;
-            state.receive_buffer = receive_buffer;
-            state.send_buffer = send_buffer;
-            state.queue = queue;
-            if !state.queue.is_empty() && unsafe { SetEvent(item.event) } == 0 {
-                return false;
-            }
-        }
-        let Ok(entry) = crate::get(fd) else {
-            return false;
-        };
-        item.description
-            .store(entry.description_id, std::sync::atomic::Ordering::Release);
-        restored.insert(fd, item);
-    }
-    if cursor != payload.len() {
-        return false;
-    }
-    let Ok(mut table) = endpoints().lock() else {
-        return false;
-    };
-    *table = restored;
-    true
-}
-
 #[cfg(all(test, windows))]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reuse_address_is_shared_without_allowing_duplicate_netlink_ports() {
+        let fd = socket(SOCK_RAW | SOCK_NONBLOCK, NETLINK_KOBJECT_UEVENT).unwrap();
+        let alias = crate::duplicate_descriptor(fd, crate::DuplicateTarget::Lowest, false).unwrap();
+        let enabled = 1i32;
+        unsafe {
+            setsockopt(
+                fd,
+                SOL_SOCKET,
+                SO_REUSEADDR,
+                (&enabled as *const i32).cast(),
+                4,
+            )
+        }
+        .unwrap();
+        let mut actual = 0i32;
+        let mut length = 4;
+        unsafe {
+            getsockopt(
+                alias,
+                SOL_SOCKET,
+                SO_REUSEADDR,
+                (&mut actual as *mut i32).cast(),
+                &mut length,
+            )
+        }
+        .unwrap();
+        assert_eq!(actual, 1);
+        let address = sockaddr(0);
+        unsafe { bind(fd, address.as_ptr(), address.len() as i32) }.unwrap();
+        let bound = endpoint(fd).unwrap().state.read().unwrap().bound.unwrap();
+        let duplicate = socket(SOCK_RAW | SOCK_NONBLOCK, NETLINK_KOBJECT_UEVENT).unwrap();
+        unsafe {
+            setsockopt(
+                duplicate,
+                SOL_SOCKET,
+                SO_REUSEADDR,
+                (&enabled as *const i32).cast(),
+                4,
+            )
+        }
+        .unwrap();
+        let address = sockaddr(bound.port);
+        assert_eq!(
+            unsafe { bind(duplicate, address.as_ptr(), address.len() as i32) },
+            Err(EADDRINUSE)
+        );
+        crate::close(fd).unwrap();
+        assert!(endpoint(alias).unwrap().state.read().unwrap().reuse_address);
+        crate::close(alias).unwrap();
+        crate::close(duplicate).unwrap();
+    }
 
     #[test]
     fn nft_cache_dumps_preserve_all_families_and_empty_object_collections() {
@@ -3084,8 +2932,10 @@ mod tests {
             }
             .unwrap();
             let queued = endpoint(fd).unwrap();
-            let mut state = queued.state.lock().unwrap();
-            let replies: Vec<_> = state.queue.drain(..).collect();
+            let replies: Vec<_> = queued
+                .state
+                .update(|state| Ok(state.queue.drain(..).collect()))
+                .unwrap();
             assert!(!replies.is_empty());
             for reply in replies {
                 assert_ne!(parse_header(&reply.bytes).unwrap().kind, NLMSG_ERROR);
@@ -3153,7 +3003,7 @@ mod tests {
         let fd = socket(SOCK_RAW | SOCK_NONBLOCK, NETLINK_ROUTE).unwrap();
         let address = sockaddr(0);
         unsafe { bind(fd, address.as_ptr(), address.len() as i32) }.unwrap();
-        let local = endpoint(fd).unwrap().state.lock().unwrap().bound.unwrap();
+        let local = endpoint(fd).unwrap().state.read().unwrap().bound.unwrap();
         let mut request = Vec::new();
         append_header(&mut request, 0x7777, NLM_F_REQUEST, 41, 0, IFINFO_MSG_LEN).unwrap();
         request.resize(NLMSG_HEADER_LEN + IFINFO_MSG_LEN, 0);
@@ -3169,7 +3019,7 @@ mod tests {
         }
         .unwrap();
         let queued = endpoint(fd).unwrap();
-        let state = queued.state.lock().unwrap();
+        let state = queued.state.read().unwrap();
         let response = state.queue.front().unwrap();
         let header = parse_header(&response.bytes).unwrap();
         assert_eq!(header.kind, NLMSG_ERROR);

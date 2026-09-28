@@ -56,8 +56,7 @@ use std::sync::{Mutex, OnceLock};
 
 use kinakaze_vfs::fs::{self, SEEK_CUR, SEEK_END, SEEK_SET};
 use kinakaze_vfs::{
-    EBADF, EFAULT, EINVAL, EIO, ENOMEM, ENOSYS, EPERM, ESPIPE, FdEntry, FdFlags, FdKind,
-    errno_from_win32,
+    EBADF, EFAULT, EINVAL, EIO, ENOMEM, EPERM, ESPIPE, FdEntry, FdFlags, FdKind, errno_from_win32,
 };
 use windows_sys::Win32::Networking::WinSock::{
     POLLERR as WSA_POLLERR, POLLHUP as WSA_POLLHUP, POLLIN as WSA_POLLIN, POLLNVAL as WSA_POLLNVAL,
@@ -70,6 +69,7 @@ use crate::stdio::File;
 mod file_origin;
 pub(crate) mod program_break;
 mod temporary;
+mod tmpfs_mapping;
 pub(crate) mod verity;
 pub use verity::kinakaze_abi_mapping_fault_signal;
 
@@ -594,146 +594,16 @@ fn memory_geometry() -> (usize, usize) {
     })
 }
 
-// ---------------------------------------------------------------------------
-// Descriptor duplication.
-//
-// A duplicate is a second handle from `DuplicateHandle` installed as a second
-// table entry. It is deliberately not the same handle stored twice: closing
-// either descriptor calls `CloseHandle`, and a shared raw value would leave the
-// survivor pointing at a closed object.
-//
-// The consequence is a real divergence. POSIX duplicates *share* a file offset,
-// so a write through one advances the other. Here each entry carries its own
-// `offset`, and Windows overlapped handles have no kernel file pointer to share,
-// so the positions move independently. The shell idiom this matters for —
-// `exec 3>&1` and appending through both — writes at the end of file either way
-// because `O_APPEND` is honoured by the kernel, so the common cases agree; two
-// descriptors walking one file with plain writes do not.
-// ---------------------------------------------------------------------------
-
-/// Duplicates a descriptor's handle, ready to install as a second entry.
-fn duplicate_handle(entry: FdEntry) -> Result<*mut c_void, i32> {
-    let mut copy: *mut c_void = ptr::null_mut();
-    // SAFETY: the source handle is live while it is in the table, the target is
-    // a writable local, and the pseudo-handle for this process is always valid.
-    let ok = unsafe {
-        DuplicateHandle(
-            GetCurrentProcess(),
-            entry.raw as *mut c_void,
-            GetCurrentProcess(),
-            &raw mut copy,
-            0,
-            // Inheritability is set from the descriptor's own flags after the
-            // install, so it is not decided here.
-            0,
-            // The duplicate must be as capable as the original; asking for
-            // specific rights would silently drop write access on an O_RDWR fd.
-            DUPLICATE_SAME_ACCESS,
-        )
-    };
-    if ok == 0 {
-        return Err(last_errno());
-    }
-    Ok(copy)
-}
-
-/// Shared body of `dup`, `dup2` and `F_DUPFD`.
-///
-/// `placement` decides which descriptor number the copy lands on. The offset is
-/// carried over so a duplicate starts where the original is, which is what a
-/// caller reading through the copy expects even though the two positions then
-/// move independently.
+// Descriptor and side-table publication, source pinning, and retirement are
+// one VFS operation shared by dup, dup2, dup3 and F_DUPFD.
 fn duplicate(oldfd: c_int, cloexec: bool, placement: Placement) -> Result<c_int, i32> {
-    let entry = kinakaze_vfs::get(oldfd)?;
-    let handleless_device = matches!(
-        entry.kind,
-        FdKind::Synthetic
-            | FdKind::SyntheticDirectory
-            | FdKind::Null
-            | FdKind::Zero
-            | FdKind::Random
-            | FdKind::Full
-            | FdKind::CgroupFile
-            | FdKind::NetlinkSocket
-            | FdKind::BpfProgram
-            | FdKind::ProcSysctl
-    );
-    if entry.raw == 0 && !handleless_device {
-        // A Unix socket before bind or connect has no handle yet. Duplicating it
-        // would produce an entry the Unix layer has no state for.
-        return Err(ENOSYS);
-    }
-
-    let handle = if handleless_device {
-        ptr::null_mut()
-    } else {
-        duplicate_handle(entry)?
+    use kinakaze_vfs::DuplicateTarget;
+    let target = match placement {
+        Placement::Lowest => DuplicateTarget::Lowest,
+        Placement::AtLeast(floor) => DuplicateTarget::AtLeast(floor),
+        Placement::Exactly(fd) => DuplicateTarget::Exactly(fd),
     };
-    // The copy keeps the original's kind and flags, except FD_CLOEXEC, which
-    // POSIX says a duplicate never inherits and `F_DUPFD_CLOEXEC` sets.
-    let mut flags = FdFlags(entry.flags.0 & !FdFlags::CLOSE_ON_EXEC.0);
-    // A borrowed original owns nothing, but this handle is a fresh one that the
-    // table must close, so the copy is never borrowed.
-    flags = FdFlags(flags.0 & !FdFlags::BORROWED.0);
-    if cloexec {
-        flags = flags.union(FdFlags::CLOSE_ON_EXEC);
-    }
-
-    let installed = match placement {
-        // POSIX only promises the lowest free descriptor, which is what the
-        // table's own installer already does.
-        Placement::Lowest => {
-            kinakaze_vfs::install_duplicate(handle as usize, entry.kind, flags, entry)
-        }
-        Placement::AtLeast(floor) => kinakaze_vfs::install_duplicate_at_least(
-            handle as usize,
-            entry.kind,
-            flags,
-            floor,
-            entry,
-        ),
-        Placement::Exactly(target) => {
-            kinakaze_vfs::install_duplicate_exact(handle as usize, entry.kind, flags, target, entry)
-        }
-    };
-    let fd = installed.inspect_err(|_| {
-        // SAFETY: installation failed, so this function still owns the copy.
-        if !handle.is_null() {
-            unsafe { CloseHandle(handle) };
-        }
-    })?;
-
-    if matches!(
-        entry.kind,
-        FdKind::Synthetic | FdKind::SyntheticDirectory | FdKind::CgroupFile | FdKind::ProcSysctl
-    ) && let Err(error) = kinakaze_vfs::duplicate_synthetic_description(oldfd, fd)
-    {
-        let _ = kinakaze_vfs::close(fd);
-        return Err(error);
-    }
-
-    if entry.kind == FdKind::UnixSocket
-        && let Err(error) = kinakaze_vfs::unix::duplicate(oldfd, fd, handle as usize)
-    {
-        // The main table owns the duplicated handle now. Closing through it
-        // rolls back both the descriptor and the handle without a double close.
-        let _ = kinakaze_vfs::close(fd);
-        return Err(error);
-    }
-    if entry.kind == FdKind::NetlinkSocket
-        && let Err(error) = kinakaze_vfs::netlink::duplicate(oldfd, fd)
-    {
-        let _ = kinakaze_vfs::close(fd);
-        return Err(error);
-    }
-    if entry.kind == FdKind::BpfProgram
-        && let Err(error) = kinakaze_vfs::bpf::duplicate(oldfd, fd)
-    {
-        let _ = kinakaze_vfs::close(fd);
-        return Err(error);
-    }
-
-    Ok(fd)
+    kinakaze_vfs::duplicate_descriptor(oldfd, target, cloexec)
 }
 
 /// Where a duplicate should land in the descriptor table.
@@ -771,35 +641,6 @@ pub extern "sysv64" fn kinakaze_abi_dup2(oldfd: c_int, newfd: c_int) -> c_int {
             kinakaze_vfs::get(oldfd).map(|entry| (entry.raw, entry.kind as u8, entry.flags.0))
         );
     }
-    let limit = match kinakaze_vfs::job::current_nofile_limit() {
-        Ok(limit) => limit,
-        Err(error) => {
-            set_errno(error);
-            return -1;
-        }
-    };
-    if newfd < 0 || newfd as usize >= limit {
-        set_errno(EBADF);
-        return -1;
-    }
-    // The no-op case, which still has to validate `oldfd`.
-    if oldfd == newfd {
-        return match kinakaze_vfs::get(oldfd) {
-            Ok(_) => newfd,
-            Err(error) => {
-                set_errno(error);
-                -1
-            }
-        };
-    }
-    // `oldfd` is checked before the target is closed, so a bad source cannot
-    // destroy a good destination.
-    if let Err(error) = kinakaze_vfs::get(oldfd) {
-        set_errno(error);
-        return -1;
-    }
-    // Closing an already-closed descriptor is not an error here.
-    let _ = kinakaze_vfs::close(newfd);
     let result = posix_value(duplicate(oldfd, false, Placement::Exactly(newfd)));
     if tracing {
         eprintln!(
@@ -1867,6 +1708,10 @@ fn poll_wait(entries: &mut [PollFd], timeout_ms: c_int) -> Result<c_int, i32> {
         if ready > 0 {
             return Ok(ready as c_int);
         }
+        kinakaze_vfs::job::drain_external();
+        if kinakaze_vfs::signal::interrupt_pending() {
+            return Err(kinakaze_vfs::EINTR);
+        }
         // Nothing is ready. A zero timeout returns immediately, as does an
         // expired deadline.
         if timeout_ms == 0 {
@@ -1900,7 +1745,7 @@ fn poll_wait(entries: &mut [PollFd], timeout_ms: c_int) -> Result<c_int, i32> {
                 }
             }
             None => {
-                let wait = bounded.unwrap_or(POLL_INTERVAL_MS).min(POLL_INTERVAL_MS);
+                let wait = bounded.unwrap_or(u32::MAX);
                 // Descriptors with a real waitable object are slept on rather
                 // than re-examined, so a keystroke or a byte written to a pty
                 // wakes this immediately instead of on the next sweep.
@@ -1937,17 +1782,31 @@ fn poll_wait(entries: &mut [PollFd], timeout_ms: c_int) -> Result<c_int, i32> {
                         _ => {}
                     }
                 }
-                if waitable.is_empty() {
-                    std::thread::sleep(std::time::Duration::from_millis(u64::from(wait)));
-                } else {
-                    // SAFETY: every handle is live for the duration of the wait.
-                    unsafe {
-                        kinakaze_vfs::deadline_wait::any(&waitable, wait);
-                    }
+                let interrupt = kinakaze_vfs::interrupt::current();
+                if interrupt.is_null() {
+                    return Err(kinakaze_vfs::EIO);
                 }
-                if kinakaze_vfs::signal::deliver_pending()
-                    == kinakaze_vfs::signal::Delivery::Interrupted
-                {
+                // Local descriptors are rescanned on the bounded interval;
+                // reserve one native wait slot for prompt signal delivery.
+                waitable.truncate(63);
+                waitable.push(interrupt);
+                kinakaze_vfs::signal::register_waiter();
+                let pending = kinakaze_vfs::signal::interrupt_pending();
+                let result = if pending {
+                    windows_sys::Win32::Foundation::WAIT_OBJECT_0
+                } else {
+                    // SAFETY: all handles, including this thread's interrupt
+                    // event, remain live throughout the registered wait.
+                    unsafe { kinakaze_vfs::deadline_wait::any(&waitable, wait) }
+                };
+                kinakaze_vfs::signal::unregister_waiter();
+                if result == windows_sys::Win32::Foundation::WAIT_FAILED {
+                    return Err(kinakaze_vfs::EIO);
+                }
+                // Like epoll, poll/pselect/ppoll return EINTR even when the
+                // handler has SA_RESTART. The ABI wrapper delivers it after
+                // operation-local handles have been released.
+                if pending || kinakaze_vfs::signal::interrupt_pending() {
                     return Err(kinakaze_vfs::EINTR);
                 }
             }
@@ -2234,6 +2093,9 @@ struct SectionBacking {
     maximum_protection: u32,
     /// Anonymous shared-object identity, unchanged when its handle is duplicated.
     futex_identity: [u64; 3],
+    /// Tmpfs mapping lease and volume metadata, retained across fd close/fork.
+    pins: [AtomicUsize; 2],
+    registered_pins: AtomicUsize,
 }
 
 struct BackingRef(*mut SectionBacking);
@@ -2261,6 +2123,8 @@ impl BackingRef {
                 retained_shared: AtomicUsize::new(0),
                 maximum_protection: 0,
                 futex_identity: [0; 3],
+                pins: std::array::from_fn(|_| AtomicUsize::new(0)),
+                registered_pins: AtomicUsize::new(0),
             });
         }
         Ok(Self(raw))
@@ -2425,6 +2289,21 @@ impl Drop for BackingRef {
         if unsafe { (*self.0).references.fetch_sub(1, Ordering::AcqRel) } != 1 {
             return;
         }
+        for index in 0..2 {
+            if unsafe { (*self.0).registered_pins.load(Ordering::Acquire) } & (1 << index) != 0 {
+                if !kinakaze_runtime::unregister_fork_handle_slot(unsafe {
+                    ptr::addr_of!((*self.0).pins[index])
+                }) {
+                    unsafe { (*self.0).references.store(1, Ordering::Release) };
+                    return;
+                }
+                unsafe {
+                    (*self.0)
+                        .registered_pins
+                        .fetch_and(!(1 << index), Ordering::Release)
+                };
+            }
+        }
         if self.is_retained()
             && !kinakaze_runtime::unregister_fork_handle_slot(
                 self.handle_slot() as *const AtomicUsize
@@ -2436,6 +2315,12 @@ impl Drop for BackingRef {
         let handle = unsafe { (*self.0).handle.swap(0, Ordering::AcqRel) } as *mut c_void;
         if !handle.is_null() {
             unsafe { CloseHandle(handle) };
+        }
+        for pin in unsafe { &(*self.0).pins } {
+            let handle = pin.swap(0, Ordering::AcqRel) as *mut c_void;
+            if !handle.is_null() {
+                unsafe { CloseHandle(handle) };
+            }
         }
         // SAFETY: the final reference uniquely owns the managed allocation.
         unsafe {
@@ -3598,11 +3483,11 @@ pub unsafe extern "sysv64" fn kinakaze_abi_dup3(oldfd: c_int, newfd: c_int, flag
         set_errno(EINVAL);
         return -1;
     }
-    let result = crate::fdio::kinakaze_abi_dup2(oldfd, newfd);
-    if result >= 0 && flags & O_CLOEXEC != 0 {
-        let _ = kinakaze_vfs::set_close_on_exec(newfd, true);
-    }
-    result
+    posix_value(duplicate(
+        oldfd,
+        flags & O_CLOEXEC != 0,
+        Placement::Exactly(newfd),
+    ))
 }
 
 #[unsafe(no_mangle)]
@@ -5252,6 +5137,9 @@ fn map_file(
     offset: u64,
     granularity: usize,
 ) -> Result<*mut c_void, i32> {
+    if kinakaze_vfs::get(fd)?.kind == kinakaze_vfs::FdKind::TmpfsFile {
+        return tmpfs_mapping::map(address, length, protection, shared, fixed, fd, offset);
+    }
     let opened = fs::verity::Opened::from_fd(fd).map_err(|error| {
         if error == kinakaze_vfs::ENOTTY {
             ENODEV

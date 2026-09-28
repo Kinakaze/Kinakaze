@@ -332,6 +332,86 @@ pub(super) struct Layout {
     pub frozen: bool,
 }
 
+impl Layout {
+    fn reserve(
+        &mut self,
+        module_id: usize,
+        size: usize,
+        align: usize,
+    ) -> Result<usize, super::TlsError> {
+        if align == 0 || !align.is_power_of_two() {
+            return Err(super::TlsError::InvalidAlignment);
+        }
+        if let Some(existing) = self
+            .modules
+            .iter()
+            .find(|module| module.module_id == module_id)
+        {
+            return Ok(existing.offset);
+        }
+        if self.frozen {
+            return Err(super::TlsError::LayoutFrozen);
+        }
+        let raw = self
+            .total
+            .checked_add(size)
+            .ok_or(super::TlsError::OffsetOutOfRange)?;
+        let offset = round_up(raw, align).ok_or(super::TlsError::OffsetOutOfRange)?;
+        self.total = offset;
+        self.modules.push(StaticModule {
+            module_id,
+            offset,
+            size,
+        });
+        Ok(offset)
+    }
+
+    fn executable(
+        &mut self,
+        module_id: usize,
+        templates: &[super::ModuleTemplate],
+    ) -> Result<(), super::TlsError> {
+        if self
+            .modules
+            .first()
+            .is_some_and(|module| module.module_id == module_id)
+        {
+            return Ok(());
+        }
+        if self.frozen {
+            return Err(super::TlsError::LayoutFrozen);
+        }
+        let mut next = Self::default();
+        for id in std::iter::once(module_id).chain(
+            self.modules
+                .iter()
+                .map(|module| module.module_id)
+                .filter(|id| *id != module_id),
+        ) {
+            let template = id
+                .checked_sub(1)
+                .and_then(|id| templates.get(id))
+                .ok_or(super::TlsError::UnknownModule)?;
+            next.reserve(id, template.memory_size, template.align)?;
+        }
+        *self = next;
+        Ok(())
+    }
+}
+
+pub(super) fn reserve_executable(
+    module_id: usize,
+    templates: &[super::ModuleTemplate],
+) -> Result<(), super::TlsError> {
+    if !supported() {
+        return Err(super::TlsError::ThreadPointerUnsupported);
+    }
+    layout()
+        .lock()
+        .map_err(|_| super::TlsError::Poisoned)?
+        .executable(module_id, templates)
+}
+
 fn layout() -> &'static Mutex<Layout> {
     static LAYOUT: std::sync::OnceLock<Mutex<Layout>> = std::sync::OnceLock::new();
     LAYOUT.get_or_init(|| Mutex::new(Layout::default()))
@@ -398,37 +478,10 @@ pub fn reserve(module_id: usize, size: usize, align: usize) -> Result<usize, sup
     if !supported() {
         return Err(super::TlsError::ThreadPointerUnsupported);
     }
-    if align == 0 || !align.is_power_of_two() {
-        return Err(super::TlsError::InvalidAlignment);
-    }
-    let mut layout = layout().lock().map_err(|_| super::TlsError::Poisoned)?;
-    if layout.frozen {
-        // A thread already has a block sized to the current layout, so growing it
-        // now would put this module beyond that thread's allocation.
-        return Err(super::TlsError::LayoutFrozen);
-    }
-    if let Some(existing) = layout
-        .modules
-        .iter()
-        .find(|module| module.module_id == module_id)
-    {
-        return Ok(existing.offset);
-    }
-
-    // Grow downward: the new module's block ends where the previous one began, and
-    // its start is rounded up to its own alignment.
-    let raw = layout
-        .total
-        .checked_add(size)
-        .ok_or(super::TlsError::OffsetOutOfRange)?;
-    let offset = round_up(raw, align).ok_or(super::TlsError::OffsetOutOfRange)?;
-    layout.total = offset;
-    layout.modules.push(StaticModule {
-        module_id,
-        offset,
-        size,
-    });
-    Ok(offset)
+    layout()
+        .lock()
+        .map_err(|_| super::TlsError::Poisoned)?
+        .reserve(module_id, size, align)
 }
 
 /// The offset a module was reserved at, if it has one.
@@ -679,6 +732,67 @@ pub unsafe fn read_fs_base() -> u64 {
 #[cfg(all(test, windows, target_arch = "x86_64"))]
 mod tests {
     use super::*;
+
+    #[test]
+    fn executable_tls_precedes_native_errno_and_preserves_alignment() {
+        let templates = [
+            super::super::ModuleTemplate {
+                image: vec![0; 4],
+                memory_size: 4,
+                align: 4,
+            },
+            super::super::ModuleTemplate {
+                image: Vec::new(),
+                memory_size: 8,
+                align: 8,
+            },
+            super::super::ModuleTemplate {
+                image: vec![9],
+                memory_size: 17,
+                align: 32,
+            },
+        ];
+        let mut layout = Layout::default();
+        for (index, template) in templates.iter().enumerate() {
+            layout
+                .reserve(index + 1, template.memory_size, template.align)
+                .unwrap();
+        }
+        layout.executable(2, &templates).unwrap();
+        let slots: Vec<_> = layout
+            .modules
+            .iter()
+            .map(|m| (m.module_id, m.offset, m.size))
+            .collect();
+        assert_eq!(slots, [(2, 8, 8), (1, 12, 4), (3, 32, 17)]);
+        layout.executable(2, &templates).unwrap();
+        assert_eq!(layout.total, 32);
+        layout.frozen = true;
+        assert_eq!(
+            layout.executable(1, &templates),
+            Err(super::super::TlsError::LayoutFrozen)
+        );
+        assert_eq!(layout.modules[0].module_id, 2);
+        assert_eq!(layout.total, 32);
+    }
+
+    #[test]
+    fn invalid_executable_tls_keeps_the_existing_layout() {
+        let templates = [super::super::ModuleTemplate {
+            image: vec![0; 4],
+            memory_size: 4,
+            align: 4,
+        }];
+        let mut layout = Layout::default();
+        layout.reserve(1, 4, 4).unwrap();
+        assert_eq!(
+            layout.executable(2, &templates),
+            Err(super::super::TlsError::UnknownModule)
+        );
+        assert_eq!(layout.total, 4);
+        assert_eq!(layout.modules.len(), 1);
+        assert_eq!(layout.modules[0].module_id, 1);
+    }
 
     #[test]
     fn the_canary_is_readable_at_the_abi_fixed_offset() {

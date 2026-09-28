@@ -24,6 +24,7 @@ pub struct ForkReservation {
 /// All callbacks return a positive Linux errno on failure. The table and its
 /// functions reside in the one runtime DLL and live until process teardown.
 pub struct ProcessAuthority {
+    pub kernel: fn(kinakaze_v2_protocol::kernel::KernelCommand) -> Result<Vec<u64>, i32>,
     pub identity: fn() -> Result<Identity, i32>,
     pub memory_target: fn(u32, bool) -> Result<(u32, u64), i32>,
     #[cfg(windows)]
@@ -40,6 +41,14 @@ pub struct ProcessAuthority {
     pub prepare_exec: fn(u32) -> Result<u64, i32>,
     pub commit_exec: fn(u64) -> Result<(), i32>,
     pub abort_exec: fn(u64) -> Result<(), i32>,
+}
+
+pub fn kernel(command: kinakaze_v2_protocol::kernel::KernelCommand) -> Result<(), i32> {
+    match get() {
+        Some(authority) => (authority.kernel)(command).map(|_| ()),
+        None if domain_id() == 0 => Ok(()), // Standalone native tests.
+        None => Err(5), // Helpers may use existing objects, never publish new ownership.
+    }
 }
 
 static AUTHORITY: AtomicPtr<ProcessAuthority> = AtomicPtr::new(core::ptr::null_mut());

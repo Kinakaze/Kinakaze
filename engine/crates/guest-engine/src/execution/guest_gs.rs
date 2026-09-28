@@ -6,43 +6,6 @@ use iced_x86::{
     Code, Decoder, DecoderOptions, Encoder, FlowControl, Instruction, InstructionInfoFactory,
     MemoryOperand, Mnemonic, Register,
 };
-use std::collections::BTreeMap;
-use std::sync::{Mutex, OnceLock};
-
-fn redirects() -> &'static Mutex<BTreeMap<usize, usize>> {
-    static REDIRECTS: OnceLock<Mutex<BTreeMap<usize, usize>>> = OnceLock::new();
-    REDIRECTS.get_or_init(|| Mutex::new(BTreeMap::new()))
-}
-
-pub(crate) fn redirect(address: usize) -> Option<usize> {
-    redirects().lock().ok()?.get(&address).copied()
-}
-
-pub(crate) fn snapshot() -> Vec<u8> {
-    redirects()
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
-        .iter()
-        .flat_map(|(address, target)| [address.to_le_bytes(), target.to_le_bytes()].concat())
-        .collect()
-}
-
-pub(crate) fn restore(bytes: &[u8]) -> bool {
-    if bytes.len() % 16 != 0 {
-        return false;
-    }
-    let mut entries = redirects()
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner);
-    entries.clear();
-    for record in bytes.chunks_exact(16) {
-        let address = usize::from_le_bytes(record[..8].try_into().unwrap());
-        let target = usize::from_le_bytes(record[8..].try_into().unwrap());
-        entries.insert(address, target);
-    }
-    true
-}
-
 pub(super) fn matches(instruction: &Instruction) -> bool {
     if matches!(
         instruction.mnemonic(),
@@ -332,10 +295,7 @@ pub(super) unsafe fn install(
         source[0] = 0xe9;
         source[1..5].copy_from_slice(&relative.to_le_bytes());
     } else {
-        redirects()
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .insert(address, trampoline);
+        super::traps::register(address, trampoline);
         source[..2].copy_from_slice(&[0x0f, 0x0b]);
     }
     Ok(InstructionTrampoline {

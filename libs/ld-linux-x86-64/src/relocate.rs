@@ -146,6 +146,7 @@ fn relocate_relative(object: &MappedObject, virtual_address: u64) -> Result<(), 
 pub struct Context<'a> {
     pub objects: &'a [MappedObject],
     pub scope: &'a Scope,
+    pub preferred: &'a [crate::scope::Provider],
     /// The object being relocated.
     pub owner: ObjectId,
     /// Resolver for the handful of symbols the host provides directly.
@@ -562,13 +563,17 @@ fn resolve_for(
     }
 
     let resolved = if symbolic {
-        context
-            .scope
-            .resolve_symbolic(context.objects, context.owner, symbol.name, version)?
+        context.scope.resolve_symbolic(
+            context.objects,
+            context.owner,
+            symbol.name,
+            version,
+            context.preferred,
+        )?
     } else {
         context
             .scope
-            .resolve(context.objects, symbol.name, version)?
+            .resolve_preferred(context.objects, symbol.name, version, context.preferred)?
     };
     if let Some(resolved) = resolved {
         return wrap_host_function(context, symbol, resolved);
@@ -580,7 +585,12 @@ fn resolve_for(
     // version; retrying unversioned is what glibc does for a weak reference and it
     // keeps a mismatched version from being fatal.
     if version.is_some()
-        && let Some(resolved) = context.scope.resolve(context.objects, symbol.name, None)?
+        && let Some(resolved) = context.scope.resolve_preferred(
+            context.objects,
+            symbol.name,
+            None,
+            context.preferred,
+        )?
     {
         return wrap_host_function(context, symbol, resolved);
     }

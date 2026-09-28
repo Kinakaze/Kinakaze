@@ -3,6 +3,7 @@ import concurrent.futures
 import hashlib
 import http.client
 import os
+import pwd
 from pathlib import Path
 import signal
 import socket
@@ -20,7 +21,8 @@ with tempfile.TemporaryDirectory(prefix='kinakaze-nginx-') as directory:
         reservation.bind(('127.0.0.1', 0))
         port = reservation.getsockname()[1]
     configuration = prefix / 'nginx.conf'
-    template = '''user sshd;
+    account = next(account for account in pwd.getpwall() if account.pw_name in ('www-data', 'sshd', 'nobody'))
+    template = '''user {user};
 worker_processes 2;
 pid {prefix}/nginx.pid;
 error_log {prefix}/error.log info;
@@ -41,7 +43,7 @@ http {{
 }}
 '''
     def configure(marker):
-        configuration.write_text(template.format(prefix=prefix, port=port, marker=marker))
+        configuration.write_text(template.format(user=account.pw_name, prefix=prefix, port=port, marker=marker))
 
     def request(path='/probe', method='GET', headers=None):
         connection = http.client.HTTPConnection('127.0.0.1', port, timeout=8)

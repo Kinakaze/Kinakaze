@@ -18,6 +18,9 @@ pub(crate) fn classify(exception: u32, address: u64, mapping_result: i32) -> Act
             _ => (11, if address < 0x1_0000 { 1 } else { 2 }),
         },
         0xc000_001d => (4, 1), // SIGILL / ILL_ILLOPC
+        // x86 privileged instructions raise #GP in user mode. Linux delivers
+        // SIGSEGV / SI_KERNEL, including port-I/O probes used by lscpu.
+        0xc000_0096 => (11, 128),
         0xc000_0094 => (8, 1), // SIGFPE / FPE_INTDIV
         0xc000_0095 => (8, 2),
         0xc000_008e => (8, 3),
@@ -67,5 +70,16 @@ mod tests {
             }
         );
         assert_eq!(classify(0x8000_0003, 0, 7), Action::Unhandled);
+    }
+
+    #[test]
+    fn privileged_instruction_is_a_catchable_general_protection_signal() {
+        assert_eq!(
+            classify(0xc000_0096, 0, 0),
+            Action::Signal {
+                number: 11,
+                code: 128
+            }
+        );
     }
 }

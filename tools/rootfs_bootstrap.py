@@ -6,9 +6,47 @@ maintainer scripts have not run. Additional packages are managed normally by APT
 """
 import hashlib
 import json
+from string import Template
+
+
+def configure_pam(files):
+    # libpam-runtime's postinst normally renders these templates. Retain the
+    # shipped Unix policy (including its password hash algorithm), with no
+    # dependency on a particular PID 1 or an interactive debconf session.
+    profile, field = {}, None
+    for line in files['usr/share/pam-configs/unix'].decode().splitlines():
+        if line.startswith((' ', '\t')) and field:
+            profile.setdefault(field, []).append(line.strip())
+        elif ':' in line:
+            field = line.split(':', 1)[0]
+    for kind in ('auth', 'account', 'password', 'session', 'session-noninteractive'):
+        group = kind.split('-')[0]
+        rules = profile[group.title() + '-Initial']
+        unix = '\n'.join(group + '\t' + rule.replace('success=end', 'success=1') for rule in rules)
+        primary, additional = (group + '\t[default=1]\tpam_permit.so', unix) if group == 'session' else (unix, '')
+        template = Template(files['usr/share/pam/common-' + kind].decode())
+        variable = 'session_nonint' if kind.endswith('-noninteractive') else group
+        files.setdefault('etc/pam.d/common-' + kind, template.substitute({
+            variable + '_primary': primary, variable + '_additional': additional,
+        }).encode())
+
+
+def configure_service_dispatch(files):
+    # --type is filtered by the systemctl client after querying unit states.
+    # Supplying the equivalent name pattern also filters in the manager before
+    # it scans enablement links for every unrelated service/target/timer.
+    path = 'usr/sbin/service'
+    if path in files:
+        command = b'systemctl list-unit-files --full --type=socket'
+        files[path] = files[path].replace(command + b' 2>', command + b" '*.socket' 2>")
+        # Both the version and usage strings only need the script's basename.
+        # Shell expansion avoids two child processes on every service action.
+        files[path] = files[path].replace(b'`basename $0`', b'${0##*/}')
 
 
 def configure_standard(files, links, preset):
+    configure_pam(files)
+    configure_service_dispatch(files)
     # Retain Debian's account IDs/shells, plus service accounts from the manifest.
     for name in ('passwd', 'group'):
         path = 'etc/' + name

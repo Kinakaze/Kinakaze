@@ -45,12 +45,24 @@ impl Default for CodeResult {
 pub type PrepareCode =
     unsafe extern "C" fn(*const CodeImage, *const CodeConfig, *mut CodeResult) -> i32;
 static PROCESSOR: OnceLock<PrepareCode> = OnceLock::new();
+static RETIRE: OnceLock<unsafe extern "C" fn(usize, usize)> = OnceLock::new();
 
-pub fn install(processor: PrepareCode) {
+pub fn install(processor: PrepareCode, retire: unsafe extern "C" fn(usize, usize)) {
+    assert!(
+        RETIRE.set(retire).is_ok(),
+        "code retirement already installed"
+    );
     assert!(
         PROCESSOR.set(processor).is_ok(),
         "code processor already installed"
     );
+}
+
+/// Retire exception metadata before an ELF address range can be reused.
+pub fn retire(base: usize, length: usize) {
+    if let Some(retire) = RETIRE.get() {
+        unsafe { retire(base, length) };
+    }
 }
 
 /// The engine is installed afresh during native worker bootstrap, including

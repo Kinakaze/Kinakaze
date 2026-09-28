@@ -29,8 +29,10 @@ const RTLD_LAZY: i32 = 0x1;
 const RTLD_NOW: i32 = 0x2;
 const RTLD_NOLOAD: i32 = 0x4;
 const RTLD_GLOBAL: i32 = 0x100;
+const RTLD_DEEPBIND: i32 = 0x8;
 const RTLD_NODELETE: i32 = 0x1000;
-const RTLD_KNOWN_FLAGS: i32 = RTLD_LAZY | RTLD_NOW | RTLD_NOLOAD | RTLD_GLOBAL | RTLD_NODELETE;
+const RTLD_KNOWN_FLAGS: i32 =
+    RTLD_LAZY | RTLD_NOW | RTLD_NOLOAD | RTLD_GLOBAL | RTLD_NODELETE | RTLD_DEEPBIND;
 
 /// Where dependencies are looked for, in order.
 #[derive(Clone, Debug, Default)]
@@ -67,7 +69,7 @@ pub struct Linker {
     provider_dependencies: Vec<Vec<Provider>>,
     scope: Scope,
     paths: SearchPaths,
-    registry: std::sync::Arc<crate::ProviderRegistry>,
+    pub(crate) registry: std::sync::Arc<crate::ProviderRegistry>,
     /// `LD_LIBRARY_PATH` is process startup state. Parsing it once also avoids
     /// taking the process environment lock for every `DT_NEEDED` edge.
     library_paths: Vec<PathBuf>,
@@ -223,6 +225,50 @@ impl Linker {
         &self.objects
     }
 
+    /// Startup envp is authoritative; the Windows host environment is not the
+    /// guest's LD_LIBRARY_PATH. Empty entries mean the guest current directory.
+    pub fn set_library_path(&mut self, value: Option<&str>, executable: &Path) {
+        self.library_paths = value
+            .map(|value| {
+                expand_search_path(
+                    value,
+                    executable.parent().unwrap_or(Path::new(".")),
+                    &self.paths.host_directory,
+                )
+            })
+            .unwrap_or_default();
+    }
+
+    /// Inspect the actual loaded graph before relocations, IFUNC resolvers, or
+    /// guest constructors run. Provider paths are rendered in the guest root.
+    pub fn dependency_listing(&self, root: ObjectId) -> String {
+        use std::fmt::Write;
+        let mut result = String::new();
+        for provider in &self.scope.providers {
+            let (name, path, base) = match provider {
+                Provider::Elf(id) if *id == root => continue,
+                Provider::Elf(id) => {
+                    let object = &self.objects[id.0];
+                    (
+                        object.name.as_str(),
+                        kinakaze_vfs::to_guest_path(&object.path),
+                        object.allocation as usize,
+                    )
+                }
+                Provider::Dll(index) => {
+                    let provider = &self.scope.dlls[*index];
+                    let guest = format!("/lib/{}", provider.name);
+                    let path = kinakaze_vfs::resolve_linux_path(&guest)
+                        .map(|path| kinakaze_vfs::to_guest_path(&path))
+                        .unwrap_or(guest);
+                    (provider.name.as_str(), path, provider.image().base())
+                }
+            };
+            let _ = writeln!(result, "\t{name} => {path} (0x{base:016x})");
+        }
+        result
+    }
+
     /// Loaded facade modules, including RTLD_LOCAL modules for dladdr and
     /// dl_iterate_phdr. The iterator borrows the linker's lifetime-pinned images.
     pub fn provider_images(&self) -> impl Iterator<Item = &dyn crate::ProviderImage> {
@@ -250,6 +296,13 @@ impl Linker {
             return Err(LinkError::MultipleExecutableObjects);
         }
         self.objects[id.0].is_executable = true;
+        if let Some(module) = self.objects[id.0].tls_module {
+            kinakaze_tls::reserve_executable_elf_module(module).map_err(|_| {
+                LinkError::InvalidTls {
+                    object: self.objects[id.0].name.clone(),
+                }
+            })?;
+        }
         Ok(())
     }
 
@@ -479,6 +532,14 @@ impl Linker {
     /// Relocates objects appended by a runtime `dlopen` without touching pages
     /// whose RELRO/protections were already finalized during process startup.
     fn link_from(&mut self, first: usize) -> Result<(), LinkError> {
+        self.link_from_preferred(first, &[])
+    }
+
+    fn link_from_preferred(
+        &mut self,
+        first: usize,
+        preferred: &[Provider],
+    ) -> Result<(), LinkError> {
         let _link = profile::begin("link", first);
         for object in &self.objects[first..] {
             if let Some(module_id) = object.tls_module {
@@ -502,6 +563,7 @@ impl Linker {
             let context = relocate::Context {
                 objects: &self.objects,
                 scope: &self.scope,
+                preferred,
                 owner: ObjectId(index),
                 builtins: &resolver,
                 unresolved_policy: self.unresolved_policy,
@@ -969,7 +1031,12 @@ impl Linker {
                         // dependency. It must be visible during relocation;
                         // GLOBAL promotion after linking would be too late.
                         let temporary = self.publish_existing_dependencies(target, first_provider);
-                        let linked = self.link_from(first_object);
+                        let preferred = if flags & RTLD_DEEPBIND != 0 {
+                            self.runtime_provider_closure(target)
+                        } else {
+                            Vec::new()
+                        };
+                        let linked = self.link_from_preferred(first_object, &preferred);
                         if flags & RTLD_GLOBAL == 0 {
                             for index in temporary {
                                 self.scope.globals[index] = false;
@@ -1095,14 +1162,15 @@ impl Linker {
 
     fn runtime_provider_closure(&self, target: RuntimeHandle) -> Vec<Provider> {
         let mut providers = Vec::new();
-        let mut pending = match target {
+        let mut pending: std::collections::VecDeque<_> = match target {
             RuntimeHandle::Main => Vec::new(),
             RuntimeHandle::Elf(id) => vec![Provider::Elf(id)],
             RuntimeHandle::Dll(index) => vec![Provider::Dll(index)],
-        };
+        }
+        .into();
         let mut visited_elf = vec![false; self.objects.len()];
         let mut visited_dll = vec![false; self.scope.dlls.len()];
-        while let Some(provider) = pending.pop() {
+        while let Some(provider) = pending.pop_front() {
             match provider {
                 Provider::Elf(id) => {
                     if std::mem::replace(&mut visited_elf[id.0], true) {
@@ -1192,7 +1260,9 @@ impl Linker {
 
     fn resolve_candidate(&self, candidate: &Path) -> Option<PathBuf> {
         let name = candidate.to_string_lossy();
-        let resolved = if name.starts_with('/') {
+        let resolved = if name.starts_with('/')
+            || (self.paths.process_namespace && !candidate.is_absolute())
+        {
             // Resolve the complete filename: resolving only the directory can
             // choose an upper overlay layer while its DSO lives in a lower one.
             let guest = name.replace('\\', "/");
@@ -1594,8 +1664,10 @@ fn reject_unbound_facade(image: &[u8], path: &Path) -> Result<(), LinkError> {
 pub fn expand_search_path(raw: &str, object_directory: &Path, _guest_root: &Path) -> Vec<PathBuf> {
     let origin = object_directory.to_string_lossy();
     raw.split([':', ';'])
-        .filter(|entry| !entry.is_empty())
         .map(|entry| {
+            if entry.is_empty() {
+                return PathBuf::from(kinakaze_vfs::fs::getcwd());
+            }
             let from_origin = entry.contains("$ORIGIN") || entry.contains("${ORIGIN}");
             let expanded = entry
                 .replace("$ORIGIN", &origin)
@@ -1605,6 +1677,10 @@ pub fn expand_search_path(raw: &str, object_directory: &Path, _guest_root: &Path
                 // object was actually loaded from. Translating it a second time
                 // would push the search under the guest root twice and send
                 // every `$ORIGIN`-relative install looking in the wrong place.
+                // Verbatim Windows paths do not accept forward slashes. An
+                // ELF $ORIGIN suffix still uses POSIX separators.
+                #[cfg(windows)]
+                let expanded = expanded.replace('/', "\\");
                 PathBuf::from(expanded)
             } else {
                 // Keep guest paths until the SONAME is appended and looked up.
@@ -1664,9 +1740,9 @@ mod tests {
         let braced = expand_search_path("${ORIGIN}/lib", directory, root);
         assert_eq!(braced[0], PathBuf::from("/opt/app/bin/lib"));
 
-        // Empty entries are dropped rather than becoming the current directory,
-        // which would silently widen the search.
-        assert!(expand_search_path("::", directory, root).is_empty());
+        // Linux explicitly treats empty entries as the current directory.
+        let empty = expand_search_path("::", directory, root);
+        assert_eq!(empty, vec![PathBuf::from(kinakaze_vfs::fs::getcwd()); 3]);
     }
 
     /// `libpulse.so.0` declares `/usr/lib/x86_64-linux-gnu/pulseaudio`, and its

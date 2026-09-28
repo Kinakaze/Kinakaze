@@ -12,6 +12,8 @@ use std::sync::Arc;
 use crate::{EINVAL, EIO, ENOTDIR, EOPNOTSUPP};
 
 pub mod api;
+mod bootstrap;
+pub use bootstrap::initialize_builtin_mounts;
 mod namespace;
 pub mod native;
 pub mod overlay;
@@ -360,6 +362,21 @@ pub(crate) fn report_snapshot() -> Result<Vec<MountReport>, i32> {
 }
 
 fn snapshot() -> Result<Arc<Vec<MountPoint>>, i32> {
+    let root = shared::initial()?;
+    loop {
+        let epoch = root.topology_revision();
+        if epoch & 1 != 0 {
+            std::thread::yield_now();
+            continue;
+        }
+        let result = namespace_snapshot();
+        if root.topology_revision() == epoch {
+            return result;
+        }
+    }
+}
+
+fn namespace_snapshot() -> Result<Arc<Vec<MountPoint>>, i32> {
     // Readers consume an atomic namespace publication without waiting on a
     // native mutex that a frozen parent thread might own during fork.
     let store = shared::get()?;
@@ -381,6 +398,34 @@ fn snapshot() -> Result<Arc<Vec<MountPoint>>, i32> {
     Ok(points)
 }
 
+fn kernel_dependencies(
+    namespace: u64,
+    points: &[MountPoint],
+) -> Result<Vec<kinakaze_v2_protocol::kernel::ObjectKey>, i32> {
+    use kinakaze_v2_protocol::kernel::ObjectKey;
+    let mut keys = std::collections::BTreeSet::new();
+    for point in points {
+        keys.insert(
+            policy::get_mapped(namespace, point.id, point.flags, point.meta.idmap.as_ref())?
+                .kernel_key(),
+        );
+        if point.flags & MS_OVERLAY != 0 {
+            keys.extend(overlay::kernel_dependencies(&point.source, point.flags)?);
+        }
+        if point.flags & MS_TMPFS != 0 {
+            keys.insert(ObjectKey::Shared(crate::tmpfs::parse(&point.source)?.0));
+        }
+        if point.flags & MS_PROC != 0 {
+            let (view, _) = crate::procfs::instance::parse(&point.source)?;
+            keys.insert(crate::namespaces::retain_kernel(
+                crate::namespaces::PID,
+                view.pidns,
+            )?);
+        }
+    }
+    Ok(keys.into_iter().collect())
+}
+
 fn update<T>(
     action: impl FnOnce(&mut Vec<MountPoint>, &mut u64) -> Result<T, i32>,
 ) -> Result<T, i32> {
@@ -389,7 +434,7 @@ fn update<T>(
 
 /// Collapses a Linux pathname without ever allowing .. above /.
 pub(crate) fn normalize(path: &str) -> Result<String, i32> {
-    if !path.starts_with('/') || path.contains('\0') || path.contains('\\') {
+    if !path.starts_with('/') || path.contains('\0') {
         return Err(EINVAL);
     }
     let mut parts: Vec<&str> = Vec::new();
@@ -442,6 +487,20 @@ fn has_fixed_virtual_dispatch(path: &str) -> bool {
             .any(|root| suffix(path, root).is_some())
 }
 
+fn root_has_mount_backends(table: &[MountPoint]) -> bool {
+    root_has_mount_backends_at(table, "/")
+}
+
+fn root_has_mount_backends_at(table: &[MountPoint], root: &str) -> bool {
+    ["/proc", "/sys", "/dev"].iter().all(|path| {
+        let path = join(root, path.trim_start_matches('/'));
+        visible_mount(table, &path)
+            .ok()
+            .flatten()
+            .is_some_and(|point| point.target == path && point.flags & (MS_PROC | MS_TMPFS) != 0)
+    })
+}
+
 /// Applies the current mount stack to an absolute Linux pathname.
 ///
 /// A backing path is resolved at bind time and is never reinterpreted through
@@ -456,7 +515,7 @@ pub(crate) fn translate(path: &str) -> Result<String, i32> {
 /// explicitly rather than interpreting EOPNOTSUPP as a missing file.
 pub(crate) fn native_translation(path: &str) -> Result<Option<String>, i32> {
     if !path.starts_with('/') {
-        if path.contains('\0') || path.contains('\\') {
+        if path.contains('\0') {
             return Err(EINVAL);
         }
         return Ok(Some(path.to_owned()));
@@ -576,7 +635,8 @@ fn bind_in(
             );
         }
     }
-    if (has_fixed_virtual_dispatch(&source) || has_fixed_virtual_dispatch(&target))
+    if (has_fixed_virtual_dispatch(&source) && !(source == "/" && root_has_mount_backends(table))
+        || has_fixed_virtual_dispatch(&target))
         && !builtin_proc
         && !selected_source.is_some_and(|p| p.flags & (MS_PROC | MS_TMPFS) != 0)
     {
@@ -631,7 +691,10 @@ fn bind_in(
     // A proc/tmpfs attachment carries its own virtual dispatch and may itself
     // be bind-mounted elsewhere (Docker persists /proc/<pid>/ns/net this way).
     // Ordinary native aliases still cannot target the built-in trees.
-    if has_fixed_virtual_dispatch(&backing) && attachment_flags & (MS_PROC | MS_TMPFS) == 0 {
+    if has_fixed_virtual_dispatch(&backing)
+        && !(backing == "/" && root_has_mount_backends(table))
+        && attachment_flags & (MS_PROC | MS_TMPFS) == 0
+    {
         return Err(EOPNOTSUPP);
     }
     let source_parent = visible_mount(table, &source)?.map_or(ROOT_MOUNT_ID, |point| point.id);
@@ -901,6 +964,7 @@ pub fn proc_remount(target: &str, flags: u64, options: &str) -> Result<(), i32> 
     }
     Ok(())
 }
+#[cfg(test)]
 pub(crate) fn tmpfs_attached(id: u64, previous_namespace: &mut Option<u64>) -> Result<bool, i32> {
     let contains = |ns: &shared::Store| -> Result<bool, i32> {
         let (_, bytes) = ns.read()?;
@@ -1088,14 +1152,11 @@ pub fn set_propagation(target: &str, flags: u64) -> Result<(), i32> {
                 flags: MS_ROOT,
             });
         }
-        let selected = if norm == "/" {
-            ROOT_MOUNT_ID
-        } else {
-            visible_mount(table, &norm)?
-                .filter(|p| p.target == norm)
-                .ok_or(EINVAL)?
-                .id
-        };
+        let selected = visible_mount(table, &norm)?
+            .filter(|p| p.target == norm)
+            .map(|p| p.id)
+            .or_else(|| (norm == "/").then_some(ROOT_MOUNT_ID))
+            .ok_or(EINVAL)?;
         let selected = if flags & MS_REC != 0 {
             api::descendants(table, selected)
         } else {
@@ -1363,7 +1424,8 @@ fn decode_table_view(payload: &[u8], detached: bool) -> Result<Vec<MountPoint>, 
             {
                 return Err(EIO);
             }
-            if has_fixed_virtual_dispatch(source) || !detached && has_fixed_virtual_dispatch(target)
+            if source != "/" && has_fixed_virtual_dispatch(source)
+                || !detached && target != "/" && has_fixed_virtual_dispatch(target)
             {
                 return Err(EOPNOTSUPP);
             }

@@ -96,7 +96,11 @@ pub use path::{
 
 // Linux's default fs.nr_open ceiling; storage grows only for occupied pages.
 pub const MAX_FDS: usize = 1024 * 1024;
+#[cfg(windows)]
+mod duplication;
 mod fd_slots;
+#[cfg(windows)]
+pub use duplication::{DuplicateTarget, duplicate_descriptor};
 
 #[cfg(windows)]
 #[link(name = "bcrypt")]
@@ -372,7 +376,6 @@ impl FdKind {
         matches!(
             self,
             Self::EventFd
-                | Self::Inotify
                 | Self::UnixSocket
                 | Self::Synthetic
                 | Self::SyntheticDirectory
@@ -381,8 +384,6 @@ impl FdKind {
                 | Self::Random
                 | Self::Full
                 | Self::CgroupFile
-                | Self::NetlinkSocket
-                | Self::BpfProgram
                 | Self::ProcSysctl
         )
     }
@@ -486,10 +487,14 @@ impl FdTable {
         table
     }
 
-    fn insert_at(&mut self, fd: i32, raw: usize, kind: FdKind, flags: FdFlags) {
+    fn insert_at(&mut self, fd: i32, raw: usize, kind: FdKind, flags: FdFlags) -> Result<(), i32> {
+        #[cfg(windows)]
+        let description_id = kinakaze_runtime::job::allocate_description_id().ok_or(ENOMEM)?;
+        #[cfg(not(windows))]
         let description_id = self.next_description_id;
-        self.next_description_id = self.next_description_id.wrapping_add(1).max(1);
+        self.next_description_id = description_id.checked_add(1).ok_or(EOVERFLOW)?;
         self.insert_at_description(fd, raw, kind, flags, 0, description_id);
+        Ok(())
     }
 
     fn insert_at_description(
@@ -557,10 +562,33 @@ mod fork_handoff {
         // Length query and buffer copy belong to one coordinator call on this
         // thread. Consume before native fork so no cached Vec crosses restore.
         static SNAPSHOT: std::cell::RefCell<Option<Vec<u8>>> = const { std::cell::RefCell::new(None) };
+        static DESCRIPTORS: std::cell::RefCell<Option<super::ExecFdSnapshot>> = const { std::cell::RefCell::new(None) };
+        static FENCE: std::cell::RefCell<Option<std::sync::RwLockReadGuard<'static, super::FdTable>>> = const { std::cell::RefCell::new(None) };
     }
 
     fn discard_snapshot() {
         SNAPSHOT.with_borrow_mut(|frame| *frame = None);
+        DESCRIPTORS.with_borrow_mut(|snapshot| *snapshot = None);
+    }
+
+    fn freeze() -> i32 {
+        let table = match super::table().read() {
+            Ok(table) => table,
+            Err(_) => return super::EIO,
+        };
+        if !DESCRIPTORS.with_borrow(|snapshot| {
+            snapshot
+                .as_ref()
+                .is_some_and(|snapshot| snapshot.matches(&table))
+        }) {
+            return super::EAGAIN;
+        }
+        FENCE.with_borrow_mut(|guard| *guard = Some(table));
+        0
+    }
+
+    fn thaw() {
+        FENCE.with_borrow_mut(|guard| *guard = None);
     }
 
     pub(super) fn is_owner() -> bool {
@@ -573,12 +601,9 @@ mod fork_handoff {
 
     unsafe extern "system" fn prepare() -> i32 {
         discard_snapshot();
-        if let Err(error) = super::publish_proc_fd_snapshot() {
-            kinakaze_runtime::fork_diagnostic(format_args!(
-                "kinakaze: VFS fork prepare failed phase=proc-fd-snapshot error={error}"
-            ));
-            return error;
-        }
+        // Proc-fd metadata is published with the checked snapshot below. A
+        // second, earlier walk can fail under ordinary open/close contention
+        // and would not describe the descriptors eventually inherited anyway.
         if let Err(error) = super::unix::prepare_process_handoff() {
             return error;
         }
@@ -597,12 +622,29 @@ mod fork_handoff {
         }
         if buffer.is_null() {
             discard_snapshot();
-            let payload = match super::serialize_fork_state() {
-                Ok(payload) => payload,
-                Err(error) => return -(error as isize),
+            let (payload, descriptors) = loop {
+                let before = match super::exec_descriptor_snapshot() {
+                    Ok(snapshot) => snapshot,
+                    Err(error) => return -(error as isize),
+                };
+                let payload =
+                    super::publish_proc_fd_snapshot().and_then(|()| super::serialize_fork_state());
+                let table = match super::table().read() {
+                    Ok(table) => table,
+                    Err(_) => return -(super::EIO as isize),
+                };
+                if before.matches(&table) {
+                    match payload {
+                        Ok(payload) => break (payload, before),
+                        Err(error) => return -(error as isize),
+                    }
+                }
+                drop(table);
+                std::thread::yield_now();
             };
             let length = payload.len() as isize;
             SNAPSHOT.with_borrow_mut(|frame| *frame = Some(payload));
+            DESCRIPTORS.with_borrow_mut(|snapshot| *snapshot = Some(descriptors));
             return length;
         }
         let Some(payload) = SNAPSHOT.with_borrow_mut(Option::take) else {
@@ -644,6 +686,9 @@ mod fork_handoff {
 
     /// Installs the hooks with the executable's process coordinator.
     fn register() {
+        kinakaze_runtime::services::install_fork_descriptors(
+            kinakaze_runtime::services::ForkDescriptors { freeze, thaw },
+        );
         use windows_sys::Win32::System::LibraryLoader::{
             GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
             GetModuleHandleExW, GetProcAddress,
@@ -742,13 +787,18 @@ pub fn install_procfs_file(path: &str, contents: Vec<u8>, flags: FdFlags) -> Res
     if procfs::mount_watch::supports(path) {
         return procfs::mount_watch::open(path, flags);
     }
-    let mut descriptions = synthetic().write().map_err(|_| EIO)?;
-    let mut paths = proc_sysctl_paths().lock().map_err(|_| EIO)?;
-    let fd = install(0, FdKind::Synthetic, flags.union(FdFlags::SEEKABLE))?;
-    let entry = get(fd)?;
-    descriptions.insert(fd, (entry.generation, contents));
-    paths.insert(fd, path.to_owned());
-    Ok(fd)
+    install_with(
+        0,
+        FdKind::Synthetic,
+        flags.union(FdFlags::SEEKABLE),
+        |fd, entry| {
+            let mut descriptions = synthetic().write().map_err(|_| EIO)?;
+            let mut paths = proc_sysctl_paths().lock().map_err(|_| EIO)?;
+            descriptions.insert(fd, (entry.generation, contents));
+            paths.insert(fd, path.to_owned());
+            Ok(())
+        },
+    )
 }
 
 /// Identity retained when a read-only synthetic file was opened. Keeping this
@@ -781,13 +831,13 @@ pub(crate) fn synthetic_file_path(fd: i32) -> Result<String, i32> {
 /// contents slot holds the path rather than file bytes.
 #[cfg(windows)]
 pub fn install_procfs_directory(path: String, flags: FdFlags) -> Result<i32, i32> {
-    let fd = install(0, FdKind::SyntheticDirectory, flags)?;
-    let entry = get(fd)?;
-    synthetic()
-        .write()
-        .map_err(|_| EIO)?
-        .insert(fd, (entry.generation, path.into_bytes()));
-    Ok(fd)
+    install_with(0, FdKind::SyntheticDirectory, flags, |fd, entry| {
+        synthetic()
+            .write()
+            .map_err(|_| EIO)?
+            .insert(fd, (entry.generation, path.into_bytes()));
+        Ok(())
+    })
 }
 
 static CGROUP_PATHS: OnceLock<std::sync::Mutex<std::collections::HashMap<i32, String>>> =
@@ -823,13 +873,18 @@ pub(crate) fn cgroup_file_path(fd: i32) -> Result<String, i32> {
 #[cfg(windows)]
 pub fn install_cgroup_file(path: String, flags: FdFlags) -> Result<i32, i32> {
     let contents = cgroup::read_file(&path)?;
-    let mut synthetic = synthetic().write().map_err(|_| EIO)?;
-    let mut paths = cgroup_paths().lock().map_err(|_| EIO)?;
-    let fd = install(0, FdKind::CgroupFile, flags.union(FdFlags::SEEKABLE))?;
-    let entry = get(fd)?;
-    synthetic.insert(fd, (entry.generation, contents));
-    paths.insert(fd, path);
-    Ok(fd)
+    install_with(
+        0,
+        FdKind::CgroupFile,
+        flags.union(FdFlags::SEEKABLE),
+        |fd, entry| {
+            let mut synthetic = synthetic().write().map_err(|_| EIO)?;
+            let mut paths = cgroup_paths().lock().map_err(|_| EIO)?;
+            synthetic.insert(fd, (entry.generation, contents));
+            paths.insert(fd, path);
+            Ok(())
+        },
+    )
 }
 
 pub(crate) fn proc_sysctl_file_path(fd: i32) -> Result<String, i32> {
@@ -898,13 +953,18 @@ pub fn duplicate_synthetic_description(oldfd: i32, newfd: i32) -> Result<(), i32
 #[cfg(windows)]
 pub fn install_proc_sysctl_file(path: String, flags: FdFlags) -> Result<i32, i32> {
     let contents = procfs::pinned(|| procfs::read_file(&path))?;
-    let mut synthetic = synthetic().write().map_err(|_| EIO)?;
-    let mut paths = proc_sysctl_paths().lock().map_err(|_| EIO)?;
-    let fd = install(0, FdKind::ProcSysctl, flags.union(FdFlags::SEEKABLE))?;
-    let entry = get(fd)?;
-    synthetic.insert(fd, (entry.generation, contents));
-    paths.insert(fd, path);
-    Ok(fd)
+    install_with(
+        0,
+        FdKind::ProcSysctl,
+        flags.union(FdFlags::SEEKABLE),
+        |fd, entry| {
+            let mut synthetic = synthetic().write().map_err(|_| EIO)?;
+            let mut paths = proc_sysctl_paths().lock().map_err(|_| EIO)?;
+            synthetic.insert(fd, (entry.generation, contents));
+            paths.insert(fd, path);
+            Ok(())
+        },
+    )
 }
 
 /// Installs a special character device descriptor (/dev/null, /dev/zero, /dev/urandom, etc.).
@@ -1067,8 +1127,8 @@ pub fn serialize_table() -> Result<Vec<u8>, i32> {
 
 /// Restores descriptors serialized by [`serialize_table`].
 ///
-/// Existing standard streams are left alone; only the inherited descriptors are
-/// re-installed at their original numbers so the child sees the same fds.
+/// Inherited descriptors replace bootstrap slots at their original numbers.
+/// Displaced bootstrap handles are closed in managed workers.
 #[cfg(windows)]
 pub fn restore_table(payload: &[u8]) -> Result<usize, ()> {
     const RECORD: usize = 36;
@@ -1111,6 +1171,20 @@ pub fn restore_table(payload: &[u8]) -> Result<usize, ()> {
     }
 
     let mut table = table().write().map_err(|_| ())?;
+    // A fresh exec worker can have bootstrap standard handles in addition to
+    // the inherited descriptor payload. Retire only displaced bootstrap copies,
+    // after every restored record has claimed its handle.
+    let bootstrap: Vec<_> = if kinakaze_runtime::authority::get().is_some() {
+        table
+            .slots
+            .iter()
+            .flatten()
+            .copied()
+            .filter(|entry| entry.flags.contains(FdFlags::BORROWED))
+            .collect()
+    } else {
+        Vec::new()
+    };
     // In-flight parent syscalls do not become child descriptors.
     table.slots.clear_reservations();
     for (fd, raw, kind, flags, offset, description_id) in records {
@@ -1131,6 +1205,28 @@ pub fn restore_table(payload: &[u8]) -> Result<usize, ()> {
             .next_description_id
             .max(description_id.wrapping_add(1).max(1));
         table.insert_at_description(fd as i32, raw, kind, flags, offset, description_id);
+    }
+    let mut retired = std::collections::HashSet::new();
+    for entry in bootstrap {
+        if !table
+            .slots
+            .iter()
+            .flatten()
+            .any(|current| current.raw == entry.raw)
+            && retired.insert(entry.raw)
+        {
+            let _ = platform::close(entry);
+        }
+    }
+    for fd in 0..3 {
+        platform::sync_standard(
+            fd,
+            table
+                .slots
+                .get(fd as usize)
+                .and_then(|e| *e)
+                .map_or(0, |e| e.raw),
+        );
     }
     Ok(count)
 }
@@ -1238,32 +1334,37 @@ fn fork_section_range(frame: &[u8], wanted: u32) -> Option<std::ops::Range<usize
 /// or duplication contract (currently IoRing and ConPTY controller objects).
 #[cfg(windows)]
 pub fn serialize_fork_state() -> Result<Vec<u8>, i32> {
+    fn section(tag: u32, payload: Result<Vec<u8>, i32>) -> Result<(u32, Vec<u8>), i32> {
+        payload.map(|bytes| (tag, bytes)).inspect_err(|error| {
+            kinakaze_runtime::fork_diagnostic(format_args!(
+                "kinakaze: VFS fork snapshot failed section={tag} error={error}"
+            ));
+        })
+    }
     let sections = [
-        (1, serialize_table()?),
-        (2, serialize_synthetic()?),
-        (3, fs::serialize_cwd()?),
-        (4, signal::serialize_fork_state()?),
-        (5, unix::serialize_fork_state()?),
-        (14, fifo::serialize_matching(|_| true)?),
-        (6, epoll::serialize_fork_state()?),
-        (7, socket::serialize_process_fork()?),
-        (12, mount::serialize_fork_state()?),
-        (15, path::serialize_root()?),
-        (16, mount::overlay::serialize(|_| true)?),
-        (28, mount::native::serialize(|_| true)?),
-        (29, ofd::serialize(|_| true)?),
-        (17, mount::api::serialize(|_| true)?),
-        (18, mount::policy::serialize()?),
-        (20, pipe_inode::serialize(|_| true)?),
-        (21, time_namespace::serialize(true)?),
-        (23, namespaces::serialize()?),
-        (24, usernet::serialize(|_| true)?),
-        (25, keyring::serialize(true)?),
-        (26, tmpfs::serialize()?),
-        (27, tty::serialize()?),
-        (22, user_namespace::serialize()?),
-        (10, netlink::serialize_matching(|_| true)?),
-        (11, bpf::serialize_matching(|_| true)?),
+        section(1, serialize_table())?,
+        section(2, serialize_synthetic())?,
+        section(3, fs::serialize_cwd())?,
+        section(4, signal::serialize_fork_state())?,
+        section(5, unix::serialize_fork_state())?,
+        section(14, fifo::serialize_matching(|_| true))?,
+        section(6, epoll::serialize_fork_state())?,
+        section(7, socket::serialize_process_fork())?,
+        section(12, mount::serialize_fork_state())?,
+        section(15, path::serialize_root())?,
+        section(16, mount::overlay::serialize(|_| true))?,
+        section(28, mount::native::serialize(|_| true))?,
+        section(29, ofd::serialize(|_| true))?,
+        section(17, mount::api::serialize(|_| true))?,
+        section(18, mount::policy::serialize())?,
+        section(20, pipe_inode::serialize(|_| true))?,
+        section(21, time_namespace::serialize(true))?,
+        section(23, namespaces::serialize())?,
+        section(24, usernet::serialize(|_| true))?,
+        section(25, keyring::serialize(true))?,
+        section(26, tmpfs::serialize())?,
+        section(27, tty::serialize())?,
+        section(22, user_namespace::serialize())?,
         (13, Vec::new()),
     ];
     let mut frame = Vec::new();
@@ -1342,8 +1443,6 @@ pub fn restore_fork_state(frame: &[u8]) -> bool {
             26 => tmpfs::restore(payload),
             27 => tty::restore(payload),
             22 => user_namespace::restore(payload),
-            10 => netlink::restore(payload),
-            11 => bpf::restore(payload),
             13 => record_lock::restore(payload),
             14 => fifo::restore_fork_state(payload),
             8 => restore_environment(payload),
@@ -1390,7 +1489,30 @@ pub fn restore_fork_state(frame: &[u8]) -> bool {
             cursor == frame.len()
         );
     }
-    cursor == frame.len()
+    if cursor != frame.len() {
+        return false;
+    }
+    // Reattach local readiness caches after all fd/socket/OFD state exists.
+    // Directory listeners themselves are already owned by init.
+    let inherited: Vec<_> = match table().read() {
+        Ok(table) => table
+            .slots
+            .enumerated()
+            .filter_map(|(fd, entry)| entry.map(|entry| (fd as i32, entry.kind)))
+            .collect(),
+        Err(_) => return false,
+    };
+    for (fd, kind) in inherited {
+        let result = match kind {
+            FdKind::Event => epoll::restore_descriptor(fd),
+            FdKind::TimerFd => timerfd::restore_subscription(fd),
+            _ => Ok(()),
+        };
+        if result.is_err() {
+            return false;
+        }
+    }
+    true
 }
 
 #[cfg(windows)]
@@ -1615,7 +1737,7 @@ pub fn install_handleless_with(
     let limit = job::current_nofile_limit()?;
     let mut table = table().write().map_err(|_| EIO)?;
     let fd = table.first_free_between(0, limit).ok_or(EMFILE)? as i32;
-    table.insert_at(fd, 0, kind, flags);
+    table.insert_at(fd, 0, kind, flags)?;
     if let Err(error) = register(fd) {
         table.slots.remove(fd as usize);
         return Err(error);
@@ -1650,6 +1772,8 @@ pub fn set_raw(fd: i32, raw: usize) -> Result<(), i32> {
     }
     #[cfg(windows)]
     inheritance.commit();
+    #[cfg(windows)]
+    platform::sync_standard(fd, raw);
     Ok(())
 }
 
@@ -1706,7 +1830,33 @@ pub fn with_execve_handle_filter<T>(operation: impl FnOnce() -> T) -> std::io::R
 /// process-creation table lock so concurrent close/dup cannot change inheritance
 /// between serialization and CreateProcessW. A mismatch takes the full fork path.
 #[cfg(windows)]
-pub struct ExecFdSnapshot(Vec<(usize, FdEntry)>);
+pub struct ExecFdSnapshot(Vec<(usize, FdEntry)>, u32);
+#[cfg(windows)]
+impl ExecFdSnapshot {
+    fn matches(&self, table: &FdTable) -> bool {
+        // An open followed by close can leave every occupied slot unchanged,
+        // while a serializer observed that transient descriptor in between.
+        // Include the allocation generation to reject this ABA snapshot.
+        if self.1 != table.next_generation {
+            return false;
+        }
+        let mut current = table
+            .slots
+            .enumerated()
+            .filter_map(|(fd, slot)| slot.map(|entry| (fd, entry)));
+        self.0.iter().all(|(fd, entry)| {
+            current.next().is_some_and(|(other_fd, other)| {
+                *fd == other_fd
+                    && entry.generation == other.generation
+                    && entry.raw == other.raw
+                    && entry.kind == other.kind
+                    && entry.flags.0 == other.flags.0
+                    && entry.description_id == other.description_id
+                    && entry.offset == other.offset
+            })
+        }) && current.next().is_none()
+    }
+}
 #[cfg(windows)]
 pub fn exec_descriptor_snapshot() -> Result<ExecFdSnapshot, i32> {
     let table = table().read().map_err(|_| EIO)?;
@@ -1716,6 +1866,7 @@ pub fn exec_descriptor_snapshot() -> Result<ExecFdSnapshot, i32> {
             .enumerated()
             .filter_map(|(fd, entry)| entry.map(|entry| (fd, entry)))
             .collect(),
+        table.next_generation,
     ))
 }
 #[cfg(windows)]
@@ -1899,14 +2050,6 @@ fn serialize_launch_state(
         (26, tmpfs::serialize()?),
         (27, tty::serialize()?),
         (22, user_namespace::serialize()?),
-        (
-            10,
-            netlink::serialize_matching(|fd| retained_fds.contains(&fd))?,
-        ),
-        (
-            11,
-            bpf::serialize_matching(|fd| retained_fds.contains(&fd))?,
-        ),
     ];
     if !env.is_empty() {
         sections.push((8, serialize_environment(env)?));
@@ -2311,7 +2454,8 @@ pub fn close_exec_wrapper_descriptors() {
                 std::process::id()
             );
         }
-        if let Ok(mut table) = table().write()
+        if kinakaze_runtime::authority::get().is_none()
+            && let Ok(mut table) = table().write()
             && let Some(Some(entry)) = table.slots.get_mut(fd as usize)
         {
             entry.flags = FdFlags(entry.flags.0 & !FdFlags::BORROWED.0);
@@ -2552,6 +2696,28 @@ pub(crate) fn install_with(
     flags: FdFlags,
     register: impl FnOnce(i32, FdEntry) -> Result<(), i32>,
 ) -> Result<i32, i32> {
+    install_with_identity(raw, kind, flags, None, register)
+}
+
+pub(crate) fn install_received(
+    raw: usize,
+    kind: FdKind,
+    flags: FdFlags,
+    description: u64,
+) -> Result<i32, i32> {
+    if description == 0 {
+        return Err(EINVAL);
+    }
+    install_with_identity(raw, kind, flags, Some(description), |_, _| Ok(()))
+}
+
+fn install_with_identity(
+    raw: usize,
+    kind: FdKind,
+    flags: FdFlags,
+    description: Option<u64>,
+    register: impl FnOnce(i32, FdEntry) -> Result<(), i32>,
+) -> Result<i32, i32> {
     let handleless = kind.allows_missing_host_handle();
     if (raw == 0 && !handleless) || raw == usize::MAX {
         return Err(EINVAL);
@@ -2572,7 +2738,11 @@ pub(crate) fn install_with(
     fd_trace("install", fd as i32, kind);
     #[cfg(windows)]
     let inheritance = exec_inheritance::DescriptorInheritance::prepare(raw, kind, flags)?;
-    table.insert_at(fd as i32, raw, kind, flags);
+    if let Some(description) = description {
+        table.insert_at_description(fd as i32, raw, kind, flags, 0, description);
+    } else {
+        table.insert_at(fd as i32, raw, kind, flags)?;
+    }
     let entry = table.slots[fd].ok_or(EIO)?;
     if let Err(error) = register(fd as i32, entry) {
         table.slots.remove(fd);
@@ -2582,6 +2752,8 @@ pub(crate) fn install_with(
     // process-specific Winsock handoff rather than raw handle inheritance.
     #[cfg(windows)]
     inheritance.commit();
+    #[cfg(windows)]
+    platform::sync_standard(fd as i32, raw);
     Ok(fd as i32)
 }
 
@@ -2618,6 +2790,8 @@ pub fn install_duplicate(
     }
     #[cfg(windows)]
     inheritance.commit();
+    #[cfg(windows)]
+    platform::sync_standard(fd as i32, raw);
     Ok(fd)
 }
 
@@ -2654,13 +2828,15 @@ impl FdReservation {
         }
         #[cfg(windows)]
         let inheritance = exec_inheritance::DescriptorInheritance::prepare(raw, kind, flags)?;
-        table.insert_at(fd as i32, raw, kind, flags);
+        table.insert_at(fd as i32, raw, kind, flags)?;
         if let Err(error) = register(fd as i32, table.slots[fd].ok_or(EIO)?) {
             table.slots.remove(fd);
             return Err(error);
         }
         #[cfg(windows)]
         inheritance.commit();
+        #[cfg(windows)]
+        platform::sync_standard(fd as i32, raw);
         table.slots.unreserve(fd);
         self.fd = None;
         Ok(fd as i32)
@@ -2746,11 +2922,13 @@ pub fn install_at_least(raw: usize, kind: FdKind, flags: FdFlags, floor: i32) ->
         .ok_or(EMFILE)?;
     #[cfg(windows)]
     let inheritance = exec_inheritance::DescriptorInheritance::prepare(raw, kind, flags)?;
-    table.insert_at(fd as i32, raw, kind, flags);
+    table.insert_at(fd as i32, raw, kind, flags)?;
     // Fork inheritance follows descriptor ownership; sockets are reconstructed
     // separately because Winsock state is process-specific.
     #[cfg(windows)]
     inheritance.commit();
+    #[cfg(windows)]
+    platform::sync_standard(fd as i32, raw);
     Ok(fd as i32)
 }
 
@@ -2788,6 +2966,8 @@ pub fn install_duplicate_at_least(
     }
     #[cfg(windows)]
     inheritance.commit();
+    #[cfg(windows)]
+    platform::sync_standard(fd as i32, raw);
     Ok(fd)
 }
 
@@ -2812,9 +2992,11 @@ pub fn install_exact(raw: usize, kind: FdKind, flags: FdFlags, fd: i32) -> Resul
     }
     #[cfg(windows)]
     let inheritance = exec_inheritance::DescriptorInheritance::prepare(raw, kind, flags)?;
-    table.insert_at(fd, raw, kind, flags);
+    table.insert_at(fd, raw, kind, flags)?;
     #[cfg(windows)]
     inheritance.commit();
+    #[cfg(windows)]
+    platform::sync_standard(fd as i32, raw);
     Ok(fd)
 }
 
@@ -2853,6 +3035,8 @@ pub fn install_duplicate_exact(
     }
     #[cfg(windows)]
     inheritance.commit();
+    #[cfg(windows)]
+    platform::sync_standard(fd as i32, raw);
     Ok(fd)
 }
 
@@ -3356,174 +3540,212 @@ pub fn close(fd: i32) -> Result<(), i32> {
     if fd < 0 {
         return Err(EBADF);
     }
-    // The Unix socket state is detached while the slot is still held, not
-    // afterwards: releasing the lock first leaves a window in which another
-    // thread can claim the freed fd and install its own state, which the cleanup
-    // below would then destroy along with that thread's live handle.
-    #[cfg(windows)]
-    let mut detached = None;
-    let (entry, description_survivor) = {
+    let retired = {
         let mut table = table().write().map_err(|_| EIO)?;
-        let slot = table.slots.get_mut(fd as usize).ok_or(EBADF)?;
-        let closing = *slot.as_ref().ok_or(EBADF)?;
+        RetiredDescriptor::detach(&mut table, fd, false)?
+    };
+    retired.release(fd)
+}
+
+struct RetiredDescriptor {
+    entry: FdEntry,
+    description_survivor: Option<(i32, FdEntry)>,
+    release_borrowed: bool,
+    #[cfg(windows)]
+    detached: Option<unix::Detached>,
+}
+
+impl RetiredDescriptor {
+    fn detach(table: &mut FdTable, fd: i32, sides_prepared: bool) -> Result<Self, i32> {
+        // The Unix socket state is detached while the slot is still held, not
+        // afterwards: releasing the lock first leaves a window in which another
+        // thread can claim the freed fd and install its own state, which the cleanup
+        // below would then destroy along with that thread's live handle.
         #[cfg(windows)]
-        {
-            // Native handles may outlive their integer slot while cancellation
-            // retires. Remove them from ambient fork inheritance before making
-            // the slot reusable, including FIFO's auxiliary inode marker.
-            if closing.kind == FdKind::Fifo {
-                fifo::disable_inheritance_locked(closing)?;
-            }
-            if closing.raw != 0
-                && !matches!(closing.kind, FdKind::Socket | FdKind::Fifo)
-                && !closing.flags.contains(FdFlags::BORROWED)
+        let mut detached = None;
+        let (entry, description_survivor, release_borrowed) = {
+            let slot = table.slots.get_mut(fd as usize).ok_or(EBADF)?;
+            let closing = *slot.as_ref().ok_or(EBADF)?;
+            let release_borrowed = closing.flags.contains(FdFlags::BORROWED)
+                && kinakaze_runtime::authority::get().is_some()
+                && !table.slots.enumerated().any(|(other, slot)| {
+                    other != fd as usize && slot.is_some_and(|entry| entry.raw == closing.raw)
+                });
+            #[cfg(windows)]
             {
-                platform::try_set_inheritable(closing.raw, false)?;
+                // Native handles may outlive their integer slot while cancellation
+                // retires. Remove them from ambient fork inheritance before making
+                // the slot reusable, including FIFO's auxiliary inode marker.
+                if closing.kind == FdKind::Fifo && !sides_prepared {
+                    fifo::disable_inheritance_locked(closing)?;
+                }
+                if !sides_prepared
+                    && closing.raw != 0
+                    && !matches!(closing.kind, FdKind::Socket | FdKind::Fifo)
+                    && (!closing.flags.contains(FdFlags::BORROWED) || release_borrowed)
+                {
+                    platform::try_set_inheritable(closing.raw, false)?;
+                }
             }
-        }
-        let entry = table.slots.remove(fd as usize).ok_or(EBADF)?;
+            let entry = table.slots.remove(fd as usize).ok_or(EBADF)?;
+            #[cfg(windows)]
+            if !sides_prepared {
+                platform::sync_standard(fd, 0);
+            }
+            #[cfg(windows)]
+            if !sides_prepared
+                && let Some(pid) = kinakaze_runtime::job::namespace_pid(std::process::id())
+            {
+                let _ = kinakaze_runtime::job::set_fd_link(pid, fd, None);
+            }
+            #[cfg(windows)]
+            if entry.kind == FdKind::UnixSocket && !sides_prepared {
+                detached = unix::detach(fd);
+            }
+            #[cfg(windows)]
+            if entry.kind == FdKind::NetlinkSocket {
+                netlink::detach(fd);
+            }
+            #[cfg(windows)]
+            if entry.kind == FdKind::EventFd {
+                // Detach before the integer slot becomes allocatable. Otherwise a
+                // concurrent creator can publish a new counter at this same fd and
+                // have it removed by the old descriptor's delayed cleanup.
+                eventfd::forget_eventfd(fd);
+            }
+            let survivor = table.slots.enumerated().find_map(|(other_fd, slot)| {
+                let candidate = slot.as_ref()?;
+                (candidate.description_id == entry.description_id)
+                    .then_some((other_fd as i32, *candidate))
+            });
+            if survivor.is_none() {
+                mount::overlay::closed(entry.description_id);
+                mount::native::closed(entry.description_id);
+                pipe_inode::closed(entry.description_id);
+                #[cfg(windows)]
+                ofd::closed(entry.description_id);
+                #[cfg(windows)]
+                usernet::closed(entry.description_id);
+            }
+            mount::api::closed(entry, table.slots.iter().flatten().copied());
+            (entry, survivor, release_borrowed)
+        };
+        Ok(Self {
+            entry,
+            description_survivor,
+            release_borrowed,
+            #[cfg(windows)]
+            detached,
+        })
+    }
+
+    fn release(self, fd: i32) -> Result<(), i32> {
+        let Self {
+            entry,
+            description_survivor,
+            release_borrowed,
+            #[cfg(windows)]
+            detached,
+        } = self;
         #[cfg(windows)]
-        if let Some(pid) = kinakaze_runtime::job::namespace_pid(std::process::id()) {
-            let _ = kinakaze_runtime::job::set_fd_link(pid, fd, None);
+        epoll::descriptor_closed(entry.description_id, description_survivor);
+        #[cfg(windows)]
+        let lock_result = record_lock::descriptor_closed(entry);
+        if entry.kind == FdKind::Pipe && std::env::var_os("KINAKAZE_PIPE_TRACE").is_some() {
+            eprintln!(
+                "kinakaze pipe: pid={} close fd={fd} raw={:#x} flags={:#x}",
+                std::process::id(),
+                entry.raw,
+                entry.flags.0
+            );
         }
+        if entry.kind == FdKind::MessageQueue {
+            mqueue::closed(entry);
+        }
+        if entry.flags.contains(FdFlags::BORROWED) && !release_borrowed {
+            return Ok(());
+        }
+        #[cfg(windows)]
+        if entry.kind == FdKind::Fifo {
+            return fifo::close_entry(fd, entry);
+        }
+        // Sockets must be released with closesocket, not CloseHandle, so Winsock can
+        // run its own teardown.
+        #[cfg(windows)]
+        if entry.kind == FdKind::Socket {
+            return socket::close_socket(entry.raw);
+        }
+        // A Unix socket owns its pipe instance and possibly a placeholder file, which
+        // that layer releases together.
         #[cfg(windows)]
         if entry.kind == FdKind::UnixSocket {
-            detached = unix::detach(fd);
+            match detached {
+                Some(state) => unix::release_detached(state),
+                // No side-table state, which happens only for a descriptor closed
+                // between allocation and initialization. The handle, if any, is still
+                // this function's to release.
+                None => return platform::close(entry),
+            }
+            return Ok(());
+        }
+        // An epoll set's registrations live outside the table and would otherwise
+        // outlive the descriptor.
+        #[cfg(windows)]
+        if entry.kind == FdKind::Event {
+            epoll::forget_set(fd, entry.raw);
         }
         #[cfg(windows)]
-        if entry.kind == FdKind::NetlinkSocket {
-            netlink::detach(fd);
+        if entry.kind == FdKind::IoRing {
+            iouring::forget_ring(fd, entry.raw);
         }
         #[cfg(windows)]
-        if entry.kind == FdKind::BpfProgram {
-            bpf::close(fd);
+        if entry.kind == FdKind::EventFd && entry.raw == 0 {
+            return Ok(());
         }
+        if entry.kind == FdKind::Inotify {
+            inotify::close_inotify(entry, description_survivor.is_none());
+        }
+        // A synthetic descriptor owns no kernel object, only its side-table entry.
         #[cfg(windows)]
-        if entry.kind == FdKind::EventFd {
-            // Detach before the integer slot becomes allocatable. Otherwise a
-            // concurrent creator can publish a new counter at this same fd and
-            // have it removed by the old descriptor's delayed cleanup.
-            eventfd::forget_eventfd(fd);
+        if matches!(
+            entry.kind,
+            FdKind::Synthetic
+                | FdKind::SyntheticDirectory
+                | FdKind::CgroupFile
+                | FdKind::ProcSysctl
+        ) {
+            forget_synthetic(fd, entry.generation);
+            return Ok(());
         }
-        let survivor = table.slots.enumerated().find_map(|(other_fd, slot)| {
-            let candidate = slot.as_ref()?;
-            (candidate.description_id == entry.description_id)
-                .then_some((other_fd as i32, *candidate))
-        });
-        if survivor.is_none() {
-            mount::overlay::closed(entry.description_id);
-            mount::native::closed(entry.description_id);
-            pipe_inode::closed(entry.description_id);
-            #[cfg(windows)]
-            ofd::closed(entry.description_id);
-            #[cfg(windows)]
-            usernet::closed(entry.description_id);
+        // Guest character devices can be handleless. Imported Windows NUL
+        // descriptors still own a native handle which must be closed below.
+        #[cfg(windows)]
+        if entry.raw == 0
+            && matches!(
+                entry.kind,
+                FdKind::Null | FdKind::Zero | FdKind::Random | FdKind::Full
+            )
+        {
+            return Ok(());
         }
-        mount::api::closed(entry, table.slots.iter().flatten().copied());
-        (entry, survivor)
-    };
-    #[cfg(windows)]
-    epoll::descriptor_closed(entry.description_id, description_survivor);
-    #[cfg(windows)]
-    let lock_result = record_lock::descriptor_closed(entry);
-    if entry.kind == FdKind::Pipe && std::env::var_os("KINAKAZE_PIPE_TRACE").is_some() {
-        eprintln!(
-            "kinakaze pipe: pid={} close fd={fd} raw={:#x} flags={:#x}",
-            std::process::id(),
-            entry.raw,
-            entry.flags.0
-        );
-    }
-    if entry.kind == FdKind::MessageQueue {
-        mqueue::closed(entry);
-    }
-    if entry.flags.contains(FdFlags::BORROWED) {
-        return Ok(());
-    }
-    #[cfg(windows)]
-    if entry.kind == FdKind::Fifo {
-        return fifo::close_entry(fd, entry);
-    }
-    // Sockets must be released with closesocket, not CloseHandle, so Winsock can
-    // run its own teardown.
-    #[cfg(windows)]
-    if entry.kind == FdKind::Socket {
-        return socket::close_socket(entry.raw);
-    }
-    #[cfg(windows)]
-    if entry.kind == FdKind::NetlinkSocket {
-        return Ok(());
-    }
-    #[cfg(windows)]
-    if entry.kind == FdKind::BpfProgram {
-        return Ok(());
-    }
-    // A Unix socket owns its pipe instance and possibly a placeholder file, which
-    // that layer releases together.
-    #[cfg(windows)]
-    if entry.kind == FdKind::UnixSocket {
-        match detached {
-            Some(state) => unix::release_detached(state),
-            // No side-table state, which happens only for a descriptor closed
-            // between allocation and initialization. The handle, if any, is still
-            // this function's to release.
-            None => return platform::close(entry),
+        // A console's cached terminal attributes are keyed by descriptor number and
+        // would otherwise be inherited by whatever reuses the slot.
+        #[cfg(windows)]
+        if entry.kind == FdKind::Console {
+            pty::forget_generation(fd, entry.generation);
         }
-        return Ok(());
+        // A terminal end owns a handle to its readiness event, and closing the last
+        // one on a side is what tells the other end that this side has gone.
+        #[cfg(windows)]
+        if matches!(entry.kind, FdKind::PtyMaster | FdKind::PtySlave) {
+            tty::close_descriptor(fd, entry.raw);
+            return Ok(());
+        }
+        let result = platform::close(entry);
+        #[cfg(windows)]
+        lock_result?;
+        result
     }
-    // An epoll set's registrations live outside the table and would otherwise
-    // outlive the descriptor.
-    #[cfg(windows)]
-    if entry.kind == FdKind::Event {
-        epoll::forget_set(fd, entry.raw);
-    }
-    #[cfg(windows)]
-    if entry.kind == FdKind::IoRing {
-        iouring::forget_ring(fd, entry.raw);
-    }
-    #[cfg(windows)]
-    if entry.kind == FdKind::EventFd && entry.raw == 0 {
-        return Ok(());
-    }
-    if entry.kind == FdKind::Inotify {
-        inotify::close_inotify(fd);
-        return Ok(());
-    }
-    // A synthetic descriptor owns no kernel object, only its side-table entry.
-    #[cfg(windows)]
-    if matches!(
-        entry.kind,
-        FdKind::Synthetic | FdKind::SyntheticDirectory | FdKind::CgroupFile | FdKind::ProcSysctl
-    ) {
-        forget_synthetic(fd, entry.generation);
-        return Ok(());
-    }
-    // Linux character devices with entirely synthetic behaviour own no host
-    // handle. Closing the descriptor only removes the table entry above.
-    #[cfg(windows)]
-    if matches!(
-        entry.kind,
-        FdKind::Null | FdKind::Zero | FdKind::Random | FdKind::Full
-    ) {
-        return Ok(());
-    }
-    // A console's cached terminal attributes are keyed by descriptor number and
-    // would otherwise be inherited by whatever reuses the slot.
-    #[cfg(windows)]
-    if entry.kind == FdKind::Console {
-        pty::forget(fd);
-    }
-    // A terminal end owns a handle to its readiness event, and closing the last
-    // one on a side is what tells the other end that this side has gone.
-    #[cfg(windows)]
-    if matches!(entry.kind, FdKind::PtyMaster | FdKind::PtySlave) {
-        tty::close_descriptor(fd, entry.raw);
-        return Ok(());
-    }
-    let result = platform::close(entry);
-    #[cfg(windows)]
-    lock_result?;
-    result
 }
 
 #[cfg(windows)]
@@ -3551,7 +3773,7 @@ mod platform {
         ConnectNamedPipe, CreateNamedPipeW, PIPE_READMODE_BYTE, PIPE_REJECT_REMOTE_CLIENTS,
         PIPE_TYPE_BYTE, PIPE_WAIT, PeekNamedPipe,
     };
-    use windows_sys::Win32::System::Threading::{INFINITE, ResetEvent, WaitForMultipleObjects};
+    use windows_sys::Win32::System::Threading::{INFINITE, WaitForMultipleObjects};
 
     use crate::fs::NativeIoStatus as IoStatusBlock;
 
@@ -3654,9 +3876,20 @@ mod platform {
                     };
                     flags = flags.union(access);
                 }
-                table.insert_at(fd, handle as usize, kind, flags);
+                let _ = table.insert_at(fd, handle as usize, kind, flags);
             }
         }
+    }
+
+    /// Guest standard descriptors own the worker's imported native endpoints.
+    /// Keep host selectors current so a later fork cannot inherit a closed or
+    /// recycled handle. Standalone library users still borrow their host stdio.
+    pub(super) fn sync_standard(fd: i32, raw: usize) {
+        if !(0..=2).contains(&fd) || kinakaze_runtime::authority::get().is_none() {
+            return;
+        }
+        let selector = [STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, STD_ERROR_HANDLE][fd as usize];
+        unsafe { windows_sys::Win32::System::Console::SetStdHandle(selector, raw as HANDLE) };
     }
 
     fn classify(handle: HANDLE) -> FdKind {
@@ -3666,9 +3899,15 @@ mod platform {
         // the handle is an event; the terminal layer recognises it by name, and
         // asking first is what lets `login_tty` plus `exec` produce a child whose
         // fd 0 is a real terminal rather than an unusable unknown.
-        let terminal = super::tty::classify_handle(handle as usize);
         // SAFETY: the handle is live while installed in the table.
         let file_type = unsafe { GetFileType(handle) };
+        // Pty handles are events. Files, pipes and character devices need no
+        // terminal-name lookup on every worker startup.
+        let terminal = if file_type == windows_sys::Win32::Storage::FileSystem::FILE_TYPE_UNKNOWN {
+            super::tty::classify_handle(handle as usize)
+        } else {
+            None
+        };
         if super::fd_trace_enabled() {
             eprintln!(
                 "[fd] classify handle={:#x} file_type={file_type} terminal={terminal:?}",
@@ -3679,10 +3918,36 @@ mod platform {
             return kind;
         }
         match file_type {
-            FILE_TYPE_CHAR => FdKind::Console,
+            FILE_TYPE_CHAR => {
+                if super::tty::handle_name(handle)
+                    .is_some_and(|name| name.eq_ignore_ascii_case(r"\Device\Null"))
+                {
+                    FdKind::Null
+                } else {
+                    FdKind::Console
+                }
+            }
             FILE_TYPE_DISK => FdKind::File,
             FILE_TYPE_PIPE => FdKind::Pipe,
             _ => FdKind::Unknown,
+        }
+    }
+
+    #[test]
+    fn inherited_null_device_is_transferable_and_not_a_console() {
+        use std::os::windows::io::IntoRawHandle;
+        for writing in [false, true] {
+            let file = std::fs::OpenOptions::new()
+                .read(!writing)
+                .write(writing)
+                .open("NUL")
+                .unwrap();
+            let raw = file.into_raw_handle();
+            assert_eq!(classify(raw), FdKind::Null);
+            let fd = super::install(raw as usize, FdKind::Null, FdFlags::NONE).unwrap();
+            super::close(fd).unwrap();
+            let mut flags = 0;
+            assert_eq!(unsafe { GetHandleInformation(raw, &mut flags) }, 0);
         }
     }
 
@@ -3979,8 +4244,15 @@ mod platform {
         let handles = [io_event, interrupt];
         // Announce this thread as interruptible so `kill` knows to wake it.
         super::signal::register_waiter();
-        // SAFETY: both handles are live for the duration of the wait.
-        let waited = unsafe { WaitForMultipleObjects(2, handles.as_ptr(), 0, INFINITE) };
+        let waited = loop {
+            // The interrupt event auto-resets. A stale wake, or default-ignored
+            // SIGCHLD from a reaped child, must not cancel a live I/O request.
+            let waited = unsafe { WaitForMultipleObjects(2, handles.as_ptr(), 0, INFINITE) };
+            if waited == WAIT_OBJECT_0 + 1 && !super::signal::interrupt_pending() {
+                continue;
+            }
+            break waited;
+        };
         super::signal::unregister_waiter();
 
         if waited == WAIT_OBJECT_0 {
@@ -3999,9 +4271,6 @@ mod platform {
         unsafe { CancelIoEx(handle, overlapped) };
         // SAFETY: the completion event remains live until the request retires.
         unsafe { WaitForMultipleObjects(1, &io_event, 0, INFINITE) };
-        // Clear the consumed interrupt so it does not abort the next call.
-        // SAFETY: the interrupt event belongs to this thread.
-        unsafe { ResetEvent(interrupt) };
         Ok(())
     }
 
@@ -4297,9 +4566,15 @@ mod tests {
             next_generation: 1,
             next_description_id: 1,
         };
-        table.insert_at(2, 0x20, FdKind::File, FdFlags::BORROWED);
-        table.insert_at(4, 0x40, FdKind::File, FdFlags::BORROWED);
-        table.insert_at(5, 0x50, FdKind::File, FdFlags::BORROWED);
+        table
+            .insert_at(2, 0x20, FdKind::File, FdFlags::BORROWED)
+            .unwrap();
+        table
+            .insert_at(4, 0x40, FdKind::File, FdFlags::BORROWED)
+            .unwrap();
+        table
+            .insert_at(5, 0x50, FdKind::File, FdFlags::BORROWED)
+            .unwrap();
 
         assert_eq!(table.first_free_from(0), Some(0));
         assert_eq!(table.first_free_from(2), Some(3));
@@ -4391,8 +4666,6 @@ mod tests {
             FdKind::Random,
             FdKind::Full,
             FdKind::CgroupFile,
-            FdKind::NetlinkSocket,
-            FdKind::BpfProgram,
             FdKind::ProcSysctl,
         ];
         assert!(kinds.into_iter().all(FdKind::allows_missing_host_handle));
@@ -6816,8 +7089,12 @@ mod tests {
             close(fd).unwrap();
             fs::unlink(&path).unwrap();
 
-            // stdout is a stream: it has no file position at all.
-            assert!(matches!(fs::lseek(1, 0, fs::SEEK_CUR), Err(ESPIPE)));
+            // Own a real pipe: the test runner may redirect stdout to a file.
+            let (read, write) = crate::create_pipe(crate::FdFlags::NONE, 4096).unwrap();
+            assert_eq!(fs::lseek(read, 0, fs::SEEK_CUR), Err(ESPIPE));
+            assert_eq!(fs::lseek(write, 0, fs::SEEK_CUR), Err(ESPIPE));
+            close(read).unwrap();
+            close(write).unwrap();
         }
 
         #[test]
@@ -7305,7 +7582,7 @@ mod tests {
         }
 
         #[test]
-        fn interrupting_a_blocked_overlapped_read_reports_eintr() {
+        fn directed_signal_interrupts_a_blocked_overlapped_read() {
             let _serialized = signal_test_lock();
             let (server, client) = overlapped_pipe_pair();
             // A stream descriptor: no offset tracking, reads block when empty.
@@ -7321,23 +7598,18 @@ mod tests {
             // Register this thread's interrupt event before the waker races us.
             assert!(!interrupt::current().is_null());
             let target = interrupt::current_thread_id();
-            let waker = std::thread::spawn(move || {
-                // Long enough for the reader to reach the dual wait.
-                std::thread::sleep(std::time::Duration::from_millis(200));
+            with_handler(crate::signal::SIGUSR1, count_run, 0, || {
+                let waker = std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(200));
+                    crate::signal::raise_thread_signal(target, crate::signal::SIGUSR1).unwrap();
+                });
+                let result = read(fd, &mut [0u8; 8]);
+                waker.join().unwrap();
                 assert!(
-                    interrupt::interrupt_thread(target),
-                    "target thread was not registered"
+                    matches!(result, Err(EINTR)),
+                    "expected EINTR, got {result:?}"
                 );
             });
-
-            // Nothing was ever written, so this read reaches the interruptible
-            // wait and only returns because the interrupt cancels it.
-            let result = read(fd, &mut [0u8; 8]);
-            waker.join().unwrap();
-            assert!(
-                matches!(result, Err(EINTR)),
-                "expected EINTR, got {result:?}"
-            );
 
             // The consumed interrupt must not leak into the next call: after a
             // write the same descriptor reads normally.
@@ -7353,6 +7625,48 @@ mod tests {
             // SAFETY: the client handle is owned by this test.
             unsafe { CloseHandle(client) };
         }
+
+        #[test]
+        fn stale_interrupt_wake_does_not_cancel_overlapped_read() {
+            let _serialized = signal_test_lock();
+            let (server, client) = overlapped_pipe_pair();
+            let fd = install(
+                server as usize,
+                FdKind::Pipe,
+                FdFlags::OVERLAPPED
+                    .union(FdFlags::PIPE_READ_END)
+                    .union(FdFlags::PIPE_WRITE_END),
+            )
+            .unwrap();
+            assert!(!interrupt::current().is_null());
+            let target = interrupt::current_thread_id();
+            let writer = client as usize;
+            let helper = std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_millis(100));
+                assert!(interrupt::interrupt_thread(target));
+                std::thread::sleep(std::time::Duration::from_millis(100));
+                let mut written = 0;
+                assert_ne!(
+                    unsafe {
+                        WriteFile(
+                            writer as HANDLE,
+                            b"ok".as_ptr(),
+                            2,
+                            &mut written,
+                            ptr::null_mut(),
+                        )
+                    },
+                    0
+                );
+            });
+            let mut bytes = [0; 2];
+            let result = read(fd, &mut bytes);
+            helper.join().unwrap();
+            close(fd).unwrap();
+            unsafe { CloseHandle(client) };
+            assert_eq!(result, Ok(2));
+            assert_eq!(&bytes, b"ok");
+        }
     }
 }
 
@@ -7364,7 +7678,7 @@ mod platform {
         for fd in 0..=2 {
             // Linux keeps the file position in the kernel, so these descriptors
             // are never marked SEEKABLE for the table to track.
-            table.insert_at(fd, fd as usize, FdKind::File, FdFlags::BORROWED);
+            let _ = table.insert_at(fd, fd as usize, FdKind::File, FdFlags::BORROWED);
         }
     }
 

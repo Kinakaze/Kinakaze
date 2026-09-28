@@ -1,50 +1,14 @@
-//! inotify: Linux file-monitoring ABI on top of Windows `ReadDirectoryChangesW`.
-//!
-//! # Design
-//!
-//! `inotify_init1`    -> allocates a synthetic FD of kind `Inotify`.
-//! `inotify_add_watch(fd, path, mask)` -> starts `ReadDirectoryChangesW` on the
-//!                      directory in a background thread and returns a watch
-//!                      descriptor (wd).
-//! `inotify_rm_watch(fd, wd)` -> signals the background thread to stop.
-//! `read(inotify_fd, buf, len)` -> drains the pending `inotify_event` queue.
-//!
-//! # inotify_event wire format (Linux x86_64 ABI)
-//!
-//! ```text
-//! struct inotify_event {
-//!     int32_t  wd;      // watch descriptor
-//!     uint32_t mask;    // event type bits
-//!     uint32_t cookie;  // rename-pair cookie (0 if not a rename)
-//!     uint32_t len;     // byte count of name[], 0-padded to 4-byte alignment
-//!     char     name[];  // filename within the watched directory (optional)
-//! };
-//! ```
-
-use std::collections::{HashMap, VecDeque};
-use std::os::windows::ffi::OsStrExt;
-use std::path::PathBuf;
-use std::sync::atomic::{AtomicU32, Ordering};
-use std::sync::{Arc, Condvar, Mutex, OnceLock};
-use std::thread::JoinHandle;
-
-use windows_sys::Win32::Foundation::{
-    CloseHandle, GetLastError, HANDLE, INVALID_HANDLE_VALUE, WAIT_OBJECT_0,
+//! Inotify open descriptions share watches and queues through native sections.
+//! Init owns directory I/O; a worker exiting never cancels an inherited watch.
+use crate::mount::shared::{self, Store};
+use crate::state_codec::{Reader, bytes, word};
+use kinakaze_v2_host_win::{DirectoryQueue, DirectoryWatch};
+use kinakaze_v2_protocol::kernel::{KernelCommand, ObjectKey};
+use std::{
+    collections::{BTreeMap, HashMap, VecDeque},
+    path::PathBuf,
+    sync::{Mutex, OnceLock},
 };
-use windows_sys::Win32::Storage::FileSystem::{
-    CreateFileW, FILE_FLAG_BACKUP_SEMANTICS, FILE_FLAG_OVERLAPPED, FILE_LIST_DIRECTORY,
-    FILE_NOTIFY_CHANGE_ATTRIBUTES, FILE_NOTIFY_CHANGE_CREATION, FILE_NOTIFY_CHANGE_DIR_NAME,
-    FILE_NOTIFY_CHANGE_FILE_NAME, FILE_NOTIFY_CHANGE_LAST_WRITE, FILE_NOTIFY_CHANGE_SIZE,
-    FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING, ReadDirectoryChangesW,
-};
-use windows_sys::Win32::System::IO::{CancelIoEx, GetOverlappedResult, OVERLAPPED};
-use windows_sys::Win32::System::Threading::{
-    CreateEventW, INFINITE, SetEvent, WaitForMultipleObjects,
-};
-
-// ---------------------------------------------------------------------------
-// inotify event mask bits (Linux ABI).
-// ---------------------------------------------------------------------------
 
 pub const IN_ACCESS: u32 = 0x0000_0001;
 pub const IN_MODIFY: u32 = 0x0000_0002;
@@ -68,81 +32,166 @@ pub const IN_ONESHOT: u32 = 0x8000_0000;
 pub const IN_CLOEXEC: i32 = 0o2000000;
 pub const IN_NONBLOCK: i32 = 0o0004000;
 
-// Windows FILE_NOTIFY_INFORMATION action codes.
 const FILE_ACTION_ADDED: u32 = 1;
 const FILE_ACTION_REMOVED: u32 = 2;
 const FILE_ACTION_MODIFIED: u32 = 3;
 const FILE_ACTION_RENAMED_OLD_NAME: u32 = 4;
 const FILE_ACTION_RENAMED_NEW_NAME: u32 = 5;
-
-// ---------------------------------------------------------------------------
-// Internal state.
-// ---------------------------------------------------------------------------
+const MAGIC: u64 = u64::from_le_bytes(*b"CYINOFD1");
+const QUEUE_LIMIT: usize = 4096;
 
 struct Watch {
-    memory: Option<crate::tmpfs::watch::Watch>,
+    id: u64,
+    volume: u64,
+    node: u64,
     path: PathBuf,
-    mask: Arc<AtomicU32>,
-    cancel_event: HANDLE,
-    thread: Option<JoinHandle<()>>,
+    filter: Vec<u8>,
+    mask: u32,
+    cookie: u32,
 }
-
-// SAFETY: HANDLE is just an integer; only mutated under the mutex.
-unsafe impl Send for Watch {}
-unsafe impl Sync for Watch {}
-
-struct InotifyState {
-    next_wd: i32,
-    watches: HashMap<i32, Watch>,
-    watches_by_path: HashMap<PathBuf, i32>,
+struct State {
+    retired: Vec<Watch>,
+    next: i32,
+    watches: BTreeMap<i32, Watch>,
     queue: VecDeque<Vec<u8>>,
-    nonblock: bool,
 }
-
-struct InotifyFd {
-    state: Mutex<InotifyState>,
-    readable: Condvar,
+impl State {
+    fn decode(data: &[u8]) -> Result<Self, i32> {
+        let mut r = Reader(data);
+        if r.word()? != MAGIC {
+            return Err(crate::EIO);
+        }
+        let mut s = Self {
+            retired: Vec::new(),
+            next: r.word()? as i32,
+            watches: BTreeMap::new(),
+            queue: VecDeque::new(),
+        };
+        let count = r.word()?;
+        if count > 16384 {
+            return Err(crate::EIO);
+        }
+        for _ in 0..count {
+            let wd = r.word()? as i32;
+            let item = Watch {
+                id: r.word()?,
+                volume: r.word()?,
+                node: r.word()?,
+                mask: r.word()? as u32,
+                cookie: r.word()? as u32,
+                path: PathBuf::from(std::str::from_utf8(r.bytes()?).map_err(|_| crate::EIO)?),
+                filter: r.bytes()?.to_vec(),
+            };
+            if s.watches.insert(wd, item).is_some() {
+                return Err(crate::EIO);
+            }
+        }
+        let count = r.word()?;
+        if count > (QUEUE_LIMIT + 1) as u64 {
+            return Err(crate::EIO);
+        }
+        for _ in 0..count {
+            s.queue.push_back(r.bytes()?.to_vec());
+        }
+        r.end()?;
+        Ok(s)
+    }
+    fn encode(&self) -> Vec<u8> {
+        let mut out = Vec::new();
+        word(&mut out, MAGIC);
+        word(&mut out, self.next as u64);
+        word(&mut out, self.watches.len() as u64);
+        for (&wd, w) in &self.watches {
+            for value in [
+                wd as u64,
+                w.id,
+                w.volume,
+                w.node,
+                w.mask as u64,
+                w.cookie as u64,
+            ] {
+                word(&mut out, value);
+            }
+            bytes(&mut out, w.path.to_string_lossy().as_bytes());
+            bytes(&mut out, &w.filter);
+        }
+        word(&mut out, self.queue.len() as u64);
+        for event in &self.queue {
+            bytes(&mut out, event);
+        }
+        out
+    }
+    fn push(&mut self, event: Vec<u8>) {
+        if self.queue.back() == Some(&event) {
+            return;
+        }
+        if self.queue.len() < QUEUE_LIMIT {
+            self.queue.push_back(event);
+        } else if self.queue.len() == QUEUE_LIMIT {
+            self.queue.push_back(encode_event(-1, 0x4000, 0, &[]));
+        }
+    }
 }
-
-static INOTIFY_MAP: OnceLock<Mutex<HashMap<i32, Arc<InotifyFd>>>> = OnceLock::new();
-
-fn inotify_map() -> &'static Mutex<HashMap<i32, Arc<InotifyFd>>> {
-    INOTIFY_MAP.get_or_init(|| Mutex::new(HashMap::new()))
+// Standalone provider tests have no init. Production never keeps watch owners
+// in a worker; only this fallback uses the same native owning wrappers locally.
+#[allow(dead_code)]
+enum LocalWatch {
+    Native(DirectoryWatch),
+    Memory(crate::tmpfs::watch::Watch),
 }
-
-// ---------------------------------------------------------------------------
-// Public API.
-// ---------------------------------------------------------------------------
-
+fn local() -> &'static Mutex<HashMap<(u64, u64), LocalWatch>> {
+    static VALUE: OnceLock<Mutex<HashMap<(u64, u64), LocalWatch>>> = OnceLock::new();
+    VALUE.get_or_init(Default::default)
+}
+fn owner(fd: i32) -> Result<Store, i32> {
+    let table = crate::table().read().map_err(|_| crate::EIO)?;
+    let entry = table
+        .slots
+        .get(fd as usize)
+        .and_then(|s| *s)
+        .ok_or(crate::EBADF)?;
+    if entry.kind != crate::FdKind::Inotify {
+        return Err(crate::EINVAL);
+    }
+    shared::object_entry(entry)
+}
+fn update<T>(owner: &Store, action: impl FnOnce(&mut State) -> Result<T, i32>) -> Result<T, i32> {
+    let (result, retired) = owner.update(|data| {
+        let mut state = State::decode(data)?;
+        let result = action(&mut state);
+        Ok((state.encode(), (result, state.retired)))
+    })?;
+    // Publish removal before cancelling I/O. An abandoned update can never
+    // leave a published watch pointing at an already destroyed native queue.
+    for watch in retired {
+        release(owner, &watch)?;
+    }
+    result
+}
 pub fn create_inotify(flags: i32) -> Result<i32, i32> {
     if flags & !(IN_CLOEXEC | IN_NONBLOCK) != 0 {
         return Err(crate::EINVAL);
     }
-    let nonblock = flags & IN_NONBLOCK != 0;
+    let store = shared::new_object()?;
+    store.replace(
+        &State {
+            retired: Vec::new(),
+            next: 1,
+            watches: BTreeMap::new(),
+            queue: VecDeque::new(),
+        }
+        .encode(),
+    )?;
     let mut fd_flags = crate::FdFlags::NONE;
     if flags & IN_CLOEXEC != 0 {
         fd_flags.0 |= crate::FdFlags::CLOSE_ON_EXEC.0;
     }
-    if nonblock {
+    if flags & IN_NONBLOCK != 0 {
         fd_flags.0 |= crate::FdFlags::NONBLOCK.0;
     }
-    let fd = crate::install_handleless(crate::FdKind::Inotify, fd_flags)?;
-    let ifd = Arc::new(InotifyFd {
-        state: Mutex::new(InotifyState {
-            next_wd: 1,
-            watches: HashMap::new(),
-            watches_by_path: HashMap::new(),
-            queue: VecDeque::new(),
-            nonblock,
-        }),
-        readable: Condvar::new(),
-    });
-    if let Ok(mut map) = inotify_map().lock() {
-        map.insert(fd, ifd);
-    }
-    Ok(fd)
+    let fd = store.descriptor_kind(crate::FdKind::Inotify, fd_flags)?;
+    crate::pipe_inode::finish_created(fd)
 }
-
 /// Resolves a guest pathname with the same cwd/root/symlink rules as the rest
 /// of the VFS, then installs a watch on the resolved object.
 pub fn add_watch_linux(fd: i32, path: &str, mask: u32) -> Result<i32, i32> {
@@ -173,274 +222,304 @@ pub fn add_watch_linux(fd: i32, path: &str, mask: u32) -> Result<i32, i32> {
     add_watch(fd, resolved, mask)
 }
 
-fn add_memory_watch(fd: i32, (volume, node, mode): (u64, u64, u32), mask: u32) -> Result<i32, i32> {
+fn valid_mask(mask: u32) -> Result<(), i32> {
     if mask & IN_ALL_EVENTS == 0 || mask & IN_MASK_ADD != 0 && mask & IN_MASK_CREATE != 0 {
-        return Err(crate::EINVAL);
+        Err(crate::EINVAL)
+    } else {
+        Ok(())
     }
+}
+fn change_mask(watch: &mut Watch, mask: u32) -> Result<(), i32> {
+    if mask & IN_MASK_CREATE != 0 {
+        return Err(crate::EEXIST);
+    }
+    if watch.volume != 0 {
+        crate::tmpfs::watch::Watch::open(watch.volume, watch.node, watch.id)?.mask(mask)?;
+    }
+    watch.mask = if mask & IN_MASK_ADD != 0 {
+        watch.mask | mask
+    } else {
+        mask
+    };
+    Ok(())
+}
+fn add_memory_watch(fd: i32, (volume, node, mode): (u64, u64, u32), mask: u32) -> Result<i32, i32> {
+    valid_mask(mask)?;
     if mask & IN_ONLYDIR != 0 && mode & crate::fs::S_IFMT != crate::fs::S_IFDIR {
         return Err(crate::ENOTDIR);
     }
-    let ifd = inotify_map()
-        .lock()
-        .map_err(|_| crate::EIO)?
-        .get(&fd)
-        .cloned()
-        .ok_or(crate::EBADF)?;
-    let mut state = ifd.state.lock().map_err(|_| crate::EIO)?;
-    for (wd, watch) in &state.watches {
-        if let Some(memory) = &watch.memory
-            && memory.volume == volume
-            && memory.node == node
-        {
-            if mask & IN_MASK_CREATE != 0 {
-                return Err(crate::EEXIST);
+    let store = owner(fd)?;
+    update(&store, |s| {
+        for (&wd, watch) in &mut s.watches {
+            if watch.volume == volume && watch.node == node {
+                change_mask(watch, mask)?;
+                return Ok(wd);
             }
-            memory.mask(mask)?;
-            return Ok(*wd);
         }
-    }
-    let memory = crate::tmpfs::watch::Watch::new(volume, node, mask)?;
-    let wd = state.next_wd;
-    state.next_wd = state.next_wd.checked_add(1).ok_or(crate::ENOSPC)?;
-    state.watches.insert(
-        wd,
-        Watch {
-            memory: Some(memory),
-            path: PathBuf::new(),
-            mask: Arc::new(AtomicU32::new(mask)),
-            cancel_event: core::ptr::null_mut(),
-            thread: None,
-        },
-    );
-    Ok(wd)
+        let next = s.next.checked_add(1).ok_or(crate::ENOSPC)?;
+        let memory = crate::tmpfs::watch::Watch::new(volume, node, mask)?;
+        memory.retain(store.kernel_key())?;
+        let id = memory.id();
+        if kinakaze_runtime::authority::get().is_none() {
+            local()
+                .lock()
+                .map_err(|_| crate::EIO)?
+                .insert((store.id(), id), LocalWatch::Memory(memory));
+        }
+        let wd = s.next;
+        s.next = next;
+        s.watches.insert(
+            wd,
+            Watch {
+                id,
+                volume,
+                node,
+                path: PathBuf::new(),
+                filter: Vec::new(),
+                mask,
+                cookie: 0,
+            },
+        );
+        Ok(wd)
+    })
 }
-
-fn collect_memory(state: &mut InotifyState) -> Result<(), i32> {
+pub fn add_watch(fd: i32, path: PathBuf, mask: u32) -> Result<i32, i32> {
+    valid_mask(mask)?;
+    let store = owner(fd)?;
+    update(&store, |s| {
+        for (&wd, watch) in &mut s.watches {
+            if watch.volume == 0 && watch.path == path {
+                change_mask(watch, mask)?;
+                return Ok(wd);
+            }
+        }
+        if s.watches.len() >= 16384 {
+            return Err(crate::ENOSPC);
+        }
+        let next = s.next.checked_add(1).ok_or(crate::ENOSPC)?;
+        let metadata = std::fs::metadata(&path).map_err(errno_from_io)?;
+        if mask & IN_ONLYDIR != 0 && !metadata.is_dir() {
+            return Err(crate::ENOTDIR);
+        }
+        let (root, filter) = if metadata.is_dir() {
+            (path.clone(), Vec::new())
+        } else {
+            (
+                path.parent().ok_or(crate::ENOENT)?.to_path_buf(),
+                path.file_name()
+                    .ok_or(crate::ENOENT)?
+                    .to_string_lossy()
+                    .as_bytes()
+                    .to_vec(),
+            )
+        };
+        let id = shared::new_object()?.id();
+        if kinakaze_runtime::authority::get().is_some() {
+            kinakaze_runtime::authority::kernel(KernelCommand::WatchDirectory {
+                owner: store.id(),
+                watch: id,
+                path: root.to_string_lossy().into_owned(),
+            })?;
+        } else {
+            let watch = DirectoryWatch::start(kinakaze_runtime::authority::domain_id(), id, &root)
+                .map_err(errno_from_io)?;
+            local()
+                .lock()
+                .map_err(|_| crate::EIO)?
+                .insert((store.id(), id), LocalWatch::Native(watch));
+        }
+        let wd = s.next;
+        s.next = next;
+        s.watches.insert(
+            wd,
+            Watch {
+                id,
+                volume: 0,
+                node: 0,
+                path,
+                filter,
+                mask,
+                cookie: 0,
+            },
+        );
+        Ok(wd)
+    })
+}
+fn release(store: &Store, watch: &Watch) -> Result<(), i32> {
+    if kinakaze_runtime::authority::get().is_none() {
+        local()
+            .lock()
+            .map_err(|_| crate::EIO)?
+            .remove(&(store.id(), watch.id));
+        return Ok(());
+    }
+    kinakaze_runtime::authority::kernel(if watch.volume == 0 {
+        KernelCommand::RemoveDirectoryWatch {
+            owner: store.id(),
+            watch: watch.id,
+        }
+    } else {
+        KernelCommand::Unlease {
+            object: ObjectKey::Shared(watch.id),
+            owner: store.kernel_key(),
+        }
+    })
+}
+fn collect(_store: &Store, s: &mut State) -> Result<(), i32> {
+    let _observation = crate::tmpfs::Observation::enter();
+    let mut events = Vec::new();
     let mut ignored = Vec::new();
-    for (&wd, watch) in &state.watches {
-        if let Some(memory) = &watch.memory {
-            for event in memory.drain(wd)? {
+    for (&wd, watch) in &mut s.watches {
+        if watch.volume != 0 {
+            for event in
+                crate::tmpfs::watch::Watch::open(watch.volume, watch.node, watch.id)?.drain(wd)?
+            {
                 if u32::from_ne_bytes(event[4..8].try_into().unwrap()) & IN_IGNORED != 0 {
                     ignored.push(wd);
                 }
-                state.queue.push_back(event);
+                events.push(event);
+            }
+            continue;
+        }
+        let queue = DirectoryQueue::open(kinakaze_runtime::authority::domain_id(), watch.id, false)
+            .map_err(errno_from_io)?;
+        let (packets, overflow, ended) = queue.drain().map_err(errno_from_io)?;
+        if overflow {
+            events.push(encode_event(-1, 0x4000, 0, &[]));
+        }
+        'packets: for packet in packets {
+            let mut offset = 0;
+            while offset + 12 <= packet.len() {
+                let next =
+                    u32::from_le_bytes(packet[offset..offset + 4].try_into().unwrap()) as usize;
+                let action = u32::from_le_bytes(packet[offset + 4..offset + 8].try_into().unwrap());
+                let length = u32::from_le_bytes(packet[offset + 8..offset + 12].try_into().unwrap())
+                    as usize;
+                let name = packet
+                    .get(offset + 12..offset + 12 + length)
+                    .ok_or(crate::EIO)?;
+                let name = wide_to_utf8(name);
+                if watch.filter.is_empty() || watch.filter == name {
+                    let mask = action_to_mask(action, watch.mask);
+                    if mask != 0 {
+                        let cookie = match action {
+                            FILE_ACTION_RENAMED_OLD_NAME => {
+                                watch.cookie = watch.cookie.wrapping_add(1).max(1);
+                                watch.cookie
+                            }
+                            FILE_ACTION_RENAMED_NEW_NAME => watch.cookie,
+                            _ => 0,
+                        };
+                        events.push(encode_event(
+                            wd,
+                            mask,
+                            cookie,
+                            if watch.filter.is_empty() { &name } else { &[] },
+                        ));
+                        if watch.mask & IN_ONESHOT != 0 {
+                            ignored.push(wd);
+                            break 'packets;
+                        }
+                    }
+                }
+                if next == 0 {
+                    break;
+                }
+                if next < 12 || next > packet.len() - offset {
+                    return Err(crate::EIO);
+                }
+                offset += next;
             }
         }
+        if ended {
+            if watch.mask & IN_DELETE_SELF != 0 {
+                events.push(encode_event(wd, IN_DELETE_SELF, 0, &[]));
+            }
+            ignored.push(wd);
+        }
     }
+    for event in events {
+        s.push(event);
+    }
+    ignored.sort_unstable();
+    ignored.dedup();
     for wd in ignored {
-        state.watches.remove(&wd);
-    }
-    Ok(())
-}
-
-pub fn add_watch(fd: i32, path: PathBuf, mask: u32) -> Result<i32, i32> {
-    if mask & IN_ALL_EVENTS == 0 {
-        return Err(crate::EINVAL);
-    }
-    if mask & IN_MASK_ADD != 0 && mask & IN_MASK_CREATE != 0 {
-        return Err(crate::EINVAL);
-    }
-    let ifd = {
-        let map = inotify_map().lock().map_err(|_| crate::EIO)?;
-        map.get(&fd).cloned().ok_or(crate::EBADF)?
-    };
-    let mut state = ifd.state.lock().map_err(|_| crate::EIO)?;
-    if let Some(&existing_wd) = state.watches_by_path.get(&path) {
-        if mask & IN_MASK_CREATE != 0 {
-            return Err(crate::EEXIST);
-        }
-        let watch = state.watches.get(&existing_wd).ok_or(crate::EIO)?;
-        let event_mask = mask & IN_ALL_EVENTS;
-        if mask & IN_MASK_ADD != 0 {
-            watch.mask.fetch_or(event_mask, Ordering::Release);
-        } else {
-            watch.mask.store(event_mask, Ordering::Release);
-        }
-        return Ok(existing_wd);
-    }
-
-    let metadata = std::fs::metadata(&path).map_err(errno_from_io)?;
-    if mask & IN_ONLYDIR != 0 && !metadata.is_dir() {
-        return Err(crate::ENOTDIR);
-    }
-    let (watch_root, filter_name) = if metadata.is_dir() {
-        (path.clone(), None)
-    } else {
-        let parent = path.parent().ok_or(crate::ENOENT)?.to_path_buf();
-        let name = path
-            .file_name()
-            .ok_or(crate::ENOENT)?
-            .encode_wide()
-            .collect::<Vec<_>>();
-        (parent, Some(name))
-    };
-
-    let dir_handle = open_watch_root(&watch_root)?;
-    let wd = state.next_wd;
-    state.next_wd += 1;
-
-    // SAFETY: CreateEventW params are all valid (null security/name, manual-reset=1, initial=0).
-    let cancel_event = unsafe { CreateEventW(core::ptr::null(), 1, 0, core::ptr::null()) };
-    if cancel_event.is_null() || cancel_event == INVALID_HANDLE_VALUE {
-        // SAFETY: GetLastError observes the failed CreateEventW immediately.
-        let error = unsafe { GetLastError() };
-        // SAFETY: the directory handle was opened successfully and has not
-        // been transferred to a worker thread.
-        unsafe { CloseHandle(dir_handle) };
-        return Err(crate::errno_from_win32(error));
-    }
-
-    let ifd_clone = Arc::clone(&ifd);
-    let effective_mask = Arc::new(AtomicU32::new(mask & IN_ALL_EVENTS));
-    let thread = match spawn_watch_thread(
-        wd,
-        dir_handle,
-        filter_name,
-        Arc::clone(&effective_mask),
-        ifd_clone,
-        cancel_event,
-    ) {
-        Ok(thread) => thread,
-        Err(error) => {
-            // SAFETY: neither handle was transferred when thread creation
-            // failed.
-            unsafe {
-                CloseHandle(cancel_event);
-                CloseHandle(dir_handle);
+        if let Some(watch) = s.watches.remove(&wd) {
+            if watch.volume == 0 {
+                s.push(encode_event(wd, IN_IGNORED, 0, &[]));
             }
-            return Err(error);
+            s.retired.push(watch);
         }
-    };
-
-    state.watches.insert(
-        wd,
-        Watch {
-            memory: None,
-            path: path.clone(),
-            mask: effective_mask,
-            cancel_event,
-            thread: Some(thread),
-        },
-    );
-    state.watches_by_path.insert(path, wd);
-    Ok(wd)
-}
-
-pub fn rm_watch(fd: i32, wd: i32) -> Result<(), i32> {
-    let ifd = {
-        let map = inotify_map().lock().map_err(|_| crate::EIO)?;
-        map.get(&fd).cloned().ok_or(crate::EBADF)?
-    };
-    let mut state = ifd.state.lock().map_err(|_| crate::EIO)?;
-    let Some(mut watch) = state.watches.remove(&wd) else {
-        return Err(crate::EINVAL);
-    };
-    state.watches_by_path.remove(&watch.path);
-    // SAFETY: cancel_event is valid and owned by this watch.
-    if !watch.cancel_event.is_null() {
-        unsafe { SetEvent(watch.cancel_event) };
     }
-    drop(state);
-    if let Some(thread) = watch.thread.take() {
-        let _ = thread.join();
-    }
-    // SAFETY: thread no longer running; safe to close.
-    if !watch.cancel_event.is_null() {
-        unsafe { CloseHandle(watch.cancel_event) };
-    }
-    let mut state = ifd.state.lock().map_err(|_| crate::EIO)?;
-    let event = encode_event(wd, IN_IGNORED, 0, &[]);
-    state.queue.push_back(event);
-    ifd.readable.notify_all();
     Ok(())
 }
-
+pub fn rm_watch(fd: i32, wd: i32) -> Result<(), i32> {
+    let store = owner(fd)?;
+    update(&store, |s| {
+        collect(&store, s)?;
+        let watch = s.watches.remove(&wd).ok_or(crate::EINVAL)?;
+        s.retired.push(watch);
+        s.push(encode_event(wd, IN_IGNORED, 0, &[]));
+        Ok(())
+    })
+}
 pub fn read_inotify(fd: i32, buf: &mut [u8], nonblock: bool) -> Result<usize, i32> {
-    let ifd = {
-        let map = inotify_map().lock().map_err(|_| crate::EIO)?;
-        map.get(&fd).cloned().ok_or(crate::EBADF)?
-    };
-    let mut state = ifd.state.lock().map_err(|_| crate::EIO)?;
+    let store = owner(fd)?;
     loop {
-        collect_memory(&mut state)?;
-        if !state.queue.is_empty() {
-            let mut written = 0usize;
-            while let Some(event) = state.queue.front() {
-                if written + event.len() > buf.len() {
+        let result = update(&store, |s| {
+            collect(&store, s)?;
+            if s.queue.is_empty() {
+                return Ok(Err(crate::EAGAIN));
+            }
+            let mut written = 0;
+            while let Some(event) = s.queue.front() {
+                if event.len() > buf.len() - written {
                     if written == 0 {
-                        return Err(crate::EINVAL);
+                        return Ok(Err(crate::EINVAL));
                     }
                     break;
                 }
-                let event = state.queue.pop_front().unwrap();
-                buf[written..written + event.len()].copy_from_slice(&event);
+                buf[written..written + event.len()].copy_from_slice(event);
                 written += event.len();
+                s.queue.pop_front();
             }
-            return Ok(written);
+            Ok(Ok(written))
+        })?;
+        if result != Err(crate::EAGAIN)
+            || nonblock
+            || crate::get(fd)?.flags.contains(crate::FdFlags::NONBLOCK)
+        {
+            return result;
         }
-        if nonblock || state.nonblock {
-            return Err(crate::EAGAIN);
-        }
-        state = ifd
-            .readable
-            .wait_timeout(state, std::time::Duration::from_millis(10))
-            .map_err(|_| crate::EIO)?
-            .0;
-        drop(state);
+        std::thread::sleep(std::time::Duration::from_millis(10));
         if matches!(
             crate::signal::deliver_pending(),
             crate::signal::Delivery::Interrupted
         ) {
             return Err(crate::EINTR);
         }
-        state = ifd.state.lock().map_err(|_| crate::EIO)?;
     }
 }
-
 pub fn poll_inotify(fd: i32) -> Result<bool, i32> {
-    let ifd = {
-        let map = inotify_map().lock().map_err(|_| crate::EIO)?;
-        map.get(&fd).cloned().ok_or(crate::EBADF)?
-    };
-    let mut state = ifd.state.lock().map_err(|_| crate::EIO)?;
-    collect_memory(&mut state)?;
-    Ok(!state.queue.is_empty())
+    let store = owner(fd)?;
+    poll_store(&store)
 }
-
-pub fn close_inotify(fd: i32) {
-    let ifd = {
-        let Ok(mut map) = inotify_map().lock() else {
-            return;
-        };
-        map.remove(&fd)
-    };
-    let Some(ifd) = ifd else { return };
-    let Ok(mut state) = ifd.state.lock() else {
+pub(crate) fn poll_store(store: &Store) -> Result<bool, i32> {
+    update(store, |s| {
+        collect(store, s)?;
+        Ok(!s.queue.is_empty())
+    })
+}
+pub fn close_inotify(entry: crate::FdEntry, last_local: bool) {
+    if kinakaze_runtime::authority::get().is_some() || !last_local {
         return;
-    };
-    let watches: Vec<i32> = state.watches.keys().copied().collect();
-    for wd in watches {
-        if let Some(mut watch) = state.watches.remove(&wd) {
-            // SAFETY: cancel_event is valid and owned.
-            if !watch.cancel_event.is_null() {
-                unsafe { SetEvent(watch.cancel_event) };
-            }
-            drop(state);
-            if let Some(thread) = watch.thread.take() {
-                let _ = thread.join();
-            }
-            // SAFETY: thread exited.
-            if !watch.cancel_event.is_null() {
-                unsafe { CloseHandle(watch.cancel_event) };
-            }
-            state = ifd.state.lock().unwrap();
+    }
+    if let Ok(store) = shared::object_entry(entry) {
+        if let Ok(mut items) = local().lock() {
+            items.retain(|(owner, _), _| *owner != store.id());
         }
     }
 }
-
-// ---------------------------------------------------------------------------
-// Helpers.
-// ---------------------------------------------------------------------------
 
 pub(crate) fn encode_event(wd: i32, mask: u32, cookie: u32, name: &[u8]) -> Vec<u8> {
     let name_len = if name.is_empty() {
@@ -490,191 +569,6 @@ fn errno_from_io(error: std::io::Error) -> i32 {
         .raw_os_error()
         .map(|code| crate::errno_from_win32(code as u32))
         .unwrap_or(crate::EIO)
-}
-
-fn open_watch_root(path: &PathBuf) -> Result<HANDLE, i32> {
-    let wide = crate::path::wide_path(path)?;
-    // Open synchronously so inotify_add_watch never reports success for an
-    // object that Windows refused to monitor.
-    let handle = unsafe {
-        CreateFileW(
-            wide.as_ptr(),
-            FILE_LIST_DIRECTORY,
-            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-            core::ptr::null(),
-            OPEN_EXISTING,
-            FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
-            core::ptr::null_mut(),
-        )
-    };
-    if handle == INVALID_HANDLE_VALUE || handle.is_null() {
-        Err(crate::errno_from_win32(unsafe { GetLastError() }))
-    } else {
-        Ok(handle)
-    }
-}
-
-fn spawn_watch_thread(
-    wd: i32,
-    dir_handle: HANDLE,
-    filter_name: Option<Vec<u16>>,
-    mask: Arc<AtomicU32>,
-    ifd: Arc<InotifyFd>,
-    cancel_event: HANDLE,
-) -> Result<JoinHandle<()>, i32> {
-    let dir_handle = dir_handle as usize;
-    let cancel_event = cancel_event as usize;
-    std::thread::Builder::new()
-        .name(format!("kinakaze-inotify-wd{wd}"))
-        .spawn(move || {
-            run_watch(
-                wd,
-                dir_handle as HANDLE,
-                filter_name,
-                mask,
-                ifd,
-                cancel_event as HANDLE,
-            )
-        })
-        .map_err(errno_from_io)
-}
-
-fn run_watch(
-    wd: i32,
-    dir_handle: HANDLE,
-    filter_name: Option<Vec<u16>>,
-    mask: Arc<AtomicU32>,
-    ifd: Arc<InotifyFd>,
-    cancel_event: HANDLE,
-) {
-    let notify_filter = FILE_NOTIFY_CHANGE_FILE_NAME
-        | FILE_NOTIFY_CHANGE_DIR_NAME
-        | FILE_NOTIFY_CHANGE_ATTRIBUTES
-        | FILE_NOTIFY_CHANGE_SIZE
-        | FILE_NOTIFY_CHANGE_LAST_WRITE
-        | FILE_NOTIFY_CHANGE_CREATION;
-
-    let mut buf = vec![0u8; 65536];
-    let mut rename_cookie: u32 = 0;
-
-    loop {
-        let io_event = unsafe { CreateEventW(core::ptr::null(), 1, 0, core::ptr::null()) };
-        if io_event.is_null() || io_event == INVALID_HANDLE_VALUE {
-            break;
-        }
-
-        let mut overlapped: OVERLAPPED = unsafe { core::mem::zeroed() };
-        overlapped.hEvent = io_event;
-        let mut bytes_returned: u32 = 0;
-
-        unsafe {
-            ReadDirectoryChangesW(
-                dir_handle,
-                buf.as_mut_ptr().cast(),
-                buf.len() as u32,
-                0,
-                notify_filter,
-                &mut bytes_returned,
-                &mut overlapped,
-                None,
-            )
-        };
-
-        let wait_handles = [io_event, cancel_event];
-        let wr = unsafe { WaitForMultipleObjects(2, wait_handles.as_ptr(), 0, INFINITE) };
-
-        if wr != WAIT_OBJECT_0 {
-            // OVERLAPPED and the buffer remain owned until cancellation has
-            // completed. Closing just the event leaves Windows writing to a
-            // returned stack frame when a watch is removed.
-            unsafe {
-                CancelIoEx(dir_handle, &overlapped);
-                GetOverlappedResult(dir_handle, &overlapped, &mut bytes_returned, 1);
-                CloseHandle(io_event);
-            }
-            break;
-        }
-
-        let mut transferred: u32 = 0;
-        let success = unsafe { GetOverlappedResult(dir_handle, &overlapped, &mut transferred, 0) };
-        unsafe { CloseHandle(io_event) };
-
-        if success == 0 || transferred == 0 {
-            if mask.load(Ordering::Acquire) & (IN_DELETE_SELF | IN_MOVE_SELF) != 0 {
-                let event = encode_event(wd, IN_DELETE_SELF | IN_ISDIR, 0, &[]);
-                push_event(&ifd, event);
-            }
-            break;
-        }
-
-        let mut offset = 0usize;
-        loop {
-            if offset + 12 > transferred as usize {
-                break;
-            }
-            let next_offset = u32::from_ne_bytes(buf[offset..offset + 4].try_into().unwrap());
-            let action = u32::from_ne_bytes(buf[offset + 4..offset + 8].try_into().unwrap());
-            let name_len_bytes =
-                u32::from_ne_bytes(buf[offset + 8..offset + 12].try_into().unwrap()) as usize;
-
-            let name_start = offset + 12;
-            let name_end = name_start + name_len_bytes;
-            let name_bytes = if name_end <= buf.len() {
-                &buf[name_start..name_end]
-            } else {
-                &[]
-            };
-            let name_words = name_bytes
-                .chunks_exact(2)
-                .map(|c| u16::from_ne_bytes([c[0], c[1]]))
-                .collect::<Vec<_>>();
-            if filter_name
-                .as_ref()
-                .is_some_and(|filter| filter != &name_words)
-            {
-                if next_offset == 0 {
-                    break;
-                }
-                offset += next_offset as usize;
-                continue;
-            }
-            let name_utf8 = wide_to_utf8(name_bytes);
-
-            let event_mask = action_to_mask(action, mask.load(Ordering::Acquire));
-            if event_mask != 0 {
-                if action == FILE_ACTION_RENAMED_OLD_NAME {
-                    rename_cookie = rename_cookie.wrapping_add(1);
-                    if rename_cookie == 0 {
-                        rename_cookie = 1;
-                    }
-                }
-                let cookie = if matches!(
-                    action,
-                    FILE_ACTION_RENAMED_OLD_NAME | FILE_ACTION_RENAMED_NEW_NAME
-                ) {
-                    rename_cookie
-                } else {
-                    0
-                };
-                let event = encode_event(wd, event_mask, cookie, &name_utf8);
-                push_event(&ifd, event);
-            }
-
-            if next_offset == 0 {
-                break;
-            }
-            offset += next_offset as usize;
-        }
-    }
-
-    unsafe { CloseHandle(dir_handle) };
-}
-
-fn push_event(ifd: &Arc<InotifyFd>, event: Vec<u8>) {
-    if let Ok(mut state) = ifd.state.lock() {
-        state.queue.push_back(event);
-        ifd.readable.notify_all();
-    }
 }
 
 #[cfg(test)]

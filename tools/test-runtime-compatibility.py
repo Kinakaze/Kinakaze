@@ -9,7 +9,7 @@ import uuid
 
 from session_process import SessionProcess
 
-PROBES = ('XVisibilityProbe', 'FutexUnflaggedProbe', 'FutexSharedProbe', 'GLStorageProbe', 'CompiledSwitchProbe', 'GLTexGenProbe', 'MmapHintProbe', 'MixedXlibXcbProbe', 'UdevMonitorProbe', 'NeteaseStartupAbiProbe', 'NeteaseAudioAbiProbe', 'PthreadCleanupProbe', 'PthreadCondCancelProbe', 'WideFormatProbe', 'AlsaCommonInterfacesProbe',
+PROBES = ('ConcurrentVforkProbe', 'RawAllocationProbe', 'SignalJumpProbe', 'XVisibilityProbe', 'FutexUnflaggedProbe', 'FutexSharedProbe', 'GLStorageProbe', 'CompiledSwitchProbe', 'GLTexGenProbe', 'MmapHintProbe', 'MixedXlibXcbProbe', 'UdevMonitorProbe', 'NeteaseStartupAbiProbe', 'NeteaseAudioAbiProbe', 'PthreadCleanupProbe', 'PthreadCondCancelProbe', 'WideFormatProbe', 'AlsaCommonInterfacesProbe',
           'CommonLibcAliasesProbe', 'UnixBlockingProbe', 'AllocationLifecycleProbe',
           'PythonRuntimeProbe', 'LineReadProbe', 'UnixPerformanceProbe',
           'UnixRightsProbe', 'UnixCredentialsProbe', 'AllocationGrowthProbe',
@@ -63,7 +63,7 @@ def main():
         with logfile.open('wb') as log:
             command = ([guest + '/' + name] if name in EXECUTABLES else
                        ['/usr/bin/python3.11', guest + '/' + name + '.py'])
-            child = SessionProcess([str(dist/'worker.exe'), 'run', '--root', str(root),
+            child = SessionProcess([str(dist/'worker.exe'), 'oneshot', '--root', str(root),
                                     '--dist', str(dist), '--', *command], stdout=log, stderr=log)
             try:
                 code = child.process.wait(timeout=args.timeout)

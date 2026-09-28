@@ -91,6 +91,8 @@ pub mod process;
 #[cfg(all(windows, target_arch = "x86_64"))]
 pub mod process_memory;
 #[cfg(all(windows, target_arch = "x86_64"))]
+mod process_stack;
+#[cfg(all(windows, target_arch = "x86_64"))]
 pub mod pthread;
 #[cfg(all(windows, target_arch = "x86_64"))]
 pub mod rand48;
@@ -105,6 +107,7 @@ pub mod scan;
 mod scratch_buffer;
 #[cfg(all(windows, target_arch = "x86_64"))]
 pub mod search;
+mod semaphore;
 #[cfg(all(windows, target_arch = "x86_64"))]
 pub mod sigextra;
 #[cfg(all(windows, target_arch = "x86_64"))]
@@ -482,9 +485,7 @@ pub extern "sysv64" fn kinakaze_abi_close(fd: i32) -> i32 {
 /// Process creation delegates to the canonical process coordinator.
 #[cfg(all(windows, target_arch = "x86_64"))]
 pub(crate) unsafe fn clone_process(parent: Option<u32>, initializer: usize, flags: u64) -> i32 {
-    unsafe {
-        kinakaze_runtime::kinakaze_process_clone_fork(parent.unwrap_or(0), initializer, flags)
-    }
+    unsafe { process_stack::fork(parent.unwrap_or(0), initializer, flags) }
 }
 
 pub(crate) fn set_process_thread_pointer(value: usize) -> bool {
@@ -504,51 +505,42 @@ pub(crate) fn process_clone_thread_entry() -> usize {
 #[cfg(all(windows, target_arch = "x86_64"))]
 #[unsafe(no_mangle)]
 pub extern "sysv64" fn kinakaze_abi_fork() -> i32 {
-    // The executable owns address-space mappings and the bootstrap entry. A
-    // provider-local process clone cannot preserve that state, so the process
-    // coordinator is mandatory.
-    // SAFETY: initialized by the provider CRT and immutable afterward.
-    let address = kinakaze_runtime::kinakaze_process_fork as *const () as usize;
-    if address != 0 {
-        // SAFETY: the host export has this System V returns-twice ABI.
-        let host: unsafe extern "sysv64" fn() -> i32 = unsafe { core::mem::transmute(address) };
-        let result = unsafe { host() };
-        if fork_trace_enabled() {
-            let direct_thread_pointer = kinakaze_tls::get_current_thread_fs_base();
-            let process_thread_pointer = process_thread_pointer();
-            let process_tls_g = if process_thread_pointer >= core::mem::size_of::<usize>() {
-                unsafe {
-                    ((process_thread_pointer - core::mem::size_of::<usize>()) as *const usize)
-                        .read_unaligned()
-                }
-            } else {
-                0
-            };
-            let direct_context = (direct_thread_pointer != 0).then(|| unsafe {
-                (
-                    ((direct_thread_pointer
-                        + kinakaze_tls::thread_pointer::ACTIVE_GUEST_STACK_POINTER_OFFSET)
-                        as *const usize)
-                        .read_unaligned(),
-                    ((direct_thread_pointer
-                        + kinakaze_tls::thread_pointer::ACTIVE_GUEST_INSTRUCTION_POINTER_OFFSET)
-                        as *const usize)
-                        .read_unaligned(),
-                )
-            });
-            eprintln!(
-                "kinakaze libc: fork returned {result}, process thread pointer={process_thread_pointer:#x}, process tls g={process_tls_g:#x}, active guest context={:?}, direct thread pointer={direct_thread_pointer:#x}, direct context={direct_context:?}",
-                kinakaze_tls::thread_pointer::active_guest_signal_context(),
-            );
-        }
-        if result < 0 {
-            set_errno(-result);
-            return -1;
-        }
-        return result;
+    // The canonical coordinator owns mappings and bootstrap state. Its work
+    // runs on a registered host stack even when called from a signal stack.
+    let result = unsafe { clone_process(None, 0, 0) };
+    if fork_trace_enabled() {
+        let direct_thread_pointer = kinakaze_tls::get_current_thread_fs_base();
+        let process_thread_pointer = process_thread_pointer();
+        let process_tls_g = if process_thread_pointer >= core::mem::size_of::<usize>() {
+            unsafe {
+                ((process_thread_pointer - core::mem::size_of::<usize>()) as *const usize)
+                    .read_unaligned()
+            }
+        } else {
+            0
+        };
+        let direct_context = (direct_thread_pointer != 0).then(|| unsafe {
+            (
+                ((direct_thread_pointer
+                    + kinakaze_tls::thread_pointer::ACTIVE_GUEST_STACK_POINTER_OFFSET)
+                    as *const usize)
+                    .read_unaligned(),
+                ((direct_thread_pointer
+                    + kinakaze_tls::thread_pointer::ACTIVE_GUEST_INSTRUCTION_POINTER_OFFSET)
+                    as *const usize)
+                    .read_unaligned(),
+            )
+        });
+        eprintln!(
+            "kinakaze libc: fork returned {result}, process thread pointer={process_thread_pointer:#x}, process tls g={process_tls_g:#x}, active guest context={:?}, direct thread pointer={direct_thread_pointer:#x}, direct context={direct_context:?}",
+            kinakaze_tls::thread_pointer::active_guest_signal_context(),
+        );
     }
-    set_errno(ENOSYS);
-    -1
+    if result < 0 {
+        set_errno(-result);
+        return -1;
+    }
+    result
 }
 
 /// `clone`: starts a process and enters `function(argument)` on `child_stack`.

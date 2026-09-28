@@ -862,6 +862,12 @@ pub fn forget(fd: i32) {
     registry.retain(|&(cached, _), _| cached != fd);
 }
 
+pub(crate) fn forget_generation(fd: i32, generation: u32) {
+    if let Ok(mut registry) = registry().lock() {
+        registry.remove(&(fd, generation));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

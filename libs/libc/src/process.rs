@@ -56,7 +56,7 @@ pub extern "sysv64" fn kinakaze_abi__exit(status: c_int) -> ! {
 /// A signal death is not `_exit(128 + signal)`: the parent must observe
 /// WIFSIGNALED, not WIFEXITED. Publish exactly one terminal reason, then perform
 /// the same vfork rendezvous and immediate host termination as ordinary exit.
-pub(crate) fn terminate_from_signal(signal: i32) {
+pub(crate) fn terminate_from_signal(signal: i32) -> ! {
     kinakaze_vfs::job::publish_termination(signal);
     crate::exec::complete_vfork(false);
     terminate_host_process((128 + signal) as u32)
@@ -93,11 +93,17 @@ pub(crate) fn terminate_host_process(status: u32) -> ! {
 
 /// `abort`, which terminates without flushing.
 ///
-/// POSIX requires an abnormal termination status; 134 is what a shell reports
-/// for a process killed by `SIGABRT`.
+/// Unblock SIGABRT and allow its handler to run, then terminate by that signal
+/// if the handler returns or the signal is ignored. Parents must see a signal
+/// death, including when the abort originates in an assertion/fortify failure.
 #[unsafe(no_mangle)]
 pub extern "sysv64" fn kinakaze_abi_abort() -> ! {
-    kinakaze_abi__exit(134)
+    use kinakaze_vfs::{interrupt, signal};
+    crate::signal::ensure_terminate_hook();
+    let _ = signal::sigprocmask(signal::SIG_UNBLOCK, 1 << (signal::SIGABRT - 1));
+    let _ = signal::raise_thread_signal(interrupt::current_thread_id(), signal::SIGABRT);
+    signal::deliver_pending();
+    terminate_from_signal(signal::SIGABRT)
 }
 
 /// Parses a leading signed integer, ignoring overflow as C's `atoi` does.

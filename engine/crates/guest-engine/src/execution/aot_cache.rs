@@ -425,6 +425,7 @@ pub(super) fn apply_cached_aot(
                     return Err(ExecutionError::AddressOverflow);
                 }
                 code[offset..end].fill(0x90);
+                super::traps::syscall(address);
                 code[offset..offset + 2].copy_from_slice(&[0x0f, 0x0b]);
             }
         }

@@ -23,10 +23,8 @@ unsafe extern "system" fn prepare() -> i32 {
         let Ok(state) = state().try_lock() else {
             return EAGAIN;
         };
-        // Semaphore undo/waiter state has a separate lifecycle contract.
-        if !state.sets.is_empty() {
-            return EAGAIN;
-        }
+        // Semaphore IDs reopen their namespace-owned sections on demand. Undo
+        // debts remain keyed to the parent identity and are not inherited.
         let mut segments: std::collections::BTreeMap<_, _> = state
             .segments
             .iter()
@@ -173,13 +171,7 @@ fn restore(input: &[u8]) -> Result<(), i32> {
         if address == 0 || read_only > 1 || restored.attachments.contains_key(&address) {
             return Err(EINVAL);
         }
-        {
-            let _lock = shm_lock(&segment)?;
-            let header = unsafe { &mut *(segment.control as *mut ShmHeader) };
-            header.nattch += 1;
-            header.lpid = own_pid();
-            header.atime = now_seconds();
-        }
+        attachment_change(&segment, true)?;
         restored.attachments.insert(
             address,
             ShmAttachment {

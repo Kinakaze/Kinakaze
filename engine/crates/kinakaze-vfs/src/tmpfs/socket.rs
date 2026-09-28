@@ -20,6 +20,7 @@ pub(crate) fn bind(path: &str) -> Result<Option<Inode>, i32> {
     l.writable()?;
     let volume = volume(l.volume)?;
     let lease = shared::new_object()?;
+    volume.meta.lease_kernel(lease.kernel_key())?;
     let pin = lease.pin()?;
     let (node, parent, name, stat) = volume.change(|s| {
         let (parent, name) = s.parent(l.node, &l.tail)?;
@@ -44,6 +45,7 @@ pub(crate) fn lookup(path: &str) -> Result<Option<(Stat, Object)>, i32> {
         return Ok(None);
     };
     let lease = shared::new_object()?;
+    volume(l.volume)?.meta.lease_kernel(lease.kernel_key())?;
     let pin = lease.pin()?;
     let stat = volume(l.volume)?.change(|s| {
         let n = s.nodes.get_mut(&l.node).ok_or(ENOENT)?;

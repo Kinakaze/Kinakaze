@@ -133,6 +133,11 @@ fn open(kind: usize, id: u64) -> Result<Arc<Store>, i32> {
     if state.kind != kind || state.id != id {
         return Err(EIO);
     }
+    let mut dependencies = vec![crate::user_namespace::retain_kernel(state.owner)?];
+    if state.parent != 0 {
+        dependencies.push(open(kind, state.parent)?.kernel_key());
+    }
+    store.retain_kernel(false, dependencies)?;
     OBJECTS
         .lock()
         .map_err(|_| EIO)?
@@ -142,6 +147,65 @@ fn open(kind: usize, id: u64) -> Result<Arc<Store>, i32> {
 pub fn privileged() -> bool {
     crate::user_namespace::id(crate::job::process_id())
         .is_ok_and(|id| crate::user_namespace::capable(id, 21))
+}
+
+pub(crate) fn retain_kernel(
+    kind: usize,
+    id: u64,
+) -> Result<kinakaze_v2_protocol::kernel::ObjectKey, i32> {
+    Ok(open(kind, id)?.kernel_key())
+}
+pub(crate) fn retain_dependency(
+    kind: usize,
+    id: u64,
+    child: kinakaze_v2_protocol::kernel::ObjectKey,
+) -> Result<(), i32> {
+    open(kind, id)?.retain_kernel(false, vec![child])
+}
+/// Serialize the IPC key directory with the namespace's other shared state.
+pub fn ipc_registry<T>(action: impl FnOnce(&[u8]) -> Result<(Vec<u8>, T), i32>) -> Result<T, i32> {
+    ipc_component_update(current_id(IPC).unwrap_or(1), 2, action)
+}
+/// IDs never repeat within a running kernel, including failed creations.
+pub fn allocate_ipc_id() -> Result<i32, i32> {
+    i32::try_from(shared::new_object()?.id()).map_err(|_| crate::ENOSPC)
+}
+/// All SysV objects, including IPC_PRIVATE, belong to their IPC namespace.
+pub fn retain_ipc(kind: kinakaze_v2_protocol::kernel::IpcKind, object_id: i32) -> Result<(), i32> {
+    use kinakaze_v2_protocol::kernel::{KernelCommand, ObjectKey};
+    if kinakaze_runtime::authority::get().is_none() {
+        return Ok(());
+    }
+    let id = current_id(IPC)?;
+    let namespace = open(IPC, id)?;
+    let object = ObjectKey::Sysv {
+        kind,
+        namespace: id,
+        id: object_id,
+    };
+    kinakaze_runtime::authority::kernel(KernelCommand::Retain {
+        object,
+        tmpfs: false,
+        dependencies: vec![namespace.kernel_key()],
+    })?;
+    namespace.retain_kernel(false, vec![object])
+}
+pub fn remove_ipc(
+    kind: kinakaze_v2_protocol::kernel::IpcKind,
+    namespace: u64,
+    id: i32,
+) -> Result<(), i32> {
+    use kinakaze_v2_protocol::kernel::{KernelCommand, ObjectKey};
+    if kinakaze_runtime::authority::get().is_none() {
+        return Ok(());
+    }
+    kinakaze_runtime::authority::kernel(KernelCommand::RemoveIpc {
+        object: ObjectKey::Sysv {
+            kind,
+            namespace,
+            id,
+        },
+    })
 }
 pub struct Prepared {
     values: [u64; 6],
@@ -214,6 +278,17 @@ pub fn prepare_with_user(
                 (),
             ))
         })?;
+        let owner = match user {
+            Some(u) => u.id(),
+            None => crate::user_namespace::id(crate::job::process_id())?,
+        };
+        store.retain_kernel(
+            false,
+            vec![
+                crate::user_namespace::retain_kernel(owner)?,
+                open(kind, values[kind])?.kernel_key(),
+            ],
+        )?;
         if kind == PID {
             registry::create_pid_namespace(id, values[PID])?;
             values[PID_CHILDREN] = id;
@@ -445,10 +520,43 @@ pub(crate) fn ipc_update<T>(
     id: u64,
     action: impl FnOnce(&[u8]) -> Result<(Vec<u8>, T), i32>,
 ) -> Result<T, i32> {
+    ipc_component_update(id, 1, action)
+}
+
+/// Independent IPC components share one atomic namespace publication. Component
+/// 1 names the POSIX queue superblock; component 2 is the SysV key directory.
+fn ipc_component_update<T>(
+    id: u64,
+    component: u64,
+    action: impl FnOnce(&[u8]) -> Result<(Vec<u8>, T), i32>,
+) -> Result<T, i32> {
+    use crate::state_codec::{Reader, bytes as put_bytes, word};
+    const MAGIC: &[u8; 8] = b"CYIPC001";
     open(IPC, id)?.update(|bytes| {
         let mut s = State::decode(bytes)?;
-        let (data, out) = action(&s.data)?;
-        s.data = data;
+        let mut parts = BTreeMap::new();
+        if !s.data.is_empty() {
+            if s.data.get(..8) != Some(MAGIC) {
+                return Err(EIO);
+            }
+            let mut reader = Reader(&s.data[8..]);
+            while !reader.0.is_empty() {
+                if parts.len() >= 16
+                    || parts
+                        .insert(reader.word()?, reader.bytes()?.to_vec())
+                        .is_some()
+                {
+                    return Err(EIO);
+                }
+            }
+        }
+        let (data, out) = action(parts.get(&component).map_or(&[], Vec::as_slice))?;
+        parts.insert(component, data);
+        s.data = MAGIC.to_vec();
+        for (tag, data) in parts {
+            word(&mut s.data, tag);
+            put_bytes(&mut s.data, &data);
+        }
         Ok((s.encode(), out))
     })
 }

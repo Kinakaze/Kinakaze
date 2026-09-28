@@ -4,6 +4,7 @@ mod desktop;
 #[path = "../../shared/desktop_client.rs"]
 mod desktop_client;
 mod image_cache;
+mod kernel;
 mod pool;
 mod tray;
 mod web;
@@ -23,6 +24,7 @@ const MAX_CONNECTIONS: usize = 128;
 struct Service {
     manager: Mutex<StateManager>,
     images: Mutex<image_cache::Cache>,
+    kernel: Mutex<kernel::Kernel>,
     changed: Condvar,
     stopping: AtomicBool,
     connections: AtomicUsize,
@@ -79,12 +81,12 @@ fn serve(mut pipe: PipeConnection, service: Arc<Service>, _slot: ConnectionSlot)
             "first request must be Hello",
         );
     };
-    if first.id == 0 {
+    if first.id == 0 || first.completed.is_some() {
         return reject(
             &mut pipe,
             first.id,
             ErrorCode::InvalidRequest,
-            "request id must be positive",
+            "Hello requires a positive request id and no completion acknowledgement",
         );
     }
     if !kinakaze_v2_protocol::supported_version(hello.version) {
@@ -169,6 +171,7 @@ fn serve(mut pipe: PipeConnection, service: Arc<Service>, _slot: ConnectionSlot)
                     manager.process_exited_with_status(peer, status);
                     let init_exited = had_init && manager.process_peer(1).is_none();
                     drop(manager);
+                    watcher.kernel.lock().unwrap().collect();
                     watcher.changed.notify_all();
                     // Observe the logical PID, not a retiring exec worker.
                     if init_exited && watcher.desktop.is_some() {
@@ -221,7 +224,13 @@ fn serve(mut pipe: PipeConnection, service: Arc<Service>, _slot: ConnectionSlot)
             );
             let result = {
                 let mut manager = service.manager.lock().unwrap();
+                let mut completed = wire.completed;
                 loop {
+                    if let Some(transaction) = completed.take()
+                        && let Err(error) = manager.acknowledge(client, transaction)
+                    {
+                        break Err(error);
+                    }
                     if service.stopping.load(Ordering::Acquire) {
                         break Err(RpcError::new(ErrorCode::Aborted, "session stopping"));
                     }
@@ -300,6 +309,12 @@ fn serve(mut pipe: PipeConnection, service: Arc<Service>, _slot: ConnectionSlot)
                 }
             };
             let result = match (&wire.request, result) {
+                (Request::Kernel(command), Ok(_)) => service
+                    .kernel
+                    .lock()
+                    .unwrap()
+                    .handle(peer, command)
+                    .map(kinakaze_v2_protocol::Reply::KernelObjects),
                 (Request::ImageSnapshot { source, length }, Ok(_)) => {
                     let section = service.images.try_lock().ok().and_then(|mut images| {
                         images.get(peer.host_pid, peer.birth, *source, *length)
@@ -483,6 +498,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let service = Arc::new(Service {
         manager: Mutex::new(StateManager::new(epoch, token.clone())),
         images: Mutex::new(image_cache::Cache::default()),
+        kernel: Mutex::new(kernel::Kernel::new(epoch)),
         changed: Condvar::new(),
         stopping: AtomicBool::new(false),
         connections: AtomicUsize::new(0),
@@ -498,6 +514,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         pool,
         desktop: None,
     });
+    kernel::start_collection(&service)?;
     let _web = web_address
         .map(|address| web::Server::start(&address, Arc::clone(&service)))
         .transpose()?;

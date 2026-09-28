@@ -31,6 +31,139 @@ fn path(fd: i32) -> Result<String, i32> {
     }
 }
 
+/// Metadata-only leaf lookup relative to the retained native directory. The
+/// caller has already dispatched virtual paths. Mount crossings still use the
+/// full resolver, and no pathname or metadata is cached across operations.
+pub(super) fn open_path_child(
+    parent: i32,
+    original: Option<crate::FdEntry>,
+    name: &str,
+    guest: &str,
+    flags: i32,
+) -> Result<Option<i32>, i32> {
+    if parent == AT_FDCWD
+        || flags & (O_PATH | O_NOFOLLOW) != O_PATH | O_NOFOLLOW
+        || name.is_empty()
+        || name.contains('/')
+        || matches!(name, "." | "..")
+    {
+        return Ok(None);
+    }
+    let Some(entry) = original else {
+        return Ok(None);
+    };
+    if get(parent)?.generation != entry.generation {
+        return Err(EBADF);
+    }
+    if entry.kind != FdKind::Directory || crate::mount::overlay::reference(entry)?.is_some() {
+        return Ok(None);
+    }
+    // A native attachment provides namespace coordinates for `guest`. Other
+    // descriptor backends retain their own resolver and policy checks.
+    let Some(description) = crate::mount::native::reference(entry)? else {
+        return Ok(None);
+    };
+    if description.policy.namespace != crate::mount::namespace_id()? {
+        return Ok(None);
+    }
+    let base = guest
+        .rsplit_once('/')
+        .map_or("/", |(base, _)| if base.is_empty() { "/" } else { base });
+    if crate::mount::query::id_for_path(base)? != crate::mount::query::id_for_path(guest)? {
+        return Ok(None);
+    }
+    let (object, current) = object::Object::from_fd_with_entry(parent)?;
+    if current.generation != entry.generation {
+        return Err(EBADF);
+    }
+    install_native_child(
+        object,
+        entry,
+        name,
+        guest,
+        flags & (O_PATH | O_NOFOLLOW | O_DIRECTORY | O_CLOEXEC),
+    )
+    .map(|descriptor| Some(descriptor.take()))
+}
+
+fn install_native_child(
+    parent: object::Object,
+    entry: crate::FdEntry,
+    name: &str,
+    guest: &str,
+    flags: i32,
+) -> Result<Descriptor, i32> {
+    let stored = crate::path::escape_component(name);
+    let object = parent.child(
+        OsStr::new(stored.as_ref()),
+        FILE_READ_ATTRIBUTES | FILE_READ_EA,
+    )?;
+    let native = crate::mount::native::reference(entry)?
+        .map(|mut d| {
+            d.path = crate::mount::namespace_path(guest)?;
+            d.writer = None;
+            Ok::<_, i32>(d)
+        })
+        .transpose()?;
+    install_native_object(object, flags, native).map(Descriptor)
+}
+
+/// The full resolver has already followed guest links and selected the mount.
+/// Pin that object once, without repeating pathname metadata/ACL/verity reads
+/// needed only for a data open. Its metadata is still read afresh by fstat.
+pub(super) fn open_native_path(
+    path: &Path,
+    flags: i32,
+    native: Option<crate::mount::native::Description>,
+) -> Result<i32, i32> {
+    let access = FILE_READ_ATTRIBUTES | FILE_READ_EA;
+    let object = if flags & O_NOFOLLOW != 0 {
+        object::Object::open(path, access)?
+    } else {
+        object::Object::open_follow(path, access)?
+    };
+    install_native_object(object, flags, native)
+}
+
+fn install_native_object(
+    object: object::Object,
+    flags: i32,
+    native: Option<crate::mount::native::Description>,
+) -> Result<i32, i32> {
+    // Installation only needs the directory/file distinction. Linux link and
+    // device markers are native files; querying their ownership, ACL and verity
+    // size here duplicates the caller's later fstat without affecting O_PATH.
+    let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
+    if unsafe { GetFileInformationByHandle(object.raw(), &mut info) } == 0 {
+        return Err(errno_from_win32(unsafe { GetLastError() }));
+    }
+    let directory = info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY != 0
+        && (info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT == 0
+            || native_symlink_target_handle(object.raw())?.is_none());
+    if flags & O_DIRECTORY != 0 && !directory {
+        return Err(ENOTDIR);
+    }
+    let fd = crate::install_with(
+        object.raw() as usize,
+        if directory {
+            FdKind::Directory
+        } else {
+            FdKind::File
+        },
+        special_fd_flags(flags)
+            .union(FdFlags::PATH_ONLY)
+            .union(FdFlags::OVERLAPPED),
+        |_, entry| {
+            if let Some(d) = native {
+                crate::mount::native::register(entry, d)?;
+            }
+            Ok(())
+        },
+    )?;
+    object.into_raw();
+    Ok(fd)
+}
+
 fn child(parent: i32, name: &str, no_xdev: bool) -> Result<Descriptor, i32> {
     if let Some(fd) = crate::mount::overlay::confined_child(parent, name, no_xdev)? {
         return Ok(Descriptor(fd));
@@ -47,38 +180,28 @@ fn child(parent: i32, name: &str, no_xdev: bool) -> Result<Descriptor, i32> {
         return Err(crate::EXDEV);
     }
     let flags = O_PATH | O_NOFOLLOW | O_CLOEXEC;
+    if crossing {
+        let namespace = crate::mount::namespace_path(&guest)?;
+        if let Some(backing) = crate::mount::native_translation(&namespace)? {
+            // The parent descriptor already proves this component's ancestry.
+            // Rewalking the absolute path would encounter the virtual parent
+            // again and recursively reenter this same mount crossing.
+            let native = crate::path::resolve_unmounted(
+                &crate::path::default_system_root(),
+                &backing,
+                false,
+            )
+            .map_err(path_errno)?;
+            let description = crate::mount::native::prepare_open_canonical(&guest, flags, &guest)?;
+            return open_native_path(&native, flags, description).map(Descriptor);
+        }
+    }
     if !crossing && entry.kind == FdKind::Directory && !crate::procfs::owns(&guest) {
-        let parent = object::Object::from_fd(parent)?;
-        let stored = crate::path::escape_component(name);
-        let object = parent.child(
-            OsStr::new(stored.as_ref()),
-            FILE_READ_ATTRIBUTES | FILE_READ_EA,
-        )?;
-        let stat = stat_handle(object.raw(), false)?;
-        let native = crate::mount::native::reference(entry)?.map(|mut d| {
-            d.path = guest;
-            d.writer = None;
-            d
-        });
-        let fd = crate::install_with(
-            object.raw() as usize,
-            if stat.st_mode & S_IFMT == S_IFDIR {
-                FdKind::Directory
-            } else {
-                FdKind::File
-            },
-            special_fd_flags(flags)
-                .union(FdFlags::PATH_ONLY)
-                .union(FdFlags::OVERLAPPED),
-            |_, entry| {
-                if let Some(d) = native {
-                    crate::mount::native::register(entry, d)?;
-                }
-                Ok(())
-            },
-        )?;
-        object.into_raw();
-        return Ok(Descriptor(fd));
+        let (object, current) = object::Object::from_fd_with_entry(parent)?;
+        if current.generation != entry.generation {
+            return Err(EBADF);
+        }
+        return install_native_child(object, entry, name, &guest, flags);
     }
     let fd = Descriptor(openat(parent, name, flags, 0)?);
     if no_xdev && fstat(parent)?.st_dev != fstat(fd.0)?.st_dev {
@@ -137,6 +260,18 @@ fn create(parent: i32, name: &str, flags: i32, mode: u32) -> Result<i32, i32> {
     object.into_raw();
     let target = Descriptor(fd);
     reopen_local_fd(target.0, flags & !(O_CREAT | O_EXCL | O_NOFOLLOW))
+}
+
+pub(super) fn stat(path: &str, follow: bool) -> Result<Stat, i32> {
+    let flags = O_PATH | O_CLOEXEC | if follow { 0 } else { O_NOFOLLOW };
+    let descriptor = Descriptor(open(AT_FDCWD, path, flags, 0, 0)?);
+    fstat(descriptor.0)
+}
+
+pub(super) fn canonical_guest(name: &str, follow: bool) -> Result<String, i32> {
+    let flags = O_PATH | O_CLOEXEC | if follow { 0 } else { O_NOFOLLOW };
+    let descriptor = Descriptor(open(AT_FDCWD, name, flags, 0, 0)?);
+    path(descriptor.0)
 }
 
 pub(super) fn open(
@@ -345,8 +480,7 @@ pub(super) fn open(
         }
         return openat(target.0, ".", flags, mode);
     }
-    if mode != 0 && flags & O_CREAT == 0 {
-        return Err(EINVAL);
-    }
+    // openat ignores mode when it does not create an inode. openat2 validates
+    // its stricter mode contract before entering this shared walker.
     reopen_local_fd(target.0, flags & !O_NOFOLLOW)
 }

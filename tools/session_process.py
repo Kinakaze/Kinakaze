@@ -112,3 +112,21 @@ class SessionProcess:
             if self.job:
                 self.kernel.CloseHandle(self.job)
                 self.job = None
+
+    def owns_process(self, pid):
+        """Membership survives native parent exit and excludes other sessions."""
+        if os.name != 'nt':
+            return False
+        self.kernel.OpenProcess.argtypes = [w.DWORD, w.BOOL, w.DWORD]
+        self.kernel.OpenProcess.restype = w.HANDLE
+        self.kernel.IsProcessInJob.argtypes = [w.HANDLE, w.HANDLE, c.POINTER(w.BOOL)]
+        self.kernel.IsProcessInJob.restype = w.BOOL
+        handle = self.kernel.OpenProcess(0x1000, False, pid)  # QUERY_LIMITED_INFORMATION
+        if not handle:
+            return False
+        try:
+            belongs = w.BOOL()
+            with self._job_lock:
+                return bool(self.job and self.kernel.IsProcessInJob(handle, self.job, c.byref(belongs)) and belongs.value)
+        finally:
+            self.kernel.CloseHandle(handle)

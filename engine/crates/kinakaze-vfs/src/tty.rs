@@ -282,6 +282,24 @@ fn last_errno() -> i32 {
 }
 
 impl Attachment {
+    pub(crate) fn rights_pins(&self, side: Side) -> Result<Vec<crate::fs::object::Object>, i32> {
+        let live = match side {
+            Side::Master => self.master_liveness.load(Ordering::Acquire),
+            Side::Slave => self.slave_liveness.load(Ordering::Acquire),
+        };
+        [
+            self._section.0,
+            self.lock.0,
+            self.master_event.0,
+            self.slave_event.0,
+            live as HANDLE,
+        ]
+        .into_iter()
+        .filter(|handle| !handle.is_null())
+        .map(crate::fs::object::Object::duplicate)
+        .collect()
+    }
+
     /// Creates the terminal numbered `index`, or reports that it exists.
     fn create(index: u32) -> Result<Self, i32> {
         let mut security = private_security();
@@ -677,7 +695,7 @@ unsafe extern "system" {
 const OBJECT_NAME_INFORMATION: u32 = 1;
 
 /// Reads a kernel object's name, or `None` when it has none.
-fn handle_name(handle: HANDLE) -> Option<String> {
+pub(crate) fn handle_name(handle: HANDLE) -> Option<String> {
     // Room for the header plus a generous name; the names here are short and
     // entirely controlled by this module.
     let mut buffer = vec![0u8; size_of::<UnicodeString>() + 1024];
@@ -966,6 +984,7 @@ fn registry() -> Result<Arc<crate::mount::shared::Store>, i32> {
             Ok((bytes.to_vec(), ()))
         }
     })?;
+    s.retain_kernel(false, Vec::new())?;
     *slot = Some(s.clone());
     Ok(s)
 }

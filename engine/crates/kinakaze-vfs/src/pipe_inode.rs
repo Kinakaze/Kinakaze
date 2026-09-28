@@ -328,7 +328,17 @@ pub(crate) fn finish_created(fd: i32) -> Result<i32, i32> {
 }
 /// Caller holds the fd table, preventing close/reuse during publication.
 pub(crate) fn publish_entry(fd: i32, entry: FdEntry) -> Result<(), i32> {
+    publish_link(fd, entry, false)
+}
+pub(crate) fn replace_entry(fd: i32, entry: FdEntry) -> Result<(), i32> {
+    publish_link(fd, entry, true)
+}
+fn publish_link(fd: i32, entry: FdEntry, replace: bool) -> Result<(), i32> {
     let Some(inode) = reference(entry)? else {
+        if replace && let Some(pid) = kinakaze_runtime::job::namespace_pid(std::process::id()) {
+            kinakaze_runtime::job::set_fd_link(pid, fd, None)
+                .map_err(crate::procfs::fd_link_error)?;
+        }
         return Ok(());
     };
     let _guard = inode.locked()?;

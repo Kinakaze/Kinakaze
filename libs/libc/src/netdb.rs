@@ -1494,8 +1494,9 @@ pub unsafe extern "sysv64" fn kinakaze_abi_getaddrinfo(
                 }
 
                 let canonical = canonical_pending.then_some(answer.canonical_name.as_str());
-                let translated =
-                    unsafe { translate_result_list(windows_file_result, hint_flags, canonical) };
+                let translated = unsafe {
+                    translate_result_list(windows_file_result, hint_flags, canonical, None)
+                };
                 unsafe { FreeAddrInfoW(windows_file_result) };
                 let new_head = match translated {
                     Ok(node) => node,
@@ -1573,7 +1574,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_getaddrinfo(
     }
 
     // SAFETY: the call succeeded, so the list is a valid chain this scope owns.
-    let outcome = unsafe { translate_result_list(windows_result, hint_flags, None) };
+    let outcome = unsafe { translate_result_list(windows_result, hint_flags, None, node_text) };
     // SAFETY: the Windows list is released whether or not translation succeeded;
     // the guest never sees these nodes.
     unsafe { FreeAddrInfoW(windows_result) };
@@ -1597,9 +1598,10 @@ unsafe fn translate_result_list(
     list: *mut AddrInfoW,
     requested_flags: c_int,
     canonical_override: Option<&str>,
+    canonical_fallback: Option<&str>,
 ) -> Result<*mut AddrInfo, c_int> {
     let mut nodes: Vec<*mut AddrInfo> = Vec::new();
-
+    let mut answers = Vec::new();
     let mut cursor = list;
     while !cursor.is_null() {
         // SAFETY: the chain is valid and `cursor` is non-null.
@@ -1610,21 +1612,49 @@ unsafe fn translate_result_list(
         if entry.ai_addr.is_null() || length < 2 {
             continue;
         }
+        answers.push(entry);
+    }
+    // Winsock may omit a canonical name for a locally resolved hostname. Linux
+    // still promises the supplied name on the first result with AI_CANONNAME.
+    let canonical = if requested_flags & AI_CANONNAME != 0 {
+        canonical_override
+            .map(str::to_owned)
+            .or_else(|| {
+                answers
+                    .iter()
+                    .find_map(|entry| unsafe { from_wide(entry.ai_canonname) })
+                    .filter(|name| !name.is_empty())
+            })
+            .or_else(|| canonical_fallback.map(str::to_owned))
+    } else {
+        None
+    };
+    // Order before allocating: sorting nodes afterwards can move the only
+    // ai_canonname off the first result, crashing hostname --fqdn and callers
+    // that legitimately rely on that API guarantee.
+    answers.sort_by_key(|entry| {
+        if family_to_linux(entry.ai_family) == AF_INET {
+            0
+        } else {
+            1
+        }
+    });
+    for entry in answers {
+        let length = entry.ai_addrlen.min(128);
         let mut address = vec![0u8; length];
         unsafe {
             ptr::copy_nonoverlapping(entry.ai_addr.cast::<u8>(), address.as_mut_ptr(), length)
         };
         sockaddr_family_to_linux(&mut address);
 
-        let canonname = if requested_flags & AI_CANONNAME != 0 && nodes.is_empty() {
-            canonical_override
-                .map(str::to_owned)
-                .or_else(|| unsafe { from_wide(entry.ai_canonname) })
-        } else {
-            None
-        };
-
-        let node = allocate_node(&address, canonname.as_deref());
+        let node = allocate_node(
+            &address,
+            if nodes.is_empty() {
+                canonical.as_deref()
+            } else {
+                None
+            },
+        );
         if node.is_null() {
             for &n in &nodes {
                 unsafe { kinakaze_abi_freeaddrinfo(n) };
@@ -1645,9 +1675,6 @@ unsafe fn translate_result_list(
         return Err(EAI_NONAME);
     }
 
-    // Stable sort: prioritize IPv4 (AF_INET = 2) for immediate connection success in mixed networks
-    nodes.sort_by_key(|&n| unsafe { if (*n).ai_family == 2 { 0 } else { 1 } });
-
     for i in 0..nodes.len() - 1 {
         unsafe {
             (*nodes[i]).ai_next = nodes[i + 1];
@@ -1655,6 +1682,50 @@ unsafe fn translate_result_list(
     }
 
     Ok(nodes[0])
+}
+
+#[cfg(test)]
+mod canonical_result_tests {
+    use super::*;
+
+    #[test]
+    fn canonical_name_stays_on_first_sorted_result_and_falls_back_to_node() {
+        let mut v4 = [0u8; 16];
+        v4[..2].copy_from_slice(&2u16.to_ne_bytes());
+        let mut v6 = [0u8; 28];
+        v6[..2].copy_from_slice(&23u16.to_ne_bytes());
+        let mut canonical = wide("canonical.example");
+        let mut second: AddrInfoW = unsafe { core::mem::zeroed() };
+        second.ai_family = 2;
+        second.ai_addr = v4.as_mut_ptr().cast();
+        second.ai_addrlen = v4.len();
+        let mut first: AddrInfoW = unsafe { core::mem::zeroed() };
+        first.ai_family = 23;
+        first.ai_addr = v6.as_mut_ptr().cast();
+        first.ai_addrlen = v6.len();
+        first.ai_next = &raw mut second;
+        for (supplied, expected) in [(true, "canonical.example"), (false, "input.example")] {
+            first.ai_canonname = if supplied {
+                canonical.as_mut_ptr()
+            } else {
+                ptr::null_mut()
+            };
+            let result = unsafe {
+                translate_result_list(&raw mut first, AI_CANONNAME, None, Some("input.example"))
+            }
+            .unwrap();
+            unsafe {
+                assert_eq!((*result).ai_family, AF_INET);
+                assert!(!(*result).ai_canonname.is_null());
+                assert_eq!(
+                    CStr::from_ptr((*result).ai_canonname).to_str().unwrap(),
+                    expected
+                );
+                assert!((*(*result).ai_next).ai_canonname.is_null());
+                kinakaze_abi_freeaddrinfo(result);
+            }
+        }
+    }
 }
 
 /// `freeaddrinfo`.
@@ -1694,7 +1765,7 @@ mod hosts;
 mod networks;
 mod nss;
 mod protocols;
-mod records;
+pub(crate) mod records;
 mod reentrant;
 mod rpc;
 mod services;

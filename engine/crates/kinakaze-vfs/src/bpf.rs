@@ -14,6 +14,8 @@
 use core::sync::atomic::{AtomicUsize, Ordering};
 use std::collections::VecDeque;
 use std::sync::Mutex;
+mod lifetime;
+pub(crate) use lifetime::Pin as RightsPin;
 
 use windows_sys::Win32::Foundation::{
     CloseHandle, HANDLE, INVALID_HANDLE_VALUE, WAIT_ABANDONED, WAIT_OBJECT_0,
@@ -28,8 +30,7 @@ use windows_sys::Win32::System::Threading::{
 };
 
 use crate::{
-    EACCES, EBADF, EBUSY, EEXIST, EINVAL, EIO, EMFILE, ENOENT, ENOSPC, EOPNOTSUPP, EPERM, FdFlags,
-    FdKind,
+    EACCES, EBADF, EBUSY, EEXIST, EINVAL, EIO, ENOENT, ENOSPC, EOPNOTSUPP, EPERM, FdFlags, FdKind,
 };
 
 pub const BPF_PROG_TYPE_CGROUP_SKB: u32 = 8;
@@ -46,13 +47,12 @@ pub const BPF_DEVCG_ACC_WRITE: u32 = 4;
 pub const BPF_DEVCG_DEV_BLOCK: u32 = 1;
 pub const BPF_DEVCG_DEV_CHAR: u32 = 2;
 
-const MAGIC: u64 = 0x4352_5942_5046_3031; // "CRYBPF01"
+const MAGIC: u64 = kinakaze_v2_protocol::kernel::BPF_MAGIC;
 const HEADER_SIZE: usize = 64;
 const HEADER_MAGIC: usize = 0;
 const HEADER_NEXT_ID: usize = 8;
 const HEADER_PROGRAM_CAPACITY: usize = 12;
 const HEADER_ATTACHMENT_CAPACITY: usize = 16;
-const HEADER_FD_CAPACITY: usize = 20;
 const HEADER_MAX_INSNS: usize = 24;
 
 const PROGRAM_CAPACITY: usize = 128;
@@ -94,15 +94,7 @@ const ATTACHMENT_FLAGS: usize = 12;
 const ATTACHMENT_PATH_LENGTH: usize = 16;
 const ATTACHMENT_PATH: usize = 32;
 
-const FD_CAPACITY: usize = 8192;
-const FD_SIZE: usize = 16;
-const FDS_OFFSET: usize = ATTACHMENTS_OFFSET + ATTACHMENT_CAPACITY * ATTACHMENT_SIZE;
-const FD_STATE: usize = 0;
-const FD_PID: usize = 4;
-const FD_NUMBER: usize = 8;
-const FD_PROGRAM_ID: usize = 12;
-
-const SECTION_SIZE: usize = FDS_OFFSET + FD_CAPACITY * FD_SIZE;
+const SECTION_SIZE: usize = ATTACHMENTS_OFFSET + ATTACHMENT_CAPACITY * ATTACHMENT_SIZE;
 
 static BASE: AtomicUsize = AtomicUsize::new(0);
 static SECTION: AtomicUsize = AtomicUsize::new(0);
@@ -187,11 +179,6 @@ unsafe fn attachment_slot(base: *mut u8, index: usize) -> *mut u8 {
     unsafe { base.add(ATTACHMENTS_OFFSET + index * ATTACHMENT_SIZE) }
 }
 
-unsafe fn fd_slot(base: *mut u8, index: usize) -> *mut u8 {
-    // SAFETY: the caller keeps index below FD_CAPACITY.
-    unsafe { base.add(FDS_OFFSET + index * FD_SIZE) }
-}
-
 fn acquire(guard: HANDLE) -> Result<(), i32> {
     if guard.is_null() {
         return Err(EIO);
@@ -219,13 +206,14 @@ fn map_registry() -> Result<*mut u8, i32> {
         return Ok(cached as *mut u8);
     }
 
-    let guard_name = wide("Local\\kinakaze.bpf.lock.v1");
+    let domain = kinakaze_runtime::authority::domain_id();
+    let guard_name = wide(&format!("Local\\kinakaze.bpf.lock.v3.{domain}"));
     // SAFETY: default security attributes and a live NUL-terminated name.
     let guard = unsafe { CreateMutexW(core::ptr::null(), 0, guard_name.as_ptr()) };
     if guard.is_null() {
         return Err(EIO);
     }
-    let section_name = wide("Local\\kinakaze.bpf.v1");
+    let section_name = wide(&kinakaze_v2_protocol::kernel::ObjectKey::Bpf.name(domain));
     // SAFETY: creates or opens a pagefile-backed section with this fixed ABI.
     let section = unsafe {
         CreateFileMappingW(
@@ -267,24 +255,33 @@ fn map_registry() -> Result<*mut u8, i32> {
             write_u32(base, HEADER_NEXT_ID, 1);
             write_u32(base, HEADER_PROGRAM_CAPACITY, PROGRAM_CAPACITY as u32);
             write_u32(base, HEADER_ATTACHMENT_CAPACITY, ATTACHMENT_CAPACITY as u32);
-            write_u32(base, HEADER_FD_CAPACITY, FD_CAPACITY as u32);
             write_u32(base, HEADER_MAX_INSNS, MAX_INSNS as u32);
             write_u64(base, HEADER_MAGIC, MAGIC);
         }
         read_u64(base, HEADER_MAGIC) == MAGIC
             && read_u32(base, HEADER_PROGRAM_CAPACITY) == PROGRAM_CAPACITY as u32
             && read_u32(base, HEADER_ATTACHMENT_CAPACITY) == ATTACHMENT_CAPACITY as u32
-            && read_u32(base, HEADER_FD_CAPACITY) == FD_CAPACITY as u32
             && read_u32(base, HEADER_MAX_INSNS) == MAX_INSNS as u32
     };
     release(guard);
-    if !compatible {
+    let retained = if compatible && kinakaze_runtime::authority::get().is_some() {
+        kinakaze_runtime::authority::kernel(kinakaze_v2_protocol::kernel::KernelCommand::Retain {
+            object: kinakaze_v2_protocol::kernel::ObjectKey::Bpf,
+            tmpfs: false,
+            dependencies: Vec::new(),
+        })
+    } else if compatible {
+        Ok(())
+    } else {
+        Err(EIO)
+    };
+    if let Err(error) = retained {
         unsafe {
             UnmapViewOfFile(view);
             CloseHandle(section);
             CloseHandle(guard);
         }
-        return Err(EIO);
+        return Err(error);
     }
     SECTION.store(section as usize, Ordering::Release);
     GUARD.store(guard as usize, Ordering::Release);
@@ -315,13 +312,8 @@ unsafe fn find_program(base: *mut u8, id: u32, allow_reserved: bool) -> Option<*
 }
 
 unsafe fn has_program_reference(base: *mut u8, id: u32) -> bool {
-    for index in 0..FD_CAPACITY {
-        let slot = unsafe { fd_slot(base, index) };
-        if unsafe { read_u32(slot, FD_STATE) } != 0
-            && unsafe { read_u32(slot, FD_PROGRAM_ID) } == id
-        {
-            return true;
-        }
+    if lifetime::alive(id) {
+        return true;
     }
     for index in 0..ATTACHMENT_CAPACITY {
         let slot = unsafe { attachment_slot(base, index) };
@@ -344,59 +336,9 @@ unsafe fn cleanup_program(base: *mut u8, id: u32) {
     }
 }
 
-unsafe fn add_fd_reference(base: *mut u8, pid: u32, fd: i32, id: u32) -> Result<(), i32> {
-    if fd < 0 || unsafe { find_program(base, id, true) }.is_none() {
-        return Err(EBADF);
-    }
-    let mut free = None;
-    for index in 0..FD_CAPACITY {
-        let slot = unsafe { fd_slot(base, index) };
-        if unsafe { read_u32(slot, FD_STATE) } == 0 {
-            free.get_or_insert(slot);
-            continue;
-        }
-        if unsafe { read_u32(slot, FD_PID) } == pid
-            && unsafe { read_u32(slot, FD_NUMBER) } == fd as u32
-        {
-            return if unsafe { read_u32(slot, FD_PROGRAM_ID) } == id {
-                Ok(())
-            } else {
-                Err(EBUSY)
-            };
-        }
-    }
-    let slot = free.ok_or(EMFILE)?;
-    unsafe {
-        write_u32(slot, FD_PID, pid);
-        write_u32(slot, FD_NUMBER, fd as u32);
-        write_u32(slot, FD_PROGRAM_ID, id);
-        write_u32(slot, FD_STATE, 1);
-    }
-    Ok(())
-}
-
 fn current_pid() -> u32 {
     crate::job::ensure_registered();
     crate::job::process_id()
-}
-
-fn program_id_for_fd(fd: i32) -> Result<u32, i32> {
-    if crate::get(fd)?.kind != FdKind::BpfProgram {
-        return Err(EBADF);
-    }
-    let pid = current_pid();
-    with_registry(|base| {
-        for index in 0..FD_CAPACITY {
-            let slot = unsafe { fd_slot(base, index) };
-            if unsafe { read_u32(slot, FD_STATE) } != 0
-                && unsafe { read_u32(slot, FD_PID) } == pid
-                && unsafe { read_u32(slot, FD_NUMBER) } == fd as u32
-            {
-                return Ok(unsafe { read_u32(slot, FD_PROGRAM_ID) });
-            }
-        }
-        Err(EBADF)
-    })
 }
 
 #[derive(Clone, Copy)]
@@ -710,10 +652,13 @@ pub fn load_program(load: ProgramLoad) -> Result<i32, BpfError> {
     }
     verify(load.program_type, &load.instructions)?;
     let tag = sha1_tag(&load.instructions);
-    let id = with_registry(|base| {
+    let reference = with_registry(|base| {
         let mut free = None;
         for index in 0..PROGRAM_CAPACITY {
             let slot = unsafe { program_slot(base, index) };
+            if unsafe { read_u32(slot, PROGRAM_STATE) } != PROGRAM_FREE {
+                unsafe { cleanup_program(base, read_u32(slot, PROGRAM_ID)) };
+            }
             if unsafe { read_u32(slot, PROGRAM_STATE) } == PROGRAM_FREE {
                 free = Some(slot);
                 break;
@@ -727,6 +672,7 @@ pub fn load_program(load: ProgramLoad) -> Result<i32, BpfError> {
             }
             id = id.wrapping_add(1).max(1);
         }
+        let reference = lifetime::Pin::open(id)?;
         unsafe {
             core::ptr::write_bytes(slot, 0, PROGRAM_SIZE);
             write_u32(slot, PROGRAM_ID, id);
@@ -766,43 +712,28 @@ pub fn load_program(load: ProgramLoad) -> Result<i32, BpfError> {
                 slot.add(PROGRAM_BYTECODE),
                 load.instructions.len(),
             );
-            write_u32(slot, PROGRAM_STATE, PROGRAM_RESERVED);
+            write_u32(slot, PROGRAM_STATE, PROGRAM_LIVE);
             write_u32(base, HEADER_NEXT_ID, id.wrapping_add(1).max(1));
         }
-        Ok(id)
+        Ok(reference)
     })
     .map_err(BpfError::errno)?;
 
-    let pid = current_pid();
-    let fd = crate::install_handleless_with(FdKind::BpfProgram, FdFlags::CLOSE_ON_EXEC, |fd| {
-        with_registry(|base| unsafe { add_fd_reference(base, pid, fd, id) })
-    })
-    .map_err(BpfError::errno)?;
-    if let Err(error) = with_registry(|base| {
-        let slot = unsafe { find_program(base, id, true) }.ok_or(EIO)?;
-        unsafe { write_u32(slot, PROGRAM_STATE, PROGRAM_LIVE) };
-        Ok(())
-    }) {
-        let _ = crate::close(fd);
-        return Err(BpfError::errno(error));
-    }
-    Ok(fd)
+    reference.install().map_err(BpfError::errno)
 }
 
 pub fn get_fd_by_id(id: u32) -> Result<i32, i32> {
-    with_registry(|base| {
-        unsafe { find_program(base, id, false) }
-            .map(|_| ())
-            .ok_or(ENOENT)
+    let reference = with_registry(|base| {
+        unsafe { cleanup_program(base, id) };
+        unsafe { find_program(base, id, false) }.ok_or(ENOENT)?;
+        lifetime::Pin::open(id)
     })?;
-    let pid = current_pid();
-    crate::install_handleless_with(FdKind::BpfProgram, FdFlags::CLOSE_ON_EXEC, |fd| {
-        with_registry(|base| unsafe { add_fd_reference(base, pid, fd, id) })
-    })
+    reference.install()
 }
 
 pub fn program_info(fd: i32) -> Result<ProgramInfo, i32> {
-    let id = program_id_for_fd(fd)?;
+    let reference = lifetime::Pin::from_fd(fd)?;
+    let id = reference.id();
     with_registry(|base| {
         let slot = unsafe { find_program(base, id, false) }.ok_or(EBADF)?;
         let mut name = [0u8; PROGRAM_NAME_CAPACITY];
@@ -870,9 +801,10 @@ pub fn attach(
     if path.len() > ATTACHMENT_PATH_CAPACITY {
         return Err(EINVAL);
     }
-    let id = program_id_for_fd(program_fd)?;
-    let replace_id = match replace_fd {
-        Some(fd) if flags & BPF_F_REPLACE != 0 => Some(program_id_for_fd(fd)?),
+    let reference = lifetime::Pin::from_fd(program_fd)?;
+    let id = reference.id();
+    let replacement = match replace_fd {
+        Some(fd) if flags & BPF_F_REPLACE != 0 => Some(lifetime::Pin::from_fd(fd)?),
         Some(_) => return Err(EINVAL),
         None if flags & BPF_F_REPLACE != 0 => return Err(EINVAL),
         None => None,
@@ -896,7 +828,8 @@ pub fn attach(
                 direct.push(slot);
             }
         }
-        if let Some(replace_id) = replace_id {
+        if let Some(replacement) = &replacement {
+            let replace_id = replacement.id();
             let slot = direct
                 .into_iter()
                 .find(|slot| unsafe { read_u32(*slot, ATTACHMENT_PROGRAM_ID) } == replace_id)
@@ -933,7 +866,8 @@ pub fn detach(target_fd: i32, program_fd: i32, attach_type: u32) -> Result<(), i
         return Err(EOPNOTSUPP);
     }
     let path = cgroup_path_from_fd(target_fd)?;
-    let id = program_id_for_fd(program_fd)?;
+    let reference = lifetime::Pin::from_fd(program_fd)?;
+    let id = reference.id();
     with_registry(|base| {
         for index in 0..ATTACHMENT_CAPACITY {
             let slot = unsafe { attachment_slot(base, index) };
@@ -997,169 +931,15 @@ pub fn remove_cgroup(path: &str) -> Result<(), i32> {
     })
 }
 
-/// A registry reference outside the guest fd table, retained during SCM export.
-pub(crate) struct RightsPin {
-    id: u32,
-    slot: usize,
-    pid: u32,
-}
-impl RightsPin {
-    pub(crate) fn id(&self) -> u32 {
-        self.id
-    }
-}
-impl Drop for RightsPin {
-    fn drop(&mut self) {
-        let _ = with_registry(|base| {
-            let slot = unsafe { fd_slot(base, self.slot) };
-            if unsafe { read_u32(slot, FD_STATE) } == 2
-                && unsafe { read_u32(slot, FD_PID) } == self.pid
-                && unsafe { read_u32(slot, FD_PROGRAM_ID) } == self.id
-            {
-                unsafe {
-                    core::ptr::write_bytes(slot, 0, FD_SIZE);
-                    cleanup_program(base, self.id);
-                }
-            }
-            Ok(())
-        });
-    }
-}
+/// A native reference outside the guest fd table, retained during SCM export.
 pub(crate) fn rights_reference(fd: i32) -> Result<RightsPin, i32> {
-    let id = program_id_for_fd(fd)?;
-    let pid = current_pid();
-    with_registry(|base| {
-        if unsafe { find_program(base, id, true) }.is_none() {
-            return Err(EBADF);
-        }
-        for index in 0..FD_CAPACITY {
-            let slot = unsafe { fd_slot(base, index) };
-            if unsafe { read_u32(slot, FD_STATE) } == 0 {
-                unsafe {
-                    write_u32(slot, FD_PID, pid);
-                    write_u32(slot, FD_NUMBER, u32::MAX);
-                    write_u32(slot, FD_PROGRAM_ID, id);
-                    write_u32(slot, FD_STATE, 2);
-                }
-                return Ok(RightsPin {
-                    id,
-                    slot: index,
-                    pid,
-                });
-            }
-        }
-        Err(EMFILE)
-    })
+    lifetime::Pin::from_fd(fd)
 }
 pub(crate) fn import_rights(fd: i32, id: u32) -> Result<(), i32> {
-    if crate::get(fd)?.kind != FdKind::BpfProgram {
+    if lifetime::Pin::from_fd(fd)?.id() != id {
         return Err(EBADF);
     }
-    let pid = current_pid();
-    with_registry(|base| unsafe { add_fd_reference(base, pid, fd, id) })
-}
-
-pub fn duplicate(oldfd: i32, newfd: i32) -> Result<(), i32> {
-    let id = program_id_for_fd(oldfd)?;
-    let pid = current_pid();
-    with_registry(|base| unsafe { add_fd_reference(base, pid, newfd, id) })
-}
-
-pub fn close(fd: i32) {
-    let pid = current_pid();
-    let _ = with_registry(|base| {
-        for index in 0..FD_CAPACITY {
-            let slot = unsafe { fd_slot(base, index) };
-            if unsafe { read_u32(slot, FD_STATE) } != 0
-                && unsafe { read_u32(slot, FD_PID) } == pid
-                && unsafe { read_u32(slot, FD_NUMBER) } == fd as u32
-            {
-                let id = unsafe { read_u32(slot, FD_PROGRAM_ID) };
-                unsafe { core::ptr::write_bytes(slot, 0, FD_SIZE) };
-                unsafe { cleanup_program(base, id) };
-                return Ok(());
-            }
-        }
-        Ok(())
-    });
-}
-
-pub fn serialize_matching(mut keep: impl FnMut(i32) -> bool) -> Result<Vec<u8>, i32> {
-    let pid = current_pid();
-    with_registry(|base| {
-        let mut records = Vec::new();
-        for index in 0..FD_CAPACITY {
-            let slot = unsafe { fd_slot(base, index) };
-            let fd = unsafe { read_u32(slot, FD_NUMBER) } as i32;
-            if unsafe { read_u32(slot, FD_STATE) } != 0
-                && unsafe { read_u32(slot, FD_PID) } == pid
-                && fd >= 0
-                && keep(fd)
-            {
-                records.push((fd, unsafe { read_u32(slot, FD_PROGRAM_ID) }));
-            }
-        }
-        let mut payload = Vec::with_capacity(4 + records.len() * 8);
-        payload.extend_from_slice(&(records.len() as u32).to_le_bytes());
-        for (fd, id) in records {
-            payload.extend_from_slice(&fd.to_le_bytes());
-            payload.extend_from_slice(&id.to_le_bytes());
-        }
-        Ok(payload)
-    })
-}
-
-pub fn restore(payload: &[u8]) -> bool {
-    let Some(count) = payload
-        .get(..4)
-        .and_then(|bytes| <[u8; 4]>::try_from(bytes).ok())
-        .map(u32::from_le_bytes)
-    else {
-        return false;
-    };
-    let Some(expected) = (count as usize)
-        .checked_mul(8)
-        .and_then(|bytes| bytes.checked_add(4))
-    else {
-        return false;
-    };
-    if payload.len() != expected {
-        return false;
-    }
-    let mut records = Vec::with_capacity(count as usize);
-    for index in 0..count as usize {
-        let at = 4 + index * 8;
-        let fd = i32::from_le_bytes(payload[at..at + 4].try_into().unwrap());
-        let id = u32::from_le_bytes(payload[at + 4..at + 8].try_into().unwrap());
-        if fd < 0
-            || records.iter().any(|(old, _)| *old == fd)
-            || crate::get(fd).is_err()
-            || crate::get(fd).is_ok_and(|entry| entry.kind != FdKind::BpfProgram)
-        {
-            return false;
-        }
-        records.push((fd, id));
-    }
-    let pid = current_pid();
-    with_registry(|base| {
-        let mut previous = Vec::new();
-        for index in 0..FD_CAPACITY {
-            let slot = unsafe { fd_slot(base, index) };
-            if unsafe { read_u32(slot, FD_STATE) } != 0 && unsafe { read_u32(slot, FD_PID) } == pid
-            {
-                previous.push(unsafe { read_u32(slot, FD_PROGRAM_ID) });
-                unsafe { core::ptr::write_bytes(slot, 0, FD_SIZE) };
-            }
-        }
-        for (fd, id) in &records {
-            unsafe { add_fd_reference(base, pid, *fd, *id) }?;
-        }
-        for id in previous {
-            unsafe { cleanup_program(base, id) };
-        }
-        Ok(())
-    })
-    .is_ok()
+    Ok(())
 }
 
 fn execute(bytes: &[u8], context: [u32; 3]) -> Result<u64, i32> {
@@ -1460,6 +1240,29 @@ mod tests {
                 .errno,
             EACCES
         );
+    }
+
+    #[test]
+    fn native_references_retain_programs_and_last_close_reclaims_slots() {
+        for _ in 0..PROGRAM_CAPACITY + 1 {
+            let program = load_program(ProgramLoad {
+                program_type: BPF_PROG_TYPE_CGROUP_DEVICE,
+                expected_attach_type: 0,
+                flags: 0,
+                instructions: [insn(0xb4, 0, 0, 0, 1), insn(0x95, 0, 0, 0, 0)].concat(),
+                license: "GPL".into(),
+                name: [0; PROGRAM_NAME_CAPACITY],
+            })
+            .unwrap();
+            let pin = rights_reference(program).unwrap();
+            let id = pin.id();
+            crate::close(program).unwrap();
+            let restored = get_fd_by_id(id).unwrap();
+            assert_eq!(program_info(restored).unwrap().id, id);
+            crate::close(restored).unwrap();
+            drop(pin);
+            assert_eq!(get_fd_by_id(id), Err(ENOENT));
+        }
     }
 
     #[test]

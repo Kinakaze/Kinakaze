@@ -481,6 +481,46 @@ fn fixed_virtual_trees_and_root_cannot_publish_ineffective_binds() {
 }
 
 #[test]
+fn recursive_root_bind_carries_real_virtual_mounts_and_roundtrips() {
+    let mut tree = Tree::new();
+    for (target, source, flags) in [
+        (
+            "/proc",
+            crate::procfs::instance::prepare("").unwrap(),
+            MS_PROC,
+        ),
+        ("/sys", "tmpfs:701:1".into(), MS_TMPFS | MS_SYSFS),
+        ("/dev", "tmpfs:702:1".into(), MS_TMPFS),
+    ] {
+        let id = allocate_id(&mut tree.next).unwrap();
+        tree.points.push(MountPoint {
+            meta: Default::default(),
+            id,
+            parent: ROOT_MOUNT_ID,
+            source,
+            target: target.into(),
+            flags,
+        });
+    }
+    let root = tree.bind("/", "/sandbox", true);
+    assert_eq!(tree.translate("/sandbox/etc/hostname"), "/etc/hostname");
+    for name in ["proc", "sys", "dev"] {
+        let child = visible_mount(&tree.points, &format!("/sandbox/{name}/item"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(child.parent, root);
+        assert_eq!(
+            native_translation_in(&tree.points, &format!("/sandbox/{name}/item")),
+            Ok(None)
+        );
+    }
+    assert_eq!(
+        decode_table(&encode_table(&tree.points).unwrap()).unwrap(),
+        tree.points
+    );
+}
+
+#[test]
 fn propagation_preserves_intermediate_shared_slave_masters() {
     let original = open_namespace(crate::FdFlags::NONE).unwrap();
     unshare_namespace().unwrap();

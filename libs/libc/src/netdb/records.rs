@@ -1,6 +1,6 @@
 //! On-demand guest text databases. Lookup retains one line, never the whole file.
 pub(super) mod cursor;
-pub(super) mod returned;
+pub(crate) mod returned;
 use std::ffi::CString;
 use std::io::{BufRead, Read};
 

@@ -621,7 +621,7 @@ pub fn remove_directory(path: &str) -> Result<(), i32> {
     if sub.is_empty() {
         return Err(crate::EBUSY);
     }
-    shared::update(|reg| {
+    let removed = shared::update(|reg| {
         if !reg.groups.contains_key(sub) {
             return Err(ENOENT);
         }
@@ -635,9 +635,14 @@ pub fn remove_directory(path: &str) -> Result<(), i32> {
             return Err(crate::EBUSY);
         }
         crate::bpf::remove_cgroup(clean)?;
-        reg.groups.remove(sub);
-        Ok(())
-    })
+        Ok(reg.groups.remove(sub).ok_or(ENOENT)?.id)
+    })?;
+    if kinakaze_runtime::authority::get().is_some() {
+        kinakaze_runtime::authority::kernel(
+            kinakaze_v2_protocol::kernel::KernelCommand::RemoveCgroup { id: removed },
+        )?;
+    }
+    Ok(())
 }
 // Directory lookup/stat must not sample every group's counters or depend on an
 // unrelated group's native query succeeding. Content is read by the open inode.

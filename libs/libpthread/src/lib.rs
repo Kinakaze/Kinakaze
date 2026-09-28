@@ -61,7 +61,7 @@ const PTHREAD_CREATE_JOINABLE: i32 = 0;
 #[cfg(all(windows, target_arch = "x86_64"))]
 const PTHREAD_CREATE_DETACHED: i32 = 1;
 #[cfg(all(windows, target_arch = "x86_64"))]
-const PTHREAD_STACK_MIN: usize = 16 * 1024;
+pub const PTHREAD_STACK_MIN: usize = 16 * 1024;
 /// Linux's default guard: one 4 KiB page below the stack.
 #[cfg(all(windows, target_arch = "x86_64"))]
 const DEFAULT_GUARD_SIZE: u32 = 4096;
@@ -509,9 +509,14 @@ unsafe extern "system" fn native_thread_start(packet: *mut c_void) -> u32 {
     inheritance.adopt();
     drop(inheritance);
     kinakaze_tls::set_locale(locale);
-    let initialized = stack::prepare_current()
-        && initialize_process_thread_tls()
-        && kinakaze_tls::set_guest_gs_base(gs_base);
+    let stack_ready = stack::prepare_current();
+    let tls_ready = stack_ready && initialize_process_thread_tls();
+    let initialized = tls_ready && kinakaze_tls::set_guest_gs_base(gs_base);
+    if !initialized && trace_enabled() {
+        eprintln!(
+            "kinakaze: [THREAD] setup failed stack={stack_ready} tls={tls_ready} gs={gs_base:#x} stack_size={stack_size}"
+        );
+    }
     if !initialized {
         finish_current_thread(PTHREAD_CANCELED);
     }
@@ -603,6 +608,9 @@ pub unsafe extern "sysv64" fn pthread_create(
     }
     let limit_error = kinakaze_runtime::services::task_creation_errno();
     if limit_error != 0 {
+        if trace_enabled() {
+            eprintln!("kinakaze: [THREAD] task limit errno={limit_error}");
+        }
         return limit_error;
     }
     let attributes = if attr.is_null() {
@@ -638,12 +646,20 @@ pub unsafe extern "sysv64" fn pthread_create(
     // topology transaction instead. Do not wait for the child under this guard:
     // its TLS initializer may itself need the mapping transaction.
     let Some(_creation_transaction) = kinakaze_runtime::begin_fork_mapping_transaction() else {
+        if trace_enabled() {
+            eprintln!("kinakaze: [THREAD] topology transaction unavailable");
+        }
         return EAGAIN;
     };
 
     let inheritance = match FsInheritance::capture() {
         Ok(value) => value,
-        Err(error) => return error,
+        Err(error) => {
+            if trace_enabled() {
+                eprintln!("kinakaze: [THREAD] filesystem inheritance errno={error}");
+            }
+            return error;
+        }
     };
     let id = allocate_thread_id();
     let start = start.expect("validated above");
@@ -700,6 +716,13 @@ pub unsafe extern "sysv64" fn pthread_create(
         )
     };
     let handle = if native.is_null() {
+        if trace_enabled() {
+            eprintln!(
+                "kinakaze: [THREAD] CreateThread failed stack={} error={}",
+                attributes.stack_size,
+                std::io::Error::last_os_error()
+            );
+        }
         // CreateThread failed and never consumed the startup packet.
         drop(unsafe { Box::from_raw(packet) });
         let _ = kinakaze_runtime::process_thread_finished();
@@ -2186,11 +2209,7 @@ pub unsafe extern "sysv64" fn pthread_cond_wait(cond: *mut usize, mutex: *mut us
 
 #[cfg(all(windows, target_arch = "x86_64"))]
 fn cancel_condition_wait(cond: *mut usize) {
-    let pending = {
-        let state = cancel_self();
-        state.enabled.load(Ordering::Acquire) && state.requested.load(Ordering::Acquire)
-    };
-    if pending {
+    if cancellation_pending() {
         // A cancelled waiter must not consume a signal intended for another
         // waiter. Extra/spurious wakeups are allowed by the condition API.
         unsafe { WakeConditionVariable(cond.cast()) };
@@ -3132,13 +3151,27 @@ pub unsafe extern "sysv64" fn pthread_setcanceltype(kind: i32, previous: *mut i3
 /// the thread are released first; the calling frame's own locals are not, because
 /// `ExitThread` does not unwind.
 pub extern "sysv64" fn pthread_testcancel() {
-    let state = cancel_self();
-    if !(state.enabled.load(Ordering::Acquire) && state.requested.load(Ordering::Acquire)) {
+    if !cancellation_pending() {
         return;
     }
-
-    drop(state);
     pthread_exit(PTHREAD_CANCELED as *mut c_void);
+}
+
+#[cfg(all(windows, target_arch = "x86_64"))]
+fn cancellation_pending() -> bool {
+    let pending = |state: &CancelState| {
+        state.enabled.load(Ordering::Acquire) && state.requested.load(Ordering::Acquire)
+    };
+    // The calling thread already owns the cached Arc. Borrow it for this hot
+    // cancellation point instead of modifying its reference count every time.
+    // Return before invoking cleanup/ExitThread so no Rust borrow crosses it.
+    CANCEL_SELF
+        .try_with(|cached| {
+            cached
+                .get()
+                .map_or_else(|| pending(&cancel_self()), |state| pending(state))
+        })
+        .unwrap_or(false)
 }
 
 // ---------------------------------------------------------------------------
@@ -3692,31 +3725,30 @@ pub unsafe extern "sysv64" fn pthread_sigmask(
 #[unsafe(no_mangle)]
 /// Sends a signal to a thread, or tests for a thread's existence with signal 0.
 ///
-/// Only self-directed signals are delivered. Signal state here is process-wide: a
-/// raise sets a pending bit and wakes interruptible waiters, with no way to name
-/// which thread must run the handler. Directing a signal at another thread needs
-/// a per-thread delivery channel that does not exist yet, so that case reports
-/// `ENOSYS` rather than silently raising it process-wide and running the handler
-/// on the wrong thread.
+/// The retained scheduling handle covers main, joinable and detached threads.
+/// Resolve its native ID while retained, then use the common directed signal
+/// queue so blocked signals remain pending for that specific thread.
 pub extern "sysv64" fn pthread_kill(thread: usize, signal: i32) -> i32 {
-    let is_self = thread == pthread_self();
-    if !is_self {
-        let known = match threads().lock() {
-            Ok(registry) => registry.contains_key(&thread),
-            Err(_) => false,
-        };
-        if !known {
+    use kinakaze_vfs::signal as signals;
+    use std::os::windows::io::AsRawHandle;
+    if signal < 0 || signal as usize >= signals::NSIG {
+        return EINVAL;
+    }
+    let result = sched::with_live_thread(thread, |handle| {
+        if signal == 0 {
+            return 0;
+        }
+        let tid =
+            unsafe { windows_sys::Win32::System::Threading::GetThreadId(handle.as_raw_handle()) };
+        if tid == 0 {
             return ESRCH;
         }
+        signals::raise_thread_signal(tid, signal).map_or_else(|error| error, |()| 0)
+    });
+    if result == 0 && signal != 0 && thread == pthread_self() {
+        signals::deliver_pending();
     }
-    // Signal 0 checks for the thread without queuing anything.
-    if signal == 0 {
-        return 0;
-    }
-    if !is_self {
-        return ENOSYS;
-    }
-    kinakaze_vfs::signal::raise_signal(signal).map_or_else(|error| error, |()| 0)
+    result
 }
 
 #[cfg(all(test, windows, target_arch = "x86_64"))]
@@ -4466,7 +4498,7 @@ mod tests {
         assert_eq!(pthread_kill(pthread_self(), 0), 0);
         assert_eq!(pthread_kill(usize::MAX, 0), ESRCH);
 
-        // A directed signal to another live thread has no delivery channel.
+        // A blocked directed signal belongs only to the named live thread.
         let mut thread: usize = 0;
         let holding = Arc::new(Barrier::new(2));
         let inner = Arc::clone(&holding);
@@ -4475,7 +4507,13 @@ mod tests {
         PARKED.set(inner).expect("first use of the test barrier");
 
         unsafe extern "sysv64" fn park(_argument: *mut c_void) -> *mut c_void {
+            use kinakaze_vfs::signal;
+            let bit = 1 << (signal::SIGUSR1 - 1);
+            let previous = signal::sigprocmask(signal::SIG_BLOCK, bit).unwrap();
             PARKED.get().expect("barrier published").wait();
+            PARKED.get().unwrap().wait();
+            assert_eq!(signal::take_pending(bit).unwrap().signal, signal::SIGUSR1);
+            signal::sigprocmask(signal::SIG_SETMASK, previous).unwrap();
             core::ptr::null_mut()
         }
 
@@ -4490,7 +4528,12 @@ mod tests {
             },
             0
         );
-        assert_eq!(pthread_kill(thread, 15), ENOSYS);
+        holding.wait();
+        assert_eq!(pthread_kill(thread, kinakaze_vfs::signal::SIGUSR1), 0);
+        assert_eq!(
+            kinakaze_vfs::signal::pending() & (1 << (kinakaze_vfs::signal::SIGUSR1 - 1)),
+            0
+        );
         holding.wait();
         assert_eq!(unsafe { pthread_join(thread, core::ptr::null_mut()) }, 0);
 

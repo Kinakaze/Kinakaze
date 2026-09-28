@@ -46,6 +46,31 @@ fn pipe_roundtrip_peer_and_continuous_exclusive_bind() {
 }
 
 #[test]
+fn buffered_pipe_preserves_prefetched_bytes_across_writes_and_peer_close() {
+    let name = endpoint();
+    let mut listener = PipeListener::bind(&name).unwrap();
+    let client = std::thread::spawn(move || {
+        let mut stream = PipeConnection::connect(&name).unwrap();
+        // Empty reads must not wait for the server to produce data.
+        assert_eq!(stream.read(&mut []).unwrap(), 0);
+        stream.write_all(&[17; 12000]).unwrap();
+        let mut reply = [0; 2];
+        stream.read_exact(&mut reply).unwrap();
+        assert_eq!(&reply, b"ok");
+    });
+    let mut stream = listener.accept().unwrap();
+    let mut prefix = [0; 4];
+    stream.read_exact(&mut prefix).unwrap();
+    assert_eq!(prefix, [17; 4]);
+    stream.write_all(b"ok").unwrap();
+    client.join().unwrap();
+    let mut remainder = Vec::new();
+    stream.read_to_end(&mut remainder).unwrap();
+    assert_eq!(remainder, vec![17; 11996]);
+    assert_eq!(stream.read(&mut [0]).unwrap(), 0);
+}
+
+#[test]
 fn dropped_client_does_not_poison_listener() {
     let name = endpoint();
     let mut listener = PipeListener::bind(&name).unwrap();
@@ -60,6 +85,38 @@ fn dropped_client_does_not_poison_listener() {
     stream.read_exact(&mut bytes).unwrap();
     assert_eq!(&bytes, b"ok");
     client.join().unwrap();
+}
+
+#[test]
+fn accept_retains_data_written_before_client_close() {
+    let name = endpoint();
+    let mut listener = PipeListener::bind(&name).unwrap();
+    let mut client = PipeConnection::connect(&name).unwrap();
+    let client_pid = std::process::id();
+    let payload = vec![29; 12000];
+    client.write_all(&payload).unwrap();
+    drop(client);
+
+    // A fallback connection bounds this regression: discarding the queued
+    // payload produces the wrong bytes instead of leaving the test hung.
+    let fallback = std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(200));
+        PipeConnection::connect(&name).ok().map(|mut client| {
+            let _ = client.write_all(b"discarded");
+            client
+        })
+    });
+    let mut accepted = listener.accept().unwrap();
+    assert_eq!(accepted.peer_pid().unwrap(), client_pid);
+    let mut bytes = vec![0; 2];
+    accepted.read_exact(&mut bytes).unwrap();
+    if bytes == payload[..2] {
+        accepted.read_to_end(&mut bytes).unwrap();
+    }
+    drop(accepted);
+    drop(listener);
+    drop(fallback.join().unwrap());
+    assert_eq!(bytes, payload);
 }
 
 #[test]

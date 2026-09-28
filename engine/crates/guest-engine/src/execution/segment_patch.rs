@@ -381,6 +381,7 @@ fn patch_code(
                 let bytes = &mut code[instruction_offset..instruction_offset + length];
                 bytes.fill(0x90);
                 if bytes.len() >= 2 {
+                    super::traps::syscall(address);
                     bytes[..2].copy_from_slice(&[0x0f, 0x0b]);
                 }
             }
@@ -401,6 +402,7 @@ fn patch_code(
                     let bytes = &mut code[instruction_offset..instruction_offset + length];
                     bytes.fill(0x90);
                     if bytes.len() >= 2 {
+                        super::traps::syscall(address);
                         bytes[..2].copy_from_slice(&[0x0f, 0x0b]);
                     }
                 }

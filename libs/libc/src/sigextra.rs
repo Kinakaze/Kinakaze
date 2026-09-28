@@ -7,11 +7,9 @@
 //! raised through `kill` would then be invisible to a thread parked in
 //! `sigsuspend`.
 //!
-//! Two things about that foundation shape this file. Handlers run when a thread
-//! looks for them rather than asynchronously, so a wait here is a loop that
-//! checks the pending set. And the pending set is process-wide, so a
-//! process-directed signal is claimed by whichever thread notices it first —
-//! which is what Linux does too, among the threads that do not block it.
+//! Waiters publish their interest before checking pending signals, then sleep
+//! on their native interrupt event. Process-directed signals are claimed by
+//! whichever eligible thread accepts them first.
 
 use core::ffi::{c_char, c_int};
 use core::ptr;
@@ -24,15 +22,25 @@ use kinakaze_vfs::{EAGAIN, EFAULT, EINTR, EINVAL};
 use crate::fdio::TimeSpec;
 use crate::signal::SigSet;
 
-/// How long a wait sleeps between checks of the pending set.
-///
-/// The waits here poll rather than blocking on the thread's interrupt event,
-/// because that event is private to [`kinakaze_vfs::interrupt`] and is owned by
-/// the I/O paths that wait on it alongside a completion handle. A millisecond
-/// is short enough that no program can tell the difference — signal delivery on
-/// a real kernel is not instantaneous either — and it keeps this file from
-/// reaching into another crate's internals to build a second wakeup path.
-const POLL_INTERVAL: Duration = Duration::from_millis(1);
+fn wait_for_signal(deadline: Option<Instant>) -> Result<(), i32> {
+    use windows_sys::Win32::Foundation::{WAIT_OBJECT_0, WAIT_TIMEOUT};
+    let event = kinakaze_vfs::interrupt::current();
+    if event.is_null() {
+        return Err(kinakaze_vfs::EIO);
+    }
+    let timeout = deadline.map_or(u32::MAX, |deadline| {
+        deadline
+            .saturating_duration_since(Instant::now())
+            .as_nanos()
+            .div_ceil(1_000_000)
+            .min(u128::from(u32::MAX - 1)) as u32
+    });
+    // The event is owned by this thread and auto-resets only when consumed.
+    match unsafe { kinakaze_vfs::deadline_wait::any(&[event], timeout) } {
+        WAIT_OBJECT_0 | WAIT_TIMEOUT => Ok(()),
+        _ => Err(kinakaze_vfs::EIO),
+    }
+}
 
 /// Linux sigval occupies one machine word, including pointer-valued payloads.
 #[unsafe(no_mangle)]
@@ -123,25 +131,24 @@ pub unsafe extern "sysv64" fn kinakaze_abi_sigsuspend(mask: *const SigSet) -> c_
         return -1;
     };
 
-    // Registering as a waiter means a signal raised on another thread wakes this
-    // one's interrupt event. The poll loop does not depend on that wake, but a
-    // registered waiter is also what stops `raise_signal` from having nobody to
-    // notify, and it keeps this wait visible to the rest of the machinery.
+    // Registration precedes the readiness check, closing the check/sleep race.
     signal::register_waiter();
-    loop {
+    let error = loop {
         // Pending signals are checked before every sleep, so one that arrived
         // before the mask changed is handled rather than waited for.
         if signal::deliver_pending() != Delivery::None {
-            break;
+            break EINTR;
         }
-        std::thread::sleep(POLL_INTERVAL);
-    }
+        if let Err(error) = wait_for_signal(None) {
+            break error;
+        }
+    };
     signal::unregister_waiter();
 
     // Restoring the mask may itself make a signal deliverable, but that delivery
     // belongs to whatever the caller does next, not to this call.
     let _ = signal::sigprocmask(SIG_SETMASK, previous);
-    crate::set_errno(EINTR);
+    crate::set_errno(error);
     -1
 }
 
@@ -189,7 +196,12 @@ pub unsafe extern "sysv64" fn kinakaze_abi_sigtimedwait(
             crate::set_errno(EINVAL);
             return -1;
         }
-        Some(Instant::now() + Duration::new(requested.tv_sec as u64, requested.tv_nsec as u32))
+        // A deadline beyond the host clock's range cannot expire during this
+        // wait. Keep it interruptible instead of overflowing Instant.
+        Instant::now().checked_add(Duration::new(
+            requested.tv_sec as u64,
+            requested.tv_nsec as u32,
+        ))
     };
 
     signal::register_signal_waiter(wanted);
@@ -212,9 +224,9 @@ pub unsafe extern "sysv64" fn kinakaze_abi_sigtimedwait(
             if now >= deadline {
                 break Err(EAGAIN);
             }
-            std::thread::sleep(POLL_INTERVAL.min(deadline - now));
-        } else {
-            std::thread::sleep(POLL_INTERVAL);
+        }
+        if let Err(error) = wait_for_signal(deadline) {
+            break Err(error);
         }
     };
     signal::unregister_waiter();
@@ -610,6 +622,24 @@ mod tests {
     }
 
     #[test]
+    fn pause_wakes_for_a_later_signal_and_returns_eintr() {
+        let _lock = serialized();
+        let _restore = handled(signal::SIGUSR1);
+        let result = with_watchdog("pause with a later signal", || {
+            let sender = std::thread::spawn(|| {
+                std::thread::sleep(Duration::from_millis(20));
+                signal::raise_signal(signal::SIGUSR1).unwrap();
+            });
+            let result = crate::strextra::windows::kinakaze_abi_pause();
+            let error = crate::kinakaze_errno();
+            sender.join().unwrap();
+            (result, error)
+        });
+        assert_eq!(result, (-1, EINTR));
+        assert_eq!(OBSERVED.load(Ordering::SeqCst), signal::SIGUSR1);
+    }
+
+    #[test]
     fn sigsuspend_returns_eintr_after_a_handler_runs() {
         let _lock = serialized();
         let _restore = handled(signal::SIGUSR1);
@@ -764,6 +794,27 @@ mod tests {
             );
             assert_eq!(OBSERVED.load(Ordering::SeqCst), 0);
             signal::sigprocmask(SIG_SETMASK, previous_mask).unwrap();
+        });
+    }
+
+    #[test]
+    fn sigtimedwait_accepts_signal_with_maximum_timeout() {
+        let _lock = serialized();
+        let _restore = handled(signal::SIGUSR1);
+        with_watchdog("sigtimedwait maximum timeout", || {
+            let mask = bit(signal::SIGUSR1).unwrap();
+            let previous = signal::sigprocmask(signal::SIG_BLOCK, mask).unwrap();
+            signal::raise_signal(signal::SIGUSR1).unwrap();
+            let wanted = set_of(&[signal::SIGUSR1]);
+            let timeout = TimeSpec {
+                tv_sec: i64::MAX,
+                tv_nsec: 999_999_999,
+            };
+            assert_eq!(
+                unsafe { kinakaze_abi_sigtimedwait(&wanted, ptr::null_mut(), &timeout) },
+                signal::SIGUSR1
+            );
+            signal::sigprocmask(SIG_SETMASK, previous).unwrap();
         });
     }
 

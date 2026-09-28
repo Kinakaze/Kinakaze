@@ -140,6 +140,7 @@ impl Client {
         write_frame(
             &mut self.pipe,
             &WireRequest {
+                completed: None,
                 id: self.sequence,
                 request,
             },
@@ -381,6 +382,7 @@ fn native_worker_helper() {
             write_frame(
                 &mut client.pipe,
                 &WireRequest {
+                    completed: None,
                     id: client.sequence,
                     request: Request::PrepareFork { request_key: 88 },
                 },
@@ -421,6 +423,7 @@ fn native_worker_helper() {
             write_frame(
                 &mut client.pipe,
                 &WireRequest {
+                    completed: None,
                     id: client.sequence,
                     request: Request::AwaitActivation,
                 },

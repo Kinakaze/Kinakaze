@@ -17,11 +17,10 @@ use std::sync::{Mutex, OnceLock};
 pub(crate) mod connect_policy;
 pub(crate) mod filter;
 
-use windows_sys::Win32::Foundation::{CloseHandle, HANDLE, WAIT_OBJECT_0, WAIT_TIMEOUT};
+use windows_sys::Win32::Foundation::{CloseHandle, HANDLE};
 use windows_sys::Win32::Networking::WinSock::{
-    FD_ACCEPT, FD_CLOSE, FD_CONNECT, FD_READ, FD_WRITE, FIONBIO, FROM_PROTOCOL_INFO,
-    INVALID_SOCKET, SOCKET, SOCKET_ERROR, WSA_FLAG_OVERLAPPED, WSACleanup, WSADATA,
-    WSADuplicateSocketW, WSAEWOULDBLOCK, WSAEventSelect, WSAGetLastError, WSAPROTOCOL_INFOW,
+    FIONBIO, FROM_PROTOCOL_INFO, INVALID_SOCKET, SOCKET, SOCKET_ERROR, WSA_FLAG_OVERLAPPED,
+    WSACleanup, WSADATA, WSADuplicateSocketW, WSAEWOULDBLOCK, WSAGetLastError, WSAPROTOCOL_INFOW,
     WSASocketW, WSAStartup, accept as wsa_accept, bind as wsa_bind, closesocket,
     connect as wsa_connect, getpeername as wsa_getpeername, getsockname as wsa_getsockname,
     getsockopt as wsa_getsockopt, ioctlsocket, listen as wsa_listen, recv as wsa_recv,
@@ -31,13 +30,11 @@ use windows_sys::Win32::Networking::WinSock::{
 use windows_sys::Win32::Security::SECURITY_ATTRIBUTES;
 use windows_sys::Win32::Storage::FileSystem::{ReadFile, WriteFile};
 use windows_sys::Win32::System::Pipes::CreatePipe;
-use windows_sys::Win32::System::Threading::{
-    CreateEventW, SetEvent, WaitForMultipleObjects, WaitForSingleObject,
-};
+use windows_sys::Win32::System::Threading::{CreateEventW, SetEvent, WaitForSingleObject};
 
 use crate::{
     EAFNOSUPPORT, EAGAIN, EBADF, EFAULT, EINPROGRESS, EINTR, EINVAL, EIO, ENOPROTOOPT, ENOTCONN,
-    ENOTSOCK, EOPNOTSUPP, FdFlags, FdKind, get, install, interrupt, signal,
+    ENOTSOCK, EOPNOTSUPP, FdFlags, FdKind, get, install, signal,
 };
 
 #[inline]
@@ -380,10 +377,6 @@ pub(crate) fn finish_process_fork(result: i32) {
         return;
     }
     for (fd, raw) in state.entries {
-        // WSAEventSelect associates readiness state with the underlying socket,
-        // not with one descriptor. A duplicate must not retain an event left by
-        // the parent's poll/epoll path.
-        unsafe { WSAEventSelect(raw as SOCKET, 0, 0) };
         // SAFETY: this plain-old-data record is initialized before it is sent.
         let mut record: ForkSocketRecord = unsafe { std::mem::zeroed() };
         record.fd = fd;
@@ -473,11 +466,6 @@ pub(crate) fn restore_process_fork(payload: &[u8]) -> bool {
                 WSA_FLAG_OVERLAPPED,
             )
         };
-        if replacement != INVALID_SOCKET {
-            // Event selection is shared by duplicated sockets. Clear the
-            // association before this process starts using the replacement.
-            unsafe { WSAEventSelect(replacement, 0, 0) };
-        }
         if replacement == INVALID_SOCKET || set_non_blocking(replacement).is_err() {
             if replacement != INVALID_SOCKET {
                 // SAFETY: the replacement was created in this process.
@@ -751,30 +739,6 @@ unsafe fn sockaddr_to_linux(
     Ok(())
 }
 
-/// Owns a Winsock event used for readiness notification.
-struct WsaEvent(HANDLE);
-
-impl WsaEvent {
-    fn new() -> Option<Self> {
-        // Manual reset, initially unsignalled: WSAEventSelect requires manual
-        // reset semantics because it signals on edge and the waiter clears it.
-        // SAFETY: null security descriptor and name request an unnamed event.
-        let handle = unsafe { CreateEventW(std::ptr::null(), 1, 0, std::ptr::null()) };
-        if handle.is_null() {
-            None
-        } else {
-            Some(Self(handle))
-        }
-    }
-}
-
-impl Drop for WsaEvent {
-    fn drop(&mut self) {
-        // SAFETY: this type owns the event it created.
-        unsafe { windows_sys::Win32::Foundation::CloseHandle(self.0) };
-    }
-}
-
 /// Puts a socket into non-blocking mode.
 ///
 /// Every socket is non-blocking at the OS level so this layer can implement
@@ -798,57 +762,23 @@ pub fn wait_readiness(
     interest: Readiness,
     timeout_ms: Option<u32>,
 ) -> Result<Readiness, i32> {
-    let event = WsaEvent::new().ok_or(EIO)?;
-    let mut mask = 0i32;
+    let mut events = 0;
     if interest.contains(Readiness::READABLE) {
-        // FD_ACCEPT is the readable condition for a listening socket, and
-        // FD_CLOSE is how a peer disconnect surfaces as readable-at-EOF.
-        mask |= (FD_READ | FD_ACCEPT | FD_CLOSE) as i32;
+        events |= crate::epoll::EPOLLIN;
     }
     if interest.contains(Readiness::WRITABLE) {
-        mask |= (FD_WRITE | FD_CONNECT) as i32;
+        events |= crate::epoll::EPOLLOUT;
     }
-
-    // SAFETY: the socket is live and the event outlives the association below.
-    // WSAEVENT is an isize alias of the same underlying handle.
-    if unsafe { WSAEventSelect(socket, event.0 as isize, mask) } == SOCKET_ERROR {
-        return Err(last_wsa_errno());
+    // The request and its event have retired before a guest signal handler runs.
+    match crate::epoll::wait_socket(socket, events, timeout_ms) {
+        Ok(0) => Err(EAGAIN),
+        Ok(_) => Ok(interest),
+        Err(EINTR) => match signal::deliver_pending() {
+            signal::Delivery::Interrupted => Err(EINTR),
+            signal::Delivery::None | signal::Delivery::Restart => Err(EAGAIN),
+        },
+        Err(error) => Err(error),
     }
-
-    let interrupt = interrupt::current();
-    let timeout = timeout_ms.unwrap_or(u32::MAX);
-    let waited = if interrupt.is_null() {
-        // SAFETY: the event is live for the duration of the wait.
-        unsafe { WaitForMultipleObjects(1, &event.0, 0, timeout) }
-    } else {
-        signal::register_waiter();
-        let handles = [event.0, interrupt];
-        // SAFETY: both handles are live for the duration of the wait.
-        let result = unsafe { WaitForMultipleObjects(2, handles.as_ptr(), 0, timeout) };
-        signal::unregister_waiter();
-        result
-    };
-
-    // Dissociating restores the socket to plain non-blocking mode so a later
-    // operation is not affected by this event registration.
-    // SAFETY: passing a null event and zero mask cancels the association.
-    unsafe { WSAEventSelect(socket, 0, 0) };
-
-    if waited == WAIT_TIMEOUT {
-        return Err(EAGAIN);
-    }
-    if waited == WAIT_OBJECT_0 {
-        return Ok(interest);
-    }
-    if waited == WAIT_OBJECT_0 + 1 {
-        // A signal arrived. Handlers run here; SA_RESTART turns into a retry at
-        // the call site, which is why the caller loops on EINTR.
-        return match signal::deliver_pending() {
-            signal::Delivery::Restart => Err(EAGAIN),
-            _ => Err(EINTR),
-        };
-    }
-    Err(EIO)
 }
 
 /// Runs `operation`, waiting for readiness and retrying while it would block.
@@ -1037,6 +967,9 @@ pub fn listen(fd: i32, backlog: i32) -> Result<(), i32> {
 ///
 /// `address` and `length` must be null or a writable pair.
 pub unsafe fn accept(fd: i32, address: *mut u8, length: *mut i32, flags: i32) -> Result<i32, i32> {
+    if flags & !(SOCK_NONBLOCK | SOCK_CLOEXEC) != 0 {
+        return Err(EINVAL);
+    }
     if let Some(owner) = crate::usernet::packet::description(fd)? {
         let (child, peer) = crate::usernet::packet::accept(fd, &owner, flags)?;
         let (bytes, size) = peer.bytes(true);
@@ -1058,24 +991,27 @@ pub unsafe fn accept(fd: i32, address: *mut u8, length: *mut i32, flags: i32) ->
     let mut storage_length = storage.len() as i32;
 
     let accepted = blocking_retry(socket, non_blocking, Readiness::READABLE, || {
-        // SAFETY: the out-parameters are local and correctly sized.
-        let accepted =
-            unsafe { wsa_accept(socket, storage.as_mut_ptr().cast(), &mut storage_length) };
-        let error = if accepted == INVALID_SOCKET {
-            unsafe { WSAGetLastError() }
-        } else {
-            0
-        };
-        crate::epoll::notify_read(fd);
-        if accepted == INVALID_SOCKET {
-            // SAFETY: WSAGetLastError has no preconditions.
-            if error == WSAEWOULDBLOCK {
-                return Err(EAGAIN);
+        // Concurrent Winsock accept calls on cross-process duplicates can
+        // sleep inside the provider even on a nonblocking listener. Serialize
+        // only the dequeue through the existing shared open description. The
+        // readiness wait and accepted connection run outside that lock.
+        let result = crate::ofd::with(fd, || {
+            if socket_of(fd)?.0 != socket {
+                return Err(EBADF);
             }
-            return Err(errno_from_wsa(error));
-        }
-        Ok(accepted)
-    })?;
+            storage_length = storage.len() as i32;
+            // SAFETY: the out-parameters are local and correctly sized.
+            let accepted =
+                unsafe { wsa_accept(socket, storage.as_mut_ptr().cast(), &mut storage_length) };
+            if accepted == INVALID_SOCKET {
+                return Err(last_wsa_errno());
+            }
+            Ok(RightsSocket(accepted))
+        });
+        crate::epoll::notify_read(fd);
+        result
+    })?
+    .into_raw();
 
     // Inherited sockets are blocking by default in Linux unless SOCK_NONBLOCK
     // is requested, but the OS handle must still be non-blocking here.
@@ -1279,6 +1215,7 @@ unsafe fn transfer(
             }
         };
     }
+
     if crate::unix::is_unix_socket(fd) {
         // SAFETY: forwarded from this function's contract; the direction selects
         // which of the two access modes the caller guaranteed.
@@ -1760,6 +1697,38 @@ pub unsafe fn getsockopt(
         return unsafe {
             crate::usernet::packet::get_option(fd, &owner, level, name, value, length)
         };
+    }
+    if level == SOL_SOCKET && matches!(name, SO_DOMAIN | SO_PROTOCOL) {
+        if length.is_null() {
+            return Err(EFAULT);
+        }
+        let capacity = unsafe { *length };
+        if capacity < 0 {
+            return Err(EINVAL);
+        }
+        if capacity != 0 && value.is_null() {
+            return Err(EFAULT);
+        }
+        let mut info: WSAPROTOCOL_INFOW = unsafe { std::mem::zeroed() };
+        let mut size = size_of::<WSAPROTOCOL_INFOW>() as i32;
+        if unsafe { wsa_getsockopt(socket, 0xffff, 0x2005, (&raw mut info).cast(), &mut size) }
+            == SOCKET_ERROR
+        {
+            return Err(last_wsa_errno());
+        }
+        let result = if name == SO_DOMAIN {
+            family_to_linux(info.iAddressFamily as u16)
+        } else {
+            info.iProtocol
+        };
+        let copied = (capacity as usize).min(size_of::<i32>());
+        unsafe {
+            if copied != 0 {
+                std::ptr::copy_nonoverlapping(result.to_ne_bytes().as_ptr(), value, copied);
+            }
+            *length = copied as i32;
+        }
+        return Ok(());
     }
     let Some((windows_level, windows_name)) = option_to_windows(level, name) else {
         return Err(ENOPROTOOPT);

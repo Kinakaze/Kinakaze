@@ -153,6 +153,18 @@ thread_local! {
     static ON_ALT_STACK: Cell<bool> = const { Cell::new(false) };
 }
 
+#[inline(never)]
+fn set_on_alternate_stack(value: bool) {
+    ON_ALT_STACK.set(value);
+}
+
+/// No Rust TLS address may remain cached across a guest callback that can fork.
+#[inline(never)]
+fn restore_handler_state(in_handler: u64, blocked: u64) {
+    IN_HANDLER.set(in_handler);
+    BLOCKED.set(blocked);
+}
+
 /// Installs or queries the calling thread's alternate signal stack.
 pub fn sigaltstack(requested: Option<SignalStack>) -> Result<SignalStack, i32> {
     let mut previous = ALT_STACK.get();
@@ -430,7 +442,7 @@ unsafe fn invoke_handler(
         } else {
             unsafe { call_handler_on_stack(handler, signal, stack_top) };
         }
-        ON_ALT_STACK.set(false);
+        set_on_alternate_stack(false);
     } else if action.flags & SA_SIGINFO != 0 {
         let handler = unsafe { core::mem::transmute::<Handler, SiginfoHandler>(handler) };
         unsafe { handler(signal, siginfo, context) };
@@ -499,12 +511,12 @@ struct TimerSignal {
 impl TimerSignal {
     fn fill(&self, info: &mut PendingSigInfo) {
         if let Some(record) = self.queued {
-            info.code = -1; // SI_QUEUE
-            SignalSender {
-                pid: record.sender,
-                uid: record.uid,
-            }
-            .fill(info);
+            info.code = record.code;
+            // The sender may already have been reaped. PID translation was
+            // captured at publication; UID translation belongs to the receiver.
+            info.payload[4..8].copy_from_slice(&record.sender.to_le_bytes());
+            let uid = crate::user_namespace::visible(record.uid, false);
+            info.payload[8..12].copy_from_slice(&uid.to_le_bytes());
             info.payload[12..20].copy_from_slice(&record.value.to_le_bytes());
             crate::job::queued::complete(record.id);
             return;
@@ -537,9 +549,7 @@ pub fn queue_timer_signal(
     crate::job::ensure_registered();
     let mut state = state().lock().map_err(|_| crate::EIO)?;
     let action = state.actions[signal as usize];
-    if matches!(action.disposition, Disposition::Ignore)
-        || (matches!(action.disposition, Disposition::Default) && default_is_ignore(signal))
-    {
+    if matches!(action.disposition, Disposition::Ignore) {
         return Ok(());
     }
     if let Some(pending) = state
@@ -579,8 +589,12 @@ pub(crate) fn queue_value_signal(record: crate::job::queued::Record) -> Result<(
     let bit = bit(record.signal).ok_or(crate::EINVAL)?;
     let mut state = state().lock().map_err(|_| crate::EIO)?;
     let action = state.actions[record.signal as usize];
+    // Default-ignored signals still belong to blocked signalfd/sigwait readers.
+    // The native pump cannot decide using its own unrelated signal mask.
     if matches!(action.disposition, Disposition::Ignore)
-        || (matches!(action.disposition, Disposition::Default) && default_is_ignore(record.signal))
+        || (record.signal == SIGCHLD
+            && matches!(record.code, 5 | 6)
+            && action.flags & SA_NOCLDSTOP != 0)
     {
         drop(state);
         crate::job::queued::complete(record.id);
@@ -661,9 +675,17 @@ fn serialize_process_state(
     let state = state().lock().map_err(|_| EIO)?;
     let mut payload = Vec::new();
     payload.extend_from_slice(&(state.actions.len() as u32).to_le_bytes());
-    payload.extend_from_slice(&0u32.to_le_bytes());
+    payload.extend_from_slice(&1u32.to_le_bytes());
     let pending = if for_exec && spawn.is_none() {
-        PENDING.load(Ordering::Acquire)
+        // Shared records are reclaimed by the replacement's pump together
+        // with their payload. Publishing a bare bit first would let signalfd
+        // consume a fabricated SI_USER before the real record arrives.
+        let queued = state
+            .timer_pending
+            .iter()
+            .filter(|signal| signal.queued.is_some())
+            .fold(0, |mask, signal| mask | bit(signal.signal).unwrap_or(0));
+        PENDING.load(Ordering::Acquire) & !queued
     } else {
         0
     };
@@ -674,6 +696,16 @@ fn serialize_process_state(
         & !(bit(SIGKILL).unwrap_or(0) | bit(SIGSTOP).unwrap_or(0));
     payload.extend_from_slice(&blocked.to_le_bytes());
     payload.extend_from_slice(&if for_exec { 0u64 } else { IN_HANDLER.get() }.to_le_bytes());
+    let alternate = if for_exec {
+        SignalStack::default()
+    } else {
+        ALT_STACK.get()
+    };
+    payload.extend_from_slice(&(alternate.ss_sp as u64).to_le_bytes());
+    payload.extend_from_slice(&(alternate.ss_size as u64).to_le_bytes());
+    payload.extend_from_slice(&alternate.ss_flags.to_le_bytes());
+    payload.extend_from_slice(&u32::from(!for_exec && ON_ALT_STACK.get()).to_le_bytes());
+    payload.extend_from_slice(&(if for_exec { 0 } else { jump::snapshot() } as u64).to_le_bytes());
     for (number, action) in state.actions.iter().enumerate() {
         // Transform only the handoff. Failed exec must leave the caller's
         // dispositions intact, and no old handler/restorer address may enter
@@ -712,9 +744,9 @@ fn serialize_process_state(
 
 /// Restores process dispositions and the one thread that survives fork.
 pub(crate) fn restore_fork_state(payload: &[u8]) -> bool {
-    const HEADER: usize = 32;
+    const HEADER: usize = 64;
     const RECORD: usize = 32;
-    if payload.len() < HEADER {
+    if payload.len() < HEADER || payload[4..8] != 1u32.to_le_bytes() {
         return false;
     }
     let count = u32::from_le_bytes(payload[0..4].try_into().unwrap_or_default()) as usize;
@@ -730,6 +762,25 @@ pub(crate) fn restore_fork_state(payload: &[u8]) -> bool {
     let pending = u64::from_le_bytes(payload[8..16].try_into().unwrap_or_default());
     let blocked = u64::from_le_bytes(payload[16..24].try_into().unwrap_or_default());
     let in_handler = u64::from_le_bytes(payload[24..32].try_into().unwrap_or_default());
+    let alternate = SignalStack {
+        ss_sp: u64::from_le_bytes(payload[32..40].try_into().unwrap()) as *mut c_void,
+        ss_size: u64::from_le_bytes(payload[40..48].try_into().unwrap()) as usize,
+        ss_flags: i32::from_le_bytes(payload[48..52].try_into().unwrap()),
+    };
+    let on_alternate = u32::from_le_bytes(payload[52..56].try_into().unwrap());
+    let jump_frame = u64::from_le_bytes(payload[56..64].try_into().unwrap()) as usize;
+    if on_alternate > 1
+        || !matches!(alternate.ss_flags, 0 | SS_DISABLE)
+        || alternate.ss_flags == 0
+            && (alternate.ss_sp.is_null()
+                || alternate.ss_size < MINSIGSTKSZ
+                || (alternate.ss_sp as usize)
+                    .checked_add(alternate.ss_size)
+                    .is_none())
+        || !jump_frame.is_multiple_of(core::mem::align_of::<usize>())
+    {
+        return false;
+    }
     let mut actions = Vec::with_capacity(count);
     for index in 0..count {
         let start = HEADER + index * RECORD;
@@ -775,12 +826,24 @@ pub(crate) fn restore_fork_state(payload: &[u8]) -> bool {
     state.waiting.clear();
     state.thread_pending.clear();
     state.thread_senders.clear();
-    // POSIX timers are not inherited across fork and are deleted by exec.
-    state.timer_pending.clear();
+    // Discard fork-inherited records and POSIX timers. An exec replacement may
+    // already have drained its shared queue while restoring descriptors; those
+    // records belong to this host and must survive disposition restoration.
+    state
+        .timer_pending
+        .retain(|signal| signal.queued.is_some_and(|record| record.held_here()));
+    let queued = state
+        .timer_pending
+        .iter()
+        .fold(0, |mask, signal| mask | bit(signal.signal).unwrap_or(0));
+    // The pump takes this same mutex before publishing payload and readiness.
+    PENDING.store(pending | queued, Ordering::Release);
     drop(state);
-    PENDING.store(pending, Ordering::Release);
     BLOCKED.set(blocked);
     IN_HANDLER.set(in_handler);
+    ALT_STACK.set(alternate);
+    ON_ALT_STACK.set(on_alternate != 0);
+    jump::restore(jump_frame);
     // The child adopts its parent's group and session last, once the signal
     // state that identity applies to is already in place.
     crate::job::restore_fork_state(&payload[records_end..])
@@ -1018,7 +1081,7 @@ fn record_nonrestart() {
 
 /// A wake or a pending default-ignored signal cannot interrupt native I/O.
 /// Inspect dispositions without dispatching guest handlers under VFS locks.
-pub(crate) fn interrupt_pending() -> bool {
+pub fn interrupt_pending() -> bool {
     let Ok(state) = state().lock() else {
         return false;
     };
@@ -1027,13 +1090,15 @@ pub(crate) fn interrupt_pending() -> bool {
         .get(&interrupt::current_thread_id())
         .copied()
         .unwrap_or(0);
-    let mut ready =
-        (PENDING.load(Ordering::Acquire) | directed) & !BLOCKED.get() & !IN_HANDLER.get();
+    let ready = (PENDING.load(Ordering::Acquire) | directed) & !BLOCKED.get() & !IN_HANDLER.get();
+    has_interrupt_action(&state.actions, ready)
+}
+
+fn has_interrupt_action(actions: &[Action], mut ready: u64) -> bool {
     while ready != 0 {
         let number = ready.trailing_zeros() as i32 + 1;
         ready &= ready - 1;
-        if state
-            .actions
+        if actions
             .get(number as usize)
             .is_some_and(|a| match a.disposition {
                 Disposition::Ignore => false,
@@ -1180,11 +1245,24 @@ pub fn register_signal_waiter(wanted: u64) {
     // able to wake, so this is the second place registration must have happened
     // by: a program that only ever reads still has to answer a `^C`.
     crate::job::ensure_registered();
+    // Publish the native event before the waiter. Otherwise a concurrent
+    // sender can observe a registered thread whose wake target does not exist.
+    let event = interrupt::current();
     let thread = interrupt::current_thread_id();
-    if let Ok(mut state) = state().lock() {
-        state
-            .waiting
-            .insert(thread, !(BLOCKED.get() | IN_HANDLER.get()) | wanted);
+    let wake = if let Ok(mut state) = state().lock() {
+        let accepted = !(BLOCKED.get() | IN_HANDLER.get()) | wanted;
+        state.waiting.insert(thread, accepted);
+        let pending = PENDING.load(Ordering::Acquire)
+            | state.thread_pending.get(&thread).copied().unwrap_or(0);
+        // Close the check/register race: earlier signals are pending, later
+        // publishers see this waiter under the same mutex. A blocked signal
+        // wakes only a sigwait caller that explicitly accepts it.
+        pending & wanted != 0 || has_interrupt_action(&state.actions, pending & accepted)
+    } else {
+        false
+    };
+    if wake && !event.is_null() {
+        interrupt::interrupt_thread(thread);
     }
 }
 
@@ -1452,8 +1530,7 @@ pub fn deliver_pending() -> Delivery {
                     }
                 }
 
-                IN_HANDLER.set(in_handler);
-                BLOCKED.set(previous_blocked);
+                restore_handler_state(in_handler, previous_blocked);
 
                 // Any handler without SA_RESTART forces EINTR.
                 if action.flags & SA_RESTART != 0 {
@@ -1517,11 +1594,22 @@ pub unsafe fn deliver_synchronous(signal: i32, siginfo: *mut c_void, context: *m
 
     // SAFETY: the loader supplied live Linux ABI records and the installed
     // action determines the handler signature and alternate stack.
-    unsafe { invoke_handler(action, handler, signal, siginfo, context) };
+    let jumped = unsafe { jump::invoke(action, handler, signal, siginfo, context) };
 
-    IN_HANDLER.set(in_handler);
-    BLOCKED.set(previous_blocked);
+    restore_handler_state(in_handler, jumped.unwrap_or(previous_blocked));
     true
+}
+
+mod jump;
+
+/// A checked jump may leave a synchronous callback on the private host stack.
+pub fn synchronous_jump_target(stack: usize) -> bool {
+    jump::valid_target(stack)
+}
+
+/// Preserve native exception cleanup when a guest handler performs longjmp.
+pub fn synchronous_jump(registers: &[u64; 8], value: i32) {
+    jump::resume(registers, value);
 }
 
 /// Handles a signal whose disposition is the default terminating action.
@@ -1788,6 +1876,63 @@ mod tests {
         // Nothing is left pending.
         assert_eq!(deliver_pending(), Delivery::None);
         sigaction(SIGUSR1, Some(Action::default())).unwrap();
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn waiter_registration_observes_signals_posted_before_registration() {
+        use windows_sys::Win32::Foundation::{WAIT_OBJECT_0, WAIT_TIMEOUT};
+        use windows_sys::Win32::System::Threading::{ResetEvent, WaitForSingleObject};
+        let _serialized = test_lock();
+        let signal_bit = bit(SIGUSR1).unwrap();
+        let old_mask = sigprocmask(SIG_SETMASK, signal_bit).unwrap();
+        let old_action = sigaction(
+            SIGUSR1,
+            Some(Action {
+                disposition: Disposition::Handle(record, 0),
+                flags: 0,
+                mask: 0,
+                restorer: 0,
+            }),
+        )
+        .unwrap();
+        let event = interrupt::current();
+        assert!(!event.is_null());
+        raise_signal(SIGUSR1).unwrap();
+        unsafe {
+            ResetEvent(event);
+        }
+        register_waiter();
+        assert_eq!(unsafe { WaitForSingleObject(event, 0) }, WAIT_TIMEOUT);
+        unregister_waiter();
+        register_signal_waiter(signal_bit);
+        assert_eq!(unsafe { WaitForSingleObject(event, 0) }, WAIT_OBJECT_0);
+        unregister_waiter();
+        sigprocmask(SIG_UNBLOCK, signal_bit).unwrap();
+        register_waiter();
+        assert_eq!(unsafe { WaitForSingleObject(event, 0) }, WAIT_OBJECT_0);
+        unregister_waiter();
+        assert_eq!(deliver_pending(), Delivery::Interrupted);
+        sigaction(SIGUSR1, Some(old_action)).unwrap();
+        sigprocmask(SIG_SETMASK, old_mask).unwrap();
+    }
+
+    #[test]
+    fn a_blocked_default_ignored_timer_keeps_its_payload_for_sigwait() {
+        let _serialized = test_lock();
+        let old = sigaction(SIGWINCH, Some(Action::default())).unwrap();
+        let mask = bit(SIGWINCH).unwrap();
+        let previous = sigprocmask(SIG_BLOCK, mask).unwrap();
+        queue_timer_signal(None, SIGWINCH, 774, 42, 0, Arc::new(AtomicI32::new(0))).unwrap();
+        let info = take_pending(mask).expect("blocked timer remains pending");
+        assert_eq!((info.signal, info.code), (SIGWINCH, -2));
+        assert_eq!(
+            usize::from_le_bytes(info.payload[12..20].try_into().unwrap()),
+            42
+        );
+        assert!(take_pending(mask).is_none());
+        sigprocmask(SIG_SETMASK, previous).unwrap();
+        sigaction(SIGWINCH, Some(old)).unwrap();
     }
 
     #[test]

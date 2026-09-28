@@ -1,5 +1,5 @@
 use std::ffi::OsStr;
-use std::io::{self, Read, Write};
+use std::io::{self, BufReader, Read, Write};
 use std::os::windows::io::{AsRawHandle, OwnedHandle};
 use std::ptr::{null, null_mut};
 use windows_sys::Win32::Foundation::{
@@ -7,13 +7,13 @@ use windows_sys::Win32::Foundation::{
     ERROR_PIPE_NOT_CONNECTED, GENERIC_READ, GENERIC_WRITE,
 };
 use windows_sys::Win32::Storage::FileSystem::{
-    CreateFileW, FILE_FLAG_FIRST_PIPE_INSTANCE, OPEN_EXISTING, PIPE_ACCESS_DUPLEX, ReadFile,
-    SECURITY_IDENTIFICATION, SECURITY_SQOS_PRESENT, WriteFile,
+    CreateFileW, FILE_FLAG_FIRST_PIPE_INSTANCE, OPEN_EXISTING, PIPE_ACCESS_DUPLEX,
+    SECURITY_IDENTIFICATION, SECURITY_SQOS_PRESENT,
 };
 use windows_sys::Win32::System::Pipes::{
     ConnectNamedPipe, CreateNamedPipeW, GetNamedPipeClientProcessId, GetNamedPipeServerProcessId,
     NMPWAIT_WAIT_FOREVER, PIPE_READMODE_BYTE, PIPE_REJECT_REMOTE_CLIENTS, PIPE_TYPE_BYTE,
-    PIPE_UNLIMITED_INSTANCES, PIPE_WAIT, WaitNamedPipeW,
+    PIPE_UNLIMITED_INSTANCES, PIPE_WAIT, PeekNamedPipe, WaitNamedPipeW,
 };
 
 fn pipe_name(endpoint: &str) -> io::Result<Vec<u16>> {
@@ -96,15 +96,39 @@ impl PipeListener {
                 let error = io::Error::last_os_error();
                 match error.raw_os_error() {
                     Some(code) if code == ERROR_PIPE_CONNECTED as i32 => {}
-                    // A client may connect then disappear before accept starts.
-                    // Replace the spent instance without surrendering the name.
+                    // Closing before accept leaves the pipe in its closing
+                    // state, but bytes already written remain readable. Only
+                    // discard an empty instance; otherwise a fast sender can
+                    // lose its frame and leave accept waiting for another peer.
                     Some(code)
                         if code == ERROR_NO_DATA as i32
                             || code == ERROR_BROKEN_PIPE as i32
                             || code == ERROR_PIPE_NOT_CONNECTED as i32 =>
                     {
-                        self.pending = Self::instance(&self.name, &self.security, false)?;
-                        continue;
+                        let mut available = 0;
+                        if unsafe {
+                            PeekNamedPipe(
+                                self.pending.as_raw_handle(),
+                                null_mut(),
+                                0,
+                                null_mut(),
+                                &mut available,
+                                null_mut(),
+                            )
+                        } == 0
+                        {
+                            let error = io::Error::last_os_error();
+                            if !matches!(error.raw_os_error(), Some(code)
+                                if code == ERROR_NO_DATA as i32 || code == ERROR_BROKEN_PIPE as i32
+                                    || code == ERROR_PIPE_NOT_CONNECTED as i32)
+                            {
+                                return Err(error);
+                            }
+                        }
+                        if available == 0 {
+                            self.pending = Self::instance(&self.name, &self.security, false)?;
+                            continue;
+                        }
                     }
                     _ => return Err(error),
                 }
@@ -112,7 +136,7 @@ impl PipeListener {
             let replacement = Self::instance(&self.name, &self.security, false)?;
             let handle = std::mem::replace(&mut self.pending, replacement);
             return Ok(PipeConnection {
-                handle,
+                reader: BufReader::with_capacity(4096, std::fs::File::from(handle)),
                 server: true,
             });
         }
@@ -122,7 +146,9 @@ impl PipeListener {
 /// A non-inheritable synchronous pipe stream. Drop closes without blocking on
 /// FlushFileBuffers; protocol replies determine when an exchange is complete.
 pub struct PipeConnection {
-    handle: OwnedHandle,
+    // Read the prefix and small payload in one native call, retaining any
+    // following frames. Writes go directly to the same duplex handle.
+    reader: BufReader<std::fs::File>,
     server: bool,
 }
 
@@ -148,7 +174,7 @@ impl PipeConnection {
             match unsafe { crate::owned(raw) } {
                 Ok(handle) => {
                     return Ok(Self {
-                        handle,
+                        reader: BufReader::with_capacity(4096, std::fs::File::from(handle)),
                         server: false,
                     });
                 }
@@ -169,9 +195,9 @@ impl PipeConnection {
         // SAFETY: Connected pipe handle and output storage are valid.
         let success = unsafe {
             if self.server {
-                GetNamedPipeClientProcessId(self.handle.as_raw_handle(), &mut pid)
+                GetNamedPipeClientProcessId(self.reader.get_ref().as_raw_handle(), &mut pid)
             } else {
-                GetNamedPipeServerProcessId(self.handle.as_raw_handle(), &mut pid)
+                GetNamedPipeServerProcessId(self.reader.get_ref().as_raw_handle(), &mut pid)
             }
         };
         if success == 0 {
@@ -187,56 +213,26 @@ impl Read for PipeConnection {
         if buffer.is_empty() {
             return Ok(0);
         }
-        let len = buffer.len().min(u32::MAX as usize) as u32;
-        let mut received = 0;
-        // SAFETY: Buffer is writable for len, and this is a synchronous pipe.
-        if unsafe {
-            ReadFile(
-                self.handle.as_raw_handle(),
-                buffer.as_mut_ptr(),
-                len,
-                &mut received,
-                null_mut(),
-            )
-        } == 0
-        {
-            let error = io::Error::last_os_error();
-            if matches!(error.raw_os_error(), Some(code) if code == ERROR_BROKEN_PIPE as i32
-                || code == ERROR_PIPE_NOT_CONNECTED as i32 || code == ERROR_NO_DATA as i32)
+        match self.reader.read(buffer) {
+            Err(error)
+                if matches!(error.raw_os_error(), Some(code)
+                if code == ERROR_BROKEN_PIPE as i32 || code == ERROR_PIPE_NOT_CONNECTED as i32
+                    || code == ERROR_NO_DATA as i32) =>
             {
-                return Ok(0);
+                Ok(0)
             }
-            return Err(error);
+            result => result,
         }
-        Ok(received as usize)
     }
 }
 
 impl Write for PipeConnection {
     fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
-        if buffer.is_empty() {
-            return Ok(0);
-        }
-        let len = buffer.len().min(u32::MAX as usize) as u32;
-        let mut sent = 0;
-        // SAFETY: Buffer is readable for len, and this is a synchronous pipe.
-        if unsafe {
-            WriteFile(
-                self.handle.as_raw_handle(),
-                buffer.as_ptr(),
-                len,
-                &mut sent,
-                null_mut(),
-            )
-        } == 0
-        {
-            return Err(io::Error::last_os_error());
-        }
-        Ok(sent as usize)
+        self.reader.get_mut().write(buffer)
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        // No user-space buffering; FlushFileBuffers would wait for a peer read.
+        // Writes are unbuffered; FlushFileBuffers would wait for a peer read.
         Ok(())
     }
 }

@@ -11,6 +11,7 @@ struct Message {
     source: UnixAddress,
     credentials: credentials::Sender,
     payload: Vec<u8>,
+    rights: Option<rights::Record>,
 }
 struct Queue {
     binding: String,
@@ -51,7 +52,7 @@ impl Queue {
             return Ok(queue);
         }
         let mut r = Reader(input);
-        if r.word()? != u64::from_le_bytes(*b"KDGRAM01") {
+        if r.word()? != u64::from_le_bytes(*b"KDGRAM02") {
             return Err(EIO);
         }
         queue.binding = r.text()?;
@@ -68,6 +69,11 @@ impl Queue {
                 source: address(&mut r)?,
                 credentials: credentials::Sender::read(&mut r)?,
                 payload: r.bytes()?.to_vec(),
+                rights: if r.word()? == 0 {
+                    None
+                } else {
+                    Some(rights::Record::read(&mut r)?)
+                },
             });
         }
         r.end()?;
@@ -75,7 +81,7 @@ impl Queue {
     }
     fn encode(&self) -> Vec<u8> {
         let mut out = Vec::new();
-        word(&mut out, u64::from_le_bytes(*b"KDGRAM01"));
+        word(&mut out, u64::from_le_bytes(*b"KDGRAM02"));
         bytes(&mut out, self.binding.as_bytes());
         word(&mut out, self.peer);
         put_address(&mut out, &self.address);
@@ -86,6 +92,10 @@ impl Queue {
             put_address(&mut out, &message.source);
             message.credentials.write(&mut out);
             bytes(&mut out, &message.payload);
+            word(&mut out, u64::from(message.rights.is_some()));
+            if let Some(rights) = &message.rights {
+                rights.write(&mut out);
+            }
         }
         out
     }
@@ -177,7 +187,7 @@ pub(super) unsafe fn send(
     supplied: Option<&credentials::Sender>,
     destination: Option<&UnixAddress>,
 ) -> Result<usize, i32> {
-    if !rights.is_empty() || flags & 1 != 0 {
+    if flags & 1 != 0 {
         return Err(EOPNOTSUPP);
     }
     if len > LIMIT {
@@ -189,11 +199,16 @@ pub(super) unsafe fn send(
         return Err(EPIPE);
     }
     let target = if let Some(destination) = destination {
-        lookup(destination, socket.network)?.id()
+        lookup(destination, socket.network)?
     } else if own.peer == 0 {
         return Err(EDESTADDRREQ);
     } else {
-        own.peer
+        procnet::Record::restore(own.peer).map_err(|_| ECONNREFUSED)?
+    };
+    let pending = if rights.is_empty() {
+        None
+    } else {
+        Some(rights::export(target.id(), rights)?)
     };
     let message = Message {
         source: socket.local.clone(),
@@ -206,37 +221,39 @@ pub(super) unsafe fn send(
         } else {
             unsafe { std::slice::from_raw_parts(buffer, len) }.to_vec()
         },
+        rights: pending.as_ref().map(rights::Pending::record),
     };
     loop {
-        let result = procnet::Record::restore(target)
-            .map_err(|_| ECONNREFUSED)
-            .and_then(|target| {
-                update(&target, |queue| {
-                    if queue.read_closed {
-                        return Err(ECONNREFUSED);
-                    }
-                    if queue.peer != 0 && queue.peer != socket.record.id() {
-                        return Err(crate::EPERM);
-                    }
-                    if queue.messages.len() >= 64
-                        || queue
-                            .messages
-                            .iter()
-                            .map(|m| m.payload.len())
-                            .sum::<usize>()
-                            + len
-                            > LIMIT
-                    {
-                        return Err(EAGAIN);
-                    }
-                    queue.messages.push_back(message.clone());
-                    Ok(len)
-                })
-            });
+        let result = update(&target, |queue| {
+            if queue.read_closed {
+                return Err(ECONNREFUSED);
+            }
+            if queue.peer != 0 && queue.peer != socket.record.id() {
+                return Err(crate::EPERM);
+            }
+            if queue.messages.len() >= 64
+                || queue
+                    .messages
+                    .iter()
+                    .map(|m| m.payload.len())
+                    .sum::<usize>()
+                    + len
+                    > LIMIT
+            {
+                return Err(EAGAIN);
+            }
+            queue.messages.push_back(message.clone());
+            Ok(len)
+        });
         if result != Err(EAGAIN)
             || flags & MSG_DONTWAIT != 0
             || get(fd)?.flags.contains(FdFlags::NONBLOCK)
         {
+            if result.is_ok()
+                && let Some(pending) = pending
+            {
+                pending.commit();
+            }
             return result;
         }
         wait()?;
@@ -249,29 +266,76 @@ pub(super) unsafe fn recv(
     flags: i32,
     control: usize,
     recvmsg: bool,
-) -> Result<(usize, i32, Option<credentials::Ucred>, UnixAddress), i32> {
+) -> Result<
+    (
+        usize,
+        Vec<i32>,
+        i32,
+        Option<credentials::Ucred>,
+        UnixAddress,
+    ),
+    i32,
+> {
     if flags & 1 != 0 {
         return Err(EOPNOTSUPP);
     }
     let socket = snapshot(fd)?;
+    let description = get(fd)?.description_id;
     loop {
+        let passcred = recvmsg && socket.record.passcred()?;
+        // Keep imported descriptors private until the queue transaction commits.
+        // Import while serialized so a simultaneous consume cannot release a
+        // peek's native bundle before it has duplicated its references.
+        let mut received = Vec::new();
+        let mut out_flags = 0;
+        let mut credentials = None;
         let result = update(&socket.record, |queue| {
             if queue.read_closed && queue.messages.is_empty() {
                 return Ok(None);
             }
-            let message = if flags & MSG_PEEK != 0 {
-                queue.messages.front().cloned()
+            let message = queue.messages.front().ok_or(EAGAIN)?;
+            if passcred {
+                if control >= 32 {
+                    credentials = Some(message.credentials.visible()?);
+                } else {
+                    out_flags |= 8;
+                }
+            }
+            let capacity = if recvmsg {
+                control
+                    .saturating_sub(if passcred { 32 } else { 0 })
+                    .saturating_sub(16)
+                    / 4
+            } else {
+                control
+            };
+            if let Some(rights) = &message.rights {
+                let truncated;
+                (received, truncated) = rights.receive(capacity.min(253), flags);
+                if truncated {
+                    out_flags |= 8;
+                }
+            }
+            Ok(if flags & MSG_PEEK != 0 {
+                Some(message.clone())
             } else {
                 queue.messages.pop_front()
-            };
-            message.map(Some).ok_or(EAGAIN)
+            })
         });
+        if result.is_err() {
+            for fd in received.drain(..) {
+                let _ = crate::close(fd);
+            }
+        }
         match result {
-            Ok(None) => return Ok((0, 0, None, UnixAddress::unnamed())),
+            Ok(None) => return Ok((0, received, 0, None, UnixAddress::unnamed())),
             Ok(Some(message)) => {
                 if flags & MSG_PEEK == 0 {
+                    if let Some(rights) = &message.rights {
+                        rights.release();
+                    }
                     crate::epoll::readiness_consumed(
-                        get(fd)?.description_id,
+                        description,
                         crate::epoll::EPOLLIN | crate::epoll::EPOLLRDNORM,
                     );
                 }
@@ -281,27 +345,16 @@ pub(super) unsafe fn recv(
                         std::ptr::copy_nonoverlapping(message.payload.as_ptr(), buffer, copied);
                     }
                 }
-                let mut out_flags = if copied < message.payload.len() {
-                    0x20
-                } else {
-                    0
-                };
-                let credentials = if recvmsg && socket.record.passcred()? {
-                    if control >= 32 {
-                        Some(message.credentials.visible()?)
-                    } else {
-                        out_flags |= 8;
-                        None
-                    }
-                } else {
-                    None
-                };
+                if copied < message.payload.len() {
+                    out_flags |= 0x20;
+                }
                 return Ok((
                     if flags & 0x20 != 0 {
                         message.payload.len()
                     } else {
                         copied
                     },
+                    received,
                     out_flags,
                     credentials,
                     message.source,
@@ -344,14 +397,19 @@ pub(super) fn shutdown(fd: i32, how: i32) -> Result<(), i32> {
     if !matches!(how, SHUT_RD | SHUT_WR | SHUT_RDWR) {
         return Err(EINVAL);
     }
-    update(&snapshot(fd)?.record, |q| {
+    let discarded = update(&snapshot(fd)?.record, |q| {
+        let mut discarded = Vec::new();
         if how != SHUT_WR {
             q.read_closed = true;
-            q.messages.clear();
+            discarded.extend(q.messages.drain(..).filter_map(|m| m.rights));
         }
         if how != SHUT_RD {
             q.write_closed = true;
         }
-        Ok(())
-    })
+        Ok(discarded)
+    })?;
+    for rights in discarded {
+        rights.release();
+    }
+    Ok(())
 }

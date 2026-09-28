@@ -18,6 +18,45 @@ static MAIN_INITIALIZERS: OnceLock<MainInitializers> = OnceLock::new();
 static TIMERS: OnceLock<TimerSyscall> = OnceLock::new();
 static TASK_LIMIT: OnceLock<fn() -> i32> = OnceLock::new();
 
+pub struct ForkDescriptors {
+    pub freeze: fn() -> i32,
+    pub thaw: fn(),
+}
+static FORK_DESCRIPTORS: OnceLock<ForkDescriptors> = OnceLock::new();
+
+pub fn install_fork_descriptors(callbacks: ForkDescriptors) {
+    assert!(
+        FORK_DESCRIPTORS.set(callbacks).is_ok(),
+        "fork descriptor fence already installed"
+    );
+}
+
+pub(crate) struct DescriptorFence(u32);
+impl DescriptorFence {
+    pub(crate) fn acquire() -> Result<Self, i32> {
+        if let Some(callbacks) = FORK_DESCRIPTORS.get() {
+            let result = (callbacks.freeze)();
+            if result != 0 {
+                return Err(result);
+            }
+        }
+        Ok(Self(std::process::id()))
+    }
+}
+impl Drop for DescriptorFence {
+    fn drop(&mut self) {
+        if self.0 == std::process::id() {
+            thaw_fork_descriptors();
+        }
+    }
+}
+
+pub(crate) fn thaw_fork_descriptors() {
+    if let Some(callbacks) = FORK_DESCRIPTORS.get() {
+        (callbacks.thaw)();
+    }
+}
+
 pub fn install_task_limit(check: fn() -> i32) {
     assert!(
         TASK_LIMIT.set(check).is_ok(),

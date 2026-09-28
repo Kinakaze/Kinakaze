@@ -82,6 +82,7 @@ class InitPool:
             while data := stream.read1(65536):
                 observed = time.perf_counter_ns()
                 log.write(data)
+                log.flush()
                 with self.lock:
                     self.buffers[index].extend(data)
                     for watch in self.watches:
@@ -101,7 +102,7 @@ class InitPool:
                         for watch in self.watches:
                             watch['offsets'][index] = max(0, watch['offsets'][index]-discarded)
 
-    def launch(self, command, *, cwd='/', environment=None):
+    def launch(self, command, *, cwd='/', environment=None, parent_pid=0):
         """Start any application and return immediately after init releases it.
 
         Returned applications wait on independent control connections, so a
@@ -121,8 +122,10 @@ class InitPool:
                         self.samples.append(sample)
                     baseline = sample.read()
                 activated = time.perf_counter_ns()
-                self.controller.call({'ActivatePoolWorker': {'pid': pid, 'launch': dict(
-                    arguments=command, cwd=cwd, environment=environment)}})
+                activation = dict(pid=pid, launch=dict(arguments=command, cwd=cwd, environment=environment))
+                if parent_pid:
+                    activation['parent_pid'] = parent_pid
+                self.controller.call({'ActivatePoolWorkerUnderParent' if parent_pid else 'ActivatePoolWorker': activation})
             except BaseException:
                 if sample:
                     sample.close()
@@ -134,7 +137,7 @@ class InitPool:
                 raise
             return PooledApplication(self, pid, started, activated, sample, baseline)
 
-    def run(self, command, *, cwd='/', environment=None, expect=(), expected_exit=0, ready_marker=None):
+    def run(self, command, *, cwd='/', environment=None, parent_pid=0, expect=(), expected_exit=0, ready_marker=None):
         with self.lock:
             offsets = [len(buffer) for buffer in self.buffers]
             watch = dict(marker=ready_marker.encode() if ready_marker else b'', offsets=offsets.copy(), timestamp=None)
@@ -146,7 +149,7 @@ class InitPool:
         before = self.child.cpu_metrics()
         started = time.perf_counter_ns()
         try:
-            application = self.launch(command, cwd=cwd, environment=environment)
+            application = self.launch(command, cwd=cwd, environment=environment, parent_pid=parent_pid)
             reserved, activated = application.pid, application.activated
             status = application.wait()
         except BaseException:

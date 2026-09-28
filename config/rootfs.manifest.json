@@ -16,6 +16,8 @@
     "etc/default",
     "etc/profile.d",
     "etc/systemd/system/ssh.service.d",
+    "etc/systemd/system/dbus.service.d",
+    "etc/systemd/system/dbus.socket.d",
     "etc/systemd/system/kinakaze.target.wants",
     "etc/systemd/system-preset",
     "usr/local/sbin",
@@ -51,6 +53,7 @@
   "links": {
     "etc/systemd/system/default.target": "/lib/systemd/system/kinakaze.target",
     "etc/systemd/system/kinakaze.target.wants/ssh.service": "/lib/systemd/system/ssh.service",
+    "etc/systemd/system/kinakaze.target.wants/dbus.socket": "/lib/systemd/system/dbus.socket",
     "var/run": "/run",
     "var/lock": "/run/lock",
     "etc/systemd/system/kinakaze.target.wants/kinakaze-session.service": "/lib/systemd/system/kinakaze-session.service"
@@ -82,11 +85,19 @@
     },
     {
       "path": "etc/systemd/system-preset/00-kinakaze.preset",
-      "content": "# Default services for the hosted Debian session.\nenable kinakaze.target\nenable ssh.service\ndisable *\n"
+      "content": "# Default services for the hosted Debian session.\nenable kinakaze.target\nenable ssh.service\nenable dbus.socket\ndisable *\n"
     },
     {
       "path": "lib/systemd/system/kinakaze.target",
       "content": "[Unit]\nDescription=Kinakaze Debian services\n# Runtime initialization is performed by the Windows host.\nDefaultDependencies=no\nAllowIsolate=yes\n\n[Install]\nAlias=default.target\n"
+    },
+    {
+      "path": "etc/systemd/system/dbus.socket.d/kinakaze.conf",
+      "content": "[Unit]\n# The host initializes mounts and devices before starting PID 1.\nDefaultDependencies=no\n\n[Install]\nWantedBy=kinakaze.target\n"
+    },
+    {
+      "path": "etc/systemd/system/dbus.service.d/kinakaze.conf",
+      "content": "[Unit]\n# Socket activation starts the system bus when a client needs it.\nDefaultDependencies=no\n"
     },
     {
       "path": "etc/systemd/system/ssh.service.d/kinakaze.conf",
@@ -94,7 +105,7 @@
     },
     {
       "path": "usr/local/sbin/kinakaze-systemd",
-      "content": "#!/bin/sh\nset -eu\n# Persist a unique identity before PID 1 starts the configured services.\n/bin/systemd-machine-id-setup\nexec /lib/systemd/systemd --system --unit=kinakaze.target --log-target=console \"$@\"\n"
+      "content": "#!/bin/sh\nset -eu\n# Allow service helpers to publish mounts within this guest namespace.\n/bin/mount --make-rshared /\n# Initialize distribution accounts and identity before PID 1 starts services.\n/bin/systemd-sysusers\n/bin/systemd-machine-id-setup\nexec /lib/systemd/systemd --system --unit=kinakaze.target --log-target=console \"$@\"\n"
     },
     {
       "path": "etc/group",

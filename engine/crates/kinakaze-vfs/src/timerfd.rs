@@ -264,10 +264,24 @@ pub fn settime(fd: i32, flags: i32, value: Itimerspec) -> Result<Itimerspec, i32
 fn canceled(state: &State) -> Result<bool, i32> {
     Ok(state.cancel_on_set != 0 && clock_change::generation()? != state.clock_generation)
 }
+pub(crate) fn restore_subscription(fd: i32) -> Result<(), i32> {
+    let (timer, _) = Timer::from_fd(fd)?;
+    // Clock identity is immutable. Do not acquire a timer mutation mutex while
+    // a fork parent's other threads can still be suspended.
+    if unsafe { (*timer.view.Value.cast::<State>()).clock } == 0 {
+        clock_change::generation()?;
+    }
+    Ok(())
+}
 pub fn gettime(fd: i32) -> Result<Itimerspec, i32> {
     let (timer, _) = Timer::from_fd(fd)?;
     let mut guard = timer.lock()?;
     let state = guard.state();
+    // A queued descriptor's keeper must keep receiving clock changes after
+    // its sender exits, even before the recipient polls the timer.
+    if state.cancel_on_set != 0 {
+        clock_change::generation()?;
+    }
     let now = now(state.clock)?;
     refresh(state, now);
     Ok(remaining(state, now))

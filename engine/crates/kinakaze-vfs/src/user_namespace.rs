@@ -177,14 +177,20 @@ fn initial() -> Result<Arc<Store>, i32> {
             })?;
         }
         State::decode(&store.read()?.1)?;
+        store.retain_kernel(false, Vec::new())?;
         *slot = Some(store);
     }
     Ok(slot.as_ref().unwrap().clone())
 }
 fn current() -> Result<Arc<Store>, i32> {
+    if let Some(store) = CURRENT.lock().map_err(|_| EIO)?.as_ref() {
+        return Ok(store.clone());
+    }
+    let pid = crate::job::process_id();
+    let inherited = kinakaze_runtime::job::user_namespace(pid).ok_or(EIO)?;
     let mut slot = CURRENT.lock().map_err(|_| EIO)?;
     if slot.is_none() {
-        *slot = Some(initial()?);
+        *slot = Some(open_store(inherited)?);
     }
     Ok(slot.as_ref().unwrap().clone())
 }
@@ -206,12 +212,16 @@ fn open_store(id: u64) -> Result<Arc<Store>, i32> {
         return Ok(store);
     }
     let store = Arc::new(Store::user_object(id, false)?);
-    State::decode(&store.read()?.1)?;
+    let state = State::decode(&store.read()?.1)?;
+    store.retain_kernel(false, vec![open_store(state.parent)?.kernel_key()])?;
     ANCESTORS.lock().map_err(|_| EIO)?.insert(id, store.clone());
     Ok(store)
 }
 fn state_of(id: u64) -> Result<State, i32> {
     State::decode(&open_store(id)?.read()?.1)
+}
+pub(crate) fn retain_kernel(id: u64) -> Result<kinakaze_v2_protocol::kernel::ObjectKey, i32> {
+    Ok(open_store(id)?.kernel_key())
 }
 pub fn current_capable(bit: u32) -> bool {
     current().is_ok_and(|ns| capable(ns.id(), bit))
@@ -296,6 +306,7 @@ pub fn prepare_unshare() -> Result<Prepared, i32> {
             (),
         ))
     })?;
+    store.retain_kernel(false, vec![parent.kernel_key()])?;
     ANCESTORS
         .lock()
         .map_err(|_| EIO)?

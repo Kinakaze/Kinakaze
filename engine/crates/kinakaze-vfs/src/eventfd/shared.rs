@@ -191,7 +191,10 @@ pub fn poll_status(fd: i32) -> Result<(bool, bool, bool), i32> {
 /// the counter's readiness level does not change. Keep those generations in
 /// the shared counter so dup, fork, and transferred descriptors see each edge.
 pub(crate) fn poll_status_with_edges(fd: i32) -> Result<(bool, bool, bool, [u64; 2]), i32> {
-    let (count, _, edges) = description(fd)?.read_with(decode)?;
+    poll_store(description(fd)?.as_ref())
+}
+pub(crate) fn poll_store(store: &Store) -> Result<(bool, bool, bool, [u64; 2]), i32> {
+    let (count, _, edges) = store.read_with(decode)?;
     Ok((count != 0, count < u64::MAX - 1, count == u64::MAX, edges))
 }
 pub fn forget_eventfd(_fd: i32) {}

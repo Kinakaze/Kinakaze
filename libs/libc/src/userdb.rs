@@ -13,6 +13,7 @@ use kinakaze_vfs::{EINVAL, ENOENT, EPERM, ERANGE};
 pub(crate) mod account_files;
 mod nss_parse;
 mod password_lock;
+mod returned;
 mod rhosts;
 mod shadow_stream;
 
@@ -124,9 +125,12 @@ fn restore_process_identity(values: [u32; 9], groups: Vec<Gid>) {
 mod identity_handoff {
     use super::*;
 
-    const KEY: u64 = 0x4c49_4243_4944_5332; // "LIBCIDS2"
+    const KEY: u64 = 0x4c49_4243_4944_5333; // "LIBCIDS3"
     unsafe extern "system" fn snapshot(buffer: *mut u8, capacity: usize) -> isize {
-        let payload = identity_payload();
+        let mut payload = identity_payload();
+        for cursor in [&PASSWD_CURSOR, &GROUP_CURSOR] {
+            payload.extend_from_slice(&(cursor.load(Ordering::SeqCst) as u64).to_le_bytes());
+        }
         if buffer.is_null() {
             return payload.len() as isize;
         }
@@ -138,14 +142,24 @@ mod identity_handoff {
     }
 
     unsafe extern "system" fn child(payload: *const u8, len: usize) -> i32 {
-        if payload.is_null() {
+        if payload.is_null() || len < 16 || len > isize::MAX as usize {
             return kinakaze_vfs::EINVAL;
         }
         let bytes = unsafe { std::slice::from_raw_parts(payload, len) };
-        let Some((values, groups)) = decode_identity_payload(bytes) else {
+        let (identity, cursors) = bytes.split_at(len - 16);
+        let Some((values, groups)) = decode_identity_payload(identity) else {
             return kinakaze_vfs::EINVAL;
         };
         restore_process_identity(values, groups);
+        for (cursor, bytes) in [&PASSWD_CURSOR, &GROUP_CURSOR]
+            .into_iter()
+            .zip(cursors.chunks_exact(8))
+        {
+            cursor.store(
+                u64::from_le_bytes(bytes.try_into().unwrap()) as usize,
+                Ordering::SeqCst,
+            );
+        }
         0
     }
 
@@ -1278,49 +1292,8 @@ fn find_user_by_uid(uid: u32) -> Option<UserAccount> {
     load_user_accounts().into_iter().find(|a| a.uid == uid)
 }
 
-// Owns backing allocations for the raw pointers in the published C record.
-struct StaticPasswdStorage {
-    _name: CString,
-    _password: CString,
-    _gecos: CString,
-    _dir: CString,
-    _shell: CString,
-    passwd: Passwd,
-}
-
-unsafe impl Send for StaticPasswdStorage {}
-unsafe impl Sync for StaticPasswdStorage {}
-
-static STATIC_PASSWD: std::sync::Mutex<Option<Box<StaticPasswdStorage>>> =
-    std::sync::Mutex::new(None);
-
 fn passwd_entry_for(account: &UserAccount) -> *mut Passwd {
-    let mut storage_guard = STATIC_PASSWD.lock().unwrap();
-    let name = CString::new(account.name.as_str()).unwrap_or_default();
-    let password = CString::new(account.password.as_str()).unwrap_or_default();
-    let gecos = CString::new(account.gecos.as_str()).unwrap_or_default();
-    let dir = CString::new(account.dir.as_str()).unwrap_or_default();
-    let shell = CString::new(account.shell.as_str()).unwrap_or_default();
-
-    let mut storage = Box::new(StaticPasswdStorage {
-        passwd: Passwd {
-            pw_name: name.as_ptr().cast_mut(),
-            pw_passwd: password.as_ptr().cast_mut(),
-            pw_uid: account.uid,
-            pw_gid: account.gid,
-            pw_gecos: gecos.as_ptr().cast_mut(),
-            pw_dir: dir.as_ptr().cast_mut(),
-            pw_shell: shell.as_ptr().cast_mut(),
-        },
-        _name: name,
-        _password: password,
-        _gecos: gecos,
-        _dir: dir,
-        _shell: shell,
-    });
-    let ptr = &mut storage.passwd as *mut Passwd;
-    *storage_guard = Some(storage);
-    ptr
+    returned::passwd(account)
 }
 
 #[derive(Clone, Debug)]
@@ -1398,49 +1371,8 @@ fn find_group_by_gid(gid: u32) -> Option<GroupAccount> {
     load_group_accounts().into_iter().find(|g| g.gid == gid)
 }
 
-// Owns backing allocations for the raw pointers in the published C record.
-struct StaticGroupStorage {
-    _name: CString,
-    _password: CString,
-    _members: Vec<CString>,
-    _member_ptrs: Vec<*mut c_char>,
-    group: Group,
-}
-
-unsafe impl Send for StaticGroupStorage {}
-unsafe impl Sync for StaticGroupStorage {}
-
-static STATIC_GROUP: std::sync::Mutex<Option<Box<StaticGroupStorage>>> =
-    std::sync::Mutex::new(None);
-
 fn group_entry_for(account: &GroupAccount) -> *mut Group {
-    let mut storage_guard = STATIC_GROUP.lock().unwrap();
-    let name = CString::new(account.name.as_str()).unwrap_or_default();
-    let password = CString::new(account.password.as_str()).unwrap_or_default();
-    let mut members = Vec::new();
-    let mut member_ptrs = Vec::new();
-    for mem in &account.members {
-        let c = CString::new(mem.as_str()).unwrap_or_default();
-        member_ptrs.push(c.as_ptr().cast_mut());
-        members.push(c);
-    }
-    member_ptrs.push(ptr::null_mut());
-
-    let mut storage = Box::new(StaticGroupStorage {
-        group: Group {
-            gr_name: name.as_ptr().cast_mut(),
-            gr_passwd: password.as_ptr().cast_mut(),
-            gr_gid: account.gid,
-            gr_mem: member_ptrs.as_mut_ptr(),
-        },
-        _name: name,
-        _password: password,
-        _members: members,
-        _member_ptrs: member_ptrs,
-    });
-    let ptr = &mut storage.group as *mut Group;
-    *storage_guard = Some(storage);
-    ptr
+    returned::group(account)
 }
 
 /// `getpwnam`.
@@ -1933,7 +1865,12 @@ pub unsafe extern "sysv64" fn kinakaze_abi_fgetpwent(file: *mut crate::stdio::Fi
             core::ptr::addr_of_mut!(res),
         )
     };
-    if code == 0 { res } else { ptr::null_mut() }
+    if code == 0 {
+        res
+    } else {
+        crate::set_errno(code);
+        ptr::null_mut()
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -2056,7 +1993,12 @@ pub unsafe extern "sysv64" fn kinakaze_abi_fgetgrent(file: *mut crate::stdio::Fi
             core::ptr::addr_of_mut!(res),
         )
     };
-    if code == 0 { res } else { ptr::null_mut() }
+    if code == 0 {
+        res
+    } else {
+        crate::set_errno(code);
+        ptr::null_mut()
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -2591,9 +2533,11 @@ pub const SC_PAGESIZE: c_int = 30;
 pub const SC_GETPW_R_SIZE_MAX: c_int = 70;
 pub const SC_GETGR_R_SIZE_MAX: c_int = 69;
 pub const SC_LOGIN_NAME_MAX: c_int = 71;
+pub const SC_THREAD_STACK_MIN: c_int = 75;
 pub const SC_NPROCESSORS_CONF: c_int = 83;
 pub const SC_NPROCESSORS_ONLN: c_int = 84;
 pub const SC_PHYS_PAGES: c_int = 85;
+pub const SC_MONOTONIC_CLOCK: c_int = 149;
 pub const SC_HOST_NAME_MAX: c_int = 180;
 
 /// The page size, which is 4096 on every Windows platform this targets.
@@ -2658,6 +2602,8 @@ pub extern "sysv64" fn sysconf(name: c_int) -> i64 {
         // Linux fixes USER_HZ at 100 and `times` results are in those units, so
         // this must be 100 for a guest converting clock ticks to seconds.
         SC_CLK_TCK => 100,
+        SC_MONOTONIC_CLOCK => 200809,
+        SC_THREAD_STACK_MIN => libpthread::PTHREAD_STACK_MIN as i64,
         // Large enough for the entry this module produces several times over.
         // glibc reports 1024 here and BusyBox uses it as its first allocation
         // before growing on ERANGE.
@@ -3766,6 +3712,11 @@ mod tests {
         );
         // USER_HZ is fixed at 100 on Linux and `times` output is in those units.
         assert_eq!(kinakaze_abi_sysconf(SC_CLK_TCK), 100);
+        assert_eq!(kinakaze_abi_sysconf(SC_MONOTONIC_CLOCK), 200809);
+        assert_eq!(
+            kinakaze_abi_sysconf(SC_THREAD_STACK_MIN),
+            libpthread::PTHREAD_STACK_MIN as i64
+        );
 
         let online = kinakaze_abi_sysconf(SC_NPROCESSORS_ONLN);
         assert!(online >= 1, "at least one processor must be online");

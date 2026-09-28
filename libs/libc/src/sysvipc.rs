@@ -1,38 +1,9 @@
 //! System V semaphores and shared memory.
 //!
-//! Windows has real equivalents for both *mechanisms* — a file mapping object
-//! is shared memory and a named mutex is a cross-process lock — but none for
-//! the System V *namespace*, where a bare integer key names an object that
-//! outlives every process that touched it. Rebuilding that namespace is most
-//! of the work in this module, and it is where the divergences live, so they
-//! are stated up front rather than left to be discovered.
-//!
-//! # A segment does not outlive its last handle
-//!
-//! This is the difference that will actually bite a caller. A Windows section
-//! object is destroyed when the last handle to it closes. A System V segment
-//! marked `IPC_RMID` survives until the last process detaches, which this
-//! module reproduces exactly — but a segment *not* marked for removal outlives
-//! every process that used it, and that cannot be reproduced at all. A program
-//! that writes a segment, exits, and expects the next run to find its data will
-//! find a freshly zeroed segment instead. Nothing here can hold the section open
-//! once no process does.
-//!
-//! # The key namespace is `Local\`, and it is per-session
-//!
-//! Two processes that pass the same key must reach the same object, so the name
-//! is derived from the key deterministically: the 32-bit key is rendered as
-//! eight lowercase hex digits after a fixed prefix, as in
-//! `Local\kinakaze.shm.1.0000002a`. The mapping is injective — every key has
-//! exactly one name and no two keys share one — so a collision is impossible by
-//! construction rather than merely unlikely, which a hash could not promise.
-//!
-//! `Local\` places the objects in the caller's Terminal Services session. The
-//! cost is that two kinakaze processes in *different* sessions (an interactive
-//! login and a service, say) will not see each other's segments even with the
-//! same key. `Global\` would fix that, but creating a global object requires
-//! `SeCreateGlobalPrivilege`, which an ordinary user does not hold, so choosing
-//! it would trade a rare limitation for a common failure.
+//! The IPC namespace owns both keyed and IPC_PRIVATE objects. Guest IDs name
+//! immutable native sections across workers; the key directory can withdraw a
+//! key without invalidating an existing attachment. Init retains sections until
+//! IPC_RMID or namespace destruction. Standalone tests retain caller handles.
 //!
 //! # Semaphores are real, with two named exceptions
 //!
@@ -49,10 +20,13 @@
 //! not interruptible by a signal, so it never reports `EINTR`.
 use core::alloc::{GlobalAlloc, Layout};
 use core::ffi::{CStr, c_char, c_int, c_void};
+use kinakaze_v2_protocol::kernel::IpcKind;
 use std::collections::{HashMap, HashSet};
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 mod lifecycle;
+mod registry;
 
 use kinakaze_vfs::{
     EAGAIN, EEXIST, EFAULT, EINVAL, EIO, ENOENT, ENOMEM, ENOSPC, ENOSYS, ERANGE, errno_from_win32,
@@ -401,6 +375,7 @@ const WAIT_ABANDONED: u32 = 0x0000_0080;
 const WAIT_TIMEOUT: u32 = 0x0000_0102;
 const INFINITE: u32 = 0xFFFF_FFFF;
 const PROCESS_QUERY_LIMITED_INFORMATION: u32 = 0x1000;
+const SYNCHRONIZE: u32 = 0x0010_0000;
 const ERROR_ALREADY_EXISTS: u32 = 183;
 const ERROR_FILE_NOT_FOUND: u32 = 2;
 fn last_errno() -> i32 {
@@ -472,21 +447,6 @@ fn control_bytes() -> usize {
 /// on exactly, and a change to it silently stops them sharing.
 fn ipc_namespace() -> u64 {
     kinakaze_vfs::namespaces::current_id(kinakaze_vfs::namespaces::IPC).unwrap_or(u64::MAX)
-}
-
-fn object_name(kind: &str, key: Key) -> String {
-    object_name_in(kind, key, ipc_namespace())
-}
-fn object_name_in(kind: &str, key: Key, namespace: u64) -> String {
-    // The key is formatted from its unsigned bit pattern so a negative key —
-    // which `ftok` readily produces — yields a name with no sign character, and
-    // so the mapping stays injective across the whole 32-bit range.
-    format!(
-        "Local\\kinakaze.{kind}.ns{}.{}.{:08x}",
-        kinakaze_runtime::authority::domain_id(),
-        namespace,
-        key as u32
-    )
 }
 
 /// A null-terminated UTF-16 copy of `text`, for the `*W` entry points.
@@ -564,10 +524,10 @@ impl Drop for CrossProcessLock {
 /// A section is zero-filled on creation, so a zero magic is exactly the state a
 /// creator that died between `CreateFileMappingW` and initialization leaves
 /// behind, and the next process to hold the key's mutex re-initializes it.
-const SHM_MAGIC: u64 = 0x4352_5953_5348_4d01;
+const SHM_MAGIC: u64 = kinakaze_v2_protocol::kernel::SHM_MAGIC;
 
 /// `SemHeader.magic`, with the same role.
-const SEM_MAGIC: u64 = 0x4352_5953_5345_4d01;
+const SEM_MAGIC: u64 = kinakaze_v2_protocol::kernel::SEM_MAGIC;
 
 /// The cross-process state of one shared-memory segment.
 ///
@@ -592,16 +552,23 @@ struct ShmHeader {
     mode: u32,
     /// Set by `IPC_RMID`. A removed segment stays usable for processes already
     /// attached and is invisible to `shmget`, exactly as on Linux.
-    removed: u32,
-    pad: u32,
+    removed: AtomicU32,
+    id: u32,
+    attachments: [AttachmentOwner; 1024],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+struct AttachmentOwner {
+    pid: u32,
+    count: u32,
+    started: u64,
 }
 
 /// One undo record: the adjustment one process owes one semaphore.
 ///
-/// `pid` and `started` together identify the process. The creation time is part
-/// of the identity because Windows recycles process ids, and reversing a live
-/// process's adjustments because it happens to hold a dead one's id would be
-/// worse than not reversing them at all.
+/// Managed debts use the Linux process identity and birth time, which survive
+/// exec. Standalone callers use a Windows PID and creation time.
 #[repr(C)]
 #[derive(Clone, Copy)]
 struct UndoEntry {
@@ -610,7 +577,7 @@ struct UndoEntry {
     sem_num: u32,
     started: u64,
     adjust: i32,
-    pad: u32,
+    managed: u32,
 }
 
 /// The cross-process state of one semaphore set.
@@ -622,7 +589,8 @@ struct SemHeader {
     nsems: u32,
     key: i32,
     mode: u32,
-    removed: u32,
+    removed: AtomicU32,
+    id: u32,
     /// Current values. Held as `i32` so an operation can be range-checked
     /// against `SEMVMX` before it is applied; the guest only ever sees these
     /// through `GETVAL`/`GETALL`, which narrow to `unsigned short`.
@@ -631,6 +599,16 @@ struct SemHeader {
     last_pid: [i32; SEMMSL],
     undo: [UndoEntry; UNDO_SLOTS],
 }
+
+// Init reads the identity and removal marker while retaining these sections.
+const _: () = {
+    assert!(core::mem::offset_of!(ShmHeader, key) == 56);
+    assert!(core::mem::offset_of!(ShmHeader, removed) == 64);
+    assert!(core::mem::offset_of!(SemHeader, key) == 28);
+    assert!(core::mem::offset_of!(SemHeader, removed) == 36);
+    assert!(core::mem::offset_of!(ShmHeader, id) == 68);
+    assert!(core::mem::offset_of!(SemHeader, id) == 40);
+};
 
 /// One segment this process knows about, keyed by the id `shmget` returned.
 struct Segment {
@@ -666,8 +644,7 @@ impl Drop for Segment {
 ///
 /// Unlike [`Segment`], this holds its mutex open rather than reopening it by
 /// name for each operation: `semop` may block for a long time under it, so the
-/// handle is worth keeping, and an unnamed `IPC_PRIVATE` set has no name to
-/// reopen from in the first place.
+/// handle is worth keeping while this worker uses the set.
 struct SemSet {
     namespace: u64,
     mapping: usize,
@@ -694,12 +671,7 @@ impl Drop for SemSet {
 
 /// Everything this process tracks for both mechanisms.
 ///
-/// The ids handed to the guest are indices into these maps, which is a real
-/// divergence: a System V identifier is system-wide and can be passed to another
-/// process, whereas one of these is meaningless outside the process that
-/// received it. What *is* preserved is the property callers actually use — two
-/// processes calling `shmget` with the same key reach the same segment, each
-/// under its own id.
+/// Process-local views cache immutable namespace-wide IDs.
 struct IpcState {
     segments: HashMap<c_int, Arc<Segment>>,
     /// Live attachments, mapping the address the guest holds to its segment id.
@@ -737,8 +709,7 @@ fn state() -> &'static Mutex<IpcState> {
             attachments: HashMap::new(),
             sets: HashMap::new(),
             removed: HashSet::new(),
-            // Ids start at 1 and are never reused, so a stale id can never name
-            // a different object than the one its holder means.
+            // Snapshot high-water mark; allocation belongs to the shared kernel.
             next_id: 1,
         })
     })
@@ -756,9 +727,7 @@ fn fail(error: i32) -> c_int {
 
 /// Creates or opens a section, reporting whether it already existed.
 ///
-/// `name` is `None` for `IPC_PRIVATE`, which wants an unnamed section: nobody
-/// can name it, which is exactly the guarantee `IPC_PRIVATE` makes, so the
-/// Windows and Linux behaviours coincide with nothing to reconcile.
+/// IPC_PRIVATE uses an internal ID name, without a guest key entry.
 fn create_section(name: Option<&str>, bytes: u64) -> Result<(*mut c_void, bool), i32> {
     let wide_name = name.map(wide);
     let name_ptr = wide_name
@@ -806,109 +775,43 @@ fn map_control(mapping: *mut c_void) -> Result<*mut c_void, i32> {
     Ok(view)
 }
 
-/// `shmget`: creates or opens a shared-memory segment.
-///
-/// `IPC_PRIVATE` produces an unnamed section, which is the clean correspondence
-/// noted in the module header. For every other key the section is named from the
-/// key, and creation is serialized on a per-key mutex so a second process cannot
-/// observe a header between `CreateFileMappingW` and its initialization.
-///
-/// `IPC_CREAT | IPC_EXCL` reports `EEXIST` when the section already exists, which
-/// is how callers arbitrate ownership, so the check is made against the host's
-/// own "already existed" answer rather than against this module's bookkeeping —
-/// the creator may be another process entirely.
-///
-/// Two divergences are worth knowing. Opening an existing segment whose size is
-/// smaller than `size` reports `EINVAL`, as on Linux. And a segment that
-/// `IPC_RMID` has removed but that another process is still attached to keeps its
-/// Windows name until that process detaches, so `shmget` on that key reports
-/// `EIDRM` during the window instead of creating a fresh segment; on Linux the
-/// name is free immediately. The window is bounded by the other process's
-/// `shmdt`, and reporting the condition beats handing back a stale segment.
+/// Create or look up a namespace-owned shared-memory segment.
 #[unsafe(no_mangle)]
 pub extern "sysv64" fn kinakaze_abi_shmget(key: Key, size: usize, flags: c_int) -> c_int {
-    let creating = flags & IPC_CREAT != 0;
-    let exclusive = flags & IPC_EXCL != 0;
-
-    // A zero size is only meaningful when opening an existing segment; Linux
-    // rejects a create of nothing.
-    if size == 0 && creating {
-        return fail(EINVAL);
-    }
-    // The section size must fit the header granule as well as the data. A
-    // request that overflows cannot be served by any amount of memory.
-    let Some(total) = size
-        .checked_add(control_bytes())
-        .and_then(|total| u64::try_from(total).ok())
-    else {
-        return fail(ENOMEM);
-    };
-
-    let name = (key != IPC_PRIVATE).then(|| object_name("shm", key));
-    // Held across create-and-initialize so the header is never observed
-    // half-written. Unnamed sections need no lock: no other process can find
-    // them, so there is no second observer to serialize against.
-    let _lock = match name.as_deref() {
-        Some(_) => match CrossProcessLock::acquire(Some(&object_name("shmlock", key))) {
-            Ok(lock) => Some(lock),
-            Err(error) => return fail(error),
-        },
-        None => None,
-    };
-
-    let (mapping, existed) = if creating || key == IPC_PRIVATE {
-        match create_section(name.as_deref(), total) {
-            Ok(pair) => pair,
-            Err(error) => return fail(error),
+    registry::get(IpcKind::Memory, key, flags, |id, fresh| {
+        if fresh && size == 0 {
+            return Err(EINVAL);
         }
-    } else {
-        // Without IPC_CREAT the segment must already exist, and `OpenFileMappingW`
-        // is the call that says so rather than creating one behind the caller's
-        // back.
-        let wide_name = wide(name.as_deref().unwrap_or_default());
-        // SAFETY: `wide_name` is a null-terminated wide string.
-        let mapping =
-            unsafe { OpenFileMappingW(FILE_MAP_READ | FILE_MAP_WRITE, 0, wide_name.as_ptr()) };
-        if mapping.is_null() {
-            // SAFETY: GetLastError has no preconditions.
-            let error = unsafe { GetLastError() };
-            return fail(if error == ERROR_FILE_NOT_FOUND {
-                ENOENT
-            } else {
-                errno_from_win32(error)
-            });
-        }
-        (mapping, true)
-    };
-
-    if existed && exclusive && creating {
-        // SAFETY: the handle is owned here and not stored.
-        unsafe { CloseHandle(mapping) };
-        return fail(EEXIST);
-    }
-
-    let control = match map_control(mapping) {
-        Ok(view) => view,
-        Err(error) => {
-            // SAFETY: owned here and not stored.
-            unsafe { CloseHandle(mapping) };
-            return fail(error);
-        }
-    };
-
-    match initialize_shm_header(control, existed, key, size, flags) {
-        Ok(segsz) => match publish_segment(key, mapping, control, segsz) {
-            Ok(id) => id,
-            Err(error) => {
-                release_section(mapping, control);
-                fail(error)
+        let total = size.checked_add(control_bytes()).ok_or(ENOMEM)? as u64;
+        let name = registry::name(IpcKind::Memory, ipc_namespace(), id);
+        let _lock = CrossProcessLock::acquire(Some(&format!("{name}.lock")))?;
+        let (mapping, control) = if fresh {
+            let (mapping, _) = create_section(Some(&name), total)?;
+            let control = match map_control(mapping) {
+                Ok(control) => control,
+                Err(error) => {
+                    unsafe { CloseHandle(mapping) };
+                    return Err(error);
+                }
+            };
+            (mapping, control)
+        } else {
+            registry::open(IpcKind::Memory, id)?
+        };
+        let result = initialize_shm_header(control, !fresh, key, size, flags).and_then(|size| {
+            if fresh {
+                unsafe {
+                    (*control.cast::<ShmHeader>()).id = id as u32;
+                }
             }
-        },
-        Err(error) => {
+            publish_segment(id, key, mapping, control, size)
+        });
+        if result.is_err() {
             release_section(mapping, control);
-            fail(error)
         }
-    }
+        result
+    })
+    .unwrap_or_else(fail)
 }
 
 /// Unmaps a control view and closes its section on a failure path.
@@ -956,13 +859,14 @@ fn initialize_shm_header(
             // Only the low nine bits are permission bits; the rest are the
             // IPC_CREAT family and are not part of the mode.
             mode: (flags & 0o777) as u32,
-            removed: 0,
-            pad: 0,
+            removed: AtomicU32::new(0),
+            id: 0,
+            attachments: [AttachmentOwner::default(); 1024],
         };
         return Ok(size);
     }
 
-    if header.removed != 0 {
+    if header.removed.load(Ordering::Acquire) != 0 {
         return Err(EIDRM);
     }
     let existing = header.segsz as usize;
@@ -976,11 +880,13 @@ fn initialize_shm_header(
 
 /// Records a segment in the state table and returns its id.
 fn publish_segment(
+    id: c_int,
     key: Key,
     mapping: *mut c_void,
     control: *mut c_void,
     segsz: usize,
 ) -> Result<c_int, i32> {
+    kinakaze_vfs::namespaces::retain_ipc(IpcKind::Memory, id)?;
     let mut state = state().lock().map_err(|_| EIO)?;
     let _mapping = kinakaze_runtime::begin_fork_mapping_transaction().ok_or(EIO)?;
     let slot = unsafe {
@@ -1000,8 +906,7 @@ fn publish_segment(
         }
         return Err(EIO);
     }
-    let id = state.next_id;
-    state.next_id += 1;
+    state.next_id = state.next_id.max(id.saturating_add(1));
     state.segments.insert(
         id,
         Arc::new(Segment {
@@ -1009,7 +914,7 @@ fn publish_segment(
             key,
             mapping: mapping as usize,
             fork_slot: slot as usize,
-            private_lock: (u64::from(own_host_pid()) << 32) | id as u32 as u64,
+            private_lock: id as u64,
             control: control as usize,
             segsz,
         }),
@@ -1025,19 +930,33 @@ const SHM_FAILED: *mut c_void = usize::MAX as *mut c_void;
 
 /// Looks up a live segment, distinguishing "removed" from "never existed".
 fn find_segment(id: c_int) -> Result<Arc<Segment>, i32> {
-    let state = state().lock().map_err(|_| EIO)?;
-    if let Some(segment) = state
+    {
+        let state = state().lock().map_err(|_| EIO)?;
+        if let Some(segment) = state
+            .segments
+            .get(&id)
+            .filter(|s| s.namespace == ipc_namespace())
+        {
+            return Ok(segment.clone());
+        }
+        if state.removed.contains(&id) {
+            return Err(EIDRM);
+        }
+    }
+    let (mapping, control) = registry::open(IpcKind::Memory, id)?;
+    let header = unsafe { &*control.cast::<ShmHeader>() };
+    let result = publish_segment(id, header.key, mapping, control, header.segsz as usize);
+    if let Err(error) = result {
+        release_section(mapping, control);
+        return Err(error);
+    }
+    state()
+        .lock()
+        .map_err(|_| EIO)?
         .segments
         .get(&id)
-        .filter(|s| s.namespace == ipc_namespace())
-    {
-        return Ok(Arc::clone(segment));
-    }
-    Err(if state.removed.contains(&id) {
-        EIDRM
-    } else {
-        EINVAL
-    })
+        .cloned()
+        .ok_or(EIO)
 }
 
 /// `shmat`: maps a segment into this process's address space.
@@ -1067,21 +986,15 @@ pub unsafe extern "sysv64" fn kinakaze_abi_shmat(
     shmaddr: *const c_void,
     flags: c_int,
 ) -> *mut c_void {
+    let segment = match find_segment(id) {
+        Ok(segment) => segment,
+        Err(error) => {
+            set_errno(error);
+            return SHM_FAILED;
+        }
+    };
     let Ok(mut state) = state().lock() else {
         set_errno(EIO);
-        return SHM_FAILED;
-    };
-    let Some(segment) = state
-        .segments
-        .get(&id)
-        .filter(|s| s.namespace == ipc_namespace())
-        .cloned()
-    else {
-        set_errno(if state.removed.contains(&id) {
-            EIDRM
-        } else {
-            EINVAL
-        });
         return SHM_FAILED;
     };
     let Some(_mapping) = kinakaze_runtime::begin_fork_mapping_transaction() else {
@@ -1163,6 +1076,12 @@ pub unsafe extern "sysv64" fn kinakaze_abi_shmat(
         set_errno(EIO);
         return SHM_FAILED;
     }
+    if let Err(error) = attachment_change(&segment, true) {
+        kinakaze_runtime::unregister_fork_mapping(view as usize);
+        unsafe { UnmapViewOfFile(view) };
+        set_errno(error);
+        return SHM_FAILED;
+    }
     state.attachments.insert(
         view as usize,
         ShmAttachment {
@@ -1173,38 +1092,64 @@ pub unsafe extern "sysv64" fn kinakaze_abi_shmat(
     );
     drop(state);
 
-    // The attach count and time live in the shared header, so a second process's
-    // IPC_STAT sees this attachment too.
-    if let Ok(_lock) = shm_lock(&segment) {
-        // SAFETY: the control view is live for the segment's lifetime and the
-        // key's mutex, or the local exclusion for an unnamed segment, is held.
-        let header = unsafe { &mut *(segment.control as *mut ShmHeader) };
-        header.nattch += 1;
-        header.atime = now_seconds();
-        header.lpid = own_pid();
-    }
     view
 }
 
-/// Acquires the mutex guarding a segment's header.
-///
-/// An `IPC_PRIVATE` segment has no name and therefore no named mutex; it is also
-/// unreachable from any other process, so the only writers are this process's own
-/// threads and the state lock already excludes them from racing here.
-fn shm_lock(segment: &Segment) -> Result<Option<CrossProcessLock>, i32> {
-    if segment.key == IPC_PRIVATE {
-        return CrossProcessLock::acquire(Some(&format!(
-            "Local\\kinakaze.shm.private.{}.{}",
-            segment.namespace, segment.private_lock
-        )))
-        .map(Some);
+fn collect_attachments(header: &mut ShmHeader) {
+    for owner in &mut header.attachments {
+        if owner.count != 0 && !process_is_alive(owner.pid, owner.started) {
+            *owner = AttachmentOwner::default();
+        }
     }
-    CrossProcessLock::acquire(Some(&object_name_in(
-        "shmlock",
-        segment.key,
+    header.nattch = header
+        .attachments
+        .iter()
+        .map(|owner| u64::from(owner.count))
+        .sum();
+}
+
+fn attachment_change(segment: &Segment, attaching: bool) -> Result<(), i32> {
+    let _lock = shm_lock(segment)?;
+    let header = unsafe { &mut *(segment.control as *mut ShmHeader) };
+    collect_attachments(header);
+    let (pid, started) = (own_host_pid(), own_start_time());
+    let index = header
+        .attachments
+        .iter()
+        .position(|owner| owner.pid == pid && owner.started == started)
+        .or_else(|| {
+            attaching
+                .then(|| header.attachments.iter().position(|owner| owner.count == 0))
+                .flatten()
+        });
+    if let Some(index) = index {
+        let owner = &mut header.attachments[index];
+        if attaching {
+            owner.count = owner.count.checked_add(1).ok_or(ENOMEM)?;
+            owner.pid = pid;
+            owner.started = started;
+            header.nattch += 1;
+            header.atime = now_seconds();
+        } else {
+            owner.count = owner.count.saturating_sub(1);
+            header.nattch = header.nattch.saturating_sub(1);
+            header.dtime = now_seconds();
+        }
+        header.lpid = own_pid();
+    } else if attaching {
+        return Err(ENOSPC);
+    }
+    Ok(())
+}
+
+/// Every attachment, including IPC_PRIVATE, uses its immutable ID's mutex.
+fn shm_lock(segment: &Segment) -> Result<Option<CrossProcessLock>, i32> {
+    let name = registry::name(
+        IpcKind::Memory,
         segment.namespace,
-    )))
-    .map(Some)
+        segment.private_lock as i32,
+    );
+    CrossProcessLock::acquire(Some(&format!("{name}.lock"))).map(Some)
 }
 
 /// `shmdt`: detaches a segment previously returned by `shmat`.
@@ -1240,15 +1185,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_shmdt(shmaddr: *const c_void) -> c_in
     }
     kinakaze_runtime::unregister_fork_mapping(shmaddr as usize);
 
-    // The segment record is gone if IPC_RMID removed it, in which case there is
-    // no header left to update; the detach itself still succeeded.
-    if let Ok(_lock) = shm_lock(&segment) {
-        // SAFETY: the control view is live while the Arc is held.
-        let header = unsafe { &mut *(segment.control as *mut ShmHeader) };
-        header.nattch = header.nattch.saturating_sub(1);
-        header.dtime = now_seconds();
-        header.lpid = own_pid();
-    }
+    let _ = attachment_change(&segment, false);
     0
 }
 
@@ -1293,7 +1230,8 @@ pub unsafe extern "sysv64" fn kinakaze_abi_shmctl(
                 return fail(EIO);
             };
             // SAFETY: the control view is live while the Arc is held.
-            let header = unsafe { &*(segment.control as *const ShmHeader) };
+            let header = unsafe { &mut *(segment.control as *mut ShmHeader) };
+            collect_attachments(header);
             let stat = ShmidDs {
                 shm_perm: IpcPerm {
                     key: header.key,
@@ -1335,9 +1273,12 @@ pub unsafe extern "sysv64" fn kinakaze_abi_shmctl(
             };
             // SAFETY: the control view is live while the Arc is held.
             let header = unsafe { &mut *(segment.control as *mut ShmHeader) };
-            header.removed = 1;
+            header.removed.store(1, Ordering::Release);
             header.ctime = now_seconds();
             drop(_lock);
+            // A lost reply is safe: init's collector also observes the removal bit.
+            let _ = kinakaze_vfs::namespaces::remove_ipc(IpcKind::Memory, segment.namespace, id);
+            registry::forget(IpcKind::Memory, id);
 
             let Ok(mut state) = state().lock() else {
                 return fail(EIO);
@@ -1353,141 +1294,60 @@ pub unsafe extern "sysv64" fn kinakaze_abi_shmctl(
 // Semaphores.
 // ---------------------------------------------------------------------------
 
-/// `semget`: creates or opens a semaphore set of `nsems` semaphores.
-///
-/// The set is a section holding a [`SemHeader`], a named mutex serializing every
-/// operation on it, and a named event blocked waiters re-test on. All three names
-/// derive from the key, so two processes reach one set.
-///
-/// `nsems` is capped at [`SEMMSL`] because the shared header is a fixed size;
-/// Linux's own default limit is the same number, so a request this rejects would
-/// have been rejected by a stock Linux kernel too.
+/// Create or look up a namespace-owned semaphore set.
 #[unsafe(no_mangle)]
 pub extern "sysv64" fn kinakaze_abi_semget(key: Key, nsems: c_int, flags: c_int) -> c_int {
-    let creating = flags & IPC_CREAT != 0;
     if nsems < 0 || nsems as usize > SEMMSL {
         return fail(EINVAL);
     }
-    // Opening an existing set may pass 0 to mean "however many there are"; a
-    // create must say how many it wants.
-    if nsems == 0 && creating {
-        return fail(EINVAL);
-    }
-    let nsems = nsems as usize;
-
-    let name = (key != IPC_PRIVATE).then(|| object_name("sem", key));
-    let _lock = match name.as_deref() {
-        Some(_) => match CrossProcessLock::acquire(Some(&object_name("semlock", key))) {
-            Ok(lock) => Some(lock),
-            Err(error) => return fail(error),
-        },
-        None => None,
-    };
-
-    let (mapping, existed) = if creating || key == IPC_PRIVATE {
-        // Sized to the whole control granule rather than to the header, because
-        // that is what `map_control` maps; a section of exactly `SemHeader` bytes
-        // rounds up only to a page and the larger view would be refused.
-        match create_section(name.as_deref(), control_bytes() as u64) {
-            Ok(pair) => pair,
-            Err(error) => return fail(error),
+    registry::get(IpcKind::Semaphore, key, flags, |id, fresh| {
+        if fresh && nsems == 0 {
+            return Err(EINVAL);
         }
-    } else {
-        let wide_name = wide(name.as_deref().unwrap_or_default());
-        // SAFETY: `wide_name` is a null-terminated wide string.
-        let mapping =
-            unsafe { OpenFileMappingW(FILE_MAP_READ | FILE_MAP_WRITE, 0, wide_name.as_ptr()) };
-        if mapping.is_null() {
-            // SAFETY: GetLastError has no preconditions.
-            let error = unsafe { GetLastError() };
-            return fail(if error == ERROR_FILE_NOT_FOUND {
-                ENOENT
-            } else {
-                errno_from_win32(error)
-            });
-        }
-        (mapping, true)
-    };
-
-    if existed && creating && flags & IPC_EXCL != 0 {
-        // SAFETY: owned here and not stored.
-        unsafe { CloseHandle(mapping) };
-        return fail(EEXIST);
-    }
-
-    let control = match map_control(mapping) {
-        Ok(view) => view,
-        Err(error) => {
-            // SAFETY: owned here and not stored.
-            unsafe { CloseHandle(mapping) };
-            return fail(error);
-        }
-    };
-
-    let count = match initialize_sem_header(control, existed, key, nsems, flags) {
-        Ok(count) => count,
-        Err(error) => {
-            release_section(mapping, control);
-            return fail(error);
-        }
-    };
-
-    match open_set_objects(key) {
-        Ok((lock, wake)) => {
-            match publish_set(mapping, control, lock, wake, count) {
-                Ok(id) => id,
+        let name = registry::name(IpcKind::Semaphore, ipc_namespace(), id);
+        let _guard = CrossProcessLock::acquire(Some(&format!("{name}.lock")))?;
+        let (mapping, control) = if fresh {
+            let (mapping, _) = create_section(Some(&name), control_bytes() as u64)?;
+            let control = match map_control(mapping) {
+                Ok(control) => control,
                 Err(error) => {
-                    // SAFETY: neither handle has been published.
-                    unsafe {
-                        CloseHandle(lock);
-                        CloseHandle(wake);
-                    }
-                    release_section(mapping, control);
-                    fail(error)
+                    unsafe { CloseHandle(mapping) };
+                    return Err(error);
                 }
-            }
-        }
-        Err(error) => {
+            };
+            (mapping, control)
+        } else {
+            registry::open(IpcKind::Semaphore, id)?
+        };
+        let result =
+            initialize_sem_header(control, !fresh, key, nsems as usize, flags).and_then(|count| {
+                if fresh {
+                    unsafe {
+                        (*control.cast::<SemHeader>()).id = id as u32;
+                    }
+                }
+                publish_set(id, mapping, control, count)
+            });
+        if result.is_err() {
             release_section(mapping, control);
-            fail(error)
         }
-    }
+        result
+    })
+    .unwrap_or_else(fail)
 }
 
-/// Opens the mutex and event a set needs, both named from the key.
-///
-/// An `IPC_PRIVATE` set gets unnamed objects: no other process can reach the set,
-/// so nothing needs to find them by name, and the mutex still serializes this
-/// process's own threads.
-fn open_set_objects(key: Key) -> Result<(*mut c_void, *mut c_void), i32> {
-    let (lock_name, wake_name) = if key == IPC_PRIVATE {
-        (None, None)
-    } else {
-        (
-            Some(wide(&object_name("semop", key))),
-            Some(wide(&object_name("semwake", key))),
-        )
-    };
-    let lock_ptr = lock_name
-        .as_ref()
-        .map_or(std::ptr::null(), |units| units.as_ptr());
-    let wake_ptr = wake_name
-        .as_ref()
-        .map_or(std::ptr::null(), |units| units.as_ptr());
-
-    // SAFETY: null attributes request the default descriptor and each name is
-    // null or a null-terminated wide string.
-    let lock = unsafe { CreateMutexW(std::ptr::null(), 0, lock_ptr) };
+/// Synchronization objects follow the ID, never a reusable guest key.
+fn open_set_objects(id: i32) -> Result<(*mut c_void, *mut c_void), i32> {
+    let name = registry::name(IpcKind::Semaphore, ipc_namespace(), id);
+    let lock_name = wide(&format!("{name}.lock"));
+    let wake_name = wide(&format!("{name}.wake"));
+    let lock = unsafe { CreateMutexW(std::ptr::null(), 0, lock_name.as_ptr()) };
     if lock.is_null() {
         return Err(last_errno());
     }
-    // Auto-reset and initially clear: each completed operation releases exactly
-    // one waiter, which then re-tests its own condition under the mutex.
-    // SAFETY: as above.
-    let wake = unsafe { CreateEventW(std::ptr::null(), 0, 0, wake_ptr) };
+    let wake = unsafe { CreateEventW(std::ptr::null(), 0, 0, wake_name.as_ptr()) };
     if wake.is_null() {
         let error = last_errno();
-        // SAFETY: created just above and not stored.
         unsafe { CloseHandle(lock) };
         return Err(error);
     }
@@ -1514,7 +1374,7 @@ fn initialize_sem_header(
         header.nsems = nsems as u32;
         header.key = key;
         header.mode = (flags & 0o777) as u32;
-        header.removed = 0;
+        header.removed.store(0, Ordering::Release);
         // A new set's semaphores are all zero on Linux, which the zero-filled
         // section already provides; they are written anyway because a
         // re-initialized section may hold a dead creator's values.
@@ -1525,12 +1385,12 @@ fn initialize_sem_header(
             sem_num: 0,
             started: 0,
             adjust: 0,
-            pad: 0,
+            managed: 0,
         }; UNDO_SLOTS];
         return Ok(nsems);
     }
 
-    if header.removed != 0 {
+    if header.removed.load(Ordering::Acquire) != 0 {
         return Err(EIDRM);
     }
     let existing = header.nsems as usize;
@@ -1544,15 +1404,15 @@ fn initialize_sem_header(
 
 /// Records a set in the state table and returns its id.
 fn publish_set(
+    id: c_int,
     mapping: *mut c_void,
     control: *mut c_void,
-    lock: *mut c_void,
-    wake: *mut c_void,
     nsems: usize,
 ) -> Result<c_int, i32> {
+    kinakaze_vfs::namespaces::retain_ipc(IpcKind::Semaphore, id)?;
     let mut state = state().lock().map_err(|_| EIO)?;
-    let id = state.next_id;
-    state.next_id += 1;
+    let (lock, wake) = open_set_objects(id)?;
+    state.next_id = state.next_id.max(id.saturating_add(1));
     state.sets.insert(
         id,
         Arc::new(SemSet {
@@ -1567,21 +1427,34 @@ fn publish_set(
     Ok(id)
 }
 
-/// Looks up a live set, distinguishing "removed" from "never existed".
+/// A fresh worker can use a semaphore ID without first calling semget.
 fn find_set(id: c_int) -> Result<Arc<SemSet>, i32> {
-    let state = state().lock().map_err(|_| EIO)?;
-    if let Some(set) = state
+    {
+        let state = state().lock().map_err(|_| EIO)?;
+        if let Some(set) = state
+            .sets
+            .get(&id)
+            .filter(|s| s.namespace == ipc_namespace())
+        {
+            return Ok(set.clone());
+        }
+        if state.removed.contains(&id) {
+            return Err(EIDRM);
+        }
+    }
+    let (mapping, control) = registry::open(IpcKind::Semaphore, id)?;
+    let count = unsafe { (*control.cast::<SemHeader>()).nsems as usize };
+    if let Err(error) = publish_set(id, mapping, control, count) {
+        release_section(mapping, control);
+        return Err(error);
+    }
+    state()
+        .lock()
+        .map_err(|_| EIO)?
         .sets
         .get(&id)
-        .filter(|s| s.namespace == ipc_namespace())
-    {
-        return Ok(Arc::clone(set));
-    }
-    Err(if state.removed.contains(&id) {
-        EIDRM
-    } else {
-        EINVAL
-    })
+        .cloned()
+        .ok_or(EIO)
 }
 /// This process's creation time, which pins its identity against id reuse.
 fn own_start_time() -> u64 {
@@ -1616,13 +1489,17 @@ fn own_start_time() -> u64 {
 /// — the conservative direction, since a missed reclaim leaks a count whereas a
 /// wrong reclaim corrupts a live process's semaphore.
 fn process_is_alive(pid: u32, started: u64) -> bool {
-    // SAFETY: the access mask is the documented minimum for GetProcessTimes and
-    // the id is only read.
-    let process = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid) };
+    // A retained Windows process handle can outlive execution. Check its wait
+    // state as well as its birth time before keeping attachments or undo debts.
+    let process = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE, 0, pid) };
     if process.is_null() {
         // The process is gone, or is one this token may not open at all. The
         // latter cannot happen for a process that shares our session and our
         // user, which is the only kind that can reach a `Local\` object.
+        return false;
+    }
+    if unsafe { WaitForSingleObject(process, 0) } == WAIT_OBJECT_0 {
+        unsafe { CloseHandle(process) };
         return false;
     }
     let mut creation = FileTime::default();
@@ -1651,6 +1528,26 @@ fn process_is_alive(pid: u32, started: u64) -> bool {
     started == 0 || creation.ticks() == started
 }
 
+fn undo_owner() -> Result<(u32, u64, u32), i32> {
+    if kinakaze_runtime::authority::get().is_some() {
+        let entry = kinakaze_runtime::job::lookup_host(own_host_pid()).ok_or(EIO)?;
+        Ok((entry.namespace_pid, entry.start_ticks, 1))
+    } else {
+        Ok((own_host_pid(), own_start_time(), 0))
+    }
+}
+
+fn undo_owner_alive(entry: UndoEntry) -> bool {
+    if entry.managed == 0 {
+        return process_is_alive(entry.pid, entry.started);
+    }
+    kinakaze_runtime::job::lookup(entry.pid).is_some_and(|process| {
+        process.start_ticks == entry.started
+            && process.flags & kinakaze_runtime::job::FLAG_ZOMBIE == 0
+            && process_is_alive(process.pid, process.token)
+    })
+}
+
 /// Reverses and frees the undo entries of every process that has died.
 ///
 /// This is what makes `SEM_UNDO` crash-safe without an exit hook. Linux reverses
@@ -1674,7 +1571,7 @@ unsafe fn reclaim_dead_undo(header: &mut SemHeader) -> bool {
         if entry.pid == 0 {
             continue;
         }
-        if process_is_alive(entry.pid, entry.started) {
+        if undo_owner_alive(entry) {
             continue;
         }
         let slot = entry.sem_num as usize;
@@ -1700,14 +1597,14 @@ pub(crate) fn unshare_undo() -> Result<(), i32> {
         .values()
         .cloned()
         .collect();
-    let pid = own_host_pid();
+    let owner = undo_owner()?;
     for set in sets {
         let _guard = CrossProcessLock::acquire_handle(set.lock as *mut c_void)?;
         let header = unsafe { &mut *(set.control as *mut SemHeader) };
         let mut changed = false;
         for index in 0..UNDO_SLOTS {
             let entry = header.undo[index];
-            if entry.pid != pid {
+            if (entry.pid, entry.started, entry.managed) != owner {
                 continue;
             }
             if (entry.sem_num as usize) < SEMMSL {
@@ -1732,15 +1629,11 @@ pub(crate) fn unshare_undo() -> Result<(), i32> {
 /// required: an operation applied without its undo recorded is precisely the leak
 /// `SEM_UNDO` exists to prevent.
 fn record_undo(header: &mut SemHeader, sem_num: u32, delta: i32) -> Result<(), i32> {
-    // SEM_UNDO is internal ownership state: Windows liveness checks must use
-    // the real pid, never the namespace pid exposed through `GETPID`.
-    let pid = own_host_pid();
-    let started = own_start_time();
-    if let Some(entry) = header
-        .undo
-        .iter_mut()
-        .find(|entry| entry.pid == pid && entry.sem_num == sem_num)
-    {
+    let (pid, started, managed) = undo_owner()?;
+    if let Some(entry) = header.undo.iter_mut().find(|entry| {
+        (entry.pid, entry.started, entry.managed) == (pid, started, managed)
+            && entry.sem_num == sem_num
+    }) {
         entry.adjust = entry.adjust.saturating_add(delta);
         // An adjustment that cancels out is dropped, so a lock taken and released
         // repeatedly does not hold a slot forever.
@@ -1762,7 +1655,7 @@ fn record_undo(header: &mut SemHeader, sem_num: u32, delta: i32) -> Result<(), i
         sem_num,
         started,
         adjust: delta,
-        pad: 0,
+        managed,
     };
     Ok(())
 }
@@ -1923,7 +1816,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_semop(
         // SAFETY: the control view is live while the Arc is held, and the set's
         // mutex is held for the whole of this block.
         let header = unsafe { &mut *(set.control as *mut SemHeader) };
-        if header.removed != 0 {
+        if header.removed.load(Ordering::Acquire) != 0 {
             return fail(EIDRM);
         }
 
@@ -2040,8 +1933,11 @@ pub unsafe extern "sysv64" fn kinakaze_abi_semctl(
     // Every command but IPC_RMID needs the set to still be there. IPC_RMID on an
     // already-removed set is EIDRM too, since the id was withdrawn from this
     // process's table when it happened.
-    if header.removed != 0 {
+    if header.removed.load(Ordering::Acquire) != 0 {
         return fail(EIDRM);
+    }
+    if unsafe { reclaim_dead_undo(header) } {
+        unsafe { SetEvent(set.wake as *mut c_void) };
     }
     let slot = sem_num as usize;
 
@@ -2133,9 +2029,11 @@ pub unsafe extern "sysv64" fn kinakaze_abi_semctl(
             0
         }
         IPC_RMID => {
-            header.removed = 1;
+            header.removed.store(1, Ordering::Release);
             header.ctime = now_seconds();
             drop(guard);
+            let _ = kinakaze_vfs::namespaces::remove_ipc(IpcKind::Semaphore, set.namespace, id);
+            registry::forget(IpcKind::Semaphore, id);
             // Waiters must be released so they can see the removal and report
             // EIDRM rather than sleeping on a set that no longer exists.
             // SAFETY: the event handle is live while the Arc is held.
@@ -2244,56 +2142,13 @@ mod tests {
     }
 
     #[test]
-    fn the_key_to_name_mapping_is_deterministic_and_injective() {
-        // Two processes must derive the same name from the same key, or they get
-        // different segments and share nothing.
-        assert_eq!(object_name("shm", 42), object_name("shm", 42));
-        assert_eq!(
-            object_name("shm", 42),
-            format!(
-                "Local\\kinakaze.shm.ns{}.{}.0000002a",
-                kinakaze_runtime::authority::domain_id(),
-                ipc_namespace()
-            )
-        );
-
-        // Distinct keys must give distinct names, including across the sign
-        // boundary: -1 and 0xffffffff are the same bit pattern and must not become
-        // two different names, while -1 and 1 must not become the same one.
-        assert_ne!(object_name("shm", 42), object_name("shm", 43));
-        assert_ne!(object_name("shm", -1), object_name("shm", 1));
-        assert_eq!(
-            object_name("shm", -1),
-            format!(
-                "Local\\kinakaze.shm.ns{}.{}.ffffffff",
-                kinakaze_runtime::authority::domain_id(),
-                ipc_namespace()
-            )
-        );
-        // The name is fixed-width, so no two keys can produce one name by one's
-        // digits running into the next field.
-        for name in [
-            object_name("shm", 0),
-            object_name("shm", i32::MIN),
-            object_name("shm", i32::MAX),
-        ] {
-            assert_eq!(
-                name.len(),
-                format!(
-                    "Local\\kinakaze.shm.ns{}.{}.",
-                    kinakaze_runtime::authority::domain_id(),
-                    ipc_namespace()
-                )
-                .len()
-                    + 8
-            );
-        }
-
-        // The kinds are separate namespaces, so a segment and a set may share a
-        // key without colliding.
-        assert_ne!(object_name("shm", 7), object_name("sem", 7));
-        // Every name is in the per-session namespace the module header documents.
-        assert!(object_name("shm", 7).starts_with("Local\\"));
+    fn object_ids_are_scoped_by_kind_namespace_and_domain() {
+        let name = registry::name(IpcKind::Memory, 1, 42);
+        assert_eq!(name, registry::name(IpcKind::Memory, 1, 42));
+        assert_ne!(name, registry::name(IpcKind::Memory, 1, 43));
+        assert_ne!(name, registry::name(IpcKind::Memory, 2, 42));
+        assert_ne!(name, registry::name(IpcKind::Semaphore, 1, 42));
+        assert!(name.starts_with("Local\\"));
     }
 
     #[test]
@@ -2356,9 +2211,10 @@ mod tests {
         // Without IPC_EXCL the same key opens the existing segment instead.
         let opened = kinakaze_abi_shmget(key, 4096, IPC_CREAT | 0o600);
         assert!(opened > 0);
-        // A different id for the same segment: ids are process-local indices, as
-        // the module header states.
-        assert_ne!(opened, first);
+        assert_eq!(
+            opened, first,
+            "a live key must return the same namespace ID"
+        );
 
         // SAFETY: IPC_RMID reads no buffer. Both ids must be removed, since each
         // holds its own handle and the section outlives either one alone.
@@ -2369,7 +2225,7 @@ mod tests {
             );
             assert_eq!(
                 kinakaze_abi_shmctl(first, IPC_RMID, std::ptr::null_mut()),
-                0
+                -1
             );
         }
     }
@@ -2877,12 +2733,27 @@ mod tests {
             .expect("failed to spawn a child process");
         let pid = child.id();
         child.wait().expect("the child should be reapable");
-        // The id may have been recycled between the wait and this call, which the
-        // creation-time check turns into "not the process we meant" — the same
-        // answer for this test's purpose. Passing 0 as the start time is the only
-        // form that could be fooled, so a real recorded time is used instead.
+        use std::os::windows::io::AsRawHandle;
+        let mut creation = FileTime::default();
+        let mut exit = FileTime::default();
+        let mut kernel = FileTime::default();
+        let mut user = FileTime::default();
+        assert_ne!(
+            unsafe {
+                GetProcessTimes(
+                    child.as_raw_handle(),
+                    &raw mut creation,
+                    &raw mut exit,
+                    &raw mut kernel,
+                    &raw mut user,
+                )
+            },
+            0
+        );
+        // Keep Child's native handle open: the original PID and birth time are
+        // still queryable even though execution has ended.
         assert!(
-            !process_is_alive(pid, own_start_time()),
+            !process_is_alive(pid, creation.ticks()),
             "an exited process must not look alive"
         );
     }

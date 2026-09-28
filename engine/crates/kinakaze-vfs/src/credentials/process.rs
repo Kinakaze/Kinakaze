@@ -13,6 +13,7 @@ fn store() -> Result<Arc<Store>, i32> {
         return Ok(store.clone());
     }
     let opened = Arc::new(Store::user_object(u64::MAX - 44, true)?);
+    opened.retain_kernel(false, Vec::new())?;
     let _ = STORE.set(opened);
     Ok(STORE.get().unwrap().clone())
 }

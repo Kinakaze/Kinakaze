@@ -71,7 +71,7 @@ def main():
                 environment['KINAKAZE_LOADER_PROFILE'] = str(profile)
                 environment['KINAKAZE_STARTUP_PROFILE'] = str(profile)
             start = time.perf_counter_ns()
-            child = SessionProcess([str(directory / 'worker.exe'), 'run', '--root', str(args.root.resolve()),
+            child = SessionProcess([str(directory / 'worker.exe'), 'oneshot', '--root', str(args.root.resolve()),
                                     '--dist', str(directory), '--', *command],
                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=environment)
             status = 'passed'

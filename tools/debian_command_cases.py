@@ -879,12 +879,12 @@ def cases():
     )
     add(
         "systemd-tmpfiles",
-        '--create --root="$PWD/jail" tmpfiles.conf; test -d jail/tmp/audit-created',
+        '--create --root="$PWD/jail" audit.conf; test -d jail/tmp/audit-created',
         "create directory from isolated tmpfiles rule",
     )
     add(
         "systemd-sysusers",
-        '--root="$PWD/jail" sysusers.conf; grep -q auditdaemon jail/etc/passwd',
+        '--root="$PWD/jail" audit.conf; grep -q auditdaemon jail/etc/passwd',
         "create account from isolated sysusers rule",
     )
     add(
@@ -1359,3 +1359,7 @@ def prepare(root: Path, case):
             "login.defs": "UID_MIN 1000\nUID_MAX 60000\nGID_MIN 1000\nGID_MAX 60000\n",
         }.items():
             (root / "jail/etc" / name).write_text(text, encoding="utf-8", newline="\n")
+        for directory, fixture in [("tmpfiles.d", "tmpfiles.conf"), ("sysusers.d", "sysusers.conf")]:
+            target = root / "jail/usr/lib" / directory / "audit.conf"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(fixtures[fixture], encoding="utf-8", newline="\n")

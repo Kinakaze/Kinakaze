@@ -1,15 +1,12 @@
 //! Directory streams: `opendir`, `readdir`, `closedir`.
 //!
-//! A `DIR` holds a snapshot taken at `opendir` time. POSIX leaves the visibility
-//! of concurrent changes unspecified, and a snapshot is both the simplest honest
-//! choice and what Windows directory enumeration naturally provides.
+//! A `DIR` buffers getdents64 records. Kernel cursors live in the VFS open
+//! description; the stream keeps only its unread buffer and telldir cookie.
 
 use core::ffi::{CStr, c_char, c_int};
 use core::ptr;
-use std::collections::HashMap;
-use std::sync::{Mutex, OnceLock};
 
-use kinakaze_vfs::fs::{self, DirectoryEntry};
+use kinakaze_vfs::fs;
 
 /// `d_type` values.
 pub const DT_UNKNOWN: u8 = 0;
@@ -37,10 +34,10 @@ pub struct Dirent {
 /// An open directory stream.
 pub struct Dir {
     pub fd: c_int,
-    entries: Vec<DirectoryEntry>,
-    untyped_native: bool,
-    overlay_records: Option<Vec<kinakaze_vfs::mount::overlay::DirectoryRecord>>,
-    position: usize,
+    buffer: Vec<u8>,
+    next: usize,
+    filled: usize,
+    position: i64,
     /// Storage for the entry returned by the most recent `readdir`.
     ///
     /// `readdir` returns a pointer that stays valid until the next call on the
@@ -86,48 +83,27 @@ pub unsafe extern "sysv64" fn kinakaze_abi_opendir(path: *const c_char) -> *mut 
     }
 }
 
-fn directory_snapshot(fd: c_int) -> Result<(Vec<DirectoryEntry>, bool), i32> {
-    if let Some(names) = fs::read_directory_names_fd(fd)? {
-        Ok((
-            names
-                .into_iter()
-                .map(|name| DirectoryEntry {
-                    is_directory: name == "." || name == "..",
-                    is_symlink: false,
-                    name,
-                })
-                .collect(),
-            true,
-        ))
-    } else {
-        fs::read_directory_fd(fd).map(|entries| (entries, false))
-    }
-}
-
 /// Adopt the caller's descriptor only on success; closedir owns exactly this fd.
 pub(crate) fn from_fd(fd: c_int) -> Result<*mut Dir, i32> {
-    let overlay_records = kinakaze_vfs::mount::overlay::directory_records(fd)?;
-    let (entries, untyped_native) = if let Some(records) = &overlay_records {
-        (
-            records
-                .iter()
-                .map(|r| DirectoryEntry {
-                    name: r.name.clone(),
-                    is_directory: r.kind == DT_DIR,
-                    is_symlink: r.kind == DT_LNK,
-                })
-                .collect(),
-            false,
-        )
-    } else {
-        directory_snapshot(fd)?
-    };
+    let entry = kinakaze_vfs::get(fd)?;
+    if entry.flags.contains(kinakaze_vfs::FdFlags::PATH_ONLY) {
+        return Err(kinakaze_vfs::EBADF);
+    }
+    if !matches!(
+        entry.kind,
+        kinakaze_vfs::FdKind::Directory
+            | kinakaze_vfs::FdKind::SyntheticDirectory
+            | kinakaze_vfs::FdKind::TmpfsDirectory
+    ) {
+        return Err(kinakaze_vfs::ENOTDIR);
+    }
+    let position = fs::lseek(fd, 0, fs::SEEK_CUR)? as i64;
     Ok(Box::into_raw(Box::new(Dir {
         fd,
-        entries,
-        untyped_native,
-        overlay_records,
-        position: 0,
+        buffer: vec![0; 32768],
+        next: 0,
+        filled: 0,
+        position,
         current: Dirent {
             d_ino: 0,
             d_off: 0,
@@ -157,30 +133,44 @@ pub unsafe extern "sysv64" fn kinakaze_abi_readdir(directory: *mut Dir) -> *mut 
     }
     // SAFETY: the caller guarantees a live stream from `opendir`.
     let directory = unsafe { &mut *directory };
-    let Some(entry) = directory.entries.get(directory.position) else {
-        // End of stream is not an error, so errno is left untouched.
-        return ptr::null_mut();
-    };
-    directory.position += 1;
-
-    let bytes = entry.name.as_bytes();
-    let length = bytes.len().min(NAME_MAX);
+    if directory.next == directory.filled {
+        match crate::fs::restart_metadata(|| {
+            fs::read_directory_bytes(directory.fd, &mut directory.buffer, true)
+        }) {
+            Ok(0) => return ptr::null_mut(),
+            Ok(length) => {
+                directory.filled = length;
+                directory.next = 0;
+            }
+            Err(error) => {
+                crate::set_errno(error);
+                return ptr::null_mut();
+            }
+        }
+    }
+    let record = &directory.buffer[directory.next..directory.filled];
+    let length = u16::from_ne_bytes(record[16..18].try_into().unwrap()) as usize;
+    let name = &record[19..length];
+    let name_length = name
+        .iter()
+        .position(|byte| *byte == 0)
+        .unwrap_or(name.len())
+        .min(NAME_MAX);
     directory.current.d_name = [0; 256];
-    for (slot, byte) in directory.current.d_name.iter_mut().zip(&bytes[..length]) {
+    for (slot, byte) in directory
+        .current
+        .d_name
+        .iter_mut()
+        .zip(&name[..name_length])
+    {
         *slot = *byte as c_char;
     }
-    directory.current.d_type = dirent_type(entry, directory.untyped_native);
-    // d_off is the offset of the *next* entry, which is what a caller uses to
-    // resume with seekdir.
-    directory.current.d_off = directory.position as i64;
-    // The host inode is not available from a plain listing; a stable synthetic
-    // value keeps callers that only test for non-zero working.
-    directory.current.d_ino = directory.position as u64;
-    if let Some(records) = &directory.overlay_records {
-        let record = &records[directory.position - 1];
-        directory.current.d_ino = record.inode;
-        directory.current.d_type = record.kind;
-    }
+    directory.current.d_type = record[18];
+    directory.current.d_reclen = length as u16;
+    directory.current.d_off = i64::from_ne_bytes(record[8..16].try_into().unwrap());
+    directory.current.d_ino = u64::from_ne_bytes(record[..8].try_into().unwrap());
+    directory.position = directory.current.d_off;
+    directory.next += length;
     &raw mut directory.current
 }
 
@@ -267,24 +257,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_rewinddir(directory: *mut Dir) {
     }
     // SAFETY: the caller guarantees a live stream.
     let directory = unsafe { &mut *directory };
-    if directory.overlay_records.is_some() {
-        match kinakaze_vfs::mount::overlay::directory_records(directory.fd) {
-            Ok(Some(records)) => {
-                directory.entries = records
-                    .iter()
-                    .map(|r| DirectoryEntry {
-                        name: r.name.clone(),
-                        is_directory: r.kind == DT_DIR,
-                        is_symlink: r.kind == DT_LNK,
-                    })
-                    .collect();
-                directory.overlay_records = Some(records);
-            }
-            Err(error) => crate::set_errno(error),
-            _ => {}
-        }
-    }
-    directory.position = 0;
+    seek_stream(directory, 0);
 }
 
 /// `telldir`.
@@ -330,174 +303,35 @@ pub unsafe extern "sysv64" fn kinakaze_abi_seekdir(directory: *mut Dir, position
     }
     // SAFETY: the caller guarantees a live stream.
     let directory = unsafe { &mut *directory };
-    // Clamp rather than allow a position past the end, so the next readdir
-    // reports end of stream instead of indexing out of range.
-    directory.position = (position as usize).min(directory.entries.len());
+    seek_stream(directory, position);
 }
 
-struct RawDirectory {
-    generation: u32,
-    entries: Vec<DirectoryEntry>,
-    untyped_native: bool,
-    position: usize,
-}
-
-fn raw_directories() -> &'static Mutex<HashMap<c_int, RawDirectory>> {
-    static DIRECTORIES: OnceLock<Mutex<HashMap<c_int, RawDirectory>>> = OnceLock::new();
-    DIRECTORIES.get_or_init(|| Mutex::new(HashMap::new()))
-}
-
-fn dirent_type(entry: &DirectoryEntry, untyped_native: bool) -> u8 {
-    if entry.is_directory {
-        DT_DIR
-    } else if untyped_native {
-        // Linux permits DT_UNKNOWN; name-only users such as GDir avoid a stat
-        // per icon, and scandir users resolve types lazily with fstatat/lstat.
-        DT_UNKNOWN
-    } else if entry.is_symlink {
-        DT_LNK
-    } else {
-        DT_REG
+fn seek_stream(directory: &mut Dir, position: i64) {
+    match fs::lseek(directory.fd, position, fs::SEEK_SET) {
+        Ok(position) => {
+            directory.position = position as i64;
+            directory.next = 0;
+            directory.filled = 0;
+        }
+        Err(error) => crate::set_errno(error),
     }
 }
 
-/// Common implementation of the x86_64 `getdents` and `getdents64` kernel ABIs.
-///
-/// Directory snapshots are keyed by both descriptor and descriptor generation,
-/// so closing and reusing an fd cannot inherit the old directory's cursor.
+/// Common implementation of the x86_64 directory syscalls. Signal handlers
+/// run only after the VFS has unwound its description locks and temporary pins.
 unsafe fn getdents_impl(fd: c_int, buffer: *mut u8, count: usize, wide: bool) -> isize {
-    // Native enumeration can retire pending I/O on a signal. Unwind the
-    // directory snapshot lock before delivering handlers, and honor SA_RESTART
-    // just like the other metadata syscalls. No cursor advances on failure.
-    match crate::fs::restart_metadata(|| {
-        let result = unsafe { getdents_once(fd, buffer, count, wide) };
-        if result < 0 {
-            Err(crate::kinakaze_errno())
-        } else {
-            Ok(result)
-        }
-    }) {
-        Ok(result) => result,
+    if buffer.is_null() {
+        crate::set_errno(kinakaze_vfs::EFAULT);
+        return -1;
+    }
+    let output = unsafe { core::slice::from_raw_parts_mut(buffer, count) };
+    match crate::fs::restart_metadata(|| fs::read_directory_bytes(fd, output, wide)) {
+        Ok(length) => length as isize,
         Err(error) => {
             crate::set_errno(error);
             -1
         }
     }
-}
-
-unsafe fn getdents_once(fd: c_int, buffer: *mut u8, count: usize, wide: bool) -> isize {
-    if buffer.is_null() {
-        crate::set_errno(kinakaze_vfs::EFAULT);
-        return -1;
-    }
-    if kinakaze_vfs::get(fd).is_ok_and(|e| e.kind == kinakaze_vfs::FdKind::TmpfsDirectory) {
-        return match kinakaze_vfs::tmpfs::read_directory_bytes(
-            fd,
-            unsafe { core::slice::from_raw_parts_mut(buffer, count) },
-            wide,
-        ) {
-            Ok(n) => n as isize,
-            Err(e) => {
-                crate::set_errno(e);
-                -1
-            }
-        };
-    }
-    match kinakaze_vfs::mount::overlay::read_directory_bytes(
-        fd,
-        unsafe { core::slice::from_raw_parts_mut(buffer, count) },
-        wide,
-    ) {
-        Ok(Some(length)) => return length as isize,
-        Ok(None) => {}
-        Err(error) => {
-            crate::set_errno(error);
-            return -1;
-        }
-    }
-    let descriptor = match kinakaze_vfs::get(fd) {
-        Ok(descriptor) => descriptor,
-        Err(error) => {
-            crate::set_errno(error);
-            return -1;
-        }
-    };
-    if !matches!(
-        descriptor.kind,
-        kinakaze_vfs::FdKind::Directory
-            | kinakaze_vfs::FdKind::SyntheticDirectory
-            | kinakaze_vfs::FdKind::TmpfsDirectory
-    ) {
-        crate::set_errno(kinakaze_vfs::ENOTDIR);
-        return -1;
-    }
-
-    let mut directories = match raw_directories().lock() {
-        Ok(directories) => directories,
-        Err(_) => {
-            crate::set_errno(kinakaze_vfs::EIO);
-            return -1;
-        }
-    };
-    let needs_snapshot = directories
-        .get(&fd)
-        .is_none_or(|directory| directory.generation != descriptor.generation);
-    if needs_snapshot {
-        let (entries, untyped_native) = match directory_snapshot(fd) {
-            Ok(entries) => entries,
-            Err(error) => {
-                crate::set_errno(error);
-                return -1;
-            }
-        };
-        directories.insert(
-            fd,
-            RawDirectory {
-                generation: descriptor.generation,
-                entries,
-                untyped_native,
-                position: 0,
-            },
-        );
-    }
-    let directory = directories.get_mut(&fd).expect("snapshot was inserted");
-    let output = unsafe { core::slice::from_raw_parts_mut(buffer, count) };
-    let mut written = 0usize;
-
-    while let Some(entry) = directory.entries.get(directory.position) {
-        let name = entry.name.as_bytes();
-        let unaligned = if wide {
-            19usize.saturating_add(name.len()).saturating_add(1)
-        } else {
-            18usize.saturating_add(name.len()).saturating_add(2)
-        };
-        let record_len = unaligned.saturating_add(7) & !7;
-        if record_len > u16::MAX as usize || written.saturating_add(record_len) > count {
-            if written == 0 {
-                crate::set_errno(kinakaze_vfs::EINVAL);
-                return -1;
-            }
-            break;
-        }
-
-        let record = &mut output[written..written + record_len];
-        record.fill(0);
-        let inode = (directory.position + 1) as u64;
-        let next = (directory.position + 1) as i64;
-        record[0..8].copy_from_slice(&inode.to_ne_bytes());
-        record[8..16].copy_from_slice(&next.to_ne_bytes());
-        record[16..18].copy_from_slice(&(record_len as u16).to_ne_bytes());
-        if wide {
-            record[18] = dirent_type(entry, directory.untyped_native);
-            record[19..19 + name.len()].copy_from_slice(name);
-        } else {
-            record[18..18 + name.len()].copy_from_slice(name);
-            record[record_len - 1] = dirent_type(entry, directory.untyped_native);
-        }
-        directory.position += 1;
-        written += record_len;
-    }
-    written as isize
 }
 
 /// Raw `getdents(2)` using the x86_64 variable-length `linux_dirent` layout.
@@ -523,6 +357,37 @@ pub unsafe extern "sysv64" fn kinakaze_abi_getdents64(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fdopendir_preserves_kernel_position_and_seek_discards_buffered_entries() {
+        let fd = fs::open("/proc/self/ns", fs::O_RDONLY | fs::O_DIRECTORY, 0).unwrap();
+        let mut first = [0u8; 24];
+        assert_eq!(
+            unsafe { kinakaze_abi_getdents64(fd, first.as_mut_ptr(), first.len()) },
+            24
+        );
+        assert_eq!(&first[19..21], b".\0");
+        let stream = from_fd(fd).unwrap();
+        unsafe {
+            let entry = kinakaze_abi_readdir(stream);
+            assert!(!entry.is_null());
+            assert_eq!(CStr::from_ptr((*entry).d_name.as_ptr()).to_bytes(), b"..");
+            let cookie = kinakaze_abi_telldir(stream);
+            let next = kinakaze_abi_readdir(stream);
+            assert!(!next.is_null());
+            let name = CStr::from_ptr((*next).d_name.as_ptr()).to_owned();
+            kinakaze_abi_seekdir(stream, cookie);
+            let next = kinakaze_abi_readdir(stream);
+            assert!(!next.is_null());
+            assert_eq!(CStr::from_ptr((*next).d_name.as_ptr()), name.as_c_str());
+            kinakaze_abi_rewinddir(stream);
+            let entry = kinakaze_abi_readdir(stream);
+            assert!(!entry.is_null());
+            assert_eq!(CStr::from_ptr((*entry).d_name.as_ptr()).to_bytes(), b".");
+            assert_eq!(kinakaze_abi_closedir(stream), 0);
+        }
+        assert!(matches!(kinakaze_vfs::get(fd), Err(kinakaze_vfs::EBADF)));
+    }
 
     #[test]
     fn raw_getdents64_packs_linux_records_and_tracks_the_cursor() {

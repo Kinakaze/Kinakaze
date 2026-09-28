@@ -131,6 +131,16 @@ fn loaded_linker() -> *mut Linker {
     unsafe { ACTIVE_LINKER.0.get().read() }
 }
 
+pub fn is_interpreter_image(bytes: &[u8]) -> bool {
+    if !bytes.starts_with(b"MZ") {
+        return false;
+    }
+    let _guard = dynamic_loader_lock();
+    let linker = loaded_linker();
+    // The active linker and its registry remain pinned under this lock.
+    !linker.is_null() && unsafe { (&*linker).registry.is_interpreter_image(bytes) }
+}
+
 /// Runs the main executable's constructor phase requested by modern libc.
 ///
 /// Dependency constructors have already run in the loader. This entry point

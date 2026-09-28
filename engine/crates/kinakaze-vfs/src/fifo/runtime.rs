@@ -345,6 +345,77 @@ pub fn duplicate_descriptor(source: FdEntry, newfd: i32, new_entry: FdEntry) -> 
     )
 }
 
+pub(crate) struct DuplicatePublication {
+    records: std::sync::MutexGuard<'static, HashMap<i32, Record>>,
+    target: i32,
+    copy: Option<Record>,
+    exclusions: Vec<crate::exec_inheritance::DescriptorInheritance>,
+}
+pub(crate) struct RetiredRecord {
+    _record: Record,
+}
+/// Caller holds the fd table. Prepare both the marker and inheritance changes
+/// before replacing anything; dropping an uncommitted publication rolls back.
+pub(crate) fn prepare_duplicate(
+    source: Option<FdEntry>,
+    target: i32,
+    previous: Option<FdEntry>,
+    next: FdEntry,
+) -> Result<DuplicatePublication, i32> {
+    let records = registry().records.lock().map_err(|_| EIO)?;
+    let copy = source
+        .map(|source| {
+            let record = records
+                .values()
+                .find(|record| same(record.entry, source))
+                .ok_or(EBADF)?;
+            Ok::<_, i32>(Record {
+                entry: next,
+                marker: Arc::new(duplicate(record.marker.0, true)?),
+                context: record.context.clone(),
+            })
+        })
+        .transpose()?;
+    let mut exclusions = Vec::new();
+    if let Some(previous) = previous.filter(|e| e.kind == FdKind::Fifo) {
+        let record = records
+            .get(&target)
+            .filter(|r| same(r.entry, previous))
+            .ok_or(EBADF)?;
+        exclusions.push(crate::exec_inheritance::DescriptorInheritance::exclude(
+            record.marker.0 as usize,
+        )?);
+        exclusions.push(crate::exec_inheritance::DescriptorInheritance::exclude(
+            previous.raw,
+        )?);
+    } else if let Some(record) = records.get(&target) {
+        exclusions.push(crate::exec_inheritance::DescriptorInheritance::exclude(
+            record.marker.0 as usize,
+        )?);
+    }
+    Ok(DuplicatePublication {
+        records,
+        target,
+        copy,
+        exclusions,
+    })
+}
+impl DuplicatePublication {
+    pub(crate) fn commit(mut self) -> Option<RetiredRecord> {
+        for exclusion in self.exclusions.drain(..) {
+            exclusion.commit();
+        }
+        let old = self
+            .records
+            .remove(&self.target)
+            .map(|record| RetiredRecord { _record: record });
+        if let Some(copy) = self.copy.take() {
+            self.records.insert(self.target, copy);
+        }
+        old
+    }
+}
+
 /// Called before descriptor detachment while the caller still owns fd-table
 /// write exclusion. A later fork must not inherit a marker absent from tag14.
 pub(crate) fn disable_inheritance_locked(entry: FdEntry) -> Result<(), i32> {

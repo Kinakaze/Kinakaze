@@ -25,10 +25,10 @@ use windows_sys::Win32::System::Threading::{
 use super::MountPoint;
 use crate::{EIO, ENOSPC, EOVERFLOW, errno_from_win32};
 
-const MAGIC: u64 = u64::from_le_bytes(*b"CYMNT003");
-const HEADER_SIZE: usize = 65536;
-const BANK_SIZE: usize = 32 * 1024 * 1024;
-const SECTION_SIZE: usize = HEADER_SIZE + BANK_SIZE * 2;
+use kinakaze_v2_protocol::kernel::{
+    BANK_SIZE, HEADER_SIZE, KernelCommand, MountPublication, ObjectKey, SECTION_SIZE,
+    STORE_MAGIC as MAGIC,
+};
 // Unix socket queue metadata is 80 bytes, or 176 with one ordinary credential.
 // Keep small observations on the stack; large namespace tables still use one Vec.
 const INLINE_SNAPSHOT_BYTES: usize = 192;
@@ -77,6 +77,19 @@ pub(super) fn install(store: Arc<Store>) -> Result<(), i32> {
 }
 static INITIAL: Mutex<Option<Arc<Store>>> = Mutex::new(None);
 
+/// Keep an existing object's native lifetime without mapping or reading its
+/// metadata. Admission checks must not register another observer in a catalog.
+pub(crate) fn pin_user_object(id: u64) -> Result<crate::fs::object::Object, i32> {
+    let name: Vec<_> = ObjectKey::Shared(id)
+        .name(kinakaze_runtime::authority::domain_id())
+        .encode_utf16()
+        .chain(Some(0))
+        .collect();
+    crate::fs::object::Object::owned(unsafe {
+        OpenFileMappingW(FILE_MAP_ALL_ACCESS, 0, name.as_ptr())
+    })
+}
+
 #[repr(C)]
 struct Header {
     magic: AtomicU64,
@@ -86,6 +99,7 @@ struct Header {
     namespace: u64,
     next_namespace: AtomicU64,
     owner: AtomicU64,
+    topology: AtomicU64,
 }
 
 struct Handle(HANDLE);
@@ -105,6 +119,7 @@ impl Drop for Handle {
 }
 
 pub(crate) struct Store {
+    object: bool,
     view: MEMORY_MAPPED_VIEW_ADDRESS,
     _section: Handle,
     mutex: Handle,
@@ -383,6 +398,12 @@ impl Store {
     // Readers can still copy either bank concurrently: keep atomic word stores
     // and their release ordering, including when replacement skipped a copy.
     fn publish(&self, _guard: &Guard<'_>, revision: u64, bytes: &[u8]) -> Result<u64, i32> {
+        let next = self.stage_bytes(revision, bytes)?;
+        self.header().publication.store(next, Ordering::SeqCst);
+        Ok(next)
+    }
+
+    fn stage_bytes(&self, revision: u64, bytes: &[u8]) -> Result<u64, i32> {
         let next = revision.checked_add(1).ok_or(EOVERFLOW)?;
         let bank = self.bank(next);
         self.commit_pages(bank, 8 + bytes.len().next_multiple_of(8))?;
@@ -393,7 +414,6 @@ impl Store {
                 .store(u64::from_le_bytes(word), Ordering::Release);
         }
         unsafe { &*bank.cast::<AtomicU64>() }.store(bytes.len() as u64, Ordering::Release);
-        self.header().publication.store(next, Ordering::SeqCst);
         Ok(next)
     }
 
@@ -436,6 +456,7 @@ impl Store {
             return Err(errno_from_win32(unsafe { GetLastError() }));
         }
         let store = Self {
+            object,
             view,
             _section: section,
             mutex,
@@ -466,6 +487,11 @@ impl Store {
         {
             return Err(EIO);
         }
+        // Namespace sections are retained before the caller can publish their
+        // identity. Other shared objects opt in at their semantic owner.
+        if !object && create && kinakaze_runtime::authority::get().is_some() {
+            store.retain_kernel(false, Vec::new())?;
+        }
         Ok(store)
     }
 
@@ -475,6 +501,39 @@ impl Store {
 
     pub(crate) fn id(&self) -> u64 {
         self.header().namespace
+    }
+    pub(crate) fn kernel_key(&self) -> ObjectKey {
+        if self.object {
+            ObjectKey::Shared(self.id())
+        } else {
+            ObjectKey::Mount(self.id())
+        }
+    }
+    pub(crate) fn retain_kernel(
+        &self,
+        tmpfs: bool,
+        dependencies: Vec<ObjectKey>,
+    ) -> Result<(), i32> {
+        if kinakaze_runtime::authority::get().is_none() {
+            return Ok(());
+        }
+        kinakaze_runtime::authority::kernel(KernelCommand::Retain {
+            object: self.kernel_key(),
+            tmpfs,
+            dependencies,
+        })
+    }
+    pub(crate) fn topology_revision(&self) -> u64 {
+        self.header().topology.load(Ordering::SeqCst)
+    }
+    pub(crate) fn lease_kernel(&self, owner: ObjectKey) -> Result<(), i32> {
+        if kinakaze_runtime::authority::get().is_none() {
+            return Ok(());
+        }
+        kinakaze_runtime::authority::kernel(KernelCommand::Lease {
+            object: self.kernel_key(),
+            owner,
+        })
     }
     pub(crate) fn pin(&self) -> Result<crate::fs::object::Object, i32> {
         crate::fs::object::Object::duplicate(self._section.0)
@@ -546,6 +605,9 @@ pub(crate) fn object_entry(entry: crate::FdEntry) -> Result<Store, i32> {
     if !matches!(
         entry.kind,
         crate::FdKind::EventFd
+            | crate::FdKind::Event
+            | crate::FdKind::Inotify
+            | crate::FdKind::NetlinkSocket
             | crate::FdKind::SignalFd
             | crate::FdKind::ProcMounts
             | crate::FdKind::FsContext
@@ -594,9 +656,19 @@ pub(crate) fn get() -> Result<Arc<Store>, i32> {
     }
     let tid = unsafe { windows_sys::Win32::System::Threading::GetCurrentThreadId() };
     let _ = LEADER.compare_exchange(0, tid, Ordering::AcqRel, Ordering::Acquire);
+    let pid = crate::job::process_id();
+    let inherited = kinakaze_runtime::job::mount_namespace(pid).ok_or(EIO)?;
     let mut slot = CURRENT.lock().map_err(|_| EIO)?;
     if slot.is_none() {
-        *slot = Some(initial()?);
+        *slot = Some(if inherited == 1 {
+            initial()?
+        } else {
+            Arc::new(Store::open_namespace(
+                kinakaze_runtime::authority::domain_id(),
+                inherited,
+                false,
+            )?)
+        });
     }
     let store = Arc::clone(slot.as_ref().ok_or(EIO)?);
     inherit(store.clone());
@@ -626,6 +698,10 @@ pub(crate) fn prepare_owned(owner: u64) -> Result<impl FnOnce() -> Result<(), i3
     )?);
     child.update(|_| Ok((bytes, ())))?;
     child.header().owner.store(owner, Ordering::Release);
+    let mut dependencies =
+        super::kernel_dependencies(child.id(), &super::decode_table(&child.read()?.1)?)?;
+    dependencies.push(crate::user_namespace::retain_kernel(owner)?);
+    child.retain_kernel(false, dependencies)?;
     Ok(move || {
         let _topology = _topology;
         install(child)
@@ -714,6 +790,18 @@ pub(crate) fn next_group() -> Result<u64, i32> {
 }
 pub(crate) fn live_namespaces() -> Result<Vec<Arc<Store>>, i32> {
     let root = initial()?;
+    if let Some(authority) = kinakaze_runtime::authority::get() {
+        let ids = (authority.kernel)(KernelCommand::MountNamespaces)?;
+        let mut namespaces = Vec::with_capacity(ids.len());
+        for id in ids {
+            match namespace(id) {
+                Ok(store) => namespaces.push(Arc::new(store)),
+                Err(crate::ENOENT) => (), // Collected after the catalogue snapshot.
+                Err(error) => return Err(error),
+            }
+        }
+        return Ok(namespaces);
+    }
     let end = root.header().next_namespace.load(Ordering::Acquire);
     let mut namespaces = vec![root];
     for id in 2..end {
@@ -724,6 +812,64 @@ pub(crate) fn live_namespaces() -> Result<Vec<Arc<Store>>, i32> {
         }
     }
     Ok(namespaces)
+}
+
+/// The topology guard is held by the caller. Input lives in a separate transfer
+/// section; a dead writer cannot race the next writer's inactive mount bank.
+pub(crate) fn publish_mounts(
+    topology: u64,
+    tables: &[(Arc<Store>, Vec<u8>, Vec<ObjectKey>)],
+) -> Result<(), i32> {
+    if kinakaze_runtime::authority::get().is_none() {
+        for (store, bytes, _) in tables {
+            store.replace(bytes)?;
+        }
+        return Ok(());
+    }
+    let mut updates = Vec::with_capacity(tables.len());
+    let mut input = Vec::new();
+    for (store, bytes, dependencies) in tables {
+        let expected = store.revision();
+        if bytes.len() > BANK_SIZE - 8 {
+            return Err(ENOSPC);
+        }
+        input.extend_from_slice(&(bytes.len() as u64).to_le_bytes());
+        input.extend_from_slice(bytes);
+        let mut dependencies = dependencies.clone();
+        dependencies.push(crate::user_namespace::retain_kernel(store.owner())?);
+        updates.push(MountPublication {
+            namespace: store.id(),
+            expected,
+            dependencies,
+        });
+    }
+    if input.is_empty() || input.len() > 64 * 1024 * 1024 {
+        return Err(ENOSPC);
+    }
+    let section = Handle::new(unsafe {
+        CreateFileMappingW(
+            INVALID_HANDLE_VALUE,
+            ptr::null(),
+            PAGE_READWRITE,
+            0,
+            input.len() as u32,
+            ptr::null(),
+        )
+    })?;
+    let view = unsafe { MapViewOfFile(section.0, FILE_MAP_ALL_ACCESS, 0, 0, input.len()) };
+    if view.Value.is_null() {
+        return Err(EIO);
+    }
+    unsafe {
+        ptr::copy_nonoverlapping(input.as_ptr(), view.Value.cast(), input.len());
+        UnmapViewOfFile(view);
+    }
+    kinakaze_runtime::authority::kernel(KernelCommand::PublishMounts {
+        topology,
+        source: section.0 as u64,
+        length: input.len() as u64,
+        updates,
+    })
 }
 impl Store {
     /// Commit memory for both banks before publishing a multi-namespace event.

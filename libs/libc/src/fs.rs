@@ -27,6 +27,9 @@ unsafe fn borrow_path(path: *const c_char) -> Result<&'static str, i32> {
     }
     // SAFETY: the caller guarantees a null-terminated string.
     let raw = unsafe { CStr::from_ptr(path) };
+    if raw.to_bytes().is_empty() {
+        return Err(kinakaze_vfs::ENOENT);
+    }
     if raw.to_bytes().len() > PATH_MAX {
         return Err(ENAMETOOLONG);
     }
@@ -299,28 +302,27 @@ pub unsafe extern "sysv64" fn chdir(path: *const c_char) -> i32 {
 ///
 /// `path` must be a valid null-terminated string.
 pub unsafe extern "sysv64" fn access(path: *const c_char, mode: i32) -> i32 {
-    // SAFETY: forwarded from this function's contract.
-    unsafe { path_op(path, |path| restart_metadata(|| fs::access(path, mode))) }
+    unsafe { crate::fsextra::kinakaze_abi_faccessat(fs::AT_FDCWD, path, mode, 0) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn kinakaze_abi_eaccess(path: *const c_char, mode: i32) -> i32 {
-    unsafe { access(path, mode) }
+    unsafe { crate::fsextra::kinakaze_abi_faccessat(fs::AT_FDCWD, path, mode, 0x200) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn eaccess(path: *const c_char, mode: i32) -> i32 {
-    unsafe { access(path, mode) }
+    unsafe { kinakaze_abi_eaccess(path, mode) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn kinakaze_abi_euidaccess(path: *const c_char, mode: i32) -> i32 {
-    unsafe { access(path, mode) }
+    unsafe { kinakaze_abi_eaccess(path, mode) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn euidaccess(path: *const c_char, mode: i32) -> i32 {
-    unsafe { access(path, mode) }
+    unsafe { kinakaze_abi_eaccess(path, mode) }
 }
 
 #[unsafe(no_mangle)]

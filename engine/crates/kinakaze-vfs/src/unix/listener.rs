@@ -59,6 +59,7 @@ struct Pending {
     handles: Vec<[u64; 3]>,
 }
 struct Queue {
+    custody: u64,
     kind: i32,
     listening: bool,
     backlog: u32,
@@ -69,9 +70,10 @@ struct Queue {
 impl Queue {
     fn decode(input: &[u8]) -> Result<Self, i32> {
         let mut r = Reader(input);
-        if r.word()? != 3 {
+        if r.word()? != 4 {
             return Err(EIO);
         }
+        let custody = r.word()?;
         let kind = r.word()? as i32;
         let listening = r.word()? != 0;
         let backlog = r.word()? as u32;
@@ -120,6 +122,7 @@ impl Queue {
         }
         r.end()?;
         Ok(Self {
+            custody,
             kind,
             listening,
             backlog,
@@ -131,7 +134,8 @@ impl Queue {
     fn encode(&self) -> Vec<u8> {
         let mut out = Vec::new();
         for value in [
-            3,
+            4,
+            self.custody,
             self.kind as u64,
             u64::from(self.listening),
             self.backlog as u64,
@@ -195,6 +199,7 @@ pub(super) struct Lease {
     pub(super) pin: Arc<Object>,
     pid: u32,
     created: u64,
+    custody: bool,
 }
 static LOCAL: Mutex<Option<HashMap<u64, Weak<Lease>>>> = Mutex::new(None);
 static DIRECTORY: Mutex<Option<Arc<Store>>> = Mutex::new(None);
@@ -212,7 +217,11 @@ fn handoff_event(token: u64) -> Result<Object, i32> {
             std::ptr::null(),
             1,
             0,
-            wide(&format!("Local\\kinakaze-listener-handoff-{token:x}")).as_ptr(),
+            wide(&format!(
+                "Local\\kinakaze-listener-handoff-{:x}-{token:x}",
+                kinakaze_runtime::authority::domain_id()
+            ))
+            .as_ptr(),
         )
     })
 }
@@ -282,7 +291,9 @@ pub(super) fn finish_handoff(pid: i32) {
 fn directory() -> Result<Arc<Store>, i32> {
     let mut slot = DIRECTORY.lock().map_err(|_| EIO)?;
     if slot.is_none() {
-        *slot = Some(Arc::new(Store::user_object(u64::MAX - 42, true)?));
+        let store = Arc::new(Store::user_object(u64::MAX - 42, true)?);
+        store.retain_kernel(false, Vec::new())?;
+        *slot = Some(store);
     }
     Ok(slot.as_ref().unwrap().clone())
 }
@@ -358,7 +369,9 @@ impl Pool {
                 } else {
                     SetEvent(self.ready.raw());
                 }
-                if queue.owners.is_empty() || queue.pending.len() <= queue.backlog as usize {
+                if (queue.custody == 0 && queue.owners.is_empty())
+                    || queue.pending.len() <= queue.backlog as usize
+                {
                     SetEvent(self.space.raw());
                 } else {
                     ResetEvent(self.space.raw());
@@ -436,9 +449,19 @@ impl Pool {
     ) -> Result<(Object, Arc<ancillary::State>), i32> {
         loop {
             let mut wait_process = None;
+            let mut publication = None;
             let result = self.update(|queue| {
-                let processes = queue.live()?;
-                if !queue.listening || processes.is_empty() {
+                let _owner = if queue.custody != 0 {
+                    Some(shared::pin_user_object(queue.custody).map_err(|_| ECONNREFUSED)?)
+                } else {
+                    None
+                };
+                let processes = if queue.custody == 0 {
+                    queue.live()?
+                } else {
+                    Vec::new()
+                };
+                if !queue.listening || (queue.custody == 0 && processes.is_empty()) {
                     return Err(ECONNREFUSED);
                 }
                 if queue.kind != kind {
@@ -490,23 +513,33 @@ impl Pool {
                 state.set_passcred(true, true)?;
                 let inherited = state.inherited();
                 let refs = [server.raw() as u64, inherited[1], inherited[3]];
-                let source = Owner {
-                    pid: std::process::id(),
-                    created: ancillary::creation_time(unsafe { GetCurrentProcess() })?,
-                    anchor: 0,
-                    inbox: 0,
-                };
                 let token = ancillary::random_id()?;
                 let mut handles = Vec::new();
-                for (owner, process) in queue.owners.iter().zip(&processes) {
-                    handles.push(owner::adopt(
-                        owner,
-                        process,
-                        self.store.id(),
+                if queue.custody != 0 {
+                    publication = Some(rights::retain_native(
+                        queue.custody,
                         token,
-                        &source,
-                        refs,
+                        &refs,
+                        self.space.raw(),
                     )?);
+                }
+                if queue.custody == 0 {
+                    let source = Owner {
+                        pid: std::process::id(),
+                        created: ancillary::creation_time(unsafe { GetCurrentProcess() })?,
+                        anchor: 0,
+                        inbox: 0,
+                    };
+                    for (owner, process) in queue.owners.iter().zip(&processes) {
+                        handles.push(owner::adopt(
+                            owner,
+                            process,
+                            self.store.id(),
+                            token,
+                            &source,
+                            refs,
+                        )?);
+                    }
                 }
                 #[cfg(test)]
                 if std::env::var_os("KINAKAZE_LISTENER_DIE_BEFORE_PUBLISH").is_some() {
@@ -520,6 +553,9 @@ impl Pool {
                 });
                 Ok(Some((client, state)))
             })?;
+            if let Some(publication) = publication {
+                publication.commit();
+            }
             if let Some(result) = result {
                 return Ok(result);
             }
@@ -534,8 +570,28 @@ impl Lease {
     pub(super) fn id(&self) -> u64 {
         self.pool.store.id()
     }
-    pub(super) fn create(name: &str, kind: i32, anchor: HANDLE) -> Result<Arc<Self>, i32> {
+    pub(super) fn create(
+        name: &str,
+        kind: i32,
+        anchor: HANDLE,
+        record: u64,
+    ) -> Result<Arc<Self>, i32> {
         let pool = Pool::from_store(shared::new_object()?)?;
+        if kinakaze_runtime::authority::get().is_some() {
+            let queue = Queue {
+                custody: record,
+                kind,
+                listening: false,
+                backlog: 0,
+                server_credentials: credentials::Sender::current(true)?,
+                owners: Vec::new(),
+                pending: Vec::new(),
+            };
+            pool.store.update(|_| Ok((queue.encode(), ())))?;
+            let lease = Self::local(pool, 0, true)?;
+            register(name, lease.id())?;
+            return Ok(lease);
+        }
         let owned = Object::duplicate(anchor)?;
         let created = ancillary::creation_time(unsafe { GetCurrentProcess() })?;
         let owner = Owner {
@@ -545,6 +601,7 @@ impl Lease {
             inbox: owner::current()?,
         };
         let queue = Queue {
+            custody: 0,
             kind,
             listening: false,
             backlog: 0,
@@ -553,12 +610,12 @@ impl Lease {
             pending: Vec::new(),
         };
         pool.store.update(|_| Ok((queue.encode(), ())))?;
-        let lease = Self::local(pool, created)?;
+        let lease = Self::local(pool, created, false)?;
         owned.into_raw();
         register(name, lease.id())?;
         Ok(lease)
     }
-    fn local(pool: Arc<Pool>, created: u64) -> Result<Arc<Self>, i32> {
+    fn local(pool: Arc<Pool>, created: u64, custody: bool) -> Result<Arc<Self>, i32> {
         let pin = Arc::new(pool.store.pin()?);
         crate::platform::try_set_inheritable(pin.raw() as usize, true)?;
         let lease = Arc::new(Self {
@@ -566,6 +623,7 @@ impl Lease {
             pin,
             pid: std::process::id(),
             created,
+            custody,
         });
         LOCAL
             .lock()
@@ -589,6 +647,10 @@ impl Lease {
             }
         }
         let pool = Pool::from_store(Store::user_object(id, false)?)?;
+        if Queue::decode(&pool.store.read()?.1)?.custody != 0 {
+            drop(local);
+            return Self::local(pool, 0, true);
+        }
         let created = ancillary::creation_time(unsafe { GetCurrentProcess() })?;
         let pin = Arc::new(pool.store.pin()?);
         crate::platform::try_set_inheritable(pin.raw() as usize, true)?;
@@ -630,6 +692,7 @@ impl Lease {
             pin,
             pid: std::process::id(),
             created,
+            custody: false,
         });
         local
             .get_or_insert_with(HashMap::new)
@@ -641,7 +704,25 @@ impl Lease {
         nonblocking: bool,
     ) -> Result<(Object, Arc<ancillary::State>, UnixAddress, bool), i32> {
         loop {
+            let mut retired = None;
             let result = self.pool.update(|queue| {
+                if queue.custody != 0 {
+                    if !queue.listening {
+                        return Err(EINVAL);
+                    }
+                    let Some(first) = queue.pending.first() else {
+                        return Ok(None);
+                    };
+                    let mut pins = rights::duplicate_native(queue.custody, first.token)?;
+                    if pins.len() != 3 {
+                        return Err(EIO);
+                    }
+                    let pipe = pins.remove(0);
+                    let state = ancillary::State::restore(first.ids)?;
+                    let entry = queue.pending.remove(0);
+                    retired = Some((queue.custody, entry.token));
+                    return Ok(Some((pipe, state, entry.peer, queue.pending.is_empty())));
+                }
                 queue.live()?;
                 let index = queue
                     .owners
@@ -665,6 +746,9 @@ impl Lease {
                 }
                 Ok(Some((pipe, state, entry.peer, queue.pending.is_empty())))
             })?;
+            if let Some((owner, id)) = retired {
+                rights::release_native(owner, id);
+            }
             #[cfg(test)]
             if result.is_some() && std::env::var_os("KINAKAZE_LISTENER_DIE_AFTER_DEQUEUE").is_some()
             {
@@ -684,6 +768,14 @@ impl Drop for Lease {
     fn drop(&mut self) {
         // Only this process's managed queue references belong to this lease.
         if self.pid != std::process::id() {
+            return;
+        }
+        if self.custody {
+            // Wake admission after a graceful last close. If a worker dies,
+            // init signals the same event when collecting queued references.
+            unsafe {
+                SetEvent(self.pool.space.raw());
+            }
             return;
         }
         let retired = self.pool.update(|queue| {
@@ -738,6 +830,7 @@ mod tests {
     fn enrollment_repairs_a_wake_without_a_published_connection() {
         let pool = Pool::from_store(shared::new_object().unwrap()).unwrap();
         let queue = Queue {
+            custody: 0,
             kind: SOCK_STREAM,
             listening: true,
             backlog: 1,

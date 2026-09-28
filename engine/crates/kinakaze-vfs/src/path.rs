@@ -23,10 +23,9 @@
 //! would collide with an escape; those code points are private use and carry no
 //! assigned meaning, so nothing real names a file with them.
 //!
-//! A literal backslash is still refused for the whole path rather than escaped.
-//! It is the one character that could turn a guest-supplied relative path into
-//! a Windows path, and guarding that is worth more than the vanishingly rare
-//! Linux filename that contains one.
+//! Backslashes are ordinary Linux filename characters (systemd uses them in
+//! escaped unit/cgroup names). Escape them before appending any component to a
+//! host path, so neither drive syntax nor UNC syntax can select a Windows path.
 
 use std::borrow::Cow;
 use std::collections::VecDeque;
@@ -101,6 +100,14 @@ pub fn wide_path(path: &Path) -> Result<Vec<u16>, i32> {
 /// access/I/O failures are errors, not permission guesses or ordinary files.
 #[cfg(windows)]
 pub fn emulated_symlink_target(path: &Path) -> Result<Option<String>, i32> {
+    symlink_component(path, false)
+}
+
+#[cfg(windows)]
+pub(crate) fn symlink_component(
+    path: &Path,
+    must_be_directory: bool,
+) -> Result<Option<String>, i32> {
     use windows_sys::Win32::Storage::FileSystem::{
         FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_REPARSE_POINT, GetFileAttributesW,
         INVALID_FILE_ATTRIBUTES,
@@ -116,12 +123,25 @@ pub fn emulated_symlink_target(path: &Path) -> Result<Option<String>, i32> {
     {
         return Ok(None);
     }
-    Ok(crate::fs::inode::read_path(path)?.symlink)
+    let target = crate::fs::inode::read_path(path)?.symlink;
+    if target.is_none()
+        && must_be_directory
+        && attributes != INVALID_FILE_ATTRIBUTES
+        && attributes & FILE_ATTRIBUTE_DIRECTORY == 0
+    {
+        return Err(crate::ENOTDIR);
+    }
+    Ok(target)
 }
 
 #[cfg(not(windows))]
 pub fn emulated_symlink_target(_path: &Path) -> Result<Option<String>, i32> {
     Ok(None)
+}
+
+#[cfg(not(windows))]
+fn symlink_component(path: &Path, _must_be_directory: bool) -> Result<Option<String>, i32> {
+    emulated_symlink_target(path)
 }
 
 /// Create a privilege-free Linux symlink with inode-owned metadata. Its target
@@ -186,7 +206,7 @@ pub fn create_emulated_symlink(_path: &Path, _target: &str) -> Result<(), i32> {
 
 /// True for a character Windows refuses anywhere in a name.
 fn is_reserved(character: char) -> bool {
-    matches!(character, '<' | '>' | ':' | '"' | '|' | '?' | '*') || (character as u32) < 0x20
+    matches!(character, '<' | '>' | ':' | '"' | '|' | '?' | '*' | '\\') || (character as u32) < 0x20
 }
 
 /// True for a character Windows strips when it ends a name.
@@ -284,9 +304,6 @@ pub(crate) use root::{restore_root, serialize_root};
 fn translate_mount_path(path: &str) -> Result<String, PathError> {
     if path.contains('\0') {
         return Err(PathError::InteriorNul);
-    }
-    if path.contains('\\') {
-        return Err(PathError::Backslash);
     }
     crate::mount::translate(path).map_err(|_| PathError::MountNamespace)
 }
@@ -388,9 +405,6 @@ fn resolve_linux_path_components(
     if linux_path.contains('\0') {
         return Err(PathError::InteriorNul);
     }
-    if linux_path.contains('\\') {
-        return Err(PathError::Backslash);
-    }
 
     let absolute = linux_path.starts_with('/');
     // Ordinary path components borrow from the caller. Owning every component
@@ -425,7 +439,8 @@ fn resolve_linux_path_components(
         if !follow_final && pending.is_empty() {
             continue;
         }
-        let Some(target) = emulated_symlink_target(&resolved).map_err(PathError::Filesystem)?
+        let Some(target) =
+            symlink_component(&resolved, !pending.is_empty()).map_err(PathError::Filesystem)?
         else {
             continue;
         };
@@ -435,9 +450,6 @@ fn resolve_linux_path_components(
         }
         if target.contains('\0') {
             return Err(PathError::InteriorNul);
-        }
-        if target.contains('\\') {
-            return Err(PathError::Backslash);
         }
 
         // A relative target is interpreted from the link's parent.  An
@@ -712,12 +724,22 @@ mod tests {
     }
 
     #[test]
-    fn windows_escape_syntax_is_rejected() {
+    fn windows_escape_syntax_remains_a_single_guest_component() {
         let root = Path::new(r"E:\host");
-        assert!(matches!(
-            resolve_linux_path_from(root, r"/tmp\escape"),
-            Err(PathError::Backslash)
-        ));
+        for name in [
+            r"tmp\escape",
+            r"C:\Windows",
+            r"\\server\share",
+            r"..\outside",
+        ] {
+            let resolved = resolve_linux_path_from(root, &format!("/{name}")).unwrap();
+            assert_eq!(resolved, root.join(escape_component(name).as_ref()));
+            assert_eq!(resolved.parent(), Some(root));
+            assert_eq!(
+                unescape_path(&resolved.file_name().unwrap().to_string_lossy()),
+                name
+            );
+        }
     }
 
     /// Debian's multiarch layout names files `<package>:<arch>.list`, so a colon
@@ -746,7 +768,7 @@ mod tests {
 
     #[test]
     fn every_reserved_character_round_trips() {
-        for reserved in ['<', '>', ':', '"', '|', '?', '*'] {
+        for reserved in ['<', '>', ':', '"', '|', '?', '*', '\\'] {
             let name = format!("a{reserved}b");
             let escaped = escape_component(&name);
             assert_ne!(escaped.as_ref(), name, "{reserved:?} should be escaped");
@@ -803,6 +825,26 @@ mod tests {
         // Restore original
         assert!(restore_root(&state));
         assert_eq!(system_root().unwrap(), original);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn regular_file_cannot_be_an_intermediate_directory() {
+        let root = temporary_root("nondirectory");
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(root.join("plain"), b"data").unwrap();
+        create_emulated_symlink(&root.join("alias"), "plain").unwrap();
+        for path in ["/plain/child", "/alias/child"] {
+            assert!(matches!(
+                resolve_linux_path_from(&root, path),
+                Err(PathError::Filesystem(crate::ENOTDIR))
+            ));
+            assert!(matches!(
+                resolve_linux_path_from_no_follow(&root, path),
+                Err(PathError::Filesystem(crate::ENOTDIR))
+            ));
+        }
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[cfg(windows)]

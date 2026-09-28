@@ -256,7 +256,9 @@ static DIRECTORY: Mutex<Option<Arc<Store>>> = Mutex::new(None);
 fn directory() -> Result<Arc<Store>, i32> {
     let mut slot = DIRECTORY.lock().map_err(|_| EIO)?;
     if slot.is_none() {
-        *slot = Some(Arc::new(Store::user_object(u64::MAX - 32, true)?));
+        let store = Arc::new(Store::user_object(u64::MAX - 32, true)?);
+        store.retain_kernel(false, Vec::new())?;
+        *slot = Some(store);
     }
     Ok(slot.as_ref().unwrap().clone())
 }
@@ -911,6 +913,13 @@ pub(crate) fn rights_reference(entry: crate::FdEntry) -> Result<Option<Arc<Endpo
 }
 pub(crate) fn rights_id(endpoint: &Endpoint) -> u64 {
     endpoint.store.id()
+}
+pub(crate) fn rights_pins(endpoint: &Endpoint) -> Result<Vec<crate::fs::object::Object>, i32> {
+    endpoint
+        .handoff_pins()?
+        .into_iter()
+        .map(|pin| crate::fs::object::Object::duplicate(pin.raw()))
+        .collect()
 }
 pub(crate) fn rights_token(
     endpoint: &Endpoint,

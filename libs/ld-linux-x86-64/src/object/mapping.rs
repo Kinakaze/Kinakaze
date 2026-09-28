@@ -4,6 +4,8 @@ use super::{LinkError, ProgramHeader};
 pub(crate) struct ImageMapping {
     pub base: *mut u8,
     #[cfg(windows)]
+    len: usize,
+    #[cfg(windows)]
     slot: *mut std::sync::atomic::AtomicUsize,
 }
 
@@ -33,6 +35,7 @@ impl ImageMapping {
         }
         Ok(Self {
             base: base as _,
+            len,
             slot: slot as _,
         })
     }
@@ -101,6 +104,7 @@ impl ImageMapping {
         }
         let mut owned = Self {
             base: core::ptr::null_mut(),
+            len,
             slot,
         };
         drop(creation);
@@ -195,6 +199,7 @@ impl ImageMapping {
         let section = section.into_raw_handle();
         let mut owned = Self {
             base: core::ptr::null_mut(),
+            len,
             slot,
         };
         let preferred = if fixed {
@@ -329,6 +334,7 @@ impl Drop for ImageMapping {
         let _transaction = kinakaze_runtime::begin_fork_mapping_transaction()
             .expect("an ELF view has an initialized mapping transaction");
         if !self.base.is_null() {
+            kinakaze_runtime::execution::retire(self.base as usize, self.len);
             kinakaze_runtime::unregister_fork_mapping(self.base as usize);
             unsafe {
                 UnmapViewOfFile(MEMORY_MAPPED_VIEW_ADDRESS {

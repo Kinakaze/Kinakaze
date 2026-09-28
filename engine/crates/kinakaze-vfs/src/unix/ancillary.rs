@@ -223,17 +223,19 @@ struct Record {
     fds: Vec<Descriptor>,
 }
 #[derive(Clone)]
-struct Descriptor {
-    raw: u64,
-    kind: u32,
-    flags: u32,
-    shared: u64,
-    metadata: Vec<u8>,
-    anonymous: Vec<u8>,
+pub(super) struct Descriptor {
+    pub(super) description: u64,
+    pub(super) raw: u64,
+    pub(super) kind: u32,
+    pub(super) flags: u32,
+    pub(super) shared: u64,
+    pub(super) metadata: Vec<u8>,
+    pub(super) anonymous: Vec<u8>,
 }
 impl Descriptor {
-    fn read(r: &mut crate::state_codec::Reader) -> Result<Self, i32> {
+    pub(super) fn read(r: &mut crate::state_codec::Reader) -> Result<Self, i32> {
         Ok(Self {
+            description: r.word()?,
             raw: r.word()?,
             kind: r.word()? as u32,
             flags: r.word()? as u32,
@@ -242,8 +244,14 @@ impl Descriptor {
             anonymous: r.bytes()?.to_vec(),
         })
     }
-    fn write(&self, bytes: &mut impl Extend<u8>) {
-        for w in [self.raw, self.kind as u64, self.flags as u64, self.shared] {
+    pub(super) fn write(&self, bytes: &mut impl Extend<u8>) {
+        for w in [
+            self.description,
+            self.raw,
+            self.kind as u64,
+            self.flags as u64,
+            self.shared,
+        ] {
             crate::state_codec::word(bytes, w);
         }
         crate::state_codec::bytes(bytes, &self.metadata);
@@ -480,12 +488,16 @@ impl Queue {
 }
 
 fn event(token: u64) -> Result<Object, i32> {
+    let domain = kinakaze_runtime::authority::domain_id();
     Object::owned(unsafe {
         CreateEventW(
             std::ptr::null(),
             1,
             0,
-            wide(&format!("Local\\kinakaze-rights-{token:016x}")).as_ptr(),
+            wide(&format!(
+                "Local\\kinakaze-rights-{domain:016x}-{token:016x}"
+            ))
+            .as_ptr(),
         )
     })
 }
@@ -612,7 +624,7 @@ pub(super) fn duplicate_raw(source: HANDLE, raw: u64, target: HANDLE) -> Result<
     }
     Ok(copy as u64)
 }
-fn supported(kind: FdKind) -> bool {
+pub(super) fn supported(kind: FdKind) -> bool {
     matches!(
         kind,
         FdKind::PtyMaster
@@ -646,14 +658,24 @@ fn supported(kind: FdKind) -> bool {
             | FdKind::Namespace
             | FdKind::UserNamespace
             | FdKind::BpfProgram
+            | FdKind::NetlinkSocket
+            | FdKind::Inotify
+            | FdKind::Event
     )
 }
 fn activate(fd: i32, descriptor: &Descriptor, process: HANDLE) -> Result<(), i32> {
+    activate_with(fd, descriptor, |raw| {
+        duplicate(process, raw, unsafe { GetCurrentProcess() })
+    })
+}
+pub(super) fn activate_with(
+    fd: i32,
+    descriptor: &Descriptor,
+    mut duplicate: impl FnMut(u64) -> Result<Object, i32>,
+) -> Result<(), i32> {
     let kind = FdKind::from_fork_code(descriptor.kind);
     if !descriptor.anonymous.is_empty() {
-        crate::pipe_inode::import_rights(crate::get(fd)?, &descriptor.anonymous, |raw| {
-            duplicate(process, raw, unsafe { GetCurrentProcess() })
-        })?;
+        crate::pipe_inode::import_rights(crate::get(fd)?, &descriptor.anonymous, &mut duplicate)?;
     }
     crate::ofd::attach(crate::get(fd)?, descriptor.shared)?;
     if kind == FdKind::BpfProgram {
@@ -666,32 +688,24 @@ fn activate(fd: i32, descriptor: &Descriptor, process: HANDLE) -> Result<(), i32
         let mut input = crate::state_codec::Reader(&descriptor.metadata);
         let overlay = input.word()?;
         if overlay == 1 {
-            crate::mount::overlay::import_rights(crate::get(fd)?, input.0, |raw| {
-                duplicate(process, raw, unsafe { GetCurrentProcess() })
-            })?;
+            crate::mount::overlay::import_rights(crate::get(fd)?, input.0, &mut duplicate)?;
         } else if overlay == 0 {
-            crate::mount::native::import_rights(crate::get(fd)?, input.0, |raw| {
-                duplicate(process, raw, unsafe { GetCurrentProcess() })
-            })?;
+            crate::mount::native::import_rights(crate::get(fd)?, input.0, &mut duplicate)?;
         } else {
             return Err(EIO);
         }
     }
     if kind == FdKind::Pipe {
-        crate::pipe_inode::import_rights(crate::get(fd)?, &descriptor.metadata, |raw| {
-            duplicate(process, raw, unsafe { GetCurrentProcess() })
-        })?;
+        crate::pipe_inode::import_rights(crate::get(fd)?, &descriptor.metadata, &mut duplicate)?;
     }
     if kind == FdKind::Fifo {
         let mut input = crate::state_codec::Reader(&descriptor.metadata);
-        let marker = duplicate(process, input.word()?, unsafe { GetCurrentProcess() })?;
+        let marker = duplicate(input.word()?)?;
         input.end()?;
         crate::fifo::import_rights(fd, marker)?;
     }
     if kind == FdKind::UnixSocket {
-        import_socket(fd, &descriptor.metadata, |raw| {
-            duplicate(process, raw, unsafe { GetCurrentProcess() })
-        })?;
+        import_socket(fd, &descriptor.metadata, &mut duplicate)?;
     }
     if matches!(
         kind,
@@ -725,7 +739,7 @@ fn activate(fd: i32, descriptor: &Descriptor, process: HANDLE) -> Result<(), i32
             let token = if token == 0 {
                 None
             } else {
-                Some(duplicate(process, token, unsafe { GetCurrentProcess() })?)
+                Some(duplicate(token)?)
             };
             crate::usernet::import_rights(crate::get(fd)?, id, token)?;
         }
@@ -764,10 +778,14 @@ fn export(socket: &UnixSocket, rights: &[i32]) -> Result<Record, i32> {
                 info.kind,
                 FdKind::File
                     | FdKind::Directory
+                    | FdKind::SyntheticDirectory
                     | FdKind::Pipe
                     | FdKind::PtyMaster
                     | FdKind::PtySlave
                     | FdKind::EventFd
+                    | FdKind::Event
+                    | FdKind::Inotify
+                    | FdKind::NetlinkSocket
                     | FdKind::TimerFd
                     | FdKind::SignalFd
                     | FdKind::ProcMounts
@@ -776,7 +794,7 @@ fn export(socket: &UnixSocket, rights: &[i32]) -> Result<Record, i32> {
             ) {
             Some(crate::ofd::promote(fd)?)
         } else {
-            None
+            crate::ofd::existing(info.description_id)?
         };
         let synthetic = if matches!(
             info.kind,
@@ -951,6 +969,7 @@ fn export(socket: &UnixSocket, rights: &[i32]) -> Result<Record, i32> {
                 Vec::new()
             };
             let mut descriptor = Descriptor {
+                description: entry.description_id,
                 raw,
                 kind: entry.kind.fork_code(),
                 flags,
@@ -1063,10 +1082,11 @@ pub(crate) fn run_keeper() -> Result<(), i32> {
         } else {
             None
         };
-        let fd = crate::install(
+        let fd = crate::install_received(
             socket.as_ref().map_or(raw, |s| s.0),
             kind,
             flags.union(FdFlags::CLOSE_ON_EXEC),
+            descriptor.description,
         )?;
         if let Some(socket) = socket {
             socket.into_raw();
@@ -1725,12 +1745,13 @@ pub(super) unsafe fn recv(
                 if flags & 0x40000000 != 0 {
                     fd_flags = fd_flags.union(FdFlags::CLOSE_ON_EXEC);
                 }
-                let fd = crate::install(
+                let fd = crate::install_received(
                     socket
                         .as_ref()
                         .map_or_else(|| object.as_ref().map_or(0, |o| o.raw() as usize), |s| s.0),
                     kind,
                     fd_flags,
+                    descriptor.description,
                 )?;
                 if let Some(object) = object {
                     object.into_raw();
@@ -1831,7 +1852,7 @@ pub(super) fn shutdown_state(socket: &UnixSocket) -> Result<(bool, bool, bool), 
     ))
 }
 
-fn export_socket(
+pub(super) fn export_socket(
     socket: &UnixSocket,
     mut duplicate: impl FnMut(u64) -> Result<u64, i32>,
 ) -> Result<Vec<u8>, i32> {
@@ -1846,7 +1867,8 @@ fn export_socket(
     let flags = u64::from(socket.owns_file)
         | (u64::from(socket.read_shut) << 1)
         | (u64::from(socket.write_shut) << 2)
-        | (u64::from(socket.is_server_end) << 3);
+        | (u64::from(socket.is_server_end) << 3)
+        | (u64::from(socket.ancillary.is_some()) << 4);
     for value in [
         socket.socket_type as u64,
         state,
@@ -1934,6 +1956,7 @@ fn import_socket(
     let socket = UnixSocket {
         record,
         ancillary: if entry.raw == 0
+            || (socket_type == SOCK_DGRAM && flags & 16 == 0)
             || (listener.is_some()
                 && matches!(state, super::State::Bound | super::State::Listening))
         {
@@ -2081,7 +2104,7 @@ mod tests {
                     crate::state_codec::word(&mut expected, word);
                 }
                 if record_count != 0 {
-                    for word in [7, 12, 42, 99, 5, 6, 1, 123, 4, 3, 456] {
+                    for word in [7, 12, 42, 99, 5, 6, 1, 789, 123, 4, 3, 456] {
                         crate::state_codec::word(&mut expected, word);
                     }
                     let metadata: Vec<_> = (0..metadata_len).map(|n| (n * 17) as u8).collect();

@@ -7,6 +7,10 @@ import tempfile
 import time
 
 
+class RedisReplyError(RuntimeError):
+    pass
+
+
 class Redis:
     def __init__(self, path):
         self.socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -36,7 +40,7 @@ class Redis:
         if kind == b'+':
             return body
         if kind == b'-':
-            raise RuntimeError(body.decode(errors='replace'))
+            raise RedisReplyError(body.decode(errors='replace'))
         if kind == b':':
             return int(body)
         if kind in (b'$', b'*'):
@@ -83,10 +87,15 @@ def main():
                 try:
                     assert connection.call('PING') == b'PONG'
                     return connection
+                except RedisReplyError as error:
+                    connection.close()
+                    if not str(error).startswith('LOADING '):
+                        raise
+                    time.sleep(0.05)
                 except BaseException:
                     connection.close()
                     raise
-            raise TimeoutError('Redis did not listen')
+            raise TimeoutError('Redis did not finish loading and become ready')
 
         def persistence_done(field, status):
             deadline = time.monotonic() + 25

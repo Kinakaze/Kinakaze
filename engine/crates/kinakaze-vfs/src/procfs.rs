@@ -1029,8 +1029,25 @@ fn devices() -> &'static str {
 }
 
 fn limits(pid: u32) -> Result<String, i32> {
-    let (nofile_soft, nofile_hard) = crate::job::nofile_limits(pid)?;
-    let (soft, hard) = kinakaze_runtime::job::mqueue_limits(pid, None).map_err(|_| crate::ESRCH)?;
+    use std::fmt::Write;
+    const RESOURCES: [(&str, &str); 16] = [
+        ("Max cpu time", "seconds"),
+        ("Max file size", "bytes"),
+        ("Max data size", "bytes"),
+        ("Max stack size", "bytes"),
+        ("Max core file size", "bytes"),
+        ("Max resident set", "bytes"),
+        ("Max processes", "processes"),
+        ("Max open files", "files"),
+        ("Max locked memory", "bytes"),
+        ("Max address space", "bytes"),
+        ("Max file locks", "locks"),
+        ("Max pending signals", "signals"),
+        ("Max msgqueue size", "bytes"),
+        ("Max nice priority", ""),
+        ("Max realtime priority", ""),
+        ("Max realtime timeout", "us"),
+    ];
     let number = |value: u64| {
         if value == u64::MAX {
             "unlimited".to_owned()
@@ -1038,26 +1055,20 @@ fn limits(pid: u32) -> Result<String, i32> {
             value.to_string()
         }
     };
-    let (mqueue_soft, mqueue_hard) = (number(soft), number(hard));
-    Ok(format!(
-        "Limit                     Soft Limit           Hard Limit           Units     \n\
-     Max cpu time              unlimited            unlimited            seconds   \n\
-     Max file size             unlimited            unlimited            bytes     \n\
-     Max data size             unlimited            unlimited            bytes     \n\
-     Max stack size            8388608              unlimited            bytes     \n\
-     Max core file size        0                    unlimited            bytes     \n\
-     Max resident set          unlimited            unlimited            bytes     \n\
-     Max processes             65535                65535                processes \n\
-     Max open files            {nofile_soft:<21}{nofile_hard:<21}files     \n\
-     Max locked memory         65536                65536                bytes     \n\
-     Max address space         unlimited            unlimited            bytes     \n\
-     Max file locks            unlimited            unlimited            locks     \n\
-     Max pending signals       65535                65535                signals   \n\
-     Max msgqueue size         {mqueue_soft:<21}{mqueue_hard:<21}bytes     \n\
-     Max nice priority         0                    0                    \n\
-     Max realtime priority     0                    0                    \n\
-     Max realtime timeout      unlimited            unlimited            us        \n"
-    ))
+    // pam_limits uses the header's line width to distinguish rows with units.
+    let mut output = format!(
+        "{:<26}{:<21}{:<21}{:<10}\n",
+        "Limit", "Soft Limit", "Hard Limit", "Units"
+    );
+    for (resource, (name, unit)) in RESOURCES.iter().enumerate() {
+        let (soft, hard) = crate::limits::get(pid, resource as u32)?;
+        write!(output, "{name:<26}{:<21}{:<21}", number(soft), number(hard)).unwrap();
+        if !unit.is_empty() {
+            write!(output, "{unit:<10}").unwrap();
+        }
+        output.push('\n');
+    }
+    Ok(output)
 }
 
 /// Lists a `/proc` directory.
@@ -3575,10 +3586,18 @@ mod tests {
 
     #[test]
     fn task_namespace_magic_links_route_properly() {
-        let path = "/proc/self/task/1/ns/net";
-        let link = crate::fs::lstat(path).expect("task netns lstat failed");
+        crate::job::ensure_registered();
+        let path = format!(
+            "/proc/self/task/{}/ns/net",
+            crate::interrupt::current_thread_id()
+        );
+        let link = crate::fs::lstat(&path).expect("task netns lstat failed");
         assert_eq!(link.st_mode & crate::fs::S_IFMT, crate::fs::S_IFLNK);
-        assert_eq!(read_file(path).unwrap(), b"net:[4026531992]");
+        assert_eq!(read_file(&path).unwrap(), b"net:[4026531992]");
+        assert_eq!(
+            crate::fs::lstat("/proc/self/task/4294967295/ns/net").err(),
+            Some(crate::ENOENT)
+        );
     }
 }
 

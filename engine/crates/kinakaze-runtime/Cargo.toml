@@ -12,6 +12,7 @@ crate-type = ["dylib"]
 path = "src/lib.rs"
 
 [dependencies]
+kinakaze-v2-protocol.workspace = true
 kinakaze-abi.workspace = true
 kinakaze-alloc.workspace = true
 

@@ -1332,6 +1332,11 @@ fn stage_handoff_state(entries: &[RegisteredParticipant]) -> Result<(), ForkErro
         // SAFETY: null/zero is the documented length query operation.
         let required = unsafe { snapshot(core::ptr::null_mut(), 0) };
         if required < 0 {
+            #[cfg(windows)]
+            fork_diagnostic(format_args!(
+                "kinakaze: fork snapshot failed participant={:#x} error={required}",
+                entry.hooks.key
+            ));
             return Err(ForkError {
                 stage: ForkStage::HandoffStage,
                 os_code: required.unsigned_abs() as u32,
@@ -1341,6 +1346,11 @@ fn stage_handoff_state(entries: &[RegisteredParticipant]) -> Result<(), ForkErro
         // SAFETY: the buffer has exactly the queried writable capacity.
         let written = unsafe { snapshot(payload.as_mut_ptr(), payload.len()) };
         if written < 0 || written as usize > payload.len() {
+            #[cfg(windows)]
+            fork_diagnostic(format_args!(
+                "kinakaze: fork snapshot failed participant={:#x} required={required} written={written}",
+                entry.hooks.key
+            ));
             return Err(ForkError {
                 stage: ForkStage::HandoffStage,
                 os_code: written.unsigned_abs() as u32,
@@ -1894,6 +1904,50 @@ pub unsafe fn fork_with_parent(parent: Option<u32>) -> Result<Pid, ForkError> {
 // sibling thread must not stage a second image over the first transaction.
 static PROCESS_IMAGE_TRANSACTION: Mutex<()> = Mutex::new(());
 
+thread_local! {
+    static FORK_ACTIVE: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+struct ForkEntry;
+
+impl ForkEntry {
+    fn enter() -> Result<Self, ForkError> {
+        if FORK_ACTIVE.with(|active| active.replace(true)) {
+            return Err(ForkError {
+                stage: ForkStage::HandoffPrepare,
+                os_code: 35,
+            });
+        }
+        Ok(Self)
+    }
+}
+
+impl Drop for ForkEntry {
+    #[inline(never)]
+    fn drop(&mut self) {
+        // Resolve the child's native TLS after the returns-twice boundary.
+        FORK_ACTIVE.with(|active| active.set(false));
+    }
+}
+
+#[cfg(test)]
+mod process_image_tests {
+    use super::*;
+
+    #[test]
+    fn fork_entry_rejects_only_same_thread_recursion() {
+        let guard = ForkEntry::enter().unwrap();
+        assert_eq!(ForkEntry::enter().err().unwrap().os_code, 35);
+        std::thread::spawn(|| {
+            let _independent = ForkEntry::enter().unwrap();
+        })
+        .join()
+        .unwrap();
+        drop(guard);
+        assert!(ForkEntry::enter().is_ok());
+    }
+}
+
 /// Serialize an exec image handoff with native fork and other exec callers.
 /// Failed exec releases this guard; successful exec terminates its whole native
 /// worker. A fork child starts with the fresh runtime DLL's unlocked mutex.
@@ -1922,13 +1976,10 @@ unsafe fn fork_initialized(
             os_code: 12,
         });
     }
-    let fork_transaction = PROCESS_IMAGE_TRANSACTION
-        .try_lock()
-        .map_err(|_| ForkError {
-            stage: ForkStage::HandoffPrepare,
-            // EDEADLK: catches both an atfork re-entry and a concurrent transaction.
-            os_code: 35,
-        })?;
+    // Another thread's fork is ordinary contention, not a guest error. Only
+    // re-entering from this thread's own atfork callback would deadlock.
+    let _fork_entry = ForkEntry::enter()?;
+    let fork_transaction = lock_process_image();
     let mut managed_fork =
         authority::ForkTransaction::prepare(parent).map_err(|errno| ForkError {
             stage: ForkStage::HandoffPrepare,
@@ -1961,17 +2012,35 @@ unsafe fn fork_initialized(
     };
     // Must precede the arena copy: the payload travels inside the arena, so
     // staging it afterwards would leave the child with nothing.
-    if let Err(error) = stage_handoff_state(&entries) {
-        #[cfg(windows)]
-        drop(mapping_transaction);
-        finish_parent(&entries, -1);
-        return Err(error);
-    }
+    let descriptor_fence = loop {
+        if let Err(error) = stage_handoff_state(&entries) {
+            #[cfg(windows)]
+            drop(mapping_transaction);
+            finish_parent(&entries, -1);
+            return Err(error);
+        }
+        match services::DescriptorFence::acquire() {
+            Ok(fence) => break fence,
+            Err(11) => std::thread::yield_now(), // FD topology changed; no child exists yet.
+            Err(error) => {
+                #[cfg(windows)]
+                drop(mapping_transaction);
+                finish_parent(&entries, -1);
+                return Err(ForkError {
+                    stage: ForkStage::HandoffStage,
+                    os_code: error as u32,
+                });
+            }
+        }
+    };
 
     #[cfg(all(windows, target_arch = "x86_64"))]
     {
         // SAFETY: the caller accepts the process-cloning contract above.
         let result = unsafe { windows::raw_fork(parent.unwrap_or(0)) };
+        // Parent callbacks may close descriptors. The native child already owns
+        // its inherited handles; its fresh provider has no parent lock to thaw.
+        drop(descriptor_fence);
         if result != 0 {
             trace_registered_tls_slots("raw-fork-returned", result as u64);
         }
@@ -2000,7 +2069,7 @@ unsafe fn fork_initialized(
                 fork_diagnostic(format_args!(
                     "kinakaze: fork child adoption failed error={error}"
                 ));
-                unsafe { windows::terminate_failed_fork_child() };
+                unsafe { windows::terminate_failed_fork_child(error as u32) };
             }
             // The child resumes here with the parent's arena already in place,
             // so the staged descriptor table can be adopted before returning to
@@ -2016,35 +2085,29 @@ unsafe fn fork_initialized(
                         e.stage, e.os_code
                     );
                 }
-                // The parent has already observed a successful host clone and
-                // owns a waitable child at this point.  A Linux fork therefore
-                // cannot be retroactively reported as a caller-side failure in
-                // the child.  Terminate the unusable child instead.  For vfork
-                // this also completes the inherited rendezvous first, so the
-                // suspended parent is never stranded by restore failure.
-                unsafe { windows::terminate_failed_fork_child() };
+                // No guest-visible child has been committed. Publish the
+                // failure before exiting so the creator can retire its row.
+                unsafe { windows::terminate_failed_fork_child(e.os_code) };
             }
             if initializer != 0 {
                 let initialize: unsafe extern "sysv64" fn(u64) -> i32 =
                     unsafe { core::mem::transmute(initializer) };
                 let error = unsafe { initialize(argument) };
                 if error != 0 {
-                    job::namespaces::set_fork_error(error as u32);
-                    job::namespaces::mark_fork_restored();
-                    unsafe { windows::terminate_failed_fork_child() };
+                    unsafe { windows::terminate_failed_fork_child(error as u32) };
                 }
             }
             if let Err(error) = managed_fork.ready() {
                 fork_diagnostic(format_args!(
                     "kinakaze: fork child readiness failed error={error}"
                 ));
-                unsafe { windows::terminate_failed_fork_child() };
+                unsafe { windows::terminate_failed_fork_child(error as u32) };
             }
             if !job::namespaces::mark_fork_restored() {
-                unsafe { windows::terminate_failed_fork_child() };
+                unsafe { windows::terminate_failed_fork_child(5) };
             }
             if managed_fork.await_activation().is_err() {
-                unsafe { windows::terminate_failed_fork_child() };
+                unsafe { windows::terminate_failed_fork_child(5) };
             }
             if fork_trace_enabled() {
                 eprintln!(
@@ -2272,7 +2335,7 @@ pub mod job {
     /// Identifies a compatible layout. Bump the trailing digits whenever a field
     /// moves: a process built against the old shape must refuse the section
     /// rather than misread a neighbour's slot.
-    const MAGIC: u64 = 0x4352_5950_4944_3136; // "CRYPID16"
+    const MAGIC: u64 = kinakaze_v2_protocol::kernel::PROCESS_TABLE_MAGIC;
 
     /// Slots in the table. Each is one hosted process.
     const CAPACITY: usize = 512;
@@ -2300,6 +2363,7 @@ pub mod job {
     const HEADER_INDEX_CAPACITY: usize = 28;
     const HEADER_FD_LINK_CAPACITY: usize = 32;
     const HEADER_FD_LINK_TARGET_CAPACITY: usize = 36;
+    const HEADER_NEXT_DESCRIPTION: usize = 40;
     const FIRST_NAMESPACE_PID: u32 = 1;
 
     // Cross-process `/proc/<pid>/fd` magic-link record offsets. The record is
@@ -2357,6 +2421,7 @@ pub mod job {
     const SLOT_TIME_NAMESPACE: usize = 1184;
     const SLOT_TIME_CHILDREN: usize = 1192;
     const SLOT_USER_NAMESPACE: usize = 1200;
+    const SLOT_REPORT_UID: usize = 1208;
     const SLOT_MQUEUE_SOFT: usize = 1824;
     const SLOT_MQUEUE_HARD: usize = 1832;
     const SLOT_FSIZE_SOFT: usize = 1840;
@@ -2489,6 +2554,35 @@ pub mod job {
         Unobservable,
     }
 
+    /// Immutable SIGCHLD information, retained independently of wait(2)'s row.
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ChildSignal {
+        /// Child PID in the receiving parent's PID namespace.
+        pub pid: u32,
+        /// Real UID in the initial user namespace.
+        pub uid: u32,
+        pub code: i32,
+        pub status: u32,
+    }
+
+    impl ChildSignal {
+        pub fn new(pid: u32, uid: u32, change: StateChange) -> Self {
+            let (code, status) = match change {
+                StateChange::Exited(status) => (1, status & 0xff),
+                StateChange::Killed(signal) => (2, signal),
+                StateChange::Stopped(signal) => (5, signal),
+                StateChange::Continued => (6, 18),
+                StateChange::Unobservable => (0, 0),
+            };
+            Self {
+                pid,
+                uid,
+                code,
+                status,
+            }
+        }
+    }
+
     /// Base address of this process's view of the section, or zero.
     static BASE: AtomicUsize = AtomicUsize::new(0);
     /// The section handle, held open only to keep the name resolvable.
@@ -2564,10 +2658,10 @@ pub mod job {
             return Some(cached as *mut u8);
         }
 
-        let epoch = super::authority::get().map(|_| super::authority::domain_id());
+        let epoch = Some(super::authority::domain_id()).filter(|epoch| *epoch != 0);
         let guard_name = wide(&epoch.map_or_else(
-            || "Local\\kinakaze.pidns.lock.v14".to_owned(),
-            |epoch| format!("Local\\kinakaze.v2.pidns.{epoch:016x}.lock.v14"),
+            || "Local\\kinakaze.pidns.lock.v15".to_owned(),
+            |epoch| format!("Local\\kinakaze.v2.pidns.{epoch:016x}.lock.v15"),
         ));
         // SAFETY: a null attribute pointer requests the default descriptor and
         // the name is a live NUL-terminated buffer for the duration of the call.
@@ -2577,8 +2671,8 @@ pub mod job {
         }
 
         let section_name = wide(&epoch.map_or_else(
-            || "Local\\kinakaze.pidns.v14".to_owned(),
-            |epoch| format!("Local\\kinakaze.v2.pidns.{epoch:016x}.v14"),
+            || "Local\\kinakaze.pidns.v15".to_owned(),
+            |epoch| kinakaze_v2_protocol::kernel::ObjectKey::ProcessTable.name(epoch),
         ));
         // SAFETY: INVALID_HANDLE_VALUE requests a pagefile-backed section, and
         // the name buffer is live for the call.
@@ -2632,6 +2726,7 @@ pub mod job {
                 // The first real process owns PID 1. Never renumber an existing
                 // namespace, reserve a phantom init, or alias it to the caller.
                 store32(base, HEADER_NEXT_PID, FIRST_NAMESPACE_PID);
+                store64(base, HEADER_NEXT_DESCRIPTION, 1);
                 store32(base, HEADER_FOREGROUND, 0);
                 store32(base, HEADER_NAMESPACE_ID, ROOT_NAMESPACE);
                 store32(base, HEADER_INDEX_CAPACITY, INDEX_CAPACITY as u32);
@@ -2660,7 +2755,17 @@ pub mod job {
                 && load32(base, HEADER_FD_LINK_CAPACITY) == FD_LINK_CAPACITY as u32
                 && load32(base, HEADER_FD_LINK_TARGET_CAPACITY) == FD_LINK_TARGET_CAPACITY as u32
         };
-        if !compatible {
+        // PID allocation and namespace records belong to the init session,
+        // including intervals with no worker holding a mapping handle.
+        let retained = compatible
+            && (super::authority::get().is_none()
+                || super::authority::kernel(kinakaze_v2_protocol::kernel::KernelCommand::Retain {
+                    object: kinakaze_v2_protocol::kernel::ObjectKey::ProcessTable,
+                    tmpfs: false,
+                    dependencies: Vec::new(),
+                })
+                .is_ok());
+        if !retained {
             // A differently shaped table from another build is not usable. Drop
             // the view and behave as an unregistered process rather than
             // scribbling over slots whose fields are somewhere else.
@@ -2677,6 +2782,17 @@ pub mod job {
 
         BASE.store(base as usize, Ordering::Release);
         Some(base)
+    }
+
+    /// Kernel-wide open-description identity. Forked and independent workers
+    /// allocate from the same atomic counter; SCM_RIGHTS preserves the value.
+    pub fn allocate_description_id() -> Option<u64> {
+        let base = map()?;
+        let counter = unsafe { &*base.add(HEADER_NEXT_DESCRIPTION).cast::<AtomicU64>() };
+        counter
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| id.checked_add(1))
+            .ok()
+            .filter(|id| *id != 0)
     }
 
     /// Takes the named mutex, reporting whether it must be released.
@@ -2969,6 +3085,7 @@ pub mod job {
             store32(entry, SLOT_STOP_SIGNAL, 0);
             store32(entry, SLOT_REPORT, REPORT_NONE);
             store32(entry, SLOT_REPORT_SIGNAL, 0);
+            store32(entry, SLOT_REPORT_UID, 0);
             store64(entry, SLOT_TOKEN, 0);
             store64(entry, SLOT_START_TICKS, 0);
             store32(entry, SLOT_NAMESPACE, 0);
@@ -3031,7 +3148,23 @@ pub mod job {
     /// # Safety
     /// `base` must address the mapped section.
     unsafe fn find_host(base: *mut u8, host_pid: u32) -> Option<*mut u8> {
-        unsafe { indexed_find(base, HOST_INDEX_OFFSET, SLOT_PID, host_pid) }
+        unsafe { find_host_identity(base, host_pid, start_token(host_pid)) }
+    }
+
+    /// A waitable zombie can outlive its Windows PID. Probe past that row to
+    /// find the current incarnation without discarding the old wait status.
+    ///
+    /// # Safety
+    /// `base` must address the mapped section and its mutex must be held.
+    unsafe fn find_host_identity(base: *mut u8, host_pid: u32, token: u64) -> Option<*mut u8> {
+        if token == 0 {
+            return None;
+        }
+        unsafe {
+            indexed_find_matching(base, HOST_INDEX_OFFSET, SLOT_PID, host_pid, |entry| {
+                load64(entry, SLOT_TOKEN) == token
+            })
+        }
     }
 
     /// Looks up a slot through one of the two fixed open-addressed indexes.
@@ -3043,6 +3176,18 @@ pub mod job {
         index_offset: usize,
         key_offset: usize,
         key: u32,
+    ) -> Option<*mut u8> {
+        unsafe { indexed_find_matching(base, index_offset, key_offset, key, |_| true) }
+    }
+
+    /// # Safety
+    /// Same validated mapping contract as [`indexed_find`].
+    unsafe fn indexed_find_matching(
+        base: *mut u8,
+        index_offset: usize,
+        key_offset: usize,
+        key: u32,
+        matches: impl Fn(*mut u8) -> bool,
     ) -> Option<*mut u8> {
         if key == 0 {
             return None;
@@ -3059,7 +3204,7 @@ pub mod job {
                 return None;
             }
             let entry = unsafe { slot(base, slot_index) };
-            if unsafe { load32(entry, key_offset) } == key {
+            if unsafe { load32(entry, key_offset) } == key && matches(entry) {
                 return Some(entry);
             }
         }
@@ -3130,7 +3275,14 @@ pub mod job {
     /// was handed the same pid after mine exited".
     fn start_token(pid: u32) -> u64 {
         // SAFETY: a limited-information handle is enough for GetProcessTimes.
-        let handle = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid) };
+        let local = pid == current_host_pid();
+        let handle = unsafe {
+            if local {
+                GetCurrentProcess()
+            } else {
+                OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid)
+            }
+        };
         if handle.is_null() {
             return 0;
         }
@@ -3152,8 +3304,10 @@ pub mod job {
                 &mut ignored,
             )
         };
-        // SAFETY: the handle was opened by this call and is not used again.
-        unsafe { CloseHandle(handle) };
+        if !local {
+            // SAFETY: the handle was opened by this call and is not used again.
+            unsafe { CloseHandle(handle) };
+        }
         if ok == 0 {
             return 0;
         }
@@ -3267,6 +3421,7 @@ pub mod job {
                 if parent_alive {
                     unsafe {
                         store32(entry, SLOT_REPORT_SIGNAL, 0);
+                        store32(entry, SLOT_REPORT_UID, 0);
                         store32(entry, SLOT_REPORT, REPORT_UNOBSERVABLE);
                         store32(entry, SLOT_FLAGS, flags | FLAG_ZOMBIE);
                     }
@@ -3350,7 +3505,7 @@ pub mod job {
             // SAFETY: the section is mapped and the mutex is held.
             unsafe { sweep(base) };
             // SAFETY: the section is mapped and the mutex is held.
-            let existing = unsafe { find_host(base, host_pid) };
+            let existing = unsafe { find_host_identity(base, host_pid, token) };
             let (entry, start_ticks) = match existing {
                 Some(entry) if mode == Registration::Claim => {
                     let entry = unsafe { read_slot(entry) };
@@ -3392,6 +3547,7 @@ pub mod job {
                         store64(candidate, SLOT_PENDING, 0);
                         store32(candidate, SLOT_REPORT, REPORT_NONE);
                         store32(candidate, SLOT_REPORT_SIGNAL, 0);
+                        store32(candidate, SLOT_REPORT_UID, 0);
                         store32(candidate, SLOT_STATE, STATE_RUNNING);
                         store32(candidate, SLOT_STOP_SIGNAL, 0);
                         store32(candidate, SLOT_DELEGATE, 0);
@@ -4309,7 +4465,7 @@ pub mod job {
             // a short-lived namespace row of its own. Linux exec has only one
             // process identity, so discard that provisional row before moving
             // the original namespace pid onto the replacement's real pid.
-            if let Some(provisional) = unsafe { find_host(base, host_pid) }
+            if let Some(provisional) = unsafe { find_host_identity(base, host_pid, token) }
                 && provisional != entry
             {
                 // SAFETY: both rows are in this mapping and the mutex is held.
@@ -4368,6 +4524,7 @@ pub mod job {
             store32(entry, SLOT_STOP_SIGNAL, original.stop_signal);
             store32(entry, SLOT_REPORT, REPORT_NONE);
             store32(entry, SLOT_REPORT_SIGNAL, 0);
+            store32(entry, SLOT_REPORT_UID, 0);
             rebuild_indexes(base);
             true
         })
@@ -4581,6 +4738,13 @@ pub mod job {
     /// inherited descriptors. Gate the notification on both process objects,
     /// matching wait(2), and never take the coordinator lock under the PID lock.
     pub fn reap_dead_children(ppid: u32) -> Result<bool, ()> {
+        reap_dead_children_with(ppid, |_| {})
+    }
+
+    pub fn reap_dead_children_with(
+        ppid: u32,
+        mut notify: impl FnMut(ChildSignal),
+    ) -> Result<bool, ()> {
         let mut found = false;
         for child in children_of(ppid)? {
             if child.flags & FLAG_EXIT_NOTIFIED != 0 {
@@ -4596,7 +4760,7 @@ pub mod job {
             }
             let published = with_table(|base| {
                 let Some(entry) = (unsafe { find(base, child.namespace_pid) }) else {
-                    return false;
+                    return None;
                 };
                 let current = unsafe { read_slot(entry) };
                 // A replacement or adoption during handle acquisition gets a
@@ -4606,13 +4770,14 @@ pub mod job {
                     || current.ppid != ppid
                     || current.flags & FLAG_EXIT_NOTIFIED != 0
                 {
-                    return false;
+                    return None;
                 }
                 unsafe {
                     if current.flags & FLAG_ZOMBIE == 0 {
                         namespaces::exiting(base, entry);
                         // No exact Linux status was published before death.
                         store32(entry, SLOT_REPORT_SIGNAL, 0);
+                        store32(entry, SLOT_REPORT_UID, 0);
                         store32(entry, SLOT_REPORT, REPORT_UNOBSERVABLE);
                     }
                     store32(
@@ -4621,10 +4786,27 @@ pub mod job {
                         current.flags | FLAG_ZOMBIE | FLAG_EXIT_NOTIFIED,
                     );
                 }
-                true
+                // Capture while the row is locked: a concurrent waiter may
+                // remove it before the signal consumer runs, or across exec.
+                unsafe {
+                    let parent = find(base, ppid)?;
+                    let pid = namespaces::visible_entry(entry, parent).unwrap_or(0);
+                    let change = decode_report(
+                        load32(entry, SLOT_REPORT),
+                        load32(entry, SLOT_REPORT_SIGNAL),
+                    )?;
+                    Some(ChildSignal::new(
+                        pid,
+                        load32(entry, SLOT_REPORT_UID),
+                        change,
+                    ))
+                }
             })
             .ok_or(())?;
-            found |= published;
+            if let Some(report) = published {
+                found = true;
+                notify(report);
+            }
         }
         Ok(found)
     }
@@ -4733,16 +4915,25 @@ pub mod job {
     /// trade a rare missed notification for a hard bound on how far behind a
     /// parent may fall, which is worse.
     pub fn post_report(pid: u32, change: StateChange) {
-        publish_report(pid, change, false);
+        publish_report(pid, change, false, None);
     }
 
     /// Publishes the stop report before the stopped state becomes observable.
     /// This must run before suspending threads that could hold the table mutex.
     pub fn post_stop(pid: u32, signal: u32) {
-        publish_report(pid, StateChange::Stopped(signal), true);
+        publish_report(pid, StateChange::Stopped(signal), true, None);
     }
 
-    fn publish_report(pid: u32, change: StateChange, stopped: bool) {
+    pub fn post_child_report(pid: u32, change: StateChange, uid: u32) {
+        publish_report(
+            pid,
+            change,
+            matches!(change, StateChange::Stopped(_)),
+            Some(uid),
+        );
+    }
+
+    fn publish_report(pid: u32, change: StateChange, stopped: bool, uid: Option<u32>) {
         let (kind, signal) = match change {
             StateChange::Stopped(signal) => (REPORT_STOPPED, signal),
             StateChange::Continued => (REPORT_CONTINUED, 0),
@@ -4757,6 +4948,9 @@ pub mod job {
                 unsafe {
                     store32(entry, SLOT_REPORT_SIGNAL, signal);
                     store32(entry, SLOT_REPORT, kind);
+                    if let Some(uid) = uid {
+                        store32(entry, SLOT_REPORT_UID, uid);
+                    }
                     if stopped {
                         store32(entry, SLOT_STOP_SIGNAL, signal);
                         store32(entry, SLOT_STATE, STATE_STOPPED);
@@ -4792,14 +4986,7 @@ pub mod job {
                     load32(entry, SLOT_REPORT_SIGNAL),
                 )
             };
-            let change = match kind {
-                REPORT_STOPPED => StateChange::Stopped(signal),
-                REPORT_CONTINUED => StateChange::Continued,
-                REPORT_KILLED => StateChange::Killed(signal),
-                REPORT_EXITED => StateChange::Exited(signal),
-                REPORT_UNOBSERVABLE => StateChange::Unobservable,
-                _ => return None,
-            };
+            let change = decode_report(kind, signal)?;
             if consume {
                 // SAFETY: the slot is inside the section.
                 unsafe { store32(entry, SLOT_REPORT, REPORT_NONE) };
@@ -4807,6 +4994,17 @@ pub mod job {
             Some(change)
         })
         .flatten()
+    }
+
+    fn decode_report(kind: u32, signal: u32) -> Option<StateChange> {
+        Some(match kind {
+            REPORT_STOPPED => StateChange::Stopped(signal),
+            REPORT_CONTINUED => StateChange::Continued,
+            REPORT_KILLED => StateChange::Killed(signal),
+            REPORT_EXITED => StateChange::Exited(signal),
+            REPORT_UNOBSERVABLE => StateChange::Unobservable,
+            _ => return None,
+        })
     }
 
     /// Adds `bit` to a process's pending mask, reporting whether it landed.
@@ -5272,7 +5470,7 @@ pub mod job {
                 let child = register(helper.pid(), own, own, own, 0)
                     .unwrap()
                     .namespace_pid;
-                post_report(child, change);
+                post_child_report(child, change, 1234);
                 assert!(
                     !reap_dead_children(own).unwrap(),
                     "a status is not kernel completion"
@@ -5280,16 +5478,19 @@ pub mod job {
                 assert_eq!(peek_report(child), Some(change));
                 helper.0.kill().unwrap();
                 helper.0.wait().unwrap();
+                let mut notices = Vec::new();
                 assert!(
-                    reap_dead_children(own).unwrap(),
+                    reap_dead_children_with(own, |notice| notices.push(notice)).unwrap(),
                     "published zombies must still notify"
                 );
+                assert_eq!(notices, [ChildSignal::new(child, 1234, change)]);
                 assert_eq!(peek_report(child), Some(change));
                 assert!(
                     !reap_dead_children(own).unwrap(),
                     "notification is emitted once"
                 );
                 release_slot(child);
+                assert_eq!(notices[0], ChildSignal::new(child, 1234, change));
             }
             release_slot(own);
             if let Some(saved) = saved {
@@ -5401,6 +5602,71 @@ pub mod job {
                     "identity rejection must not kill the new owner"
                 );
             }
+        }
+
+        #[test]
+        fn recycled_host_pid_preserves_waitable_zombie_and_claims_a_fresh_identity() {
+            let _serialized = serialized();
+            struct Rows(Vec<u32>);
+            impl Drop for Rows {
+                fn drop(&mut self) {
+                    for pid in &self.0 {
+                        release_slot(*pid);
+                    }
+                }
+            }
+            let mut rows = Rows(Vec::new());
+            let own = lookup_host(current_host_pid()).unwrap_or_else(|| {
+                let own = register(current_host_pid(), 0, 0, 0, 0).unwrap();
+                rows.0.push(own.namespace_pid);
+                own
+            });
+            let helper = LiveProcess::spawn();
+            let old = register(helper.pid(), own.pgid, own.sid, own.namespace_pid, 0).unwrap();
+            rows.0.push(old.namespace_pid);
+            post_report(old.namespace_pid, StateChange::Exited(23));
+            // The old Linux child remains waitable while Windows has already
+            // reused its host PID. Model that deterministically, without
+            // relying on Windows' allocator to recycle a particular number.
+            with_table(|base| unsafe {
+                let entry = find(base, old.namespace_pid).unwrap();
+                store64(entry, SLOT_TOKEN, old.token ^ 1);
+            })
+            .unwrap();
+            let fresh = claim(helper.pid(), own.pgid, own.sid, own.namespace_pid)
+                .expect("a recycled host PID must claim a new Linux identity");
+            rows.0.push(fresh.namespace_pid);
+            assert_ne!(fresh.namespace_pid, old.namespace_pid);
+            assert_eq!(fresh.token, old.token);
+            assert_eq!(fresh.flags & FLAG_ZOMBIE, 0);
+            assert_eq!(lookup_host(helper.pid()), Some(fresh));
+            assert_ne!(lookup(old.namespace_pid).unwrap().flags & FLAG_ZOMBIE, 0);
+            assert_eq!(
+                peek_report(old.namespace_pid),
+                Some(StateChange::Exited(23))
+            );
+            assert_eq!(claim(helper.pid(), 90, 91, 0), Some(fresh));
+
+            // Exec may encounter the reused host before its new image claims
+            // a provisional row. Its cleanup must not erase the old zombie.
+            release_slot(fresh.namespace_pid);
+            let image = LiveProcess::spawn();
+            let process = register(image.pid(), own.pgid, own.sid, own.namespace_pid, 0).unwrap();
+            rows.0.push(process.namespace_pid);
+            assert!(replace_host(process.namespace_pid, helper.pid()));
+            assert_eq!(
+                lookup_host(helper.pid()).unwrap().namespace_pid,
+                process.namespace_pid
+            );
+            assert_eq!(
+                peek_report(old.namespace_pid),
+                Some(StateChange::Exited(23))
+            );
+            release_slot(old.namespace_pid);
+            assert_eq!(
+                lookup_host(helper.pid()).unwrap().namespace_pid,
+                process.namespace_pid
+            );
         }
 
         #[test]
@@ -5621,6 +5887,17 @@ mod windows {
     static VFORK_EXIT_EVENT: AtomicUsize = AtomicUsize::new(0);
     static VFORK_EXIT_ACK: AtomicUsize = AtomicUsize::new(0);
 
+    thread_local! {
+        // A parent can have several callers waiting for different vfork
+        // children. Only this caller's rendezvous belongs in its snapshot.
+        static VFORK_PENDING: std::cell::Cell<[usize; 3]> = const { std::cell::Cell::new([0; 3]) };
+    }
+
+    #[inline(never)]
+    fn publish_vfork(handles: [usize; 3]) {
+        VFORK_PENDING.set(handles);
+    }
+
     pub(super) fn register_child_handle(pid: u32, process: usize) -> i32 {
         if pid == 0 || process == 0 {
             return 0;
@@ -5665,11 +5942,7 @@ mod windows {
     /// Serializes an active vfork rendezvous into the generic fork command
     /// frame. Ordinary fork has no such record.
     pub(super) fn snapshot_vfork_state() -> Option<[u8; 24]> {
-        let handles = [
-            VFORK_EXEC_EVENT.load(Ordering::Acquire),
-            VFORK_EXIT_EVENT.load(Ordering::Acquire),
-            VFORK_EXIT_ACK.load(Ordering::Acquire),
-        ];
+        let handles = VFORK_PENDING.get();
         if handles.iter().all(|handle| *handle == 0) {
             return None;
         }
@@ -5705,6 +5978,9 @@ mod windows {
 
     /// Forks with the parent/child rendezvous required by `vfork`.
     pub(super) unsafe fn vfork(_stack_boundary: usize) -> Pid {
+        if VFORK_PENDING.get() != [0; 3] {
+            return -35;
+        }
         let security = SECURITY_ATTRIBUTES {
             nLength: size_of::<SECURITY_ATTRIBUTES>() as u32,
             lpSecurityDescriptor: ptr::null_mut(),
@@ -5744,9 +6020,7 @@ mod windows {
         // Publish the rendezvous before the returns-twice boundary.  The fresh
         // child must inherit it even when restoring a participant fails before
         // `fork` can return zero to this function.
-        VFORK_EXEC_EVENT.store(exec_event as usize, Ordering::Release);
-        VFORK_EXIT_EVENT.store(exit_event as usize, Ordering::Release);
-        VFORK_EXIT_ACK.store(exit_ack as usize, Ordering::Release);
+        publish_vfork([exec_event as usize, exit_event as usize, exit_ack as usize]);
 
         // SAFETY: this is the same returns-twice boundary as ordinary fork.
         if vfork_trace_enabled() {
@@ -5767,9 +6041,7 @@ mod windows {
                         error.os_code,
                     );
                 }
-                VFORK_EXEC_EVENT.store(0, Ordering::Release);
-                VFORK_EXIT_EVENT.store(0, Ordering::Release);
-                VFORK_EXIT_ACK.store(0, Ordering::Release);
+                publish_vfork([0; 3]);
                 unsafe {
                     close_if_live(exec_event);
                     close_if_live(exit_event);
@@ -5810,9 +6082,7 @@ mod windows {
                 registry_pid.and_then(|registry_pid| children.get(registry_pid))
             });
             let Some(handle) = handle else {
-                VFORK_EXEC_EVENT.store(0, Ordering::Release);
-                VFORK_EXIT_EVENT.store(0, Ordering::Release);
-                VFORK_EXIT_ACK.store(0, Ordering::Release);
+                publish_vfork([0; 3]);
                 unsafe {
                     close_if_live(exec_event);
                     close_if_live(exit_event);
@@ -5834,9 +6104,7 @@ mod windows {
                 )
             } == 0
             {
-                VFORK_EXEC_EVENT.store(0, Ordering::Release);
-                VFORK_EXIT_EVENT.store(0, Ordering::Release);
-                VFORK_EXIT_ACK.store(0, Ordering::Release);
+                publish_vfork([0; 3]);
                 unsafe {
                     close_if_live(exec_event);
                     close_if_live(exit_event);
@@ -5870,9 +6138,7 @@ mod windows {
         // These are process-local copies.  The child consumed and closed its
         // inherited handles independently; clear the parent's publication
         // before closing the parent-owned copies below.
-        VFORK_EXEC_EVENT.store(0, Ordering::Release);
-        VFORK_EXIT_EVENT.store(0, Ordering::Release);
-        VFORK_EXIT_ACK.store(0, Ordering::Release);
+        publish_vfork([0; 3]);
 
         unsafe {
             close_if_live(exec_event);
@@ -5885,11 +6151,12 @@ mod windows {
 
     /// Ends a clone that exists at the host level but could not restore enough
     /// guest process state to return safely into user code.
-    pub(super) unsafe fn terminate_failed_fork_child() -> ! {
-        // A normal fork has no published vfork handles, making this a no-op.
-        // A vfork child signals its suspended parent and waits for the parent's
-        // acknowledgement before its process object disappears.
-        unsafe { complete_vfork(false) };
+    pub(super) unsafe fn terminate_failed_fork_child(error: u32) -> ! {
+        super::job::namespaces::set_fork_error(error.max(1));
+        super::job::namespaces::mark_fork_restored();
+        // The creator is still waiting for restoration, before the vfork
+        // rendezvous. Waiting for its exit acknowledgement here deadlocks.
+        // Native termination releases this failed candidate's inherited events.
         unsafe { ExitProcess(125) }
     }
 

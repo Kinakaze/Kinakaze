@@ -194,11 +194,22 @@ pub(super) fn refresh(item: &Endpoint, state: &mut EndpointState) -> Result<(), 
     if item.protocol != NETLINK_ROUTE || !subscribed(state) {
         return Ok(());
     }
-    let journal = crate::route_state::snapshot_for(item.namespace)?.notifications;
     let filter = crate::socket::filter::for_description(
         item.description.load(std::sync::atomic::Ordering::Acquire),
     )?;
-    refresh_journal_filtered(state, journal, filter.as_deref())?;
+    refresh_filtered(item, state, filter.as_deref())
+}
+
+pub(super) fn refresh_filtered(
+    item: &Endpoint,
+    state: &mut EndpointState,
+    filter: Option<&crate::socket::filter::State>,
+) -> Result<(), i32> {
+    if item.protocol != NETLINK_ROUTE || !subscribed(state) {
+        return Ok(());
+    }
+    let journal = crate::route_state::snapshot_for(item.namespace)?.notifications;
+    refresh_journal_filtered(state, journal, filter)?;
     if !state.queue.is_empty() || state.multicast_overflow {
         if unsafe { SetEvent(item.event) } == 0 {
             return Err(EIO);
@@ -260,23 +271,24 @@ pub(crate) fn prepare_wait(fd: i32) -> Result<(bool, Vec<Source>), i32> {
 }
 
 pub(super) fn prepare(item: &Endpoint) -> Result<(bool, Vec<Source>), i32> {
-    let mut state = item.state.lock().map_err(|_| EIO)?;
-    refresh(item, &mut state)?;
-    let mut sources = vec![unsafe { Source::duplicate(item.event)? }];
-    if item.protocol == NETLINK_ROUTE && subscribed(&state) {
-        let event = Publication::open(
-            item.namespace,
-            state
-                .multicast_cursor
-                .checked_add(1)
-                .ok_or(crate::EOVERFLOW)?,
-        )?;
-        sources.push(unsafe { Source::duplicate(event.0)? });
-        // Enrollment precedes the second snapshot: a commit in the gap is
-        // observed here or signals the pinned event, so wakeups cannot be lost.
-        refresh(item, &mut state)?;
-    }
-    Ok((!state.queue.is_empty() || state.multicast_overflow, sources))
+    item.state.update(|state| {
+        refresh(item, state)?;
+        let mut sources = vec![unsafe { Source::duplicate(item.event)? }];
+        if item.protocol == NETLINK_ROUTE && subscribed(&state) {
+            let event = Publication::open(
+                item.namespace,
+                state
+                    .multicast_cursor
+                    .checked_add(1)
+                    .ok_or(crate::EOVERFLOW)?,
+            )?;
+            sources.push(unsafe { Source::duplicate(event.0)? });
+            // Enrollment precedes the second snapshot: a commit in the gap is
+            // observed here or signals the pinned event, so wakeups cannot be lost.
+            refresh(item, state)?;
+        }
+        Ok((!state.queue.is_empty() || state.multicast_overflow, sources))
+    })
 }
 
 #[cfg(test)]
@@ -445,7 +457,7 @@ mod tests {
         journal.encode(&mut encoded).unwrap();
         assert_eq!(Journal::decode(&encoded).unwrap(), journal);
         assert_eq!(Journal::decode(&[]).unwrap(), Journal::default());
-        let mut state = item.state.lock().unwrap();
+        let mut state = item.state.read().unwrap();
         refresh_journal(&mut state, journal.clone()).unwrap();
         assert!(state.multicast_overflow);
         assert_eq!(state.multicast_cursor, journal.sequence);
@@ -519,7 +531,7 @@ mod tests {
         let sender = endpoint(fd)
             .unwrap()
             .state
-            .lock()
+            .read()
             .unwrap()
             .bound
             .unwrap()

@@ -10,8 +10,8 @@ use windows_sys::Win32::System::JobObjects::{
     SetInformationJobObject,
 };
 use windows_sys::Win32::System::Threading::{
-    GetProcessTimes, INFINITE, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SET_QUOTA,
-    PROCESS_SYNCHRONIZE, PROCESS_TERMINATE, WaitForSingleObject,
+    GetProcessTimes, INFINITE, OpenProcess, PROCESS_DUP_HANDLE, PROCESS_QUERY_LIMITED_INFORMATION,
+    PROCESS_SET_QUOTA, PROCESS_SYNCHRONIZE, PROCESS_TERMINATE, WaitForSingleObject,
 };
 
 /// Redirected streams need no console host. Preserve the existing console path
@@ -59,6 +59,32 @@ pub struct ProcessHandle {
 }
 
 impl ProcessHandle {
+    /// Duplicate a capability from this exact native process incarnation.
+    pub fn duplicate_object(&self, source: u64) -> io::Result<OwnedHandle> {
+        use windows_sys::Win32::{
+            Foundation::{DUPLICATE_SAME_ACCESS, DuplicateHandle},
+            System::Threading::GetCurrentProcess,
+        };
+        if source == 0 || source > isize::MAX as u64 {
+            return Err(io::Error::other("invalid object handle"));
+        }
+        let mut handle = std::ptr::null_mut();
+        if unsafe {
+            DuplicateHandle(
+                self.handle.as_raw_handle(),
+                source as _,
+                GetCurrentProcess(),
+                &mut handle,
+                0,
+                0,
+                DUPLICATE_SAME_ACCESS,
+            )
+        } == 0
+        {
+            return Err(io::Error::last_os_error());
+        }
+        unsafe { crate::owned(handle) }
+    }
     pub fn open(pid: u32) -> io::Result<Self> {
         // Assignment to a kill-on-close Job requires SET_QUOTA and TERMINATE.
         // SAFETY: No pointers; false explicitly prohibits handle inheritance.
@@ -67,7 +93,8 @@ impl ProcessHandle {
                 PROCESS_QUERY_LIMITED_INFORMATION
                     | PROCESS_SYNCHRONIZE
                     | PROCESS_SET_QUOTA
-                    | PROCESS_TERMINATE,
+                    | PROCESS_TERMINATE
+                    | PROCESS_DUP_HANDLE,
                 0,
                 pid,
             )

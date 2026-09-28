@@ -66,6 +66,7 @@ impl Client {
         write_frame(
             &mut self.pipe,
             &WireRequest {
+                completed: None,
                 id: self.sequence,
                 request,
             },

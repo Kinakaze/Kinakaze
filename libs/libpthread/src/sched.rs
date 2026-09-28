@@ -95,7 +95,7 @@ fn native_error() -> i32 {
     }
 }
 
-fn with_live_thread(id: usize, action: impl FnOnce(&OwnedHandle) -> i32) -> i32 {
+pub(super) fn with_live_thread(id: usize, action: impl FnOnce(&OwnedHandle) -> i32) -> i32 {
     let current = super::pthread_self();
     if id == current {
         if let Err(error) = register_current(id) {
@@ -135,7 +135,8 @@ pub fn cpu_clock(id: usize) -> Result<i32, i32> {
     if error == 0 { Ok(clock) } else { Err(error) }
 }
 
-fn validate(policy: i32, priority: i32) -> Result<(), i32> {
+/// Shared by pthread and process-facing scheduling entry points.
+pub fn validate(policy: i32, priority: i32) -> Result<(), i32> {
     let base = policy & !SCHED_RESET_ON_FORK;
     let valid = match base {
         SCHED_OTHER | SCHED_BATCH | SCHED_IDLE => priority == 0,

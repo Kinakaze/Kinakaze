@@ -3,6 +3,7 @@
 use super::*;
 use crate::mount::shared::{self, Store};
 use crate::state_codec::{Reader, bytes, word};
+use kinakaze_v2_protocol::kernel::{CGROUP_CATALOG, CGROUP_MAGIC};
 use std::sync::Arc;
 
 pub(crate) fn store() -> Result<Arc<Store>, i32> {
@@ -10,7 +11,7 @@ pub(crate) fn store() -> Result<Arc<Store>, i32> {
     if let Some(s) = STORE.get() {
         return Ok(s.clone());
     }
-    let s = Arc::new(Store::user_object(u64::MAX - 26, true)?);
+    let s = Arc::new(Store::user_object(CGROUP_CATALOG, true)?);
     s.update(|old| {
         Ok((
             if old.is_empty() {
@@ -21,14 +22,20 @@ pub(crate) fn store() -> Result<Arc<Store>, i32> {
             (),
         ))
     })?;
+    s.retain_kernel(false, Vec::new())?;
     let _ = STORE.set(s.clone());
     Ok(s)
 }
 fn encode(reg: &CgroupRegistry) -> Vec<u8> {
-    let mut out = b"CRYCG002".to_vec();
+    let mut out = CGROUP_MAGIC.to_le_bytes().to_vec();
     word(&mut out, reg.groups.len() as u64);
     let mut rows: Vec<_> = reg.groups.iter().collect();
     rows.sort_by_key(|(p, _)| *p);
+    // The owner reads this bounded index from the same atomic publication to
+    // reclaim native jobs even if a remover dies before its release RPC.
+    for (_, node) in &rows {
+        word(&mut out, node.id);
+    }
     for (path, n) in rows {
         bytes(&mut out, path.as_bytes());
         word(&mut out, n.id);
@@ -46,7 +53,7 @@ fn encode(reg: &CgroupRegistry) -> Vec<u8> {
     out
 }
 fn decode(data: &[u8]) -> Result<CgroupRegistry, i32> {
-    if data.get(..8) != Some(b"CRYCG002") {
+    if data.get(..8) != Some(&CGROUP_MAGIC.to_le_bytes()) {
         return Err(crate::EIO);
     }
     let mut r = Reader(&data[8..]);
@@ -54,10 +61,19 @@ fn decode(data: &[u8]) -> Result<CgroupRegistry, i32> {
     if count > 100_000 {
         return Err(crate::EIO);
     }
+    let mut identities = std::collections::BTreeSet::new();
+    for _ in 0..count {
+        if !identities.insert(r.word()?) {
+            return Err(crate::EIO);
+        }
+    }
     let mut groups = HashMap::new();
     for _ in 0..count {
         let path = r.text()?;
         let id = r.word()?;
+        if !identities.remove(&id) {
+            return Err(crate::EIO);
+        }
         let optional = |v| if v == u64::MAX { None } else { Some(v) };
         let mut n = CgroupNode {
             id,
@@ -117,6 +133,17 @@ pub(super) fn job(id: u64) -> Result<(HANDLE, bool), i32> {
         return Err(crate::errno_from_win32(unsafe { GetLastError() }));
     }
     let fresh = unsafe { GetLastError() } != 183;
+    if kinakaze_runtime::authority::get().is_some() {
+        use kinakaze_v2_protocol::kernel::{KernelCommand, ObjectKey};
+        if let Err(error) = kinakaze_runtime::authority::kernel(KernelCommand::Retain {
+            object: ObjectKey::CgroupJob(id),
+            tmpfs: false,
+            dependencies: Vec::new(),
+        }) {
+            unsafe { CloseHandle(h) };
+            return Err(error);
+        }
+    }
     jobs.insert(id, h as usize);
     Ok((h, fresh))
 }

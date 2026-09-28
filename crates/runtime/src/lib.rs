@@ -17,8 +17,8 @@ use std::{
 use kinakaze_v2_abi::*;
 use kinakaze_v2_host_win::PipeConnection;
 use kinakaze_v2_protocol::{
-    ClientRole, Hello, MAX_FRAME_SIZE, PROTOCOL_VERSION, Reply, Request, RuntimeOpenConfig,
-    WireRequest, WireResponse, read_frame, write_frame,
+    ClientRole, Hello, PROTOCOL_VERSION, Reply, Request, RuntimeOpenConfig, WireRequest,
+    WireResponse, encode_frame, read_frame,
 };
 
 #[cfg(feature = "guest-engine")]
@@ -29,21 +29,37 @@ mod helper;
 struct Connection {
     pipe: Option<PipeConnection>,
     next_id: u64,
+    completed: Option<u64>,
 }
 
 impl Connection {
     fn exchange(&mut self, request: Request) -> Result<WireResponse, i32> {
         let id = self.next_id;
-        let wire_request = WireRequest { id, request };
+        let completed = match &request {
+            Request::CommitFork { transaction }
+            | Request::AbortFork { transaction }
+            | Request::AbortExec { transaction } => Some(*transaction),
+            // Successful exec is reclaimed only after the old native image dies.
+            _ => None,
+        };
+        let wire_request = WireRequest {
+            id,
+            request,
+            completed: self.completed,
+        };
         // The wire envelope is larger than the input JSON. Reject a local size
         // error before touching the connection or consuming a sequence number.
-        let payload = serde_json::to_vec(&wire_request).map_err(|_| STATUS_INVALID_ARGUMENT)?;
-        if payload.len() > MAX_FRAME_SIZE {
-            return Err(STATUS_INVALID_ARGUMENT);
-        }
+        let payload = encode_frame(&wire_request).map_err(|_| STATUS_INVALID_ARGUMENT)?;
         self.next_id = id.checked_add(1).ok_or(STATUS_PROTOCOL)?;
         let pipe = self.pipe.as_mut().ok_or(STATUS_TRANSPORT)?;
-        let result = exchange_frame(pipe, wire_request);
+        let result = exchange_frame(pipe, id, &payload);
+        if let Ok(response) = &result {
+            self.completed = if matches!(response.result, Ok(Reply::Ok)) {
+                completed
+            } else {
+                None
+            };
+        }
         // A partial write/read has an uncertain outcome. Never replay a request
         // on this session; the worker lifecycle, not a DLL retry, owns recovery.
         if result.is_err() {
@@ -55,11 +71,15 @@ impl Connection {
 
 fn exchange_frame<T: io::Read + io::Write>(
     stream: &mut T,
-    request: WireRequest,
+    id: u64,
+    payload: &[u8],
 ) -> Result<WireResponse, i32> {
-    write_frame(stream, &request).map_err(|_| STATUS_TRANSPORT)?;
+    stream
+        .write_all(payload)
+        .and_then(|()| stream.flush())
+        .map_err(|_| STATUS_TRANSPORT)?;
     let response: WireResponse = read_frame(stream).map_err(|_| STATUS_TRANSPORT)?;
-    if response.id != request.id {
+    if response.id != id {
         return Err(STATUS_PROTOCOL);
     }
     Ok(response)
@@ -161,6 +181,7 @@ fn open_session(config: RuntimeOpenConfig) -> Result<Box<Session>, i32> {
     let mut connection = Connection {
         pipe: Some(pipe),
         next_id: 1,
+        completed: None,
     };
     let response = connection.exchange(Request::Hello(Hello {
         version: PROTOCOL_VERSION,
@@ -337,6 +358,7 @@ pub extern "sysv64" fn kinakaze_runtime_abi_version_sysv() -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use kinakaze_v2_protocol::write_frame;
     static TEST_SESSION_LOCK: Mutex<()> = Mutex::new(());
 
     fn disconnected_session(owner: u32) -> Box<Session> {
@@ -345,6 +367,7 @@ mod tests {
             connection: mem::ManuallyDrop::new(Mutex::new(Connection {
                 pipe: None,
                 next_id: 1,
+                completed: None,
             })),
         })
     }
@@ -499,10 +522,13 @@ mod tests {
         assert!(matches!(
             exchange_frame(
                 &mut duplex,
-                WireRequest {
+                7,
+                &encode_frame(&WireRequest {
+                    completed: None,
                     id: 7,
                     request: Request::Identity
-                }
+                })
+                .unwrap()
             ),
             Err(STATUS_PROTOCOL)
         ));
@@ -520,6 +546,7 @@ mod tests {
         let mut connection = Connection {
             pipe: None,
             next_id: 1,
+            completed: None,
         };
         assert_eq!(connection.exchange(request), Err(STATUS_INVALID_ARGUMENT));
         assert_eq!(connection.next_id, 1);

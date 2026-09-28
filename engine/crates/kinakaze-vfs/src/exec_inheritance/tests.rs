@@ -56,7 +56,8 @@ fn spawn_fence_refuses_a_republished_descriptor_even_with_the_same_handle() {
     crate::table()
         .write()
         .unwrap()
-        .insert_at(fd, handle as usize, FdKind::Event, FdFlags::NONE);
+        .insert_at(fd, handle as usize, FdKind::Event, FdFlags::NONE)
+        .unwrap();
     let called = std::cell::Cell::new(false);
     let error = crate::with_checked_exec_handle_filter(&snapshot, || called.set(true)).unwrap_err();
     assert_eq!(error.raw_os_error(), Some(1237));
@@ -74,7 +75,9 @@ fn precreation_error_rolls_back_without_calling_the_operation() {
     // Explicitly inject a bad table record, not an unknown live native object.
     // INVALID_HANDLE_VALUE is the current-process pseudo-handle, which cannot
     // have inheritance flags changed and never represents an owned event.
-    table.insert_at(slot as i32, usize::MAX, FdKind::Event, FdFlags::NONE);
+    table
+        .insert_at(slot as i32, usize::MAX, FdKind::Event, FdFlags::NONE)
+        .unwrap();
     drop(table);
     let called = std::cell::Cell::new(false);
     assert!(crate::with_exec_handle_filter(|| called.set(true)).is_err());

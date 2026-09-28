@@ -275,6 +275,58 @@ impl Scope {
         skip: Option<ObjectId>,
         start: usize,
     ) -> Result<Option<Resolution>, LinkError> {
+        self.resolve_in_order(
+            objects,
+            name,
+            version,
+            skip,
+            self.providers
+                .iter()
+                .enumerate()
+                .skip(start)
+                .filter(|(index, _)| self.globals.get(*index).copied().unwrap_or(true))
+                .map(|(_, provider)| *provider),
+        )
+    }
+
+    /// DEEPBIND affects this relocation group, without reordering RTLD_DEFAULT
+    /// or changing visibility for unrelated libraries and their constructors.
+    pub fn resolve_preferred(
+        &self,
+        objects: &[MappedObject],
+        name: &str,
+        version: Option<&str>,
+        preferred: &[Provider],
+    ) -> Result<Option<Resolution>, LinkError> {
+        if preferred.is_empty() {
+            return self.resolve(objects, name, version);
+        }
+        self.resolve_in_order(
+            objects,
+            name,
+            version,
+            None,
+            preferred.iter().copied().chain(
+                self.providers
+                    .iter()
+                    .enumerate()
+                    .filter(|(index, provider)| {
+                        self.globals.get(*index).copied().unwrap_or(true)
+                            && !preferred.contains(provider)
+                    })
+                    .map(|(_, provider)| *provider),
+            ),
+        )
+    }
+
+    fn resolve_in_order(
+        &self,
+        objects: &[MappedObject],
+        name: &str,
+        version: Option<&str>,
+        skip: Option<ObjectId>,
+        providers: impl Iterator<Item = Provider>,
+    ) -> Result<Option<Resolution>, LinkError> {
         let mut weak_fallback: Option<Resolution> = None;
         static SYMBOL_TRACE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
         let trace_stdio = *SYMBOL_TRACE
@@ -284,11 +336,8 @@ impl Scope {
                 "fopen" | "fopen64" | "__getdelim" | "getdelim" | "fclose"
             );
 
-        for (index, provider) in self.providers.iter().enumerate().skip(start) {
-            if !self.globals.get(index).copied().unwrap_or(true) {
-                continue;
-            }
-            match *provider {
+        for provider in providers {
+            match provider {
                 Provider::Elf(id) => {
                     if Some(id) == skip {
                         continue;
@@ -347,6 +396,7 @@ impl Scope {
         owner: ObjectId,
         name: &str,
         version: Option<&str>,
+        preferred: &[Provider],
     ) -> Result<Option<Resolution>, LinkError> {
         let object = &objects[owner.0];
         if let Some(symbol) = object.lookup(name)?
@@ -354,7 +404,7 @@ impl Scope {
         {
             return Ok(Some(definition_of(objects, owner, symbol)?));
         }
-        self.resolve(objects, name, version)
+        self.resolve_preferred(objects, name, version, preferred)
     }
 }
 

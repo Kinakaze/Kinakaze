@@ -81,6 +81,20 @@ unsafe extern "system" {
 /// Owned object reference. Separate reopen/stream handles carry data I/O, so
 /// sharing an object reference does not share a mutable seek position or pending
 /// request. Every object has SYNCHRONIZE access for retiring its own native open.
+pub(crate) struct DirectoryItem {
+    pub name: OsString,
+    pub identity: Option<DirectoryIdentity>,
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Hash)]
+pub(crate) struct DirectoryIdentity {
+    pub inode: u64,
+    pub created: u64,
+    pub changed: u64,
+    pub attributes: u32,
+    pub ea_size: u32,
+}
+
 #[derive(Debug)]
 pub(crate) struct Object(usize);
 impl Drop for Object {
@@ -270,6 +284,16 @@ impl Object {
     }
 
     pub(crate) fn open(path: &Path, access: u32) -> Result<Self, i32> {
+        Self::open_with_flags(path, access, FLAGS)
+    }
+
+    /// The guest resolver has selected the native path. Preserve ordinary
+    /// Win32 follow behavior for native links/junctions on metadata-only opens.
+    pub(crate) fn open_follow(path: &Path, access: u32) -> Result<Self, i32> {
+        Self::open_with_flags(path, access, FLAGS & !FILE_FLAG_OPEN_REPARSE_POINT)
+    }
+
+    fn open_with_flags(path: &Path, access: u32, flags: u32) -> Result<Self, i32> {
         let name = crate::path::wide_path(path)?;
         Self::owned(unsafe {
             CreateFileW(
@@ -278,7 +302,7 @@ impl Object {
                 SHARE,
                 ptr::null(),
                 OPEN_EXISTING,
-                FLAGS,
+                flags,
                 ptr::null_mut(),
             )
         })
@@ -496,6 +520,25 @@ impl Object {
     }
 
     fn entries_with_atime(&self, suppress_atime: bool) -> Result<Vec<OsString>, i32> {
+        Ok(self
+            .scan_directory(suppress_atime, false)?
+            .into_iter()
+            .map(|entry| entry.name)
+            .collect())
+    }
+
+    pub(crate) fn directory_items(&self) -> Result<Vec<DirectoryItem>, i32> {
+        match self.scan_directory(false, true) {
+            Err(crate::EOPNOTSUPP) => self.scan_directory(false, false),
+            result => result,
+        }
+    }
+
+    fn scan_directory(
+        &self,
+        suppress_atime: bool,
+        identities: bool,
+    ) -> Result<Vec<DirectoryItem>, i32> {
         let query = {
             Self::reopen(
                 self.raw(),
@@ -525,7 +568,7 @@ impl Object {
                     &mut io,
                     storage.as_mut_ptr().cast(),
                     (storage.len() * 8) as u32,
-                    12,
+                    if identities { 37 } else { 12 },
                     0,
                     ptr::null(),
                     u8::from(first),
@@ -536,6 +579,9 @@ impl Object {
             if status as u32 == 0x8000_0006 {
                 return Ok(result);
             }
+            if identities && matches!(status as u32, 0xc000_0003 | 0xc000_00bb | 0xc000_000d) {
+                return Err(crate::EOPNOTSUPP);
+            }
             if status < 0 {
                 return Err(errno_from_win32(unsafe { RtlNtStatusToDosError(status) }));
             }
@@ -545,29 +591,40 @@ impl Object {
             let bytes = unsafe {
                 std::slice::from_raw_parts(storage.as_ptr().cast::<u8>(), io.information)
             };
+            let name_offset = if identities { 104 } else { 12 };
+            let length_offset = if identities { 60 } else { 8 };
             let mut cursor = 0;
             loop {
                 let record = &bytes[cursor..];
-                if record.len() < 12 {
+                if record.len() < name_offset {
                     return Err(EIO);
                 }
                 let next = u32::from_le_bytes(record[0..4].try_into().unwrap()) as usize;
-                let length = u32::from_le_bytes(record[8..12].try_into().unwrap()) as usize;
-                if length % 2 != 0 || length > record.len() - 12 {
+                let length = u32::from_le_bytes(
+                    record[length_offset..length_offset + 4].try_into().unwrap(),
+                ) as usize;
+                if length % 2 != 0 || length > record.len() - name_offset {
                     return Err(EIO);
                 }
-                let name: Vec<u16> = record[12..12 + length]
+                let name: Vec<u16> = record[name_offset..name_offset + length]
                     .chunks_exact(2)
                     .map(|v| u16::from_le_bytes([v[0], v[1]]))
                     .collect();
                 let name = OsString::from_wide(&name);
                 if name != "." && name != ".." {
-                    result.push(name);
+                    let identity = identities.then(|| DirectoryIdentity {
+                        inode: u64::from_le_bytes(record[96..104].try_into().unwrap()),
+                        created: u64::from_le_bytes(record[8..16].try_into().unwrap()),
+                        changed: u64::from_le_bytes(record[32..40].try_into().unwrap()),
+                        attributes: u32::from_le_bytes(record[56..60].try_into().unwrap()),
+                        ea_size: u32::from_le_bytes(record[64..68].try_into().unwrap()),
+                    });
+                    result.push(DirectoryItem { name, identity });
                 }
                 if next == 0 {
                     break;
                 }
-                if next < 12 + length || next >= record.len() {
+                if next < name_offset + length || next >= record.len() {
                     return Err(EIO);
                 }
                 cursor += next;

@@ -101,8 +101,18 @@ pub(crate) fn namespace_root_path() -> Result<Option<String>, i32> {
 }
 
 /// Native handles retain their position in the original namespace after chroot.
+/// `path` comes from Object::path (GetFinalPathNameByHandle), so the common
+/// case is already canonical. Reopening it and the immutable namespace base
+/// only to canonicalize them again adds filesystem I/O to every openat leaf.
 pub(crate) fn to_namespace_path(path: &Path) -> Option<String> {
-    let root = default_system_root().canonicalize().ok()?;
+    let base = default_system_root();
+    if let Some(relative) = super::strip_native_root(path, &base) {
+        return Some(format!(
+            "/{}",
+            unescape_path(&relative.to_string_lossy().replace('\\', "/")).trim_matches('/')
+        ));
+    }
+    let root = base.canonicalize().ok()?;
     let path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
     let relative = path.strip_prefix(root).ok()?;
     Some(format!(

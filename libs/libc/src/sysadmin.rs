@@ -17,8 +17,10 @@ use crate::set_errno;
 mod keys;
 mod mount_api;
 pub mod mqueue;
+mod sched_api;
 use kinakaze_vfs::{EAGAIN, EFAULT, EINVAL, ENOSYS, ENOTDIR, EPERM, ETIMEDOUT};
 pub use mount_api::*;
+pub use sched_api::*;
 
 /// Raw host I/O ports are not delegated to guest user mode. Libpci must use
 /// its kernel interface instead of executing privileged IN/OUT instructions.
@@ -575,80 +577,12 @@ pub const RLIMIT_AS: c_int = 9;
 /// One past the highest resource Linux defines, which bounds a valid argument.
 const RLIMIT_NLIMITS: c_int = 16;
 
-/// The stack the guest actually runs on, in bytes.
-///
-/// This is deliberately *not* `GetCurrentThreadStackLimits`. The loader does not
-/// run guest code on the Windows thread stack: it reserves a separate block and
-/// enters the ELF entry point with `rsp` inside it, so the limit that governs the
-/// guest is that block's size. See `STACK_REGION` in
-/// `crates/kinakaze-link/src/launch.rs`, which this mirrors.
-///
-/// The constant is duplicated rather than imported because `libc` does not depend
-/// on `kinakaze-link` — the loader links the libc, not the other way round. It
-/// coincides with the usual Linux `RLIMIT_STACK` default of 8 MiB, which is what
-/// the loader chose it to match.
-const GUEST_STACK_SIZE: u64 = 8 * 1024 * 1024;
+#[cfg(test)]
+const GUEST_STACK_SIZE: u64 = kinakaze_vfs::limits::STACK_BYTES;
 
-/// The limit in force for one resource.
-///
-/// Several of these are real figures rather than placeholders.
-///
-/// - `RLIMIT_NOFILE` is the process's retained soft/hard ceiling. Descriptor
-///   pages are allocated on use, up to [`kinakaze_vfs::MAX_FDS`]. Raising a
-///   limit does not allocate entries or change the fixed libc fd_set ABI.
-/// - `RLIMIT_STACK` is the loader's guest stack block. See [`GUEST_STACK_SIZE`]
-///   for why this is not the Windows thread stack.
-/// - `RLIMIT_AS` and `RLIMIT_DATA` are `RLIM64_INFINITY`: there is no enforced
-///   per-process address-space or data-segment quota. The host's usable virtual
-///   address range is an architectural constraint, not either Linux rlimit.
-/// - `RLIMIT_CORE` is genuinely 0. Nothing here writes a Linux core file; Windows
-///   produces minidumps through WER, an entirely separate mechanism that no
-///   `RLIMIT_CORE` value influences. A caller checking before it enables core
-///   dumps gets the correct answer, and BusyBox's `ulimit -c` prints the truth.
-///
-/// Everything else is `RLIM64_INFINITY`, because no per-process ceiling on it is
-/// enforced here that could be reported. "Unlimited" is the honest encoding of an
-/// unenforced limit — and the same value a normal Linux process carries for most
-/// of these — where a made-up number would be acted on as though something
-/// checked it.
 fn limit_for(resource: c_int, pid: u32) -> Result<RLimit64, i32> {
-    let both = |value: u64| RLimit64 {
-        rlim_cur: value,
-        rlim_max: value,
-    };
-    Ok(match resource {
-        RLIMIT_FSIZE | RLIMIT_NPROC => {
-            let (rlim_cur, rlim_max) = kinakaze_vfs::limits::limits(pid, resource as u32, None)?;
-            RLimit64 { rlim_cur, rlim_max }
-        }
-        12 => {
-            let (soft, hard) = kinakaze_vfs::mqueue::limits(pid, None)?;
-            RLimit64 {
-                rlim_cur: soft,
-                rlim_max: hard,
-            }
-        }
-        RLIMIT_NOFILE => {
-            let (soft, hard) = kinakaze_vfs::job::nofile_limits(pid)?;
-            RLimit64 {
-                rlim_cur: soft,
-                rlim_max: hard,
-            }
-        }
-        RLIMIT_STACK => RLimit64 {
-            rlim_cur: GUEST_STACK_SIZE,
-            // The hard limit is unlimited on Linux by default, and nothing here
-            // would stop a larger block being reserved for a future guest.
-            rlim_max: RLIM64_INFINITY,
-        },
-        // Linux INIT_RLIMITS also starts AS and DATA without process quotas.
-        // Ordinary allocation failures do not imply a configured resource limit.
-        RLIMIT_AS | RLIMIT_DATA => both(RLIM64_INFINITY),
-        RLIMIT_CORE => both(0),
-        // RLIMIT_CPU, RLIMIT_FSIZE, RLIMIT_RSS, RLIMIT_NPROC, RLIMIT_MEMLOCK and
-        // the four Linux adds above them. None is enforced here.
-        _ => both(RLIM64_INFINITY),
-    })
+    let (rlim_cur, rlim_max) = kinakaze_vfs::limits::get(pid, resource as u32)?;
+    Ok(RLimit64 { rlim_cur, rlim_max })
 }
 
 /// `getrlimit64`.
@@ -1136,7 +1070,9 @@ pub unsafe extern "sysv64" fn kinakaze_abi_mount(
         crate::set_errno(EINVAL);
         return -1;
     }
-    let fs_type = if filesystem.is_null() || flags & kinakaze_vfs::mount::MS_BIND != 0 {
+    let ignores_filesystem = flags & kinakaze_vfs::mount::MS_BIND != 0
+        || flags & MS_REMOUNT == 0 && flags & (MS_PROPAGATION | MS_MOVE) != 0;
+    let fs_type = if filesystem.is_null() || ignores_filesystem {
         ""
     } else {
         match unsafe { CStr::from_ptr(filesystem) }.to_str() {
@@ -1240,10 +1176,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_mount(
     }
     let is_bind = flags & kinakaze_vfs::mount::MS_BIND != 0;
     let is_propagation = !is_bind && (flags & kinakaze_vfs::mount::MS_PROPAGATION != 0);
-    if flags & MS_REMOUNT != 0
-        || (!is_bind && !is_propagation && flags & (MS_PROPAGATION | MS_MOVE) != 0)
-        || (is_propagation && flags & MS_MOVE != 0)
-    {
+    if flags & MS_REMOUNT != 0 {
         crate::set_errno(ENOSYS);
         return -1;
     }
@@ -1262,6 +1195,31 @@ pub unsafe extern "sysv64" fn kinakaze_abi_mount(
                 return -1;
             }
         }
+    }
+    if !is_bind && flags & MS_MOVE != 0 {
+        let result = (|| {
+            if source.is_null() {
+                return Err(EINVAL);
+            }
+            let source = unsafe { CStr::from_ptr(source) }
+                .to_str()
+                .map_err(|_| EINVAL)?;
+            if source.is_empty() {
+                return Err(EINVAL);
+            }
+            // Legacy mount follows both endpoints, including the proc fd
+            // magic links used by systemd's nofollow mount helper.
+            let source = kinakaze_vfs::mount::resolve_mount_target(source)?;
+            let target = kinakaze_vfs::mount::resolve_mount_target(target_str)?;
+            kinakaze_vfs::mount::api::move_path(&source, &target, 0x11)
+        })();
+        return match result {
+            Ok(()) => 0,
+            Err(error) => {
+                crate::set_errno(error);
+                -1
+            }
+        };
     }
     if source.is_null() {
         crate::set_errno(EFAULT);
@@ -2088,6 +2046,13 @@ pub const SYS_MKNOD: i64 = 133;
 pub const SYS_PERSONALITY: i64 = 135;
 pub const SYS_STATFS: i64 = 137;
 pub const SYS_FSTATFS: i64 = 138;
+pub const SYS_SCHED_SETPARAM: i64 = 142;
+pub const SYS_SCHED_GETPARAM: i64 = 143;
+pub const SYS_SCHED_SETSCHEDULER: i64 = 144;
+pub const SYS_SCHED_GETSCHEDULER: i64 = 145;
+pub const SYS_SCHED_GET_PRIORITY_MAX: i64 = 146;
+pub const SYS_SCHED_GET_PRIORITY_MIN: i64 = 147;
+pub const SYS_SCHED_RR_GET_INTERVAL: i64 = 148;
 pub const SYS_PIVOT_ROOT: i64 = 155;
 pub const SYS_PRCTL: i64 = 157;
 pub const SYS_ARCH_PRCTL: i64 = 158;
@@ -3543,6 +3508,34 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
             to_kernel(res as i64)
         }
         SYS_SCHED_YIELD => i64::from(kinakaze_abi_sched_yield()),
+        SYS_SCHED_SETPARAM => to_kernel(unsafe {
+            kinakaze_abi_sched_setparam(argument1 as c_int, argument2 as *const SchedParam) as i64
+        }),
+        SYS_SCHED_GETPARAM => to_kernel(unsafe {
+            kinakaze_abi_sched_getparam(argument1 as c_int, argument2 as *mut SchedParam) as i64
+        }),
+        SYS_SCHED_SETSCHEDULER => to_kernel(unsafe {
+            kinakaze_abi_sched_setscheduler(
+                argument1 as c_int,
+                argument2 as c_int,
+                argument3 as *const SchedParam,
+            ) as i64
+        }),
+        SYS_SCHED_GETSCHEDULER => {
+            to_kernel(kinakaze_abi_sched_getscheduler(argument1 as c_int) as i64)
+        }
+        SYS_SCHED_GET_PRIORITY_MAX => {
+            to_kernel(kinakaze_abi_sched_get_priority_max(argument1 as c_int) as i64)
+        }
+        SYS_SCHED_GET_PRIORITY_MIN => {
+            to_kernel(kinakaze_abi_sched_get_priority_min(argument1 as c_int) as i64)
+        }
+        SYS_SCHED_RR_GET_INTERVAL => to_kernel(unsafe {
+            kinakaze_abi_sched_rr_get_interval(
+                argument1 as c_int,
+                argument2 as *mut crate::time::TimeSpec,
+            ) as i64
+        }),
         SYS_MADVISE => {
             let res = crate::fdio::madvise_impl(
                 argument1 as *mut c_void,
@@ -3954,6 +3947,12 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
             };
             to_kernel(res as i64)
         }
+        SYS_FALLOCATE => to_kernel(i64::from(crate::fdio::kinakaze_abi_fallocate(
+            argument1 as c_int,
+            argument2 as c_int,
+            argument3 as i64,
+            argument4 as i64,
+        ))),
         SYS_FTRUNCATE => {
             let res = crate::fs::ftruncate(argument1 as c_int, argument2 as i64);
             to_kernel(res as i64)
@@ -4542,7 +4541,9 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
                     argument1 as c_int,
                     argument2 as *const c_char,
                     argument3 as c_int,
-                    argument4 as c_int,
+                    // The original syscall has three arguments. Flags exist
+                    // only in faccessat2; r10 is unspecified here.
+                    0,
                 )
             };
             to_kernel(res as i64)
@@ -4559,21 +4560,56 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
             to_kernel(res as i64)
         }
         SYS_PPOLL => {
-            let timeout_ms = if argument3 == 0 {
-                -1
+            if argument4 != 0 {
+                if argument5 != 8 {
+                    return -i64::from(EINVAL);
+                }
+                if let Err(error) = futex_access(argument4 as usize, 8, false) {
+                    return error;
+                }
+            }
+            let timeout = if argument3 == 0 {
+                None
             } else {
-                let ts = unsafe { &*(argument3 as *const crate::time::TimeSpec) };
-                (ts.tv_sec
-                    .saturating_mul(1000)
-                    .saturating_add(ts.tv_nsec / 1_000_000)) as c_int
+                if let Err(error) =
+                    futex_access(argument3 as usize, size_of::<KernelTimespec>(), false)
+                {
+                    return error;
+                }
+                let ts = unsafe { (argument3 as *const KernelTimespec).read_unaligned() };
+                if let Err(error) = timespec_ns(&ts) {
+                    return error;
+                }
+                Some(std::time::Duration::new(
+                    ts.tv_sec as u64,
+                    ts.tv_nsec as u32,
+                ))
             };
+            let started = std::time::Instant::now();
             let res = unsafe {
-                crate::fdio::kinakaze_abi_poll(
-                    argument1 as *mut crate::fdio::PollFd,
-                    argument2 as u64,
-                    timeout_ms,
+                crate::fsextra::kinakaze_abi_ppoll(
+                    argument1 as *mut c_void,
+                    argument2 as usize,
+                    argument3 as *const libpthread::Timespec,
+                    argument4 as *const c_void,
                 )
             };
+            // The kernel ABI writes back the remaining timeout; libc ppoll
+            // deliberately preserves its caller's timespec. Like Linux, an
+            // unwritable timeout does not turn an otherwise valid wait into
+            // EFAULT, and a zero timeout is never written back.
+            if let Some(timeout) = timeout
+                && !timeout.is_zero()
+                && futex_access(argument3 as usize, size_of::<KernelTimespec>(), true).is_ok()
+            {
+                let left = timeout.saturating_sub(started.elapsed());
+                unsafe {
+                    (argument3 as *mut KernelTimespec).write_unaligned(KernelTimespec {
+                        tv_sec: left.as_secs() as i64,
+                        tv_nsec: i64::from(left.subsec_nanos()),
+                    });
+                }
+            }
             to_kernel(res as i64)
         }
         SYS_UTIMENSAT => {
@@ -5141,8 +5177,13 @@ fn raw_clone_process(
     child_tid: *mut c_int,
     requested_tls: usize,
 ) -> i64 {
-    let Some((_, instruction)) = kinakaze_tls::thread_pointer::active_guest_signal_context() else {
-        return -i64::from(EINVAL);
+    let instruction = if child_stack == 0 {
+        0
+    } else {
+        match kinakaze_tls::thread_pointer::active_guest_signal_context() {
+            Some((_, instruction)) => instruction,
+            None => return -i64::from(EINVAL),
+        }
     };
     let parent = if flags & 0x8000 != 0 {
         let parent = kinakaze_vfs::job::process_info(kinakaze_vfs::job::process_id())
@@ -5192,7 +5233,7 @@ fn raw_clone_process(
             crate::process::terminate_host_process(127);
         }
     }
-    i64::from(result)
+    to_kernel(i64::from(result))
 }
 
 const NEW_NAMESPACE_FLAGS: u64 = 0x7e02_0000;
@@ -5823,6 +5864,15 @@ mod tests {
         // Genuinely zero: no Linux core file is ever written here.
         let core = read(RLIMIT_CORE);
         assert_eq!((core.rlim_cur, core.rlim_max), (0, 0));
+
+        // Realtime scheduling is unavailable: restricting its ceiling to zero
+        // is an enforced no-op, as requested by sandboxed system services.
+        let realtime = read(14); // RLIMIT_RTPRIO
+        assert_eq!((realtime.rlim_cur, realtime.rlim_max), (0, 0));
+        assert_eq!(
+            unsafe { kinakaze_abi_setrlimit64(14, &raw const realtime) },
+            0
+        );
 
         // An architectural address-space ceiling is not a per-process quota.
         // These resources have no configured enforcement and report unlimited.
@@ -7678,70 +7728,6 @@ mod tests {
         // the calls corrupt memory.
         assert_eq!(size_of::<FileTime>(), 8);
     }
-}
-
-#[repr(C)]
-pub struct SchedParam {
-    pub sched_priority: c_int,
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "sysv64" fn kinakaze_abi_sched_getparam(
-    _pid: c_int,
-    param: *mut SchedParam,
-) -> c_int {
-    if !param.is_null() {
-        unsafe {
-            (*param).sched_priority = 0;
-        }
-    }
-    0
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "sysv64" fn kinakaze_abi_sched_setparam(
-    _pid: c_int,
-    _param: *const SchedParam,
-) -> c_int {
-    0
-}
-
-#[unsafe(no_mangle)]
-pub extern "sysv64" fn kinakaze_abi_sched_getscheduler(_pid: c_int) -> c_int {
-    0 // SCHED_OTHER
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "sysv64" fn kinakaze_abi_sched_setscheduler(
-    _pid: c_int,
-    _policy: c_int,
-    _param: *const SchedParam,
-) -> c_int {
-    0
-}
-
-#[unsafe(no_mangle)]
-pub extern "sysv64" fn kinakaze_abi_sched_get_priority_min(_policy: c_int) -> c_int {
-    0
-}
-
-#[unsafe(no_mangle)]
-pub extern "sysv64" fn kinakaze_abi_sched_get_priority_max(_policy: c_int) -> c_int {
-    99
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "sysv64" fn kinakaze_abi_sched_rr_get_interval(
-    _pid: c_int,
-    tp: *mut crate::time::TimeSpec,
-) -> c_int {
-    if !tp.is_null() {
-        unsafe {
-            (*tp).tv_sec = 0;
-            (*tp).tv_nsec = 100_000_000;
-        }
-    }
-    0
 }
 
 #[unsafe(no_mangle)]

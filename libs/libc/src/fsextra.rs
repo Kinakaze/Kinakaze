@@ -45,6 +45,9 @@ const AT_SYMLINK_NOFOLLOW: i32 = 0x100;
 /// `AT_EACCESS`, selecting effective rather than real credentials for access checks.
 const AT_EACCESS: i32 = 0x200;
 
+/// Linux ignores automount requests for these metadata operations.
+const AT_NO_AUTOMOUNT: i32 = 0x800;
+
 /// `AT_EMPTY_PATH`, allowing an empty pathname to refer to `dirfd` itself.
 const AT_EMPTY_PATH: i32 = 0x1000;
 
@@ -275,11 +278,8 @@ pub unsafe extern "sysv64" fn kinakaze_abi_fstat64(fd: c_int, out: *mut Stat) ->
 
 /// `fstatat`: `stat` relative to a directory descriptor.
 ///
-/// Only `AT_FDCWD` and absolute paths are honoured, matching the VFS's own
-/// limit: a genuinely directory-relative lookup needs the descriptor's path,
-/// which the table records for synthetic directories only. Anything else reports
-/// `ENOSYS` rather than resolving against the wrong directory and returning
-/// metadata for a file the caller did not name.
+/// An empty name refers to the descriptor only with `AT_EMPTY_PATH`; with
+/// `AT_FDCWD` that explicit extension refers to the current directory.
 ///
 /// # Safety
 ///
@@ -291,32 +291,38 @@ pub unsafe extern "sysv64" fn kinakaze_abi_fstatat(
     out: *mut Stat,
     flags: c_int,
 ) -> c_int {
+    if flags & !(AT_SYMLINK_NOFOLLOW | AT_NO_AUTOMOUNT | AT_EMPTY_PATH) != 0 {
+        set_errno(EINVAL);
+        return -1;
+    }
     // SAFETY: forwarded from this function's own contract.
     let borrowed = unsafe { borrow_path(path) };
     let value = borrowed.and_then(|path| {
         crate::fs::restart_metadata(|| {
-            if (flags & AT_EMPTY_PATH != 0 && path.is_empty()) || (path.is_empty() && dirfd >= 0) {
-                return fs::fstat(dirfd);
-            }
-            if !path.starts_with('/') && dirfd != AT_FDCWD {
-                // A relative name plus a real directory descriptor: recover the
-                // directory's own path so the join is against the right place.
-                let base = directory_path(dirfd)?;
-                let joined = if base.ends_with('/') {
-                    format!("{base}{path}")
+            if path.is_empty() && flags & AT_EMPTY_PATH != 0 {
+                return if dirfd == AT_FDCWD {
+                    fs::stat(".")
                 } else {
-                    format!("{base}/{path}")
-                };
-                return if flags & AT_SYMLINK_NOFOLLOW != 0 {
-                    fs::lstat(&joined)
-                } else {
-                    fs::stat(&joined)
+                    fs::fstat(dirfd)
                 };
             }
-            if flags & AT_SYMLINK_NOFOLLOW != 0 {
-                fs::lstat(path)
+            let target = resolve_at(dirfd, path)?;
+            let query = || {
+                if flags & AT_SYMLINK_NOFOLLOW != 0 {
+                    fs::lstat(&target)
+                } else {
+                    fs::stat(&target)
+                }
+            };
+            if dirfd != AT_FDCWD
+                && !path.starts_with('/')
+                && kinakaze_vfs::get(dirfd)?.kind == kinakaze_vfs::FdKind::SyntheticDirectory
+            {
+                // Only a retained descriptor may resolve the internal proc
+                // instance path, including after a namespace switch or detach.
+                kinakaze_vfs::procfs::descriptor_scope(query)
             } else {
-                fs::stat(path)
+                query()
             }
         })
     });
@@ -417,8 +423,16 @@ pub unsafe extern "sysv64" fn kinakaze_abi_statx(
         set_errno(EFAULT);
         return -1;
     }
+    const SYNC_TYPE: i32 = 0x6000;
+    if flags & !(AT_SYMLINK_NOFOLLOW | AT_NO_AUTOMOUNT | AT_EMPTY_PATH | SYNC_TYPE) != 0
+        || flags & SYNC_TYPE == SYNC_TYPE
+        || mask & 0x8000_0000 != 0
+    {
+        set_errno(EINVAL);
+        return -1;
+    }
     let mut st: Stat = unsafe { core::mem::zeroed() };
-    let res = unsafe { kinakaze_abi_fstatat(dirfd, path, &mut st, flags) };
+    let res = unsafe { kinakaze_abi_fstatat(dirfd, path, &mut st, flags & !SYNC_TYPE) };
     if res != 0 {
         return -1;
     }
@@ -742,7 +756,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_faccessat(
     mode: c_int,
     flags: c_int,
 ) -> c_int {
-    let value = unsafe { access_at(dirfd, path, mode, flags) };
+    let value = crate::fs::restart_metadata(|| unsafe { access_at(dirfd, path, mode, flags) });
     match value {
         Ok(()) => 0,
         Err(error) => {
@@ -783,7 +797,11 @@ unsafe fn access_at(
 
     let path = unsafe { borrow_path(path) }?;
     let info = if path.is_empty() && flags & AT_EMPTY_PATH != 0 {
-        fs::fstat(dirfd)?
+        if dirfd == AT_FDCWD {
+            fs::stat(".")?
+        } else {
+            fs::fstat(dirfd)?
+        }
     } else {
         let target = resolve_at(dirfd, path)?;
         if flags & AT_SYMLINK_NOFOLLOW != 0 {
@@ -994,64 +1012,21 @@ pub unsafe extern "sysv64" fn kinakaze_abi_chmod(path: *const c_char, mode: u32)
         if kinakaze_vfs::tmpfs::chmod(path, mode)? {
             return Ok(());
         }
-        if path.starts_with("/dev/") || path.starts_with("dev/") {
+        let resolved = kinakaze_vfs::mount::overlay::prepare_write(path, true, false)?;
+        // Builtin device nodes may have no host inode. Real entries under
+        // /dev (including named shared memory) must retain their actual mode.
+        if (path.starts_with("/dev/") || path.starts_with("dev/")) && !resolved.exists() {
+            fs::stat(path)?;
             return Ok(());
         }
-        let resolved = kinakaze_vfs::mount::overlay::prepare_write(path, true, false)?;
         apply_mode(&resolved, mode)
     }))
 }
 
-/// `fchmod`, reached through the descriptor's own path.
-///
-/// The mode is applied by name rather than through the handle because a handle
-/// opened for reading carries no `FILE_WRITE_ATTRIBUTES` access, and POSIX
-/// permits `fchmod` on a read-only descriptor.
+/// Change the retained inode's mode with the same checks as fchmodat2.
 #[unsafe(no_mangle)]
 pub extern "sysv64" fn kinakaze_abi_fchmod(fd: c_int, mode: u32) -> c_int {
-    if kinakaze_vfs::get(fd).is_ok_and(|e| e.flags.contains(kinakaze_vfs::FdFlags::PATH_ONLY)) {
-        return posix(Err(kinakaze_vfs::EBADF));
-    }
-    match kinakaze_vfs::devpts::fchmod(fd, mode) {
-        Ok(true) => return 0,
-        Err(e) => {
-            set_errno(e);
-            return -1;
-        }
-        _ => (),
-    }
-    if kinakaze_vfs::get(fd).is_ok_and(|e| {
-        matches!(
-            e.kind,
-            kinakaze_vfs::FdKind::TmpfsFile
-                | kinakaze_vfs::FdKind::TmpfsDirectory
-                | kinakaze_vfs::FdKind::MessageQueue
-                | kinakaze_vfs::FdKind::SysfsFile
-        )
-    }) {
-        return posix(kinakaze_vfs::tmpfs::fchmod(fd, mode));
-    }
-    match kinakaze_vfs::pipe_inode::chmod(fd, mode) {
-        Ok(true) => return 0,
-        Ok(false) => {}
-        Err(error) => {
-            crate::set_errno(error);
-            return -1;
-        }
-    }
-    match kinakaze_vfs::mount::overlay::chmod_descriptor(fd, mode) {
-        Ok(true) => return 0,
-        Err(error) => return posix(Err(error)),
-        Ok(false) => {}
-    }
-    let result = kinakaze_vfs::get(fd).and_then(|entry| {
-        if let Ok(path) = handle_path(entry.raw as *mut c_void) {
-            apply_mode(&path, mode)
-        } else {
-            Ok(())
-        }
-    });
-    posix(result)
+    posix(fs::chmod_descriptor(fd, mode, false))
 }
 
 /// Change a path's own mode without following its final symbolic link.
@@ -1114,6 +1089,9 @@ pub unsafe extern "sysv64" fn kinakaze_abi_fchmodat(
 
 /// Joins an `*at` path against its directory descriptor.
 pub(crate) fn resolve_at(dirfd: c_int, path: &str) -> Result<String, i32> {
+    if path.is_empty() {
+        return Err(kinakaze_vfs::ENOENT);
+    }
     if path.starts_with('/') || dirfd == AT_FDCWD {
         return Ok(path.to_string());
     }
@@ -2199,9 +2177,9 @@ pub use crate::xattr::*;
 // ---------------------------------------------------------------------------
 
 /// `FNM_NOESCAPE`: a backslash is an ordinary character, not an escape.
-pub const FNM_NOESCAPE: c_int = 1 << 0;
+pub const FNM_NOESCAPE: c_int = 1 << 1;
 /// `FNM_PATHNAME`: a `/` in the string matches only a literal `/` in the pattern.
-pub const FNM_PATHNAME: c_int = 1 << 1;
+pub const FNM_PATHNAME: c_int = 1 << 0;
 /// `FNM_PERIOD`: a leading `.` matches only a literal `.` in the pattern.
 pub const FNM_PERIOD: c_int = 1 << 2;
 /// `FNM_LEADING_DIR`: the pattern may match a prefix ending at a `/`.
@@ -2803,7 +2781,11 @@ fn volume_directory(target: &Path) -> PathBuf {
 /// Builds a `struct statfs` for the volume backing a Windows path.
 fn statfs_for(target: &Path) -> Result<Statfs, i32> {
     let (available, total, free) = volume_totals(&volume_directory(target))?;
-    Ok(Statfs {
+    Ok(statfs_totals(available, total, free))
+}
+
+fn statfs_totals(available: u64, total: u64, free: u64) -> Statfs {
+    Statfs {
         f_type: NTFS_MAGIC,
         f_bsize: BLOCK_SIZE as i64,
         f_blocks: total / BLOCK_SIZE,
@@ -2820,7 +2802,7 @@ fn statfs_for(target: &Path) -> Result<Statfs, i32> {
         f_frsize: BLOCK_SIZE as i64,
         f_flags: 0,
         f_spare: [0; 4],
-    })
+    }
 }
 
 /// Converts a `struct statfs` into the `statvfs` shape.
@@ -2838,8 +2820,8 @@ fn statvfs_from(value: &Statfs) -> Statvfs {
         f_files: value.f_files,
         f_ffree: value.f_ffree,
         f_favail: value.f_ffree,
-        f_fsid: 0,
-        f_flag: 0,
+        f_fsid: u64::from(value.f_fsid[0] as u32) | (u64::from(value.f_fsid[1] as u32) << 32),
+        f_flag: value.f_flags as u64,
         f_namemax: value.f_namelen as u64,
         __f_spare: [0; 6],
     }
@@ -2868,7 +2850,8 @@ fn statfs_handleless() -> Statfs {
 /// for procfs in particular: opening `/proc/self/fd` and then calling `fstatfs`
 /// must report the same `PROC_SUPER_MAGIC` as `statfs("/proc/self/fd")`.
 fn statfs_for_descriptor(fd: c_int) -> Result<Statfs, i32> {
-    if kinakaze_vfs::get(fd)?.kind == kinakaze_vfs::FdKind::MountTree {
+    let entry = kinakaze_vfs::get(fd)?;
+    if entry.kind == kinakaze_vfs::FdKind::MountTree {
         let path = format!("{}/.", kinakaze_vfs::mount::api::tree_path(fd)?);
         let root = fs::open(&path, fs::O_PATH | fs::O_CLOEXEC, 0)?;
         let result = statfs_for_descriptor(root);
@@ -2879,7 +2862,7 @@ fn statfs_for_descriptor(fd: c_int) -> Result<Statfs, i32> {
         return Ok(tmpfs_statfs(s));
     }
     if matches!(
-        kinakaze_vfs::get(fd)?.kind,
+        entry.kind,
         kinakaze_vfs::FdKind::TmpfsFile
             | kinakaze_vfs::FdKind::TmpfsDirectory
             | kinakaze_vfs::FdKind::MessageQueue
@@ -2891,11 +2874,11 @@ fn statfs_for_descriptor(fd: c_int) -> Result<Statfs, i32> {
     {
         return overlay_statfs(&path, device, readonly);
     }
-    let entry = kinakaze_vfs::get(fd)?;
     match entry.kind {
         kinakaze_vfs::FdKind::File | kinakaze_vfs::FdKind::Directory => {
-            let mut value = statfs_for(&handle_path(entry.raw as *mut c_void)?)?;
-            if let Some(flags) = kinakaze_vfs::mount::native::flags_fd(fd)? {
+            let totals = fs::descriptor_volume_totals(fd)?;
+            let mut value = statfs_totals(totals.available, totals.total, totals.free);
+            if let Some(flags) = totals.mount_flags {
                 value.f_flags = (value.f_flags & !15) | (flags & 15) as i64;
             }
             Ok(value)
@@ -2958,6 +2941,26 @@ fn statfs_synthesized(magic: i64) -> Statfs {
 }
 
 fn statfs_for_path(borrowed: &str) -> Result<Statfs, i32> {
+    match statfs_for_path_resolved(borrowed) {
+        Err(kinakaze_vfs::EOPNOTSUPP) => {
+            // A symlink can cross from native storage into a virtual mount.
+            // Use the same retained backend as open, including its mount policy.
+            let fd = fs::open(borrowed, fs::O_PATH | fs::O_CLOEXEC, 0)?;
+            let result = statfs_for_descriptor(fd);
+            let _ = kinakaze_vfs::close(fd);
+            result
+        }
+        result => result,
+    }
+}
+fn statfs_for_path_resolved(borrowed: &str) -> Result<Statfs, i32> {
+    if borrowed.is_empty() {
+        return Err(kinakaze_vfs::ENOENT);
+    }
+    // Mount policy lookup uses the same normalized guest path as stat/open.
+    // A raw cwd + "/." otherwise reaches it as an invalid mount component.
+    let absolute = fs::absolute_linux(borrowed);
+    let borrowed = absolute.as_str();
     let mut value = statfs_for_path_inner(borrowed)?;
     if let Some(flags) = kinakaze_vfs::mount::native::flags_path(borrowed)? {
         value.f_flags = (value.f_flags & !15) | (flags & 15) as i64;
@@ -3021,8 +3024,12 @@ pub unsafe extern "sysv64" fn kinakaze_abi_statfs(path: *const c_char, out: *mut
         set_errno(EFAULT);
         return -1;
     }
-    let value = unsafe { borrow_path(path) }
-        .and_then(|p| crate::fs::restart_metadata(|| statfs_for_path(&p)));
+    let value = unsafe { borrow_path(path) }.and_then(|p| {
+        crate::fs::restart_metadata(|| {
+            fs::stat(p)?;
+            statfs_for_path(p)
+        })
+    });
     match value {
         Ok(value) => {
             unsafe { ptr::write(out, value) };
@@ -3073,8 +3080,12 @@ pub unsafe extern "sysv64" fn kinakaze_abi_statvfs(
         set_errno(EFAULT);
         return -1;
     }
-    let value = unsafe { borrow_path(path) }
-        .and_then(|p| crate::fs::restart_metadata(|| statfs_for_path(&p)));
+    let value = unsafe { borrow_path(path) }.and_then(|p| {
+        crate::fs::restart_metadata(|| {
+            fs::stat(p)?;
+            statfs_for_path(p)
+        })
+    });
     match value {
         Ok(value) => {
             unsafe { ptr::write(out, statvfs_from(&value)) };
@@ -4669,22 +4680,54 @@ pub unsafe extern "sysv64" fn kinakaze_abi_ppoll(
     fds: *mut core::ffi::c_void,
     nfds: usize,
     tmo_p: *const libpthread::Timespec,
-    _sigmask: *const core::ffi::c_void,
+    sigmask: *const core::ffi::c_void,
 ) -> c_int {
-    let timeout_ms = if tmo_p.is_null() {
-        -1
+    let timeout = if tmo_p.is_null() {
+        None
     } else {
-        let ts = unsafe { *tmo_p };
-        if ts.tv_sec < 0 || ts.tv_nsec < 0 {
-            -1
-        } else if ts.tv_sec == 0 && ts.tv_nsec == 0 {
-            0
-        } else {
-            let ms = (ts.tv_sec as i64) * 1000 + (ts.tv_nsec as i64 + 999_999) / 1_000_000;
-            ms.min(i32::MAX as i64) as i32
+        let ts = unsafe { tmo_p.read_unaligned() };
+        if ts.tv_sec < 0 || !(0..1_000_000_000).contains(&ts.tv_nsec) {
+            set_errno(EINVAL);
+            return -1;
+        }
+        Some(std::time::Duration::new(
+            ts.tv_sec as u64,
+            ts.tv_nsec as u32,
+        ))
+    };
+    // Do not deliver between swapping the mask and entering poll's pending /
+    // waiter check: that would reopen the race ppoll is meant to close.
+    let restore = (!sigmask.is_null()).then(|| {
+        kinakaze_vfs::signal::swap_blocked_mask(unsafe { sigmask.cast::<u64>().read_unaligned() })
+    });
+    let started = std::time::Instant::now();
+    let mut remaining = timeout;
+    let result = loop {
+        let timeout_ms = remaining.map_or(-1, |duration| {
+            duration
+                .as_nanos()
+                .div_ceil(1_000_000)
+                .min(c_int::MAX as u128) as c_int
+        });
+        let result = unsafe { crate::fdio::kinakaze_abi_poll(fds.cast(), nfds as u64, timeout_ms) };
+        // poll's integer timeout is shorter than ppoll's timespec range.
+        // Chunk large waits without overflowing or returning before the deadline.
+        remaining = timeout.map(|duration| duration.saturating_sub(started.elapsed()));
+        if result != 0 || remaining.is_none_or(|duration| duration.is_zero()) {
+            break result;
         }
     };
-    unsafe { crate::fdio::kinakaze_abi_poll(fds as *mut _, nfds as u64, timeout_ms) }
+    if let Some(previous) = restore {
+        let saved = kinakaze_tls::errno();
+        kinakaze_vfs::signal::swap_blocked_mask(previous);
+        set_errno(saved);
+    }
+    if result >= 0 {
+        // When readiness wins, restore the saved mask first. Signals blocked
+        // by that mask stay pending rather than running under the temporary one.
+        kinakaze_vfs::signal::deliver_pending();
+    }
+    result
 }
 
 #[unsafe(no_mangle)]

@@ -148,7 +148,7 @@ pub(crate) fn prepare(options: &str) -> Result<String, i32> {
         s.pts = Some(p);
         Ok(())
     })?;
-    start_keeper(id)?;
+    retain_volume(id)?;
     Ok(source)
 }
 pub(crate) fn reconfigure(source: &str, options: &str) -> Result<(), i32> {

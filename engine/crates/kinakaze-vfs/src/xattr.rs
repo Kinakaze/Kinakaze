@@ -28,7 +28,9 @@ use windows_sys::Win32::System::Threading::{
     CreateMutexW, INFINITE, ReleaseMutex, WaitForMultipleObjects, WaitForSingleObject,
 };
 
-use crate::{EBADF, EEXIST, EINVAL, EIO, ENOSPC, EOPNOTSUPP, FdFlags, FdKind, errno_from_win32};
+use crate::{EBADF, EEXIST, EINVAL, EIO, ENOSPC, EOPNOTSUPP, errno_from_win32};
+#[cfg(test)]
+use crate::{FdFlags, FdKind};
 
 pub const ENODATA: i32 = 61;
 pub const XATTR_CREATE: i32 = 1;
@@ -131,8 +133,19 @@ impl Drop for InodeLock {
 }
 
 /// An independently opened metadata handle; never changes a guest fd's offset.
-pub struct Attributes(Handle, Option<crate::mount::overlay::MetadataHandle>);
+pub struct Attributes(AttributeHandle);
+enum AttributeHandle {
+    Native(Handle),
+    Mounted(crate::mount::overlay::MetadataHandle),
+}
 impl Attributes {
+    fn raw(&self) -> HANDLE {
+        use std::os::windows::io::AsRawHandle;
+        match &self.0 {
+            AttributeHandle::Native(handle) => handle.0,
+            AttributeHandle::Mounted(handle) => handle.as_raw_handle(),
+        }
+    }
     fn access(write: bool) -> u32 {
         FILE_READ_ATTRIBUTES | FILE_READ_EA | if write { FILE_WRITE_EA } else { 0 }
     }
@@ -140,24 +153,43 @@ impl Attributes {
     /// `path` has already been resolved with the desired final-symlink rule.
     pub fn open_host(path: &Path, write: bool) -> Result<Self, i32> {
         let object = crate::fs::object::Object::open(path, Self::access(write))?;
-        Ok(Self(Handle(object.into_raw()), None))
+        Ok(Self(AttributeHandle::Native(Handle(object.into_raw()))))
     }
 
     pub fn from_fd(fd: i32, write: bool) -> Result<Self, i32> {
-        use std::os::windows::io::AsRawHandle;
-        if let Some(handle) = crate::mount::overlay::metadata_handle(fd, write, false)? {
-            let mut attributes = unsafe { Self::from_handle(handle.as_raw_handle(), write)? };
-            attributes.1 = Some(handle);
-            return Ok(attributes);
+        Self::from_descriptor(fd, write, false)
+    }
+
+    fn from_descriptor(fd: i32, write: bool, allow_path: bool) -> Result<Self, i32> {
+        let handle =
+            crate::mount::overlay::metadata_handle(fd, write, allow_path)?.ok_or(EOPNOTSUPP)?;
+        Ok(Self(AttributeHandle::Mounted(handle)))
+    }
+
+    /// Follow procfs fd magic links to the pinned inode, not its display name.
+    /// No guest descriptor is allocated, so metadata lookup works at RLIMIT_NOFILE.
+    pub fn from_fd_link(path: &str, follow: bool, write: bool) -> Result<Option<Self>, i32> {
+        if crate::tmpfs::owns(path) {
+            return Ok(None);
         }
-        let entry = crate::get(fd)?;
-        if entry.flags.contains(FdFlags::PATH_ONLY) {
-            return Err(EBADF);
-        }
-        if !matches!(entry.kind, FdKind::File | FdKind::Directory) {
+        let Some((pid, fd)) = crate::procfs::fd_magic_link(path) else {
+            return Ok(None);
+        };
+        let (canonical, _scope) = crate::procfs::instance::enter(path)?;
+        crate::procfs::metadata(&canonical)?;
+        if !follow {
             return Err(EOPNOTSUPP);
         }
-        unsafe { Self::from_handle(entry.raw as HANDLE, write) }
+        if pid != crate::job::process_id() {
+            return Err(EOPNOTSUPP);
+        }
+        Self::from_descriptor(fd, write, true)
+            .map(Some)
+            .map_err(|error| if error == EBADF { crate::ENOENT } else { error })
+    }
+
+    pub fn is_overlay(&self) -> bool {
+        matches!(&self.0, AttributeHandle::Mounted(handle) if handle.is_overlay())
     }
 
     /// An independent metadata open of the same inode, never its current name.
@@ -165,12 +197,12 @@ impl Attributes {
     /// The borrowed handle must remain live throughout the native reopen.
     pub(crate) unsafe fn from_handle(handle: HANDLE, write: bool) -> Result<Self, i32> {
         let object = crate::fs::object::Object::reopen(handle, Self::access(write))?;
-        Ok(Self(Handle(object.into_raw()), None))
+        Ok(Self(AttributeHandle::Native(Handle(object.into_raw()))))
     }
 
     /// Query the same inode as the EA handle, including emulated symlink type.
     pub fn metadata(&self) -> Result<crate::fs::Stat, i32> {
-        crate::fs::stat_handle(self.0.0, false)
+        crate::fs::stat_handle(self.raw(), false)
     }
 
     fn read_table(&self) -> Result<Table, i32> {
@@ -182,7 +214,7 @@ impl Attributes {
         let mut io = IoStatus::default();
         let status = unsafe {
             NtQueryEaFile(
-                self.0.0,
+                self.raw(),
                 &mut io,
                 buffer.as_mut_ptr().cast(),
                 buffer.len() as u32,
@@ -193,7 +225,7 @@ impl Attributes {
                 1,
             )
         };
-        let status = unsafe { crate::fs::complete_native_status(self.0.0, &mut io, status)? };
+        let status = unsafe { crate::fs::complete_native_status(self.raw(), &mut io, status)? };
         if matches!(status as u32, 0xc000_0051 | 0xc000_0052 | 0x8000_0012) {
             return Ok(Table::new());
         }
@@ -230,13 +262,13 @@ impl Attributes {
         let mut io = IoStatus::default();
         let status = unsafe {
             NtSetEaFile(
-                self.0.0,
+                self.raw(),
                 &mut io,
                 buffer.as_ptr().cast(),
                 buffer.len() as u32,
             )
         };
-        let status = unsafe { crate::fs::complete_native_status(self.0.0, &mut io, status)? };
+        let status = unsafe { crate::fs::complete_native_status(self.raw(), &mut io, status)? };
         if status == 0 {
             Ok(())
         } else {
@@ -246,12 +278,12 @@ impl Attributes {
 
     pub fn get(&self, name: &[u8]) -> Result<Vec<u8>, i32> {
         validate_name(name)?;
-        let _lock = InodeLock::acquire(self.0.0)?;
+        let _lock = InodeLock::acquire(self.raw())?;
         self.read_table()?.remove(name).ok_or(ENODATA)
     }
 
     pub fn list(&self) -> Result<Vec<Vec<u8>>, i32> {
-        let _lock = InodeLock::acquire(self.0.0)?;
+        let _lock = InodeLock::acquire(self.raw())?;
         Ok(self.read_table()?.into_keys().collect())
     }
 
@@ -259,7 +291,7 @@ impl Attributes {
     /// Internal filesystem consumers must not assemble related metadata from
     /// repeated independent getxattr calls that can observe different updates.
     pub(crate) fn snapshot(&self) -> Result<BTreeMap<Vec<u8>, Vec<u8>>, i32> {
-        let _lock = InodeLock::acquire(self.0.0)?;
+        let _lock = InodeLock::acquire(self.raw())?;
         self.read_table()
     }
 
@@ -268,7 +300,7 @@ impl Attributes {
         &self,
         attributes: &BTreeMap<Vec<u8>, Vec<u8>>,
     ) -> Result<(), i32> {
-        let _lock = InodeLock::acquire(self.0.0)?;
+        let _lock = InodeLock::acquire(self.raw())?;
         self.write_table(attributes)
     }
 
@@ -280,7 +312,7 @@ impl Attributes {
         if value.len() > XATTR_SIZE_MAX {
             return Err(7);
         } // E2BIG
-        let _lock = InodeLock::acquire(self.0.0)?;
+        let _lock = InodeLock::acquire(self.raw())?;
         let mut table = self.read_table()?;
         let exists = table.contains_key(name);
         if flags & XATTR_CREATE != 0 && exists {
@@ -295,7 +327,7 @@ impl Attributes {
 
     pub fn remove(&self, name: &[u8]) -> Result<(), i32> {
         validate_name(name)?;
-        let _lock = InodeLock::acquire(self.0.0)?;
+        let _lock = InodeLock::acquire(self.raw())?;
         let mut table = self.read_table()?;
         table.remove(name).ok_or(ENODATA)?;
         self.write_table(&table)
@@ -389,7 +421,7 @@ mod tests {
         let other_path = path.clone();
         let holder = std::thread::spawn(move || {
             let attrs = Attributes::open_host(&other_path, false).unwrap();
-            let _lock = InodeLock::acquire(attrs.0.0).unwrap();
+            let _lock = InodeLock::acquire(attrs.raw()).unwrap();
             ready_tx.send(()).unwrap();
             release_rx.recv().unwrap();
         });
@@ -407,7 +439,7 @@ mod tests {
         CALLS.store(0, std::sync::atomic::Ordering::SeqCst);
         assert!(!crate::interrupt::current().is_null());
         crate::signal::raise_thread_signal(crate::interrupt::current_thread_id(), 12).unwrap();
-        let interrupted = matches!(InodeLock::acquire(attrs.0.0), Err(crate::EINTR));
+        let interrupted = matches!(InodeLock::acquire(attrs.raw()), Err(crate::EINTR));
         release_tx.send(()).unwrap();
         holder.join().unwrap();
         assert_eq!(CALLS.load(std::sync::atomic::Ordering::SeqCst), 0);
@@ -417,7 +449,7 @@ mod tests {
         assert!(interrupted);
         assert_eq!(delivery, crate::signal::Delivery::Interrupted);
         assert_eq!(CALLS.load(std::sync::atomic::Ordering::SeqCst), 1);
-        assert!(InodeLock::acquire(attrs.0.0).is_ok());
+        assert!(InodeLock::acquire(attrs.raw()).is_ok());
     }
 
     #[test]

@@ -5,9 +5,8 @@ use super::*;
 use crate::inotify::*;
 
 pub(crate) struct Watch {
-    pub(crate) volume: u64,
-    pub(crate) node: u64,
     store: Store,
+    projection: Option<Arc<Volume>>,
 }
 pub(crate) fn locate(path: &str, follow: bool) -> Result<Option<(u64, u64, u32)>, i32> {
     let Some(l) = resolve_location(path, follow, 0)? else {
@@ -80,8 +79,26 @@ impl Queue {
     }
 }
 impl Watch {
+    pub(crate) fn id(&self) -> u64 {
+        self.store.id()
+    }
+    pub(crate) fn retain(&self, owner: kinakaze_v2_protocol::kernel::ObjectKey) -> Result<(), i32> {
+        self.store.retain_kernel(false, Vec::new())?;
+        self.store.lease_kernel(owner)
+    }
+    pub(crate) fn open(volume_id: u64, _node: u64, id: u64) -> Result<Self, i32> {
+        let volume = volume(volume_id)?;
+        let projection = volume.decoded()?.sys.is_some().then(|| volume.clone());
+        Ok(Self {
+            store: Store::user_object(id, false)?,
+            projection,
+        })
+    }
     pub(crate) fn new(volume_id: u64, node: u64, mask: u32) -> Result<Self, i32> {
+        let volume = volume(volume_id)?;
+        let projection = volume.decoded()?.sys.is_some().then(|| volume.clone());
         let store = shared::new_object()?;
+        volume.meta.lease_kernel(store.kernel_key())?;
         store.replace(
             &Queue {
                 mask,
@@ -89,18 +106,14 @@ impl Watch {
             }
             .encode(),
         )?;
-        volume(volume_id)?.change(|s| {
+        volume.change(|s| {
             if !s.nodes.contains_key(&node) {
                 return Err(ENOENT);
             }
             s.watches.push((store.id(), node));
             Ok(())
         })?;
-        Ok(Self {
-            volume: volume_id,
-            node,
-            store,
-        })
+        Ok(Self { store, projection })
     }
     pub(crate) fn mask(&self, mask: u32) -> Result<(), i32> {
         self.store.update(|b| {
@@ -116,7 +129,17 @@ impl Watch {
     pub(crate) fn drain(&self, wd: i32) -> Result<Vec<Vec<u8>>, i32> {
         // Cgroup counters can change without a write to this mount. Refreshing
         // its projection publishes the corresponding file modifications too.
-        let _ = volume(self.volume)?.snapshot()?;
+        // Ordinary tmpfs writers already publish events in their transaction;
+        // reading an empty queue must not decode the whole filesystem again.
+        if let Some(volume) = &self.projection {
+            let _ = volume.snapshot()?;
+        }
+        if self
+            .store
+            .read_with(|b| Ok(Queue::decode(b)?.events.is_empty()))?
+        {
+            return Ok(Vec::new());
+        }
         self.store.update(|b| {
             let mut q = Queue::decode(b)?;
             let mut events = std::mem::take(&mut q.events);
@@ -233,4 +256,43 @@ pub(super) fn after(observations: Vec<Observation>, s: &State) -> Result<(), i32
         })?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty_polls_preserve_remote_notifications_and_one_shot_removal() {
+        let source = prepare_unkept("size=64k").unwrap();
+        let id = parse(&source).unwrap().0;
+        let watch = Watch::new(id, 1, IN_ATTRIB | IN_ONESHOT).unwrap();
+        let revision = watch.store.revision();
+        for _ in 0..20 {
+            assert!(watch.drain(7).unwrap().is_empty());
+        }
+        assert_eq!(watch.store.revision(), revision);
+        std::thread::spawn(move || {
+            let remote = Volume::map(Store::user_object(id, false).unwrap(), false).unwrap();
+            remote
+                .change(|s| {
+                    s.nodes.get_mut(&1).unwrap().mode = S_IFDIR | 0o700;
+                    Ok(())
+                })
+                .unwrap();
+        })
+        .join()
+        .unwrap();
+        let events = watch.drain(7).unwrap();
+        assert_eq!(events.len(), 2);
+        assert_eq!(
+            events[0],
+            crate::inotify::encode_event(7, IN_ATTRIB | IN_ISDIR, 0, &[])
+        );
+        assert_eq!(
+            events[1],
+            crate::inotify::encode_event(7, IN_IGNORED, 0, &[])
+        );
+        assert!(watch.drain(7).unwrap().is_empty());
+    }
 }

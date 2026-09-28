@@ -51,7 +51,9 @@ fn namespace() -> Result<u64, i32> {
 fn store() -> Result<Arc<Store>, i32> {
     let mut slot = STORE.lock().map_err(|_| EIO)?;
     if slot.is_none() {
-        *slot = Some(Arc::new(Store::user_object(CATALOG, true)?));
+        let store = Arc::new(Store::user_object(CATALOG, true)?);
+        store.retain_kernel(false, Vec::new())?;
+        *slot = Some(store);
     }
     Ok(slot.as_ref().unwrap().clone())
 }

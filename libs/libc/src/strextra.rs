@@ -1267,8 +1267,10 @@ pub mod windows {
 
     #[unsafe(no_mangle)]
     pub extern "sysv64" fn kinakaze_abi_pause() -> c_int {
-        std::thread::park();
-        -1
+        let mut mask = crate::signal::SigSet { bits: [0; 16] };
+        mask.bits[0] = kinakaze_vfs::signal::blocked_mask();
+        // pause keeps the current mask and returns EINTR after a handler.
+        unsafe { crate::sigextra::kinakaze_abi_sigsuspend(&mask) }
     }
 
     /// # Safety

@@ -45,6 +45,9 @@ pub fn fallocate(fd: i32, mode: i32, offset: i64, length: i64) -> Result<(), i32
         return Err(EINVAL);
     }
     let end = offset.checked_add(length).ok_or(EFBIG)?;
+    if crate::get(fd)?.kind == FdKind::TmpfsFile {
+        return crate::tmpfs::fallocate(fd, mode, offset as u64, length as u64);
+    }
     let (object, _) = object::Object::from_fd_checked(fd, |entry| {
         if entry.flags.contains(FdFlags::PATH_ONLY) {
             return Err(EBADF);

@@ -108,6 +108,8 @@ pub extern "system" fn kinakaze_process_initialize_thread_tls() -> i32 {
 #[cfg(all(windows, target_arch = "x86_64"))]
 mod host;
 #[cfg(all(windows, target_arch = "x86_64"))]
+mod interpreter;
+#[cfg(all(windows, target_arch = "x86_64"))]
 mod veh;
 
 /// True when the object is a real program rather than a freestanding probe.
@@ -328,6 +330,14 @@ fn hosted_main() -> i32 {
         }
         trace_spawn_loader_phase("libc-handoff-consumed");
     }
+    if shared_launch.is_none() {
+        if let Err(errno) = kinakaze_vfs::mount::initialize_builtin_mounts() {
+            report_loader_error(format_args!(
+                "cannot initialize guest mounts: errno {errno}"
+            ));
+            return 1;
+        }
+    }
     // A direct launch has not passed through guest execve's path walk. Resolve
     // the guest inode links before reading its shebang/ELF (e.g. /bin/sh -> dash).
     // A handoff already pins its image and may outlive unlink/rename, so keep it.
@@ -416,6 +426,27 @@ fn hosted_main() -> i32 {
         },
     };
 
+    let program = match interpreter::prepare(
+        path,
+        root_image,
+        guest_arguments,
+        exec_environment.as_deref(),
+    ) {
+        Ok(interpreter::Command::Exit(status)) => return status,
+        Ok(interpreter::Command::Run(program)) => program,
+        Err(error) => {
+            report_loader_error(format_args!("interpreter: {error}"));
+            return 1;
+        }
+    };
+    let interpreter::Program {
+        path,
+        image: root_image,
+        arguments: guest_arguments,
+        library_path,
+        kernel_entry,
+    } = program;
+
     // Kept outside the guest-visible environment by `host::exec`; libc uses it
     // solely to implement Linux `/proc/self/exe` across a hosted exec.
     unsafe { std::env::set_var("KINAKAZE_GUEST_EXECUTABLE", &path) };
@@ -432,8 +463,14 @@ fn hosted_main() -> i32 {
     kinakaze_vfs::job::set_process_identity(comm, &guest_executable, &guest_arguments);
     trace_spawn_loader_phase("guest-identity-set");
 
-    if elf_expects_kernel_entry(&root_image) {
-        return match host::exec(&path, &guest_arguments, Some(root_image), exec_environment) {
+    if kernel_entry || elf_expects_kernel_entry(&root_image) {
+        return match host::exec(
+            &path,
+            &guest_arguments,
+            Some(root_image),
+            exec_environment,
+            library_path.as_deref(),
+        ) {
             // `exec` returns Infallible on success, so only the error arm exists.
             Ok(never) => match never {},
             Err(error) => {
@@ -1003,7 +1040,7 @@ fn engine_teb_slots_reserved_in_child(snapshot: &EngineForkSnapshot) -> bool {
 
 #[cfg(all(windows, target_arch = "x86_64"))]
 unsafe extern "system" fn snapshot_engine_fork_state(buffer: *mut u8, len: usize) -> isize {
-    let redirects = execution::guest_gs::snapshot();
+    let redirects = execution::traps::snapshot();
     let header = core::mem::size_of::<EngineForkSnapshot>();
     let needed = header + redirects.len();
     if buffer.is_null() {
@@ -1111,7 +1148,7 @@ unsafe extern "system" fn snapshot_engine_fork_state(buffer: *mut u8, len: usize
 unsafe extern "system" fn restore_engine_fork_state(payload: *const u8, len: usize) -> i32 {
     if !payload.is_null() && len >= core::mem::size_of::<EngineForkSnapshot>() {
         let header = core::mem::size_of::<EngineForkSnapshot>();
-        if !execution::guest_gs::restore(unsafe {
+        if !execution::traps::restore(unsafe {
             core::slice::from_raw_parts(payload.add(header), len - header)
         }) {
             return 22;
@@ -1233,7 +1270,6 @@ pub fn run(config: GuestConfig) -> i32 {
         ));
         return 2;
     }
-    kinakaze_runtime::execution::install(execution::prepare);
     trace_spawn_loader_phase("runtime-entry");
     if !register_engine_fork_participant() {
         report_loader_error(format_args!(
@@ -1295,6 +1331,10 @@ mod launch_tests {
 
 #[cfg(all(windows, target_arch = "x86_64"))]
 extern "C" fn install_process_services() {
+    // A fork worker resumes copied guest code without calling run(). Publish
+    // the code preparation/retirement services when its fresh DLL loads too,
+    // so a later dlopen can prepare libraries first loaded in that child.
+    kinakaze_runtime::execution::install(execution::prepare, execution::retire);
     kinakaze_runtime::services::install_engine(kinakaze_runtime::services::EngineServices {
         clone_thread: kinakaze_process_clone_thread,
     });

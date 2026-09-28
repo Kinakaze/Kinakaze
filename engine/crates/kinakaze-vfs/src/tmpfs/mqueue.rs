@@ -211,7 +211,8 @@ pub(crate) fn prepare(options: &str) -> Result<String, i32> {
             }
             Ok((encode_catalog(&ids), ()))
         })?;
-        start_keeper(id)?;
+        retain_volume(id)?;
+        namespaces::retain_dependency(namespaces::IPC, ipc, volume(id)?.meta.kernel_key())?;
         Ok((source.as_bytes().to_vec(), source))
     })
 }
@@ -221,18 +222,6 @@ pub(crate) fn reconfigure(_source: &str, options: &str) -> Result<(), i32> {
     } else {
         Err(EINVAL)
     }
-}
-pub(crate) fn namespace_alive(ipc: u64) -> bool {
-    let key = if ipc == 1 {
-        u64::MAX - namespaces::IPC as u64
-    } else {
-        ipc
-    };
-    // Do not register the keeper as a guest or retain the namespace ourselves.
-    Store::user_object(key, false).is_ok()
-        || kinakaze_runtime::job::everyone().into_iter().any(|p| {
-            namespaces::process_id(p.namespace_pid, namespaces::IPC).is_ok_and(|id| id == ipc)
-        })
 }
 fn process_live(pid: u32, host: u32) -> bool {
     use windows_sys::Win32::System::Threading::{
@@ -424,7 +413,7 @@ pub fn unlink(name_: &str) -> Result<(), i32> {
         Ok(())
     })
 }
-fn queue_fd(fd: i32) -> Result<(Store, Location, u64, i32), i32> {
+fn queue_fd(fd: i32) -> Result<(Arc<Store>, Location, u64, i32), i32> {
     let result = descriptor(fd)?;
     if get(fd)?.kind != FdKind::MessageQueue || result.3 & O_PATH != 0 {
         return Err(EBADF);
@@ -817,6 +806,7 @@ fn catalog() -> Result<Arc<Store>, i32> {
         return Ok(store.clone());
     }
     let store = Arc::new(Store::user_object(u64::MAX - 24, true)?);
+    store.retain_kernel(false, Vec::new())?;
     let _ = CATALOG.set(store.clone());
     Ok(store)
 }

@@ -768,6 +768,17 @@ fn native_metadata_operations_reuse_completed_lookup() {
         (32, 32),
         "completed path walks must be reused within the operation"
     );
+    let before = RESOLUTION_WALKS.get();
+    for _ in 0..32 {
+        // Ordinary open ignores a mode without O_CREAT; this also exercises
+        // the complete native read path while an unrelated overlay exists.
+        let fd = fs::open(&path, fs::O_RDONLY, 0o666).unwrap();
+        let mut bytes = [0; 7];
+        assert_eq!(crate::read(fd, &mut bytes).unwrap(), bytes.len());
+        assert_eq!(&bytes, b"content");
+        crate::close(fd).unwrap();
+    }
+    assert_eq!(RESOLUTION_WALKS.get() - before, 32);
     let inode = fs::stat(&path).unwrap().st_ino;
     std::fs::rename(&native, directory.join("old-file")).unwrap();
     std::fs::write(&native, b"replacement").unwrap();

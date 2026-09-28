@@ -667,21 +667,18 @@ fn exec_shares_transaction_and_request_key_quotas_without_allocating_a_process()
     manager.process_exited(peer(1));
     let before = kinakaze_v2_protocol::Stats {
         clients: before.clients - 1,
+        transactions: 0,
         ..before
     };
-    assert_error(
-        &mut manager,
-        candidate,
-        exec_request(2, 3),
-        ErrorCode::LimitExceeded,
-    );
+    assert_eq!(manager.stats(), before);
+    prepare(&mut manager, candidate, 2, 3);
     assert_error(
         &mut manager,
         candidate,
         Request::PrepareFork { request_key: 1 },
         ErrorCode::LimitExceeded,
     );
-    assert_eq!(manager.stats(), before);
+    assert_eq!(manager.stats().transactions, 1);
 
     let mut manager = StateManager::with_limits(
         71,
@@ -708,6 +705,41 @@ fn exec_shares_transaction_and_request_key_quotas_without_allocating_a_process()
         Request::PrepareFork { request_key: 1 },
         ErrorCode::LimitExceeded,
     );
+    manager.acknowledge(owner, transaction).unwrap();
+    prepare(&mut manager, owner, 2, 3);
+}
+
+#[test]
+fn repeated_exec_reclaims_old_image_replay_records_only_after_native_death() {
+    let mut manager = StateManager::with_limits(
+        71,
+        SECRET.into(),
+        Limits {
+            max_request_keys_per_process: 1,
+            max_transactions: 1,
+            ..Limits::default()
+        },
+    );
+    let mut owner = worker(&mut manager, 1);
+    for native in 1..=1100 {
+        let transaction = prepare(&mut manager, owner, 1, native + 1);
+        let candidate = worker(&mut manager, native + 1);
+        ready(&mut manager, candidate);
+        commit(&mut manager, owner, transaction);
+        commit(&mut manager, owner, transaction);
+        assert!(manager.acknowledge(candidate, transaction).is_err());
+        assert!(manager.acknowledge(owner, transaction).is_err());
+        manager.disconnect(owner);
+        assert_eq!(manager.stats().transactions, 1);
+        manager.process_exited(peer(native));
+        assert_eq!(
+            manager.handle(candidate, Request::AwaitActivation).unwrap(),
+            Reply::Ok
+        );
+        assert_eq!(manager.stats().transactions, 0);
+        assert_eq!(manager.stats().processes, 1);
+        owner = candidate;
+    }
 }
 
 #[test]

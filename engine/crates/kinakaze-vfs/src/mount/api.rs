@@ -1644,13 +1644,16 @@ pub fn move_path(source: &str, target: &str, flags: u32) -> Result<(), i32> {
     }
     let source = namespace_path(&canonical_mount_path(source, flags & 1 != 0)?)?;
     let target = namespace_path(&canonical_mount_path(target, flags & 0x10 != 0)?)?;
-    if has_fixed_virtual_dispatch(&target) {
+    if target != "/" && has_fixed_virtual_dispatch(&target) {
         return Err(EOPNOTSUPP);
     }
     update(|table, _| {
         let point = visible_mount(table, &source)?
             .filter(|p| p.target == source)
             .ok_or(EINVAL)?;
+        if target == "/" && !root_has_mount_backends_at(table, &source) {
+            return Err(EOPNOTSUPP);
+        }
         if suffix(&target, &source).is_some()
             || table
                 .iter()
@@ -1686,5 +1689,8 @@ fn canonical_mount_path(path: &str, follow: bool) -> Result<String, i32> {
     if crate::procfs::owns(path) || crate::tmpfs::owns(path) {
         return normalize(path);
     }
-    overlay::canonical_guest(path, follow)
+    match overlay::canonical_guest(path, follow) {
+        Err(EOPNOTSUPP) => fs::canonical_guest(path, follow),
+        result => result,
+    }
 }

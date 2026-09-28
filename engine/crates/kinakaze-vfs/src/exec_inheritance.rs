@@ -19,6 +19,20 @@ pub(super) struct DescriptorInheritance {
 }
 
 impl DescriptorInheritance {
+    pub(super) fn exclude(raw: usize) -> Result<Self, i32> {
+        let mut previous = 0;
+        if unsafe { GetHandleInformation(raw as HANDLE, &mut previous) } == 0 {
+            return Err(super::errno_from_win32(unsafe {
+                windows_sys::Win32::Foundation::GetLastError()
+            }));
+        }
+        let guard = Self {
+            raw,
+            previous: previous & HANDLE_FLAG_INHERIT,
+        };
+        super::platform::try_set_inheritable(raw, false)?;
+        Ok(guard)
+    }
     pub(super) fn prepare(raw: usize, kind: FdKind, flags: FdFlags) -> Result<Self, i32> {
         if raw == 0 || flags.contains(FdFlags::BORROWED) {
             return Ok(Self {
@@ -131,26 +145,7 @@ pub(super) fn with_filter<T>(
         .write()
         .map_err(|_| io::Error::other("fd table poisoned"))?;
     if let Some(snapshot) = snapshot {
-        let current: Vec<_> = table
-            .slots
-            .enumerated()
-            .filter_map(|(fd, entry)| entry.map(|entry| (fd, entry)))
-            .collect();
-        let same = snapshot.0.len() == current.len()
-            && snapshot
-                .0
-                .iter()
-                .zip(&current)
-                .all(|((a_fd, a), (b_fd, b))| {
-                    a_fd == b_fd
-                        && a.generation == b.generation
-                        && a.raw == b.raw
-                        && a.kind == b.kind
-                        && a.flags.0 == b.flags.0
-                        && a.description_id == b.description_id
-                        && a.offset == b.offset
-                });
-        if !same {
+        if !snapshot.matches(&table) {
             return Err(io::Error::from_raw_os_error(1237)); // ERROR_RETRY; no native child created
         }
     }

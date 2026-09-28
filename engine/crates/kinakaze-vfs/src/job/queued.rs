@@ -7,7 +7,7 @@ use crate::mount::shared::Store;
 use std::os::windows::io::AsRawHandle;
 use std::sync::{Arc, OnceLock};
 
-const MAGIC: &[u8; 8] = b"CYSIGQ01";
+const MAGIC: &[u8; 8] = b"CYSIGQ02";
 const ROW: usize = 48;
 const LIMIT_PER_UID: usize = 1024;
 
@@ -20,7 +20,13 @@ pub(crate) struct Record {
     holder: u32,
     pub sender: u32,
     pub uid: u32,
+    pub code: i32,
     pub value: usize,
+}
+impl Record {
+    pub(crate) fn held_here(self) -> bool {
+        self.holder == current_host_pid()
+    }
 }
 fn store() -> Result<Arc<Store>, i32> {
     static STORE: OnceLock<Arc<Store>> = OnceLock::new();
@@ -28,6 +34,7 @@ fn store() -> Result<Arc<Store>, i32> {
         return Ok(store.clone());
     }
     let opened = Arc::new(Store::user_object(u64::MAX - 52, true)?);
+    opened.retain_kernel(false, Vec::new())?;
     let _ = STORE.set(opened);
     Ok(STORE.get().unwrap().clone())
 }
@@ -56,6 +63,7 @@ fn decode(bytes: &[u8]) -> Result<(u64, Vec<Record>), i32> {
                 holder: dword(24),
                 sender: dword(28),
                 uid: dword(32),
+                code: dword(36) as i32,
                 value: qword(40) as usize,
             }
         })
@@ -73,7 +81,7 @@ fn encode(serial: u64, records: &[Record]) -> Vec<u8> {
         bytes.extend_from_slice(&record.holder.to_le_bytes());
         bytes.extend_from_slice(&record.sender.to_le_bytes());
         bytes.extend_from_slice(&record.uid.to_le_bytes());
-        bytes.extend_from_slice(&[0; 4]);
+        bytes.extend_from_slice(&record.code.to_le_bytes());
         bytes.extend_from_slice(&record.value.to_le_bytes());
     }
     bytes
@@ -127,6 +135,42 @@ pub fn send(pid: i32, signal: i32, value: usize) -> Result<(), i32> {
     {
         return Ok(());
     }
+    let sender = table::namespaces::visible_from(current_pid(), target.namespace_pid).unwrap_or(0);
+    enqueue(target, signal, sender, identity.uids[0], -1, value, true)?;
+    if signal == SIGCONT {
+        table::set_state(target.namespace_pid, STATE_RUNNING, 0);
+        poke("cont", target.pid);
+    }
+    if target.namespace_pid == current_pid() {
+        let _ = drain_external_notified(true);
+    }
+    Ok(())
+}
+
+pub(super) fn child(parent: u32, report: table::ChildSignal) -> Result<(), i32> {
+    let Some(target) = table::lookup(parent) else {
+        return Ok(());
+    };
+    enqueue(
+        target,
+        SIGCHLD,
+        report.pid,
+        report.uid,
+        report.code,
+        report.status as usize,
+        false,
+    )
+}
+
+fn enqueue(
+    target: table::Entry,
+    signal: i32,
+    sender: u32,
+    uid: u32,
+    code: i32,
+    value: usize,
+    limited: bool,
+) -> Result<(), i32> {
     let wake = table::notifications::event("wake", target.pid).ok_or(EIO)?;
     store()?.update(|bytes| {
         let (serial, mut records) = decode(bytes)?;
@@ -139,7 +183,7 @@ pub fn send(pid: i32, signal: i32, value: usize) -> Result<(), i32> {
         {
             return Ok((encode(serial, &records), ()));
         }
-        if records.iter().filter(|r| r.uid == identity.uids[0]).count() >= LIMIT_PER_UID {
+        if limited && records.iter().filter(|r| r.uid == uid).count() >= LIMIT_PER_UID {
             return Err(crate::EAGAIN);
         }
         let next = serial.checked_add(1).ok_or(crate::EAGAIN)?;
@@ -149,8 +193,9 @@ pub fn send(pid: i32, signal: i32, value: usize) -> Result<(), i32> {
             born: target.start_ticks,
             id: serial,
             holder: 0,
-            sender: current_pid(),
-            uid: identity.uids[0],
+            sender,
+            uid,
+            code,
             value,
         });
         // Notify before commit while holding the store mutex. A receiver that
@@ -158,15 +203,8 @@ pub fn send(pid: i32, signal: i32, value: usize) -> Result<(), i32> {
         if unsafe { SetEvent(wake.as_raw_handle()) } == 0 {
             return Err(EIO);
         }
-        if signal == SIGCONT {
-            table::set_state(target.namespace_pid, STATE_RUNNING, 0);
-            poke("cont", target.pid);
-        }
         Ok((encode(next, &records), ()))
     })?;
-    if target.namespace_pid == current_pid() {
-        let _ = drain_external_notified(true);
-    }
     Ok(())
 }
 

@@ -21,6 +21,7 @@ use windows_sys::Win32::{
 };
 pub mod cgroupfs;
 pub mod devpts;
+pub mod mapping;
 pub mod mqueue;
 mod observation;
 pub(crate) mod socket;
@@ -64,6 +65,7 @@ struct Node {
     children: BTreeMap<String, u64>,
     pages: BTreeMap<u64, u64>,
     opens: Vec<u64>,
+    mappings: Vec<(u64, u64, u64)>,
 }
 struct State {
     watches: Vec<(u64, u64)>,
@@ -105,6 +107,7 @@ impl Node {
             children: BTreeMap::new(),
             pages: BTreeMap::new(),
             opens: Vec::new(),
+            mappings: Vec::new(),
         }
     }
     fn stat(&self, id: u64, volume: u64) -> Stat {
@@ -154,7 +157,7 @@ impl Node {
 impl State {
     fn decode(data: &[u8]) -> Result<Self, i32> {
         let mut r = Reader(data);
-        if r.word()? != 0x4359544d50465338 {
+        if r.word()? != 0x4359544d50465339 {
             return Err(EIO);
         }
         let mut s = Self {
@@ -199,6 +202,7 @@ impl State {
                 children: BTreeMap::new(),
                 pages: BTreeMap::new(),
                 opens: Vec::new(),
+                mappings: Vec::new(),
             };
             let children = r.word()?;
             if children > 1_000_000 {
@@ -221,6 +225,13 @@ impl State {
             for _ in 0..opens {
                 n.opens.push(r.word()?);
             }
+            let mappings = r.word()?;
+            if mappings > 1_000_000 {
+                return Err(EIO);
+            }
+            for _ in 0..mappings {
+                n.mappings.push((r.word()?, r.word()?, r.word()?));
+            }
             s.nodes.insert(id, n);
         }
         s.pts = devpts::Instance::decode(&mut r)?;
@@ -239,7 +250,7 @@ impl State {
     fn encode(&self) -> Vec<u8> {
         let mut b = Vec::new();
         for v in [
-            0x4359544d50465338,
+            0x4359544d50465339,
             self.limit,
             self.capacity,
             self.inodes,
@@ -285,6 +296,12 @@ impl State {
             for id in &n.opens {
                 word(&mut b, *id);
             }
+            word(&mut b, n.mappings.len() as u64);
+            for &(lease, start, end) in &n.mappings {
+                for value in [lease, start, end] {
+                    word(&mut b, value);
+                }
+            }
         }
         devpts::Instance::encode(&self.pts, &mut b);
         mqueue::Instance::encode(&self.mq, &mut b);
@@ -304,7 +321,9 @@ impl State {
         mqueue::collect(self);
         for n in self.nodes.values_mut() {
             n.opens
-                .retain(|id| !matches!(Store::user_object(*id, false), Err(ENOENT)));
+                .retain(|id| !matches!(shared::pin_user_object(*id), Err(ENOENT)));
+            n.mappings
+                .retain(|(id, _, _)| !matches!(shared::pin_user_object(*id), Err(ENOENT)));
         }
         let dead: Vec<_> = self
             .nodes
@@ -312,6 +331,7 @@ impl State {
             .filter(|(id, n)| {
                 n.links == 0
                     && n.opens.is_empty()
+                    && n.mappings.is_empty()
                     && self
                         .pts
                         .as_ref()
@@ -427,7 +447,7 @@ impl Volume {
                 CreateFileMappingW(
                     INVALID_HANDLE_VALUE,
                     ptr::null(),
-                    PAGE_READWRITE | SEC_RESERVE,
+                    windows_sys::Win32::System::Memory::PAGE_EXECUTE_READWRITE | SEC_RESERVE,
                     (s.capacity >> 32) as u32,
                     s.capacity as u32,
                     name.as_ptr(),
@@ -446,14 +466,24 @@ impl Volume {
             }
             return Err(ENOMEM);
         }
-        Ok(Arc::new(Self {
+        let volume = Arc::new(Self {
             meta,
             section,
             view,
             capacity: s.capacity,
             message_queues: std::sync::atomic::AtomicBool::new(s.mq.is_some()),
             _network: network,
-        }))
+        });
+        if kinakaze_runtime::authority::get().is_some() {
+            let dependencies = volume
+                ._network
+                .as_ref()
+                .map(|s| s.kernel_key())
+                .into_iter()
+                .collect();
+            volume.meta.retain_kernel(true, dependencies)?;
+        }
+        Ok(volume)
     }
     fn change<T>(&self, f: impl FnOnce(&mut State) -> Result<T, i32>) -> Result<T, i32> {
         self.change_observed(f).map(|(_, result)| result)
@@ -547,6 +577,18 @@ impl Volume {
         let n = s.nodes.get_mut(&id).ok_or(ENOENT)?;
         if n.mode & S_IFMT != S_IFREG {
             return Err(EINVAL);
+        }
+        // A live view must never expose a slot recycled into another inode.
+        // Cross-process VMA revocation is not available yet; reject removal of
+        // mapped pages before changing metadata or contents. Growth and changes
+        // within the final mapped page retain their normal semantics.
+        let first_removed = length.div_ceil(PAGE);
+        if length < n.size
+            && n.mappings
+                .iter()
+                .any(|(_, start, end)| *end > first_removed && *start < n.size.div_ceil(PAGE))
+        {
+            return Err(EBUSY);
         }
         let removed = n.pages.split_off(&length.div_ceil(PAGE));
         s.free.extend(removed.into_values());
@@ -649,6 +691,8 @@ pub fn reopen(fd: i32, flags: i32) -> Result<i32, i32> {
     }
     let d = shared::new_object()?;
     d.update(|_| Ok((encode_descriptor(&l, 0, flags), ())))?;
+    v.meta.lease_kernel(d.kernel_key())?;
+    crate::mount::policy::get(l.namespace, l.mount, l.flags)?.lease_kernel(d.kernel_key())?;
     let f = fs::special_fd_flags(flags).union(FdFlags::SEEKABLE);
     v.change(|s| {
         s.nodes.get_mut(&l.node).ok_or(ENOENT)?.opens.push(d.id());
@@ -685,8 +729,43 @@ fn number(text: &str, percent: bool) -> Result<u64, i32> {
         .ok_or(EINVAL)
 }
 pub(crate) fn prepare(options: &str) -> Result<String, i32> {
-    let source = prepare_unkept(options)?;
-    start_keeper(parse(&source)?.0)?;
+    prepare_unkept(options)
+}
+pub(crate) fn prepare_devices() -> Result<String, i32> {
+    let source = prepare("mode=0755")?;
+    let (id, _) = parse(&source)?;
+    volume(id)?.change(|state| {
+        for name in ["pts", "shm", "mqueue"] {
+            state.insert(1, name, Node::new(S_IFDIR | 0o755, 1))?;
+        }
+        for (name, major, minor, mode) in [
+            ("null", 1, 3, 0o666),
+            ("zero", 1, 5, 0o666),
+            ("full", 1, 7, 0o666),
+            ("random", 1, 8, 0o666),
+            ("urandom", 1, 9, 0o666),
+            ("tty", 5, 0, 0o666),
+            ("console", 5, 1, 0o600),
+        ] {
+            let mut node = Node::new(S_IFCHR | mode, 1);
+            node.device = (major << 8) | minor;
+            state.insert(1, name, node)?;
+        }
+        for (name, target) in [
+            ("ptmx", "pts/ptmx"),
+            ("fd", "/proc/self/fd"),
+            ("stdin", "/proc/self/fd/0"),
+            ("stdout", "/proc/self/fd/1"),
+            ("stderr", "/proc/self/fd/2"),
+            ("core", "/proc/kcore"),
+        ] {
+            let mut node = Node::new(S_IFLNK | 0o777, 1);
+            node.target = target.into();
+            node.size = target.len() as u64;
+            state.insert(1, name, node)?;
+        }
+        Ok(())
+    })?;
     Ok(source)
 }
 fn prepare_unkept(options: &str) -> Result<String, i32> {
@@ -902,15 +981,20 @@ pub fn stat(path: &str, follow: bool) -> Result<Option<Stat>, i32> {
         s.nodes.get(&l.node).ok_or(ENOENT)?.stat(l.node, l.volume),
     ))
 }
-fn descriptor(fd: i32) -> Result<(Store, Location, u64, i32), i32> {
-    let entry = crate::get(fd)?;
-    if !matches!(
-        entry.kind,
-        FdKind::TmpfsFile | FdKind::TmpfsDirectory | FdKind::MessageQueue | FdKind::SysfsFile
-    ) {
-        return Err(EBADF);
-    }
-    let store = shared::object_fd(fd)?;
+fn descriptor(fd: i32) -> Result<(Arc<Store>, Location, u64, i32), i32> {
+    let store = {
+        let table = crate::table().read().map_err(|_| EIO)?;
+        let entry = table.slots.get(fd as usize).and_then(|e| *e).ok_or(EBADF)?;
+        if !matches!(
+            entry.kind,
+            FdKind::TmpfsFile | FdKind::TmpfsDirectory | FdKind::MessageQueue | FdKind::SysfsFile
+        ) {
+            return Err(EBADF);
+        }
+        // Pin under the fd-table guard so close/reuse cannot substitute an
+        // object. Dup aliases reuse one mapping; the final close releases it.
+        crate::ofd::object_store(entry)?
+    };
     let data = store.read()?.1;
     let mut r = Reader(&data);
     let l = Location {
@@ -1060,6 +1144,9 @@ pub fn open(path: &str, flags: i32, mode: u32) -> Result<Option<i32>, i32> {
     }
     let description = shared::new_object()?;
     description.update(|_| Ok((encode_descriptor(&l, 0, flags), ())))?;
+    v.meta.lease_kernel(description.kernel_key())?;
+    crate::mount::policy::get(l.namespace, l.mount, l.flags)?
+        .lease_kernel(description.kernel_key())?;
     v.change(|s| {
         s.nodes
             .get_mut(&l.node)
@@ -1171,6 +1258,8 @@ fn open_pinned(mut l: Location, flags: i32, mode: u32) -> Result<i32, i32> {
     }
     let d = shared::new_object()?;
     d.update(|_| Ok((encode_descriptor(&l, 0, flags), ())))?;
+    v.meta.lease_kernel(d.kernel_key())?;
+    crate::mount::policy::get(l.namespace, l.mount, l.flags)?.lease_kernel(d.kernel_key())?;
     let mut f = fs::special_fd_flags(flags).union(FdFlags::SEEKABLE);
     if flags & O_CLOEXEC != 0 {
         f = f.union(FdFlags::CLOSE_ON_EXEC);
@@ -1479,6 +1568,42 @@ pub fn truncate(fd: i32, length: i64) -> Result<(), i32> {
     crate::limits::truncate(length as u64)?;
     let v = volume(l.volume)?;
     v.change(|s| v.truncate(s, l.node, length as u64))
+}
+pub(crate) fn fallocate(fd: i32, mode: i32, offset: u64, length: u64) -> Result<(), i32> {
+    let (_, location, _, flags) = descriptor(fd)?;
+    if flags & O_PATH != 0 || flags & O_ACCMODE == O_RDONLY {
+        return Err(EBADF);
+    }
+    location.writable()?;
+    if mode & !1 != 0 {
+        return Err(EOPNOTSUPP);
+    }
+    let end = offset.checked_add(length).ok_or(EOVERFLOW)?;
+    if mode & 1 == 0 {
+        crate::limits::truncate(end)?;
+    }
+    let volume = volume(location.volume)?;
+    volume.change(|state| {
+        if state.sys.is_some() || state.mq.is_some() {
+            return Err(ENODEV);
+        }
+        let mut node = state.nodes.get(&location.node).ok_or(ENOENT)?.clone();
+        if node.mode & S_IFMT != S_IFREG {
+            return Err(EISDIR);
+        }
+        for page in offset / PAGE..end.div_ceil(PAGE) {
+            if !node.pages.contains_key(&page) {
+                node.pages.insert(page, volume.allocate(state)?);
+            }
+        }
+        if mode & 1 == 0 {
+            node.size = node.size.max(end);
+        }
+        node.ctime = now();
+        node.mtime = node.ctime;
+        state.nodes.insert(location.node, node);
+        Ok(())
+    })
 }
 pub fn create(path: &str, mode: u32, device: u64, target: &str) -> Result<bool, i32> {
     let Some(l) = location(path)? else {
@@ -2020,6 +2145,11 @@ pub fn fstatfs(fd: i32) -> Result<Statistics, i32> {
     statistics(&descriptor(fd)?.1)
 }
 pub(crate) fn serialize() -> Result<Vec<u8>, i32> {
+    // Mounted volumes and live descriptions already have init-owned backing.
+    // Per-worker mapping caches are reconstructed only when the child uses them.
+    if kinakaze_runtime::authority::get().is_some() {
+        return Ok(Vec::new());
+    }
     let mut b = Vec::new();
     for id in VOLUMES.lock().map_err(|_| EIO)?.keys() {
         word(&mut b, *id);
@@ -2035,256 +2165,28 @@ pub(crate) fn restore(data: &[u8]) -> bool {
 }
 pub(crate) fn reference(source: &str, object: u64) -> Result<(), i32> {
     let (id, _) = parse(source)?;
+    volume(id)?
+        .meta
+        .lease_kernel(kinakaze_v2_protocol::kernel::ObjectKey::Shared(object))?;
     volume(id)?.change(|s| {
         s.nodes.get_mut(&1).ok_or(EIO)?.opens.push(object);
         Ok(())
     })
 }
-fn start_keeper(id: u64) -> Result<(), i32> {
-    use std::os::windows::ffi::OsStrExt;
-    use windows_sys::Win32::{
-        Foundation::{DUPLICATE_SAME_ACCESS, DuplicateHandle, GENERIC_READ, GENERIC_WRITE},
-        Security::SECURITY_ATTRIBUTES,
-        Storage::FileSystem::{
-            CreateFileW, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING, ReadFile,
-        },
-        System::{
-            Console::{GetStdHandle, STD_ERROR_HANDLE},
-            Pipes::{CreatePipe, PeekNamedPipe},
-            Threading::*,
-        },
-    };
-    struct Handle(HANDLE);
-    impl Drop for Handle {
-        fn drop(&mut self) {
-            unsafe {
-                CloseHandle(self.0);
-            }
-        }
+// Retain filesystem backing through its mount and namespace references.
+// No auxiliary process is needed; init owns the sparse section before publish.
+fn retain_volume(id: u64) -> Result<(), i32> {
+    let v = volume(id)?;
+    let s = State::decode(&v.meta.read()?.1)?;
+    let mut dependencies = Vec::new();
+    if let Some(sys) = &s.sys {
+        dependencies.push(sysfs::retain_namespace(sys)?.kernel_key());
     }
-    struct Attributes(Vec<usize>);
-    impl Drop for Attributes {
-        fn drop(&mut self) {
-            unsafe {
-                DeleteProcThreadAttributeList(self.0.as_mut_ptr().cast());
-            }
-        }
+    if let Some(mq) = &s.mq {
+        dependencies.push(crate::namespaces::retain_kernel(
+            crate::namespaces::IPC,
+            mq.ipc,
+        )?);
     }
-    let executable = std::env::current_exe().map_err(|_| EIO)?;
-    if executable.file_stem().is_none_or(|s| s != "elf-loader") {
-        return Ok(());
-    }
-    let trace = std::env::var_os("KINAKAZE_TMPFS_TRACE").is_some();
-    if trace {
-        eprintln!("tmpfs keeper start host={} id={id}", std::process::id());
-    }
-    let security = SECURITY_ATTRIBUTES {
-        nLength: std::mem::size_of::<SECURITY_ATTRIBUTES>() as u32,
-        lpSecurityDescriptor: ptr::null_mut(),
-        bInheritHandle: 1,
-    };
-    let (mut input, mut output) = (ptr::null_mut(), ptr::null_mut());
-    if unsafe { CreatePipe(&mut input, &mut output, &security, 0) } == 0 {
-        return Err(errno_from_win32(unsafe { GetLastError() }));
-    }
-    let (input, output) = (Handle(input), Handle(output));
-    crate::platform::try_set_inheritable(input.0 as usize, false)?;
-    let null = unsafe {
-        CreateFileW(
-            windows_sys::core::w!("NUL"),
-            GENERIC_READ | GENERIC_WRITE,
-            FILE_SHARE_READ | FILE_SHARE_WRITE,
-            &security,
-            OPEN_EXISTING,
-            0,
-            ptr::null_mut(),
-        )
-    };
-    if null == INVALID_HANDLE_VALUE {
-        return Err(errno_from_win32(unsafe { GetLastError() }));
-    }
-    let null = Handle(null);
-    let mut error = None;
-    if trace {
-        let mut raw = ptr::null_mut();
-        if unsafe {
-            DuplicateHandle(
-                GetCurrentProcess(),
-                GetStdHandle(STD_ERROR_HANDLE),
-                GetCurrentProcess(),
-                &mut raw,
-                0,
-                1,
-                DUPLICATE_SAME_ACCESS,
-            )
-        } != 0
-        {
-            error = Some(Handle(raw));
-        }
-    }
-    let mut inherited = vec![output.0, null.0];
-    if let Some(error) = &error {
-        inherited.push(error.0);
-    }
-    let mut size = 0;
-    unsafe {
-        InitializeProcThreadAttributeList(ptr::null_mut(), 1, 0, &mut size);
-    }
-    if size == 0 {
-        return Err(EIO);
-    }
-    let mut buffer = vec![0usize; size.div_ceil(std::mem::size_of::<usize>())];
-    if unsafe { InitializeProcThreadAttributeList(buffer.as_mut_ptr().cast(), 1, 0, &mut size) }
-        == 0
-    {
-        return Err(EIO);
-    }
-    let mut attributes = Attributes(buffer);
-    if unsafe {
-        UpdateProcThreadAttribute(
-            attributes.0.as_mut_ptr().cast(),
-            0,
-            PROC_THREAD_ATTRIBUTE_HANDLE_LIST as usize,
-            inherited.as_ptr().cast(),
-            inherited.len() * std::mem::size_of::<HANDLE>(),
-            ptr::null_mut(),
-            ptr::null(),
-        )
-    } == 0
-    {
-        return Err(errno_from_win32(unsafe { GetLastError() }));
-    }
-    let mut startup = unsafe { std::mem::zeroed::<STARTUPINFOEXW>() };
-    startup.StartupInfo.cb = std::mem::size_of::<STARTUPINFOEXW>() as u32;
-    startup.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
-    startup.StartupInfo.hStdInput = null.0;
-    startup.StartupInfo.hStdOutput = output.0;
-    startup.StartupInfo.hStdError = error.as_ref().map_or(null.0, |e| e.0);
-    startup.lpAttributeList = attributes.0.as_mut_ptr().cast();
-    let executable_wide: Vec<u16> = executable
-        .as_os_str()
-        .encode_wide()
-        .chain(Some(0))
-        .collect();
-    let mut command: Vec<u16> = format!("\"{}\" --tmpfs-keeper {id}", executable.display())
-        .encode_utf16()
-        .chain(Some(0))
-        .collect();
-    let mut process = unsafe { std::mem::zeroed::<PROCESS_INFORMATION>() };
-    if unsafe {
-        CreateProcessW(
-            executable_wide.as_ptr(),
-            command.as_mut_ptr(),
-            ptr::null(),
-            ptr::null(),
-            1,
-            CREATE_NO_WINDOW | EXTENDED_STARTUPINFO_PRESENT,
-            ptr::null(),
-            ptr::null(),
-            &startup.StartupInfo,
-            &mut process,
-        )
-    } == 0
-    {
-        return Err(errno_from_win32(unsafe { GetLastError() }));
-    }
-    unsafe {
-        CloseHandle(process.hThread);
-    }
-    let process = Handle(process.hProcess);
-    drop(output);
-    // A helper must acknowledge its mapping before the creator releases it.
-    let start = std::time::Instant::now();
-    loop {
-        let mut available = 0;
-        let peek = unsafe {
-            PeekNamedPipe(
-                input.0,
-                ptr::null_mut(),
-                0,
-                ptr::null_mut(),
-                &mut available,
-                ptr::null_mut(),
-            )
-        };
-        if peek != 0 && available != 0 {
-            let (mut ready, mut count) = (0u8, 0);
-            if unsafe {
-                ReadFile(
-                    input.0,
-                    (&mut ready as *mut u8).cast(),
-                    1,
-                    &mut count,
-                    ptr::null_mut(),
-                )
-            } != 0
-                && count == 1
-                && ready == 1
-            {
-                return Ok(());
-            }
-            break;
-        }
-        if start.elapsed().as_secs() >= 5 || unsafe { WaitForSingleObject(process.0, 5) } != 258 {
-            break;
-        }
-    }
-    unsafe {
-        TerminateProcess(process.0, 1);
-        WaitForSingleObject(process.0, 5000);
-    }
-    Err(EIO)
-}
-/// Keep kernel sections alive independently of the process which mounted them.
-/// This helper does not register a guest PID. A sysfs volume pins its network
-/// namespace until its mounts and open descriptions are no longer referenced.
-pub fn run_keeper() {
-    use std::io::Write;
-    // Keep the ID allocator alive for exactly as long as its volume objects.
-    let Ok(_allocator) = shared::initial() else {
-        return;
-    };
-    let Some(id) = std::env::args().nth(2).and_then(|s| s.parse::<u64>().ok()) else {
-        return;
-    };
-    let Ok(v) = volume(id) else {
-        return;
-    };
-    let mut output = std::io::stdout().lock();
-    if output.write_all(&[1]).and_then(|_| output.flush()).is_err() {
-        return;
-    }
-    drop(output);
-    if std::env::var_os("KINAKAZE_TMPFS_TRACE").is_some() {
-        eprintln!("tmpfs keeper ready host={} id={id}", std::process::id());
-    }
-    let start = std::time::Instant::now();
-    let mut attached_namespace = None;
-    loop {
-        std::thread::sleep(std::time::Duration::from_millis(500));
-        if kinakaze_runtime::job::all_process_info().is_empty() {
-            if std::env::var_os("KINAKAZE_TMPFS_TRACE").is_some() {
-                eprintln!("tmpfs keeper exit id={id}: no guest rows");
-            }
-            break;
-        }
-        if start.elapsed().as_secs() < 3 {
-            continue;
-        }
-        let opened = v
-            .change(|s| {
-                Ok(s.nodes.values().any(|n| !n.opens.is_empty())
-                    || s.pts.as_ref().is_some_and(|p| !p.terminals.is_empty())
-                    || s.mq
-                        .as_ref()
-                        .is_some_and(|m| mqueue::namespace_alive(m.ipc)))
-            })
-            .unwrap_or(true);
-        if !opened && !crate::mount::tmpfs_attached(id, &mut attached_namespace).unwrap_or(true) {
-            if std::env::var_os("KINAKAZE_TMPFS_TRACE").is_some() {
-                eprintln!("tmpfs keeper exit id={id}: no mount/open refs");
-            }
-            break;
-        }
-    }
+    v.meta.retain_kernel(true, dependencies)
 }

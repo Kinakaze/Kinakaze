@@ -122,7 +122,15 @@ pub(crate) fn prepare_open(path: &str, flags: i32) -> Result<Option<Description>
     // Reuse it only in this operation; a later open resolves rename/symlink or
     // mount changes again rather than consulting a persistent path cache.
     let canonical = overlay::canonical_guest(path, flags & crate::fs::O_NOFOLLOW == 0)?;
-    let Some(policy) = policy_at_canonical(&canonical)? else {
+    prepare_open_canonical(path, flags, &canonical)
+}
+
+pub(crate) fn prepare_open_canonical(
+    path: &str,
+    flags: i32,
+    canonical: &str,
+) -> Result<Option<Description>, i32> {
+    let Some(policy) = policy_at_canonical(canonical)? else {
         return Ok(None);
     };
     let create = flags & crate::fs::O_CREAT != 0 && crate::fs::stat(path).is_err();
@@ -132,7 +140,7 @@ pub(crate) fn prepare_open(path: &str, flags: i32) -> Result<Option<Description>
     Ok(Some(Description {
         policy,
         writer,
-        path: namespace_path(&canonical)?,
+        path: namespace_path(canonical)?,
     }))
 }
 pub(crate) fn write_path(path: &str, follow: bool) -> Result<Option<Arc<Object>>, i32> {
@@ -145,10 +153,16 @@ pub(crate) fn namespace_for_native(
     let Some(description) = reference(entry)? else {
         return Ok(None);
     };
+    namespace_for_description(&description, native).map(Some)
+}
+pub(crate) fn namespace_for_description(
+    description: &Description,
+    native: &std::path::Path,
+) -> Result<String, i32> {
     if description.policy.id == ROOT_MOUNT_ID {
-        return Ok(Some(
-            crate::path::to_namespace_path(native).unwrap_or_else(|| crate::to_guest_path(native)),
-        ));
+        return Ok(
+            crate::path::to_namespace_path(native).unwrap_or_else(|| crate::to_guest_path(native))
+        );
     }
     if description.policy.namespace == namespace_id()? {
         if let Some(point) = snapshot()?.iter().find(|p| p.id == description.policy.id) {
@@ -160,15 +174,15 @@ pub(crate) fn namespace_for_native(
                 .map_err(|_| EIO)?;
                 let backing = backing.canonicalize().unwrap_or(backing);
                 if let Ok(tail) = native.strip_prefix(&backing) {
-                    return Ok(Some(join(
+                    return Ok(join(
                         &point.target,
                         &crate::path::unescape_path(&tail.to_string_lossy().replace('\\', "/")),
-                    )));
+                    ));
                 }
             }
         }
     }
-    Ok(Some(description.path))
+    Ok(description.path.clone())
 }
 pub fn descriptor_path(fd: i32) -> Result<Option<String>, i32> {
     let (object, entry) = match Object::from_fd_with_entry(fd) {

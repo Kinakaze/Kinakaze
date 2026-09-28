@@ -68,7 +68,7 @@ impl Record {
 
 macro_rules! returned_record {
     ($magic:expr) => {
-        thread_local! { static RETURNED: std::cell::RefCell<Option<super::records::returned::Record>> = const { std::cell::RefCell::new(None) }; }
+        thread_local! { static RETURNED: std::cell::RefCell<Option<$crate::netdb::records::returned::Record>> = const { std::cell::RefCell::new(None) }; }
         fn register_returned() -> Result<(), i32> {
             static REGISTERED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
             if *REGISTERED.get_or_init(|| {
@@ -117,7 +117,7 @@ macro_rules! returned_record {
                 return 22;
             }
             RETURNED.with(|slot| {
-                *slot.borrow_mut() = (address != 0).then_some(super::records::returned::Record(address))
+                *slot.borrow_mut() = (address != 0).then_some($crate::netdb::records::returned::Record(address))
             });
             0
         }

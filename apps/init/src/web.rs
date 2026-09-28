@@ -791,6 +791,7 @@ mod tests {
 
     fn test_service() -> Arc<Service> {
         Arc::new(Service {
+            kernel: std::sync::Mutex::new(crate::kernel::Kernel::new(1)),
             images: std::sync::Mutex::new(crate::image_cache::Cache::default()),
             prewarm_process: None,
             pool: None,

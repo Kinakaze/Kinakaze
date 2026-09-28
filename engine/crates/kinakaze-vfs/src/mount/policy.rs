@@ -25,7 +25,7 @@ use windows_sys::Win32::System::Threading::{
     CreateMutexW, INFINITE, ReleaseMutex, WaitForSingleObject,
 };
 
-const MAGIC: u64 = u64::from_le_bytes(*b"CYMPOL02");
+const MAGIC: u64 = kinakaze_v2_protocol::kernel::POLICY_MAGIC;
 #[repr(C)]
 struct Header {
     magic: AtomicU64,
@@ -59,6 +59,24 @@ fn cache() -> &'static Mutex<HashMap<(u64, u64), Arc<Policy>>> {
     CACHE.get_or_init(Default::default)
 }
 impl Policy {
+    pub(crate) fn lease_kernel(
+        &self,
+        owner: kinakaze_v2_protocol::kernel::ObjectKey,
+    ) -> Result<(), i32> {
+        if kinakaze_runtime::authority::get().is_none() {
+            return Ok(());
+        }
+        kinakaze_runtime::authority::kernel(kinakaze_v2_protocol::kernel::KernelCommand::Lease {
+            object: self.kernel_key(),
+            owner,
+        })
+    }
+    pub(crate) fn kernel_key(&self) -> kinakaze_v2_protocol::kernel::ObjectKey {
+        kinakaze_v2_protocol::kernel::ObjectKey::MountPolicy {
+            namespace: self.namespace,
+            id: self.id,
+        }
+    }
     fn header(&self) -> &Header {
         unsafe { &*self.view.Value.cast::<Header>() }
     }
@@ -198,7 +216,17 @@ pub(crate) fn get(namespace: u64, id: u64, flags: u64) -> Result<Arc<Policy>, i3
     if policy.header().magic.load(Ordering::Acquire) != MAGIC {
         return Err(EIO);
     }
-    crate::platform::try_set_inheritable(policy.section.raw() as usize, true)?;
+    crate::platform::try_set_inheritable(
+        policy.section.raw() as usize,
+        kinakaze_runtime::authority::get().is_none(),
+    )?;
+    if kinakaze_runtime::authority::get().is_some() {
+        kinakaze_runtime::authority::kernel(kinakaze_v2_protocol::kernel::KernelCommand::Retain {
+            object: policy.kernel_key(),
+            tmpfs: false,
+            dependencies: Vec::new(),
+        })?;
+    }
     cache.insert((namespace, id), policy.clone());
     Ok(policy)
 }
@@ -220,6 +248,11 @@ pub(crate) fn get_mapped(
 }
 
 pub(crate) fn serialize() -> Result<Vec<u8>, i32> {
+    // Init owns mount references, and OFD tokens own detached descriptor
+    // references. A child reopens its policies lazily instead of cloning caches.
+    if kinakaze_runtime::authority::get().is_some() {
+        return Ok(Vec::new());
+    }
     let cache = cache().lock().map_err(|_| EIO)?;
     let mut bytes = Vec::with_capacity(cache.len() * 32);
     for p in cache.values() {

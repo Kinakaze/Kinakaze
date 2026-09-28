@@ -7,7 +7,8 @@
     "awk": {"link": "/usr/bin/awk", "choices": {"/usr/bin/mawk": 5}},
     "vi": {"link": "/usr/bin/vi", "choices": {"/usr/bin/vim.tiny": 15}},
     "nc": {"link": "/bin/nc", "choices": {"/bin/nc.traditional": 10}},
-    "telnet": {"link": "/usr/bin/telnet", "choices": {"/usr/bin/inetutils-telnet": 100}}
+    "telnet": {"link": "/usr/bin/telnet", "choices": {"/usr/bin/inetutils-telnet": 100}},
+    "which": {"link": "/usr/bin/which", "choices": {"/usr/bin/which.debianutils": 0}}
   },
   "packages": [
     "busybox", "netbase", "apt", "dpkg", "gpgv", "debian-archive-keyring",

@@ -7,6 +7,7 @@ pub(crate) mod guest_gs;
 pub mod instruction_trampoline;
 mod profile;
 pub mod segment_patch;
+pub(crate) mod traps;
 
 use kinakaze_elf::{ElfFile, dynamic::DynamicInfo};
 use kinakaze_runtime::execution::{CodeConfig, CodeImage, CodeResult};
@@ -119,11 +120,12 @@ unsafe fn prepare_image(
     let thread = slot(config.thread_pointer_slot);
     let transition = slot(config.transition_slot);
     let scratch = slot(config.scratch_slot);
-    let directory = super::CONFIGURATION
-        .get()
-        .expect("engine configured before image preparation")
-        .root
-        .join("var/cache/kinakaze/aot");
+    // VFS restores the process root in fork children; the initial engine launch
+    // configuration belongs only to the original worker. Cache unavailability
+    // must never prevent preparing a newly dlopened image.
+    let directory = kinakaze_vfs::path::system_root()
+        .ok()
+        .map(|root| root.join("var/cache/kinakaze/aot"));
     let hashing = profile::begin("hash", bytes.len());
     let key = if view.content_hash.is_null() {
         aot_cache::compute_cache_key("image", bytes)
@@ -133,7 +135,9 @@ unsafe fn prepare_image(
     };
     drop(hashing);
     let loading = profile::begin("cache-read", bytes.len());
-    let cached = aot_cache::load_aot_cache(&directory, &key);
+    let cached = directory
+        .as_deref()
+        .and_then(|directory| aot_cache::load_aot_cache(directory, &key));
     drop(loading);
     if let Some(cached) = cached {
         // A cache hit is validated before any write. Once application starts,
@@ -175,6 +179,12 @@ unsafe fn prepare_image(
     output.thread_pointer_sites = report.other_sites.len();
     // Caches are disposable performance data; a read-only root still runs the
     // fully prepared image. No execution error is suppressed here.
-    let _ = aot_cache::save_aot_cache(&directory, &key, &cached);
+    if let Some(directory) = directory {
+        let _ = aot_cache::save_aot_cache(&directory, &key, &cached);
+    }
     Ok(())
+}
+
+pub unsafe extern "C" fn retire(base: usize, length: usize) {
+    traps::forget(base, length);
 }

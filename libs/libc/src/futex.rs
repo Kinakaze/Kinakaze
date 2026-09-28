@@ -22,7 +22,7 @@ use windows_sys::Win32::System::Threading::{
     CreateEventW, CreateMutexW, EVENT_MODIFY_STATE, GetCurrentProcess, GetCurrentThread,
     GetCurrentThreadId, GetProcessIdOfThread, GetProcessTimes, GetThreadTimes, INFINITE,
     OpenEventW, OpenThread, ReleaseMutex, SetEvent, THREAD_QUERY_LIMITED_INFORMATION,
-    THREAD_SYNCHRONIZE, WaitForMultipleObjects, WaitForSingleObject,
+    THREAD_SYNCHRONIZE, WaitForSingleObject,
 };
 
 #[repr(C)]
@@ -664,7 +664,7 @@ pub(crate) fn wait(
                     .min(u128::from(INFINITE - 1)) as u32
             });
             let handles = [waiter.event.0, interrupt];
-            let status = unsafe { WaitForMultipleObjects(2, handles.as_ptr(), 0, milliseconds) };
+            let status = unsafe { kinakaze_vfs::deadline_wait::any(&handles, milliseconds) };
             if status == WAIT_OBJECT_0 || status == WAIT_TIMEOUT {
                 match waiter.finish(false) {
                     Ok(true) => break Ok(true),

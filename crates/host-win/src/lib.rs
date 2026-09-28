@@ -9,6 +9,7 @@
 #![cfg(windows)]
 
 mod diagnostics;
+mod directory_watch;
 mod file_map;
 mod library;
 mod memory;
@@ -19,6 +20,7 @@ mod startup_gate;
 mod startup_profile;
 
 pub use diagnostics::{ProcessMetrics, process_metrics};
+pub use directory_watch::{DirectoryQueue, DirectoryWatch};
 pub use file_map::ReadOnlyFile;
 pub use library::{Library, LoadedModule};
 pub use memory::{ExecutableMemory, MemoryProtection, page_size};

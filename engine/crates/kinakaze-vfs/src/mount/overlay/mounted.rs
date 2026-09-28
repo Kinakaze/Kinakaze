@@ -43,6 +43,13 @@ fn super_policy(source: &str, flags: u64) -> Result<Arc<crate::mount::policy::Po
     });
     crate::mount::policy::get(0, id, flags & 1)
 }
+pub(crate) fn kernel_dependencies(
+    source: &str,
+    flags: u64,
+) -> Result<Vec<kinakaze_v2_protocol::kernel::ObjectKey>, i32> {
+    let (source, _) = super::split_view(source)?;
+    Ok(vec![super_policy(source, flags)?.kernel_key()])
+}
 #[derive(Clone)]
 struct Writer {
     mount: Option<Arc<Object>>,
@@ -624,13 +631,17 @@ pub(crate) struct Resolved {
 thread_local! { static RESOLUTION_WALKS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) }; }
 pub(crate) fn canonical_guest(path: &str, follow: bool) -> Result<String, i32> {
     let resolved = resolve_inner(path, follow, false, true, None)?.ok_or(EIO)?;
+    visible_guest(resolved.guest)
+}
+
+fn visible_guest(guest: String) -> Result<String, i32> {
     if let Some(root) = crate::path::namespace_root_path()?
-        && let Some(rest) = resolved.guest.strip_prefix(&root)
+        && let Some(rest) = guest.strip_prefix(&root)
         && (rest.is_empty() || rest.starts_with('/'))
     {
         return Ok(format!("/{}", rest.trim_start_matches('/')));
     }
-    Ok(resolved.guest)
+    Ok(guest)
 }
 
 /// Walk guest components, expanding symlinks in the merged namespace, including
@@ -667,7 +678,7 @@ fn resolve_inner(
     }
     #[cfg(test)]
     RESOLUTION_WALKS.set(RESOLUTION_WALKS.get() + 1);
-    if path.contains('\0') || path.contains('\\') {
+    if path.contains('\0') {
         return Err(EINVAL);
     }
     let root = if let Some(root) = &overlay_root {
@@ -850,7 +861,7 @@ fn resolve_inner(
                     crate::path::resolve_unmounted(&root, &translated, false).map_err(path_error)?
                 }
             };
-            let link = crate::path::emulated_symlink_target(&native)?;
+            let link = crate::path::symlink_component(&native, !final_component)?;
             native_parent = Some((translated, native.clone()));
             (native, None, link)
         };
@@ -1086,6 +1097,10 @@ impl WritePath {
 
 pub(crate) enum OpenPath {
     Native(Option<WritePath>),
+    ResolvedNative {
+        path: PathBuf,
+        description: Option<crate::mount::native::Description>,
+    },
     /// The full descriptor walker owns cross-backend links and their shared
     /// forty-link limit; never turn procfs or tmpfs into a native layer alias.
     Virtual,
@@ -1101,6 +1116,21 @@ pub(crate) fn open_path(path: &str, flags: i32) -> Result<OpenPath, i32> {
     if virtual_crossing {
         return Ok(OpenPath::Virtual);
     }
+    let resolved = match resolved {
+        Some(resolved) if resolved.location.is_none() => {
+            // Keep the completed native lookup and its attachment policy for
+            // this open. Rewalking both here and in fs::open repeated every
+            // ancestor without improving symlink or mount semantics.
+            let canonical = visible_guest(resolved.guest)?;
+            let description =
+                crate::mount::native::prepare_open_canonical(path, flags, &canonical)?;
+            return Ok(OpenPath::ResolvedNative {
+                path: resolved.path,
+                description,
+            });
+        }
+        other => other,
+    };
     open_native_path(path, flags, resolved, is_path, exclusive, follow, create)
         .map(OpenPath::Native)
 }
@@ -1316,6 +1346,17 @@ pub fn prepare_create(path: &str) -> Result<WritePath, i32> {
     match open_path(path, fs::O_CREAT | fs::O_EXCL | fs::O_WRONLY)? {
         OpenPath::Native(Some(path)) => return Ok(path),
         OpenPath::Native(None) => {}
+        OpenPath::ResolvedNative { path, description } => {
+            return Ok(WritePath {
+                path,
+                location: None,
+                publication: None,
+                anonymous: false,
+                _guard: None,
+                writer: None,
+                _native_writer: description.and_then(|d| d.writer),
+            });
+        }
         OpenPath::Virtual => return Err(crate::EOPNOTSUPP),
     }
     prepare_write(path, false, true)
@@ -1382,12 +1423,18 @@ fn prepare_mode(
 pub(crate) enum StatResolution {
     Overlay(Stat),
     Native(PathBuf),
+    Virtual,
 }
 
 /// Preserve a completed native walk for the caller's metadata query. Returning
 /// only "not overlay" made stat repeat every ancestor's inode/EA lookup.
 pub(crate) fn stat_resolution(path: &str, follow: bool) -> Result<Option<StatResolution>, i32> {
-    let Some(resolved) = resolve(path, follow, false)? else {
+    let mut crossing = false;
+    let resolved = resolve_inner(path, follow, false, false, Some(&mut crossing))?;
+    if crossing {
+        return Ok(Some(StatResolution::Virtual));
+    }
+    let Some(resolved) = resolved else {
         return Ok(None);
     };
     let Some(location) = resolved.location else {
@@ -1629,6 +1676,23 @@ pub(crate) fn register(entry: crate::FdEntry, mut description: Description) -> R
         .lock()
         .map_err(|_| EIO)?
         .insert(entry.description_id, description);
+    Ok(())
+}
+pub(crate) fn lease_policies(
+    entry: crate::FdEntry,
+    owner: kinakaze_v2_protocol::kernel::ObjectKey,
+) -> Result<(), i32> {
+    let description = descriptions()
+        .lock()
+        .map_err(|_| EIO)?
+        .get(&entry.description_id)
+        .cloned();
+    if let Some(d) = description {
+        d.location.instance.policy.lease_kernel(owner)?;
+        if let Some(policy) = &d.location.policy {
+            policy.lease_kernel(owner)?;
+        }
+    }
     Ok(())
 }
 pub(crate) fn reference(entry: crate::FdEntry) -> Result<Option<Description>, i32> {
@@ -1887,8 +1951,14 @@ pub(crate) fn reopen_object(
 
 pub struct MetadataHandle {
     handle: std::os::windows::io::OwnedHandle,
+    overlay: bool,
     _writer: Option<Writer>,
     _native_writer: Option<Arc<Object>>,
+}
+impl MetadataHandle {
+    pub(crate) fn is_overlay(&self) -> bool {
+        self.overlay
+    }
 }
 impl std::os::windows::io::AsRawHandle for MetadataHandle {
     fn as_raw_handle(&self) -> std::os::windows::io::RawHandle {
@@ -1906,10 +1976,7 @@ pub fn metadata_handle(
     let pinned = crate::native_pin::pin_native_fd(fd, |entry| {
         description = reference(entry)?;
         native = crate::mount::native::reference(entry)?;
-        if (description.is_some() || native.is_some())
-            && !allow_path
-            && entry.flags.contains(crate::FdFlags::PATH_ONLY)
-        {
+        if !allow_path && entry.flags.contains(crate::FdFlags::PATH_ONLY) {
             return Err(crate::EBADF);
         }
         Ok(())
@@ -1920,11 +1987,11 @@ pub fn metadata_handle(
         Err(e) => return Err(e),
     };
     let Some(description) = description else {
-        let Some(native) = native else {
-            return Ok(None);
-        };
         let writer = if write {
-            Some(native.policy.writer()?)
+            native
+                .as_ref()
+                .map(|native| native.policy.writer())
+                .transpose()?
         } else {
             None
         };
@@ -1937,6 +2004,7 @@ pub fn metadata_handle(
             };
         let object = Object::reopen(pinned.as_raw_handle(), access)?;
         return Ok(Some(MetadataHandle {
+            overlay: false,
             handle: unsafe {
                 std::os::windows::io::OwnedHandle::from_raw_handle(object.into_raw())
             },
@@ -1954,6 +2022,7 @@ pub fn metadata_handle(
         };
     let object = Object::reopen(object.raw(), access)?;
     Ok(Some(MetadataHandle {
+        overlay: true,
         handle: unsafe { std::os::windows::io::OwnedHandle::from_raw_handle(object.into_raw()) },
         _writer: refreshed.writer,
         _native_writer: None,
@@ -2057,7 +2126,9 @@ pub(crate) fn ownership_mapping(
     Ok(None)
 }
 pub(crate) fn descriptor_mapping(fd: i32) -> Result<Option<crate::user_namespace::Mapping>, i32> {
-    if let Some(description) = description(fd)? {
+    // Ownership lookup also serves fchownat(AT_EMPTY_PATH) on O_PATH handles.
+    // The caller enforces operation-specific descriptor access restrictions.
+    if let Some(description) = reference(crate::get(fd)?)? {
         if let Some(policy) = description.location.policy {
             return policy.mapping();
         }

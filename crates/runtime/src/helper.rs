@@ -29,6 +29,7 @@ pub unsafe extern "C" fn kinakaze_runtime_helper_run_v1(
         let mut connection = Connection {
             pipe: Some(PipeConnection::connect(&config.endpoint).map_err(|_| STATUS_TRANSPORT)?),
             next_id: 1,
+            completed: None,
         };
         let epoch = match connection
             .exchange(Request::Hello(Hello {

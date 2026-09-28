@@ -129,6 +129,7 @@ pub fn exec(
     arguments: &[String],
     image: Option<kinakaze_link::ImmutableBytes>,
     exec_environment: Option<Vec<String>>,
+    library_path: Option<&str>,
 ) -> Result<std::convert::Infallible, LinkError> {
     super::trace_spawn_loader_phase("exec-entered");
     if let Some(directory) = std::env::var_os("KINAKAZE_NAMESPACE_TRACE_DIR") {
@@ -146,6 +147,9 @@ pub fn exec(
     ));
     super::trace_spawn_loader_phase("linker-allocated");
     linker.register_provider_registry(super::configuration()?.providers.clone())?;
+    let environment_library_path =
+        super::interpreter::environment_value(exec_environment.as_deref(), "LD_LIBRARY_PATH");
+    linker.set_library_path(library_path.or(environment_library_path.as_deref()), path);
     register_builtins(&mut linker)?;
     super::trace_spawn_loader_phase("linker-created");
     // Ordinary V2 launch keeps the linker's strict default: every required

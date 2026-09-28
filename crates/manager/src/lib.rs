@@ -508,7 +508,13 @@ impl StateManager {
             ProcessState::Pending(_) => {
                 if !matches!(
                     request,
-                    Request::RegisterModule { .. } | Request::MarkReady | Request::AwaitActivation
+                    Request::RegisterModule { .. }
+                        | Request::MarkReady
+                        | Request::AwaitActivation
+                        | Request::Kernel(
+                            kinakaze_v2_protocol::kernel::KernelCommand::Retain { .. }
+                                | kinakaze_v2_protocol::kernel::KernelCommand::Lease { .. }
+                        )
                 ) {
                     return Err(error(ErrorCode::NotReady, "child must await parent commit"));
                 }
@@ -516,7 +522,7 @@ impl StateManager {
             ProcessState::Active => {}
         }
         match request {
-            Request::ImageSnapshot { .. } => Ok(Reply::Ok),
+            Request::ImageSnapshot { .. } | Request::Kernel(_) => Ok(Reply::Ok),
             Request::MarkPrewarmReady => {
                 let process = self.processes.get_mut(&pid).unwrap();
                 if process.identity.parent_pid != 0
@@ -656,6 +662,63 @@ impl StateManager {
                 unreachable!("handled before dispatch")
             }
         }
+    }
+
+    /// Release a terminal replay record only after its native owner confirms receipt.
+    /// The transport authenticates every envelope before calling this method.
+    pub fn acknowledge(&mut self, client: ClientId, id: u64) -> RpcResult<()> {
+        let connected = self
+            .clients
+            .get(&client)
+            .ok_or_else(|| error(ErrorCode::Unauthorized, "unknown client"))?;
+        let ClientKind::Worker { pid } = connected.kind else {
+            return Err(error(
+                ErrorCode::Unauthorized,
+                "only the active worker may acknowledge",
+            ));
+        };
+        self.processes
+            .get(&pid)
+            .filter(|process| process.peer == connected.peer)
+            .ok_or_else(|| error(ErrorCode::Unauthorized, "worker no longer owns process"))?;
+        if let Some(transaction) = self.transactions.get(&id) {
+            if transaction.parent != pid {
+                return Err(error(
+                    ErrorCode::Unauthorized,
+                    "foreign fork acknowledgement",
+                ));
+            }
+            if !matches!(
+                transaction.state,
+                TransactionState::Committed | TransactionState::Aborted
+            ) {
+                return Err(error(ErrorCode::NotReady, "fork is not terminal"));
+            }
+            self.transactions.remove(&id);
+            self.processes
+                .get_mut(&pid)
+                .unwrap()
+                .request_keys
+                .retain(|_, value| *value != id);
+        } else if let Some(transaction) = self.exec_transactions.get(&id) {
+            if transaction.process != pid || transaction.owner != client {
+                return Err(error(
+                    ErrorCode::Unauthorized,
+                    "foreign exec acknowledgement",
+                ));
+            }
+            if transaction.state != TransactionState::Aborted {
+                return Err(error(ErrorCode::NotReady, "exec still owns a native image"));
+            }
+            self.exec_transactions.remove(&id);
+            self.processes
+                .get_mut(&pid)
+                .unwrap()
+                .exec_request_keys
+                .retain(|_, value| *value != id);
+        }
+        // Repeating an acknowledgement is harmless; it never allocates work.
+        Ok(())
     }
 
     pub fn stats(&self) -> Stats {
@@ -914,12 +977,14 @@ impl StateManager {
     /// `status` is the native exit code, not Linux waitpid's encoded status.
     pub fn process_exited_with_status(&mut self, peer: PeerIdentity, status: i32) {
         let mut deferred_exits = Vec::new();
+        let mut replaced_images = Vec::new();
         for transaction in self.exec_transactions.values_mut() {
             if transaction.retiring && transaction.target == peer {
                 transaction.candidate_exit.get_or_insert(status);
             }
             if transaction.retiring && transaction.owner_peer == peer {
                 transaction.retiring = false;
+                replaced_images.push(transaction.process);
                 if let Some(process) = self.processes.get_mut(&transaction.process) {
                     process.peer = transaction.target;
                 }
@@ -934,6 +999,25 @@ impl StateManager {
                 if let Some(status) = transaction.candidate_exit {
                     deferred_exits.push((transaction.target, status));
                 }
+            }
+        }
+        // The dead image cannot retry terminal work. Pending forks still belong
+        // to the logical PID and may be completed by its replacement.
+        for pid in replaced_images {
+            self.transactions.retain(|_, transaction| {
+                transaction.parent != pid
+                    || !matches!(
+                        transaction.state,
+                        TransactionState::Committed | TransactionState::Aborted
+                    )
+            });
+            self.exec_transactions
+                .retain(|_, transaction| transaction.process != pid);
+            if let Some(process) = self.processes.get_mut(&pid) {
+                process
+                    .request_keys
+                    .retain(|_, id| self.transactions.contains_key(id));
+                process.exec_request_keys.clear();
             }
         }
         let exec_targets: Vec<_> = self
@@ -1577,7 +1661,11 @@ impl StateManager {
             .ok_or_else(|| error(ErrorCode::Aborted, "exec owner has exited"))?;
         match request {
             Request::Identity => Ok(Reply::Identity(process.identity)),
-            Request::ImageSnapshot { .. } => Ok(Reply::Ok),
+            Request::ImageSnapshot { .. }
+            | Request::Kernel(
+                kinakaze_v2_protocol::kernel::KernelCommand::Retain { .. }
+                | kinakaze_v2_protocol::kernel::KernelCommand::Lease { .. },
+            ) => Ok(Reply::Ok),
             Request::RegisterModule { module_id, schema } => {
                 match process.snapshot.modules.get(&module_id) {
                     Some(existing) if *existing == schema => Ok(Reply::Ok),

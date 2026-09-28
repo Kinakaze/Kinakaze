@@ -78,6 +78,6 @@ jobs:
           if ($LASTEXITCODE -eq 0) {
             gh release upload "$env:RELEASE_TAG" @assets --clobber
           } else {
-            gh release create "$env:RELEASE_TAG" @assets --verify-tag --title "Kinakaze $env:RELEASE_TAG" --notes-file "docs/releases/$env:RELEASE_TAG.md"
+            gh release create "$env:RELEASE_TAG" @assets --verify-tag --title "Kinakaze $env:RELEASE_TAG" --generate-notes
           }
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

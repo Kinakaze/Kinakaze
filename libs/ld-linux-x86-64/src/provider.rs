@@ -89,6 +89,7 @@ pub struct ProviderRegistry {
     images: HashMap<String, ProviderEntry>,
     paths: HashMap<std::path::PathBuf, String>,
     pub(crate) restore_source: Option<std::path::PathBuf>,
+    interpreter_image: OnceLock<Option<crate::ImmutableBytes>>,
 }
 
 type Factory = Box<dyn FnOnce() -> Result<Arc<dyn ProviderImage>, LinkError> + Send>;
@@ -247,6 +248,21 @@ impl ProviderRegistry {
 
     pub fn contains(&self, soname: &str) -> bool {
         self.images.contains_key(soname)
+    }
+
+    /// Only the registered interpreter can act as a native guest command.
+    /// Compare immutable bytes so aliases and copied rootfs images work without
+    /// accepting arbitrary PE files or trusting the executable's basename.
+    pub fn is_interpreter_image(&self, bytes: &[u8]) -> bool {
+        bytes.starts_with(b"MZ")
+            && self
+                .interpreter_image
+                .get_or_init(|| {
+                    let entry = self.images.get("ld-linux-x86-64.so.2")?;
+                    crate::snapshot_guest_image(entry.path()).ok()
+                })
+                .as_ref()
+                .is_some_and(|image| image.as_slice() == bytes)
     }
 
     /// Resolve identity without opening an image, in particular for RTLD_NOLOAD.

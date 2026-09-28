@@ -351,14 +351,9 @@ static FALLBACK_GLOBAL_ERRNO: std::sync::atomic::AtomicI32 = std::sync::atomic::
 
 /// Returns a stable pointer to the calling host thread's errno cell.
 pub fn errno_location() -> *mut i32 {
-    // Module 1 is native libc's ELF-visible TLS. Both direct errno imports and
-    // __errno_location must address the same cell in the calling thread's TCB.
-    let pointer = get_current_thread_fs_base();
-    if pointer != 0 {
-        if let Some(offset) = thread_pointer::offset_of(1) {
-            return (pointer - offset) as *mut i32;
-        }
-    }
+    // Installation and fork restoration publish the native libc cell. A guest
+    // may replace FS with a private TCB whose layout contains no native errno.
+    // Never derive a host ABI cell from that arbitrary guest thread pointer.
     ERRNO_POINTER
         .try_with(|slot| {
             let current = slot.get();
@@ -464,6 +459,13 @@ pub fn reserve_static_elf_module(module_id: usize) -> Result<usize, TlsError> {
         .cloned()
         .ok_or(TlsError::UnknownModule)?;
     thread_pointer::reserve(module_id, template.memory_size, template.align)
+}
+
+/// The executable's local-exec TLS offsets are already encoded in its code.
+/// Place it nearest TP before relocations or any thread freezes the layout.
+pub fn reserve_executable_elf_module(module_id: usize) -> Result<(), TlsError> {
+    let templates = modules().read().map_err(|_| TlsError::Poisoned)?;
+    thread_pointer::reserve_executable(module_id, &templates)
 }
 
 /// Selects the direct TEB TLS slot used by AOT-generated host-call trampolines.

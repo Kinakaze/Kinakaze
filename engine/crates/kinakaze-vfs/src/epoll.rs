@@ -11,6 +11,8 @@
 //! by LSPs, and AFD only understands the bottom of that stack, so every
 //! registration resolves the base handle once with `SIO_BASE_HANDLE`.
 
+#[cfg(test)]
+use crate::install;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Mutex, MutexGuard, OnceLock};
@@ -35,9 +37,7 @@ use windows_sys::Win32::System::Threading::{
 };
 
 use crate::socket::Readiness;
-use crate::{
-    EBADF, EEXIST, EINTR, EINVAL, EIO, ENOENT, EPERM, FdFlags, FdKind, install, interrupt, signal,
-};
+use crate::{EBADF, EEXIST, EINTR, EINVAL, EIO, ENOENT, EPERM, FdFlags, FdKind, interrupt, signal};
 
 // Linux epoll event bits.
 pub const EPOLLIN: u32 = 0x001;
@@ -175,6 +175,11 @@ unsafe extern "system" {
 /// One registered descriptor.
 #[derive(Clone, Copy)]
 struct Registration {
+    kind: FdKind,
+    flags: FdFlags,
+    lifetime: u64,
+    /// Shared state identity; weak, and never itself a guest reference.
+    object: u64,
     /// The AFD base handle, resolved once at registration time.
     base_handle: usize,
     /// A currently live descriptor naming the registered open description.
@@ -243,6 +248,9 @@ const UNIX_POLL_INTERVAL_MS: u32 = 10;
 
 /// An epoll set.
 struct EpollSet {
+    shared_revision: u64,
+    shared: Option<std::sync::Arc<crate::mount::shared::Store>>,
+    _wake_owner: Option<crate::fs::object::Object>,
     /// Public aliases share one open file description and one registration set.
     /// The map key stays private and stable when the original fd is closed.
     description_id: u64,
@@ -307,201 +315,103 @@ fn sets() -> &'static Mutex<HashMap<i32, EpollSet>> {
     SETS.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-struct SetsGuard(MutexGuard<'static, HashMap<i32, EpollSet>>);
+mod shared;
+mod target;
+
+struct SetsGuard {
+    local: MutexGuard<'static, HashMap<i32, EpollSet>>,
+    _gate: Option<shared::Gate>,
+    dirty: bool,
+}
 
 impl std::ops::Deref for SetsGuard {
     type Target = HashMap<i32, EpollSet>;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.local
     }
 }
 
 impl std::ops::DerefMut for SetsGuard {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        self.dirty = true;
+        &mut self.local
     }
 }
 
 impl Drop for SetsGuard {
     fn drop(&mut self) {
+        if self.dirty {
+            for set in self.local.values_mut() {
+                if let Some(store) = &set.shared {
+                    if let Err(error) = store.replace(&shared::encode(&set.registrations)) {
+                        eprintln!("kinakaze: cannot publish epoll state: {error}");
+                    } else {
+                        set.shared_revision = store.revision();
+                    }
+                }
+            }
+        }
         SETS_LOCK_OWNER.store(0, Ordering::Release);
     }
 }
 
 fn lock_sets(owner: usize) -> Result<SetsGuard, ()> {
-    let guard = sets().lock().map_err(|_| ())?;
-    SETS_LOCK_OWNER.store(owner, Ordering::Release);
-    Ok(SetsGuard(guard))
-}
-
-/// Serializes epoll interest state.  The transient AFD poll request/event is not
-/// included; `epoll_wait` creates those per call in the child as on the parent.
-pub(crate) fn serialize_fork_state() -> Result<Vec<u8>, i32> {
-    let sets = lock_sets(1).map_err(|_| EIO)?;
-    let mut payload = Vec::new();
-    payload.extend_from_slice(
-        &(sets.values().filter(|set| set.descriptor >= 0).count() as u32).to_le_bytes(),
-    );
-    payload.extend_from_slice(&0u32.to_le_bytes());
-    for set in sets.values() {
-        if set.descriptor < 0 {
-            continue;
-        }
-        payload.extend_from_slice(&set.descriptor.to_le_bytes());
-        payload.extend_from_slice(&(set.registrations.len() as u32).to_le_bytes());
-        for (key, registration) in set.registrations.iter() {
-            let flags = u32::from(registration.disarmed)
-                | (u32::from(registration.is_socket) << 1)
-                | (u32::from(registration.is_unix) << 2);
-            payload.extend_from_slice(&key.fd.to_le_bytes());
-            payload.extend_from_slice(&key.description_id.to_le_bytes());
-            payload.extend_from_slice(&registration.interest.to_le_bytes());
-            payload.extend_from_slice(&registration.data.to_le_bytes());
-            payload.extend_from_slice(&registration.reported.to_le_bytes());
-            payload.extend_from_slice(&flags.to_le_bytes());
-            for edge in registration.eventfd_edges {
-                payload.extend_from_slice(&edge.to_le_bytes());
-            }
-        }
-    }
-    Ok(payload)
-}
-
-pub(crate) fn restore_fork_state(payload: &[u8]) -> bool {
-    if payload.len() < 8 {
-        return false;
-    }
-    let count = u32::from_le_bytes(payload[0..4].try_into().unwrap_or_default()) as usize;
-    let mut cursor = 8usize;
-    let mut restored = HashMap::with_capacity(count);
-    for _ in 0..count {
-        if cursor + 8 > payload.len() {
-            return false;
-        }
-        let epoll_fd =
-            i32::from_le_bytes(payload[cursor..cursor + 4].try_into().unwrap_or_default());
-        let registrations = u32::from_le_bytes(
-            payload[cursor + 4..cursor + 8]
-                .try_into()
-                .unwrap_or_default(),
-        ) as usize;
-        let epoll_entry = crate::get(epoll_fd).ok();
-        let epoll_handle = epoll_entry.map(|entry| entry.raw);
-        cursor += 8;
-        let mut set = EpollSet {
-            description_id: epoll_entry.map_or(0, |entry| entry.description_id),
-            descriptor: epoll_fd,
-            registrations: HashMap::with_capacity(registrations),
-            wake_handle: epoll_handle.unwrap_or_default(),
-        };
-        for _ in 0..registrations {
-            if cursor + 48 > payload.len() {
-                return false;
-            }
-            let fd = i32::from_le_bytes(payload[cursor..cursor + 4].try_into().unwrap_or_default());
-            let description_id = u64::from_le_bytes(
-                payload[cursor + 4..cursor + 12]
-                    .try_into()
-                    .unwrap_or_default(),
-            );
-            let interest = u32::from_le_bytes(
-                payload[cursor + 12..cursor + 16]
-                    .try_into()
-                    .unwrap_or_default(),
-            );
-            let data = u64::from_le_bytes(
-                payload[cursor + 16..cursor + 24]
-                    .try_into()
-                    .unwrap_or_default(),
-            );
-            let reported = u32::from_le_bytes(
-                payload[cursor + 24..cursor + 28]
-                    .try_into()
-                    .unwrap_or_default(),
-            );
-            let flags = u32::from_le_bytes(
-                payload[cursor + 28..cursor + 32]
-                    .try_into()
-                    .unwrap_or_default(),
-            );
-            let eventfd_edges = [
-                u64::from_le_bytes(payload[cursor + 32..cursor + 40].try_into().unwrap()),
-                u64::from_le_bytes(payload[cursor + 40..cursor + 48].try_into().unwrap()),
-            ];
-            cursor += 48;
-            let Some((poll_fd, entry)) = crate::get_by_description_id(description_id) else {
-                continue;
-            };
-            if entry.kind == FdKind::Pipe && !entry.flags.has_pipe_access() {
-                return false;
-            }
-            if !supports_epoll(entry.kind) {
-                return false;
-            }
-            let is_socket = flags & 2 != 0;
-            let is_unix = flags & 4 != 0;
-            let resolved = if is_socket {
-                match base_handle(entry.raw as SOCKET) {
-                    Ok(value) => value,
-                    Err(_) => continue,
-                }
-            } else {
-                entry.raw
-            };
-            if epoll_handle.is_some() {
-                set.registrations.insert(
-                    RegistrationKey { fd, description_id },
-                    Registration {
-                        readiness_revision: 0,
-                        eventfd_edges,
-                        base_handle: resolved,
-                        poll_fd,
-                        interest,
-                        data,
-                        disarmed: flags & 1 != 0,
-                        reported,
-                        is_socket,
-                        is_packet: entry.flags.contains(FdFlags::PACKET_SOCKET),
-                        packet_output_blocked: false,
-                        is_unix,
-                        is_eventfd: matches!(
-                            entry.kind,
-                            FdKind::EventFd
-                                | FdKind::Event
-                                | FdKind::TimerFd
-                                | FdKind::SignalFd
-                                | FdKind::ProcMounts
-                                | FdKind::MessageQueue
-                                | FdKind::SysfsFile
-                        ),
-                        is_netlink: entry.kind == FdKind::NetlinkSocket,
-                        is_inotify: entry.kind == FdKind::Inotify,
-                        is_pipe: entry.kind == FdKind::Pipe,
-                        is_fifo: entry.kind == FdKind::Fifo,
-                        pipe_readable: entry.flags.contains(FdFlags::PIPE_READ_END),
-                        pipe_writable: entry.flags.contains(FdFlags::PIPE_WRITE_END),
-                        pipe_overlapped: entry.flags.contains(FdFlags::OVERLAPPED),
-                        is_pty: matches!(
-                            entry.kind,
-                            FdKind::PtyMaster | FdKind::PtySlave | FdKind::Console
-                        ),
-                    },
-                );
-            }
-        }
-        if epoll_handle.is_some() {
-            restored.insert(epoll_fd, set);
-        }
-    }
-    if cursor != payload.len() {
-        return false;
-    }
-    let Ok(mut sets) = lock_sets(2) else {
-        return false;
+    let mut guard = sets().lock().map_err(|_| ())?;
+    // Resetting the control event belongs to the same transaction as taking
+    // its interest snapshot. Never hold this gate across a native wait.
+    let gate = if owner == 14 || guard.values().all(|set| set.shared.is_none()) {
+        None
+    } else {
+        Some(shared::Gate::acquire().map_err(|_| ())?)
     };
-    *sets = restored;
-    true
+    let mut dirty = false;
+    for set in guard.values_mut() {
+        if let Some(store) = &set.shared {
+            if store.revision() != set.shared_revision {
+                let (revision, state) = store
+                    .read_with_revision(|data| shared::decode(data, &set.registrations))
+                    .map_err(|_| ())?;
+                set.registrations = state;
+                set.shared_revision = revision;
+            }
+            for (key, registration) in &mut set.registrations {
+                if registration.poll_fd < 0 {
+                    shared::resolve(*key, registration).map_err(|_| ())?;
+                }
+            }
+            if gate.is_some() {
+                let mut retired = Vec::new();
+                for (key, registration) in &set.registrations {
+                    if registration.poll_fd < 0 && !target::alive(registration).map_err(|_| ())? {
+                        retired.push(*key);
+                    }
+                }
+                dirty |= !retired.is_empty();
+                for key in retired {
+                    set.registrations.remove(&key);
+                }
+            }
+        }
+    }
+    SETS_LOCK_OWNER.store(owner, Ordering::Release);
+    Ok(SetsGuard {
+        local: guard,
+        _gate: gate,
+        dirty,
+    })
+}
+
+// The descriptor's section is inherited directly; no registration state is copied.
+pub(crate) fn serialize_fork_state() -> Result<Vec<u8>, i32> {
+    Ok(Vec::new())
+}
+pub(crate) fn restore_fork_state(payload: &[u8]) -> bool {
+    payload.is_empty()
+}
+
+pub(crate) fn restore_descriptor(fd: i32) -> Result<(), i32> {
+    set_key(fd).map(|_| ())
 }
 
 /// Resolves a socket's base handle for AFD.
@@ -641,6 +551,9 @@ impl PollSet {
             sets.insert(
                 key,
                 EpollSet {
+                    shared_revision: 0,
+                    shared: None,
+                    _wake_owner: None,
                     description_id: 0,
                     descriptor: -1,
                     registrations: HashMap::new(),
@@ -659,7 +572,7 @@ impl PollSet {
     }
 
     pub fn add(&self, fd: i32, event: EpollEvent) -> Result<(), i32> {
-        control_set(self.key, EPOLL_CTL_ADD, fd, Some(event))
+        control_set(self.key, EPOLL_CTL_ADD, fd, Some(event), false)
     }
 
     /// Return EINTR with all wait resources released. The caller drops this
@@ -680,44 +593,19 @@ pub fn epoll_create1(flags: i32) -> Result<i32, i32> {
     if flags & !EPOLL_CLOEXEC != 0 {
         return Err(EINVAL);
     }
-    // An epoll set is not a kernel object here, but it still needs a descriptor
-    // number. A manual-reset event is the placeholder object: it is cheap and
-    // gives the table a real handle to own and close.
-    // SAFETY: null security descriptor and name request an unnamed event.
-    let handle = unsafe { CreateEventW(std::ptr::null(), 1, 0, std::ptr::null()) };
-    if handle.is_null() {
-        return Err(EIO);
-    }
-    let mut fd_flags = FdFlags::NONE;
-    if flags & EPOLL_CLOEXEC != 0 {
-        fd_flags = fd_flags.union(FdFlags::CLOSE_ON_EXEC);
-    }
-    let fd = install(handle as usize, FdKind::Event, fd_flags).inspect_err(|_| {
-        // SAFETY: installation failed, so this function still owns the event.
-        unsafe { CloseHandle(handle) };
-    })?;
-    let description_id = crate::get(fd)?.description_id;
-    let result = (|| {
-        let mut sets = lock_sets(3).map_err(|_| EIO)?;
-        let key = (i32::MIN..0)
-            .rev()
-            .find(|key| !sets.contains_key(key))
-            .ok_or(crate::ENOMEM)?;
-        sets.insert(
-            key,
-            EpollSet {
-                description_id,
-                descriptor: fd,
-                registrations: HashMap::new(),
-                wake_handle: handle as usize,
-            },
-        );
-        Ok(fd)
-    })();
-    if result.is_err() {
+    let store = crate::mount::shared::new_object()?;
+    store.replace(&shared::encode(&HashMap::new()))?;
+    let fd_flags = if flags & EPOLL_CLOEXEC != 0 {
+        FdFlags::CLOSE_ON_EXEC
+    } else {
+        FdFlags::NONE
+    };
+    let fd = store.descriptor_kind(FdKind::Event, fd_flags)?;
+    if let Err(error) = set_key(fd) {
         let _ = crate::close(fd);
+        return Err(error);
     }
-    result
+    Ok(fd)
 }
 
 fn set_key(fd: i32) -> Result<i32, i32> {
@@ -725,10 +613,53 @@ fn set_key(fd: i32) -> Result<i32, i32> {
     if entry.kind != FdKind::Event {
         return Err(EINVAL);
     }
-    let sets = lock_sets(14).map_err(|_| EIO)?;
-    sets.iter()
+    {
+        let sets = sets().lock().map_err(|_| EIO)?;
+        if let Some(key) = sets
+            .iter()
+            .find_map(|(key, set)| (set.description_id == entry.description_id).then_some(*key))
+        {
+            // The cache owns its mapping and wake event. Reopening both on
+            // every epoll_wait adds native syscalls to otherwise cached waits.
+            let table = crate::table().read().map_err(|_| EIO)?;
+            return table
+                .slots
+                .get(fd as usize)
+                .and_then(|slot| *slot)
+                .filter(|current| current.generation == entry.generation)
+                .map(|_| key)
+                .ok_or(EBADF);
+        }
+    }
+    let (entry, store) = {
+        let table = crate::table().read().map_err(|_| EIO)?;
+        let entry = table.slots.get(fd as usize).and_then(|s| *s).ok_or(EBADF)?;
+        if entry.kind != FdKind::Event {
+            return Err(EINVAL);
+        }
+        (entry, crate::mount::shared::object_entry(entry)?)
+    };
+    let mut sets = lock_sets(14).map_err(|_| EIO)?;
+    // close removes the descriptor before taking this cache lock. Recheck
+    // after acquiring it so a racing close cannot leave a new orphaned cache.
+    if crate::get(fd)?.generation != entry.generation {
+        return Err(EBADF);
+    }
+    if let Some(key) = sets
+        .iter()
         .find_map(|(key, set)| (set.description_id == entry.description_id).then_some(*key))
-        .ok_or(EBADF)
+    {
+        return Ok(key);
+    }
+    let key = (i32::MIN..0)
+        .rev()
+        .find(|key| !sets.contains_key(key))
+        .ok_or(crate::ENOMEM)?;
+    sets.insert(key, shared::attach(fd, entry, store)?);
+    // This only materializes a local cache. During child restoration a parent
+    // writer may be frozen; never take its mutex or republish its state here.
+    sets.dirty = false;
+    Ok(key)
 }
 
 /// `epoll_create`, whose size argument Linux ignores.
@@ -794,7 +725,9 @@ pub fn descriptor_closed(description_id: u64, survivor: Option<(i32, crate::FdEn
         unsafe { SetEvent(set.wake_handle as HANDLE) };
         if let Some((fd, entry)) = survivor {
             set.descriptor = fd;
-            set.wake_handle = entry.raw;
+            if set.shared.is_none() {
+                set.wake_handle = entry.raw;
+            }
             true
         } else {
             false
@@ -810,6 +743,22 @@ pub fn descriptor_closed(description_id: u64, survivor: Option<(i32, crate::FdEn
                     changed = true;
                 }
             }
+        } else if set.shared.is_some() {
+            set.registrations.retain(|key, registration| {
+                if key.description_id != description_id {
+                    return true;
+                }
+                changed = true;
+                if matches!(
+                    crate::mount::shared::Store::user_object(registration.lifetime, false),
+                    Err(crate::ENOENT)
+                ) {
+                    return false;
+                }
+                registration.poll_fd = -1;
+                registration.base_handle = 0;
+                true
+            });
         } else {
             let before = set.registrations.len();
             set.registrations
@@ -905,7 +854,7 @@ pub fn epoll_ctl(
     if crate::get(epoll_fd)?.description_id == crate::get(fd)?.description_id {
         return Err(EINVAL);
     }
-    control_set(key, operation, fd, event)
+    control_set(key, operation, fd, event, true)
 }
 
 fn control_set(
@@ -913,6 +862,7 @@ fn control_set(
     operation: i32,
     fd: i32,
     event: Option<EpollEvent>,
+    shared: bool,
 ) -> Result<(), i32> {
     let entry = crate::get(fd)?;
     let key = RegistrationKey {
@@ -959,6 +909,18 @@ fn control_set(
             entry.raw
         };
         Some(Registration {
+            kind: entry.kind,
+            flags: entry.flags,
+            lifetime: if shared {
+                crate::ofd::promote(fd)?.id()
+            } else {
+                0
+            },
+            object: if shared {
+                target::capture(fd, entry)?
+            } else {
+                0
+            },
             readiness_revision: 0,
             eventfd_edges: [0; 2],
             base_handle,
@@ -1036,6 +998,9 @@ fn control_set(
         _ => Err(EINVAL),
     };
     if result.is_ok() {
+        if let Some(store) = &set.shared {
+            store.replace(&shared::encode(&set.registrations))?;
+        }
         // SAFETY: the epoll set owns a live manual-reset event. A blocked wait
         // must rebuild its AFD snapshot after every interest-list mutation.
         unsafe { SetEvent(set.wake_handle as HANDLE) };
@@ -1046,6 +1011,37 @@ fn control_set(
 enum AfdPollResult {
     Ready(u32),
     InterestChanged,
+}
+
+/// One operation's readiness request. Unlike WSAEventSelect, AFD requests do
+/// not replace another process's notification on a shared socket description.
+pub(crate) fn wait_socket(socket: SOCKET, interest: u32, timeout: Option<u32>) -> Result<u32, i32> {
+    if interrupt::current().is_null() {
+        return Err(EIO);
+    }
+    let event = crate::io_event::IoEvent::new().ok_or(EIO)?;
+    let mut info = AfdPollInfo {
+        timeout: 0,
+        handle_count: 1,
+        exclusive: 0,
+        handles: [AfdPollHandleInfo::default(); MAX_POLL_HANDLES],
+    };
+    info.handles[0] = AfdPollHandleInfo {
+        handle: base_handle(socket)?,
+        events: interest_to_afd(interest),
+        status: 0,
+    };
+    match afd_poll_batch(
+        &mut info,
+        timeout,
+        event.0,
+        std::ptr::null_mut(),
+        std::ptr::null_mut(),
+    )? {
+        AfdPollResult::Ready(0) => Ok(0),
+        AfdPollResult::Ready(_) => Ok(afd_to_events(info.handles[0].events, interest)),
+        AfdPollResult::InterestChanged => Err(EBADF),
+    }
 }
 
 /// Reject cycles and excessive nesting before publishing a new epoll edge.
@@ -1279,8 +1275,22 @@ pub fn epoll_wait(epoll_fd: i32, events: &mut [EpollEvent], timeout_ms: i32) -> 
 /// Observe ready registrations without disarming one-shots or consuming edges.
 /// poll/select use this when another event loop exposes its epoll descriptor.
 pub fn poll_readable(epoll_fd: i32) -> Result<bool, i32> {
-    let mut event = [EpollEvent { events: 0, data: 0 }];
-    wait_set(set_key(epoll_fd)?, &mut event, 0, false, false).map(|count| count != 0)
+    thread_local! { static DEPTH: std::cell::Cell<u32> = const { std::cell::Cell::new(0) }; }
+    struct Nested;
+    impl Drop for Nested {
+        fn drop(&mut self) {
+            DEPTH.with(|depth| depth.set(depth.get() - 1));
+        }
+    }
+    DEPTH.with(|depth| {
+        if depth.get() >= 5 {
+            return Err(crate::ELOOP);
+        }
+        depth.set(depth.get() + 1);
+        let _nested = Nested;
+        let mut event = [EpollEvent { events: 0, data: 0 }];
+        wait_set(set_key(epoll_fd)?, &mut event, 0, false, false).map(|count| count != 0)
+    })
 }
 
 fn wait_set(
@@ -1395,6 +1405,12 @@ fn epoll_wait_inner(
             let mut pty_pending = Vec::new();
             for (key, registration) in &set.registrations {
                 if registration.disarmed {
+                    continue;
+                }
+                if registration.poll_fd < 0 {
+                    if registration.object != 0 {
+                        eventfd_pending.push((*key, *registration));
+                    }
                     continue;
                 }
                 if registration.is_packet {
@@ -1611,6 +1627,9 @@ fn epoll_wait_inner(
             }
         }
 
+        // Share projected filesystem observations across this readiness scan,
+        // including nested epoll sets. Never retain them across a native wait.
+        let filesystem_observation = crate::tmpfs::Observation::enter();
         let mut eventfd_ready = Vec::new();
         let mut eventfd_waits = Vec::new();
         let mut native_eventfds = 0;
@@ -1619,6 +1638,21 @@ fn epoll_wait_inner(
             let mut sampled_edges = registration.eventfd_edges;
             let fd = registration.poll_fd;
             let previous_waits = eventfd_waits.len();
+            if fd < 0 {
+                if let Some((reported, edges)) = target::poll(registration)? {
+                    if edges[0] != registration.eventfd_edges[0] {
+                        sampled.reported &= !(EPOLLIN | EPOLLRDNORM | EPOLLERR);
+                    }
+                    if edges[1] != registration.eventfd_edges[1] {
+                        sampled.reported &= !(EPOLLOUT | EPOLLWRNORM);
+                    }
+                    clear_absent_readiness(epoll_fd, *key, reported);
+                    if reported != 0 {
+                        eventfd_ready.push((*key, sampled, reported, edges));
+                    }
+                }
+                continue;
+            }
             if PIPE_STATE_TRACE_ACTIVE.load(Ordering::Acquire) {
                 eprintln!("kinakaze pipe epoll eventfd: fd={fd} before-readiness");
             }
@@ -1747,6 +1781,7 @@ fn epoll_wait_inner(
             }
         }
 
+        drop(filesystem_observation);
         let mut pipe_ready = Vec::new();
         for (key, registration) in &pipe_pending {
             let fd = registration.poll_fd;
@@ -1832,14 +1867,16 @@ fn epoll_wait_inner(
             if registration.interest & EPOLLET != 0 && reported & !registration.reported == 0 {
                 continue;
             }
+            if consume
+                && !finish_delivery(epoll_fd, *key, *reported, registration.readiness_revision)
+            {
+                continue;
+            }
             events[filled] = EpollEvent {
                 events: *reported,
                 data: registration.data,
             };
             filled += 1;
-            if consume {
-                finish_delivery(epoll_fd, *key, *reported, registration.readiness_revision);
-            }
         }
 
         for (key, registration, reported, edges) in &eventfd_ready {
@@ -1849,20 +1886,22 @@ fn epoll_wait_inner(
             if registration.interest & EPOLLET != 0 && reported & !registration.reported == 0 {
                 continue;
             }
-            events[filled] = EpollEvent {
-                events: *reported,
-                data: registration.data,
-            };
-            filled += 1;
-            if consume {
-                finish_delivery_with_edges(
+            if consume
+                && !finish_delivery_with_edges(
                     epoll_fd,
                     *key,
                     *reported,
                     registration.readiness_revision,
                     Some(*edges),
-                );
+                )
+            {
+                continue;
             }
+            events[filled] = EpollEvent {
+                events: *reported,
+                data: registration.data,
+            };
+            filled += 1;
         }
 
         for (key, registration, reported) in &netlink_ready {
@@ -1872,14 +1911,16 @@ fn epoll_wait_inner(
             if registration.interest & EPOLLET != 0 && reported & !registration.reported == 0 {
                 continue;
             }
+            if consume
+                && !finish_delivery(epoll_fd, *key, *reported, registration.readiness_revision)
+            {
+                continue;
+            }
             events[filled] = EpollEvent {
                 events: *reported,
                 data: registration.data,
             };
             filled += 1;
-            if consume {
-                finish_delivery(epoll_fd, *key, *reported, registration.readiness_revision);
-            }
         }
 
         for (key, registration, reported) in &inotify_ready {
@@ -1889,14 +1930,16 @@ fn epoll_wait_inner(
             if registration.interest & EPOLLET != 0 && reported & !registration.reported == 0 {
                 continue;
             }
+            if consume
+                && !finish_delivery(epoll_fd, *key, *reported, registration.readiness_revision)
+            {
+                continue;
+            }
             events[filled] = EpollEvent {
                 events: *reported,
                 data: registration.data,
             };
             filled += 1;
-            if consume {
-                finish_delivery(epoll_fd, *key, *reported, registration.readiness_revision);
-            }
         }
 
         for (key, registration, reported) in &pipe_ready {
@@ -1904,6 +1947,11 @@ fn epoll_wait_inner(
                 break;
             }
             if registration.interest & EPOLLET != 0 && reported & !registration.reported == 0 {
+                continue;
+            }
+            if consume
+                && !finish_delivery(epoll_fd, *key, *reported, registration.readiness_revision)
+            {
                 continue;
             }
             events[filled] = EpollEvent {
@@ -1917,9 +1965,7 @@ fn epoll_wait_inner(
                     "kinakaze pipe epoll delivery: epfd={epoll_fd} fd={fd} filled={filled} before-finish"
                 );
             }
-            if consume {
-                finish_delivery(epoll_fd, *key, *reported, registration.readiness_revision);
-            }
+
             if PIPE_STATE_TRACE_ACTIVE.load(Ordering::Acquire) {
                 let fd = registration.poll_fd;
                 eprintln!(
@@ -1935,14 +1981,16 @@ fn epoll_wait_inner(
             if registration.interest & EPOLLET != 0 && reported & !registration.reported == 0 {
                 continue;
             }
+            if consume
+                && !finish_delivery(epoll_fd, *key, *reported, registration.readiness_revision)
+            {
+                continue;
+            }
             events[filled] = EpollEvent {
                 events: *reported,
                 data: registration.data,
             };
             filled += 1;
-            if consume {
-                finish_delivery(epoll_fd, *key, *reported, registration.readiness_revision);
-            }
         }
 
         // Non-socket descriptors report their requested readiness directly.
@@ -1957,14 +2005,16 @@ fn epoll_wait_inner(
             if registration.interest & EPOLLET != 0 && reported & !registration.reported == 0 {
                 continue;
             }
+            if consume
+                && !finish_delivery(epoll_fd, *key, reported, registration.readiness_revision)
+            {
+                continue;
+            }
             events[filled] = EpollEvent {
                 events: reported,
                 data: registration.data,
             };
             filled += 1;
-            if consume {
-                finish_delivery(epoll_fd, *key, reported, registration.readiness_revision);
-            }
         }
 
         if !socket_entries.is_empty() {
@@ -2136,19 +2186,21 @@ fn epoll_wait_inner(
                     {
                         continue;
                     }
+                    if consume
+                        && !finish_delivery(
+                            epoll_fd,
+                            *key,
+                            translated,
+                            registration.readiness_revision,
+                        )
+                    {
+                        continue;
+                    }
                     events[filled] = EpollEvent {
                         events: translated,
                         data: registration.data,
                     };
                     filled += 1;
-                    if consume {
-                        finish_delivery(
-                            epoll_fd,
-                            *key,
-                            translated,
-                            registration.readiness_revision,
-                        );
-                    }
                 }
             }
         }
@@ -2262,8 +2314,8 @@ fn remaining_timeout(timeout_ms: i32, deadline: Option<std::time::Instant>) -> O
 }
 
 /// Records a delivery, disarming one-shot registrations.
-fn finish_delivery(epoll_fd: i32, key: RegistrationKey, reported: u32, revision: u64) {
-    finish_delivery_with_edges(epoll_fd, key, reported, revision, None);
+fn finish_delivery(epoll_fd: i32, key: RegistrationKey, reported: u32, revision: u64) -> bool {
+    finish_delivery_with_edges(epoll_fd, key, reported, revision, None)
 }
 
 fn finish_delivery_with_edges(
@@ -2272,16 +2324,27 @@ fn finish_delivery_with_edges(
     reported: u32,
     revision: u64,
     edges: Option<[u64; 2]>,
-) {
+) -> bool {
     let Ok(mut sets) = lock_sets(7) else {
-        return;
+        return false;
     };
     let Some(set) = sets.get_mut(&epoll_fd) else {
-        return;
+        return false;
     };
     let Some(registration) = set.registrations.get_mut(&key) else {
-        return;
+        return false;
     };
+    // A native wait may complete after close detached this worker's last
+    // descriptor. Its retained metadata is not permission to deliver that stale event.
+    if (registration.poll_fd < 0
+        && (registration.object == 0 || !target::alive(registration).unwrap_or(false)))
+        || registration.disarmed
+        || (registration.interest & EPOLLET != 0
+            && reported & !registration.reported == 0
+            && edges.is_none_or(|edges| edges == registration.eventfd_edges))
+    {
+        return false;
+    }
     if epoll_trace_enabled() {
         eprintln!(
             "kinakaze epoll: deliver epfd={epoll_fd} fd={} description={} interest={:#x} previous={:#x} events={reported:#x}",
@@ -2298,6 +2361,7 @@ fn finish_delivery_with_edges(
         // One-shot stays silent until EPOLL_CTL_MOD rearms it.
         registration.disarmed = true;
     }
+    true
 }
 
 /// Clears edge-trigger history for conditions that are no longer true.
@@ -2559,7 +2623,8 @@ mod pipe_tests {
             crate::table()
                 .write()
                 .unwrap()
-                .insert_at(fd, 0, FdKind::Null, FdFlags::NONE);
+                .insert_at(fd, 0, FdKind::Null, FdFlags::NONE)
+                .unwrap();
             Ok(EPOLLIN)
         });
         assert_ne!(crate::get(fd).unwrap().description_id, description);

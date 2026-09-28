@@ -38,6 +38,7 @@ mod datagram;
 mod listener;
 pub(crate) mod procnet;
 pub(crate) mod readiness;
+mod rights;
 pub use ancillary::{async_enabled, get_owner, set_async, set_owner};
 pub fn run_rights_keeper() -> Result<(), i32> {
     ancillary::run_keeper()
@@ -168,9 +169,14 @@ pub unsafe fn recv_control_from(
         let description = get(fd)?.description_id;
         let result = if datagram::selected(fd)? {
             unsafe { datagram::recv(fd, buffer, len, flags, control, recvmsg) }.and_then(
-                |(n, flags, credentials, source)| {
-                    unsafe { write_address(&source, address, address_length) }?;
-                    Ok((n, Vec::new(), flags, credentials))
+                |(n, fds, flags, credentials, source)| {
+                    if let Err(error) = unsafe { write_address(&source, address, address_length) } {
+                        for fd in fds {
+                            let _ = crate::close(fd);
+                        }
+                        return Err(error);
+                    }
+                    Ok((n, fds, flags, credentials))
                 },
             )
         } else {
@@ -956,6 +962,42 @@ pub fn duplicate(oldfd: i32, newfd: i32, handle: usize) -> Result<(), i32> {
     Ok(())
 }
 
+/// Prepared under fd-table exclusion; all allocation and validation precedes
+/// replacement. Keep the socket table guarded until the fd and state commit.
+pub(crate) struct DuplicatePublication {
+    table: std::sync::MutexGuard<'static, HashMap<i32, UnixSocket>>,
+    target: i32,
+    copy: Option<UnixSocket>,
+}
+pub(crate) fn prepare_duplicate(
+    source: Option<i32>,
+    target: i32,
+    handle: usize,
+) -> Result<DuplicatePublication, i32> {
+    let table = sockets().lock().map_err(|_| EIO)?;
+    let copy = source
+        .map(|fd| {
+            let mut copy = table.get(&fd).cloned().ok_or(EBADF)?;
+            copy.handle = handle;
+            Ok::<_, i32>(copy)
+        })
+        .transpose()?;
+    Ok(DuplicatePublication {
+        table,
+        target,
+        copy,
+    })
+}
+impl DuplicatePublication {
+    pub(crate) fn commit(mut self) -> Option<Detached> {
+        let old = self.table.remove(&self.target).map(Detached);
+        if let Some(copy) = self.copy.take() {
+            self.table.insert(self.target, copy);
+        }
+        old
+    }
+}
+
 /// Applies `update` to one socket's state.
 fn modify<T>(fd: i32, update: impl FnOnce(&mut UnixSocket) -> Result<T, i32>) -> Result<T, i32> {
     let descriptors = crate::table().read().map_err(|_| EIO)?;
@@ -968,11 +1010,20 @@ fn modify<T>(fd: i32, update: impl FnOnce(&mut UnixSocket) -> Result<T, i32>) ->
         return Err(ENOTSOCK);
     }
     let mut table = sockets().lock().map_err(|_| EIO)?;
-    let socket = table.get_mut(&fd).ok_or(EBADF)?;
+    let socket = table.get(&fd).ok_or(EBADF)?;
     let mut updated = socket.clone();
     let result = update(&mut updated)?;
     updated.record.publish(&updated)?;
-    *socket = updated;
+    // Descriptor-local native references differ, but all aliases observe the
+    // same bind/listen/shutdown metadata for this open socket description.
+    for socket in table
+        .values_mut()
+        .filter(|socket| socket.record.id() == updated.record.id())
+    {
+        let handle = socket.handle;
+        *socket = updated.clone();
+        socket.handle = handle;
+    }
     Ok(result)
 }
 
@@ -1283,35 +1334,73 @@ fn publish_socket(
     let mut descriptors = crate::table().write().map_err(|_| EIO)?;
     let entry = descriptors
         .slots
-        .get_mut(usize::try_from(fd).map_err(|_| EBADF)?)
-        .and_then(|slot| slot.as_mut())
+        .get(usize::try_from(fd).map_err(|_| EBADF)?)
+        .and_then(|slot| *slot)
         .ok_or(EBADF)?;
-    check_rebind(*entry, expected)?;
+    check_rebind(entry, expected)?;
     let mut states = sockets().lock().map_err(|_| EIO)?;
-    let socket = states.get_mut(&fd).ok_or(EBADF)?;
+    let socket = states.get(&fd).ok_or(EBADF)?;
     if socket.handle != entry.raw {
         return Err(EBADF);
     }
-    let inheritance = crate::exec_inheritance::DescriptorInheritance::prepare(
-        handle.raw() as usize,
-        entry.kind,
-        entry.flags,
-    )?;
     let mut updated = socket.clone();
     update(&mut updated);
+    // Prepare every local alias before publication. Failure leaves all the old
+    // descriptors and shared metadata intact; each alias owns a native handle.
+    let raw = handle.raw();
+    let mut copies = Vec::new();
+    let mut original = Some(handle);
+    for (alias, slot) in descriptors.slots.enumerated() {
+        let Some(previous) = slot.filter(|entry| entry.description_id == expected.description_id)
+        else {
+            continue;
+        };
+        let state = states.get(&(alias as i32)).ok_or(EBADF)?;
+        if state.handle != previous.raw {
+            return Err(EBADF);
+        }
+        let handle = if alias == fd as usize {
+            original.take().ok_or(EIO)?
+        } else {
+            crate::fs::object::Object::duplicate(raw)?
+        };
+        let inheritance = crate::exec_inheritance::DescriptorInheritance::prepare(
+            handle.raw() as usize,
+            previous.kind,
+            previous.flags,
+        )?;
+        let exclusion = (previous.raw != 0)
+            .then(|| crate::exec_inheritance::DescriptorInheritance::exclude(previous.raw))
+            .transpose()?;
+        copies.push((alias as i32, previous, handle, inheritance, exclusion));
+    }
     updated.record.publish(&updated)?;
-    *socket = updated;
-    entry.raw = handle.into_raw() as usize;
-    socket.handle = entry.raw;
-    inheritance.commit();
-    let entry = *entry;
+    let mut rebound = Vec::new();
+    for (alias, previous, handle, inheritance, exclusion) in copies {
+        let entry = descriptors
+            .slots
+            .get_mut(alias as usize)
+            .unwrap()
+            .as_mut()
+            .unwrap();
+        entry.raw = handle.into_raw() as usize;
+        inheritance.commit();
+        if let Some(exclusion) = exclusion {
+            exclusion.commit();
+        }
+        let mut state = updated.clone();
+        state.handle = entry.raw;
+        states.insert(alias, state);
+        rebound.push((alias, previous.raw, *entry));
+    }
     drop(states);
     drop(descriptors);
-    crate::epoll::descriptor_rebound(fd, entry);
-    if expected.raw != 0 {
-        // Native waiters own duplicates; only the descriptor's old reference
-        // is retired here. Accept uses a separate atomic ownership transfer.
-        unsafe { CloseHandle(expected.raw as HANDLE) };
+    for (alias, old, entry) in rebound {
+        crate::epoll::descriptor_rebound(alias, entry);
+        if old != 0 {
+            // Pending operations own pins; retire only this alias's reference.
+            unsafe { CloseHandle(old as HANDLE) };
+        }
     }
     Ok(())
 }
@@ -1437,7 +1526,8 @@ pub unsafe fn bind(fd: i32, address: *const u8, length: i32) -> Result<(), i32> 
     let listener = if current.socket_type == SOCK_DGRAM {
         None
     } else {
-        match listener::Lease::create(&pipe_name, current.socket_type, handle) {
+        match listener::Lease::create(&pipe_name, current.socket_type, handle, current.record.id())
+        {
             Ok(listener) => Some(listener),
             Err(error) => {
                 if let Some(inode) = &inode {
@@ -2524,6 +2614,20 @@ pub unsafe fn setsockopt(
         return Err(ENOPROTOOPT);
     }
     match name {
+        // Linux accepts these generic socket flags for AF_UNIX, while its
+        // unix recvmsg paths do not emit timestamp cmsgs (Linux 6.1/6.12).
+        // Retain the selected mode on the shared socket, including across exec
+        // and descriptor transfer, rather than silently discarding the option.
+        29 | 35 | 63 | 64 => {
+            if length < size_of::<i32>() as i32 {
+                return Err(EINVAL);
+            }
+            if value.is_null() {
+                return Err(EFAULT);
+            }
+            let enabled = unsafe { value.cast::<i32>().read_unaligned() } != 0;
+            socket.record.set_timestamp(name, enabled)
+        }
         16 => {
             // SO_PASSCRED
             if length < size_of::<i32>() as i32 {
@@ -2602,6 +2706,14 @@ pub unsafe fn getsockopt(
     match name {
         // SAFETY: bounded by the checked capacity.
         SO_TYPE => unsafe { write_int(value, length, capacity, socket.socket_type) },
+        29 | 35 | 63 | 64 => unsafe {
+            write_int(
+                value,
+                length,
+                capacity,
+                i32::from(socket.record.timestamp(name)?),
+            )
+        },
         16 => unsafe {
             write_int(
                 value,

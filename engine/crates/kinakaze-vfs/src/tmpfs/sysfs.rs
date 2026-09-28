@@ -68,6 +68,7 @@ fn catalog() -> Result<Arc<Store>, i32> {
         return Ok(s.clone());
     }
     let s = Arc::new(Store::user_object(u64::MAX - 25, true)?);
+    s.retain_kernel(false, Vec::new())?;
     let _ = STORE.set(s.clone());
     Ok(s)
 }
@@ -107,7 +108,7 @@ pub(crate) fn prepare(options: &str) -> Result<String, i32> {
             refresh(s)?;
             Ok(())
         })?;
-        start_keeper(id)?;
+        retain_volume(id)?;
         word(&mut entries, netns);
         word(&mut entries, id);
         Ok((entries, source))
@@ -672,7 +673,25 @@ pub fn poll(fd: i32) -> Result<u32, i32> {
     if flags & O_PATH != 0 {
         return Err(EBADF);
     }
-    volume(l.volume)?.change(|s| {
+    let volume = volume(l.volume)?;
+    let state = volume.decoded()?;
+    if state.sys.as_ref().is_some_and(|instance| instance.cgroup) {
+        let node = state.nodes.get(&l.node).ok_or(ENOENT)?;
+        // A cgroup fd pins its inode generation. Query that attribute directly:
+        // idle polls need neither a topology rebuild nor a write transaction.
+        // Changed/deleted attributes still use the transaction below, publishing
+        // their event sequence and inotify notifications together.
+        if node.links == 0
+            || crate::cgroup::read_file_generation(
+                &super::cgroupfs::path(&state, l.node)?,
+                node.device,
+            )
+            .is_ok_and(|text| text == node.target.as_bytes())
+        {
+            return poll_events(&state, l.node, d.id());
+        }
+    }
+    volume.change(|s| {
         if s.sys.as_ref().is_some_and(|instance| instance.cgroup)
             && s.nodes.get(&l.node).is_some_and(|n| n.links != 0)
         {
@@ -682,21 +701,24 @@ pub fn poll(fd: i32) -> Result<u32, i32> {
                 Err(error) => return Err(error),
             }
         }
-        let n = s.nodes.get(&l.node).ok_or(ENOENT)?;
-        let seen = s
-            .sys
-            .as_ref()
-            .ok_or(EINVAL)?
-            .buffers
-            .get(&d.id())
-            .map(|b| b.0);
-        Ok(0x145
-            | if n.links == 0 || seen != Some(n.mtime) {
-                0xa
-            } else {
-                0
-            })
+        poll_events(s, l.node, d.id())
     })
+}
+fn poll_events(s: &State, node: u64, description: u64) -> Result<u32, i32> {
+    let n = s.nodes.get(&node).ok_or(ENOENT)?;
+    let seen = s
+        .sys
+        .as_ref()
+        .ok_or(EINVAL)?
+        .buffers
+        .get(&description)
+        .map(|b| b.0);
+    Ok(0x145
+        | if n.links == 0 || seen != Some(n.mtime) {
+            0xa
+        } else {
+            0
+        })
 }
 pub(super) fn writable(s: &State, node: u64) -> Result<(), i32> {
     let n = s.nodes.get(&node).ok_or(ENOENT)?;

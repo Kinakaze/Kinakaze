@@ -369,6 +369,8 @@ class NetworkFixtures:
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dist", type=Path, required=True)
+    parser.add_argument("--inventory-dist", type=Path,
+                        help="prepared Debian payload to inventory and install; native runtime comes from --dist")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--phase", choices=("smoke", "functional"), required=True)
     parser.add_argument("--jobs", type=int, default=6)
@@ -381,12 +383,16 @@ def main():
     )
     args = parser.parse_args()
     dist, output = args.dist.resolve(), args.output.resolve()
+    inventory_dist = (args.inventory_dist or args.dist).resolve()
     output.mkdir(parents=True, exist_ok=True)
-    entries = inventory(dist)
+    entries = inventory(inventory_dist)
     images = {
-        name: hashlib.sha256((dist / name).read_bytes()).hexdigest()
-        for name in ("worker.exe", "rootfs.manifest.json")
+        str(path.relative_to(dist)): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in (dist / "worker.exe", dist / "init.exe", *sorted((dist / "rootfs/lib").glob("*")))
+        if path.is_file()
     }
+    images["rootfs.manifest.json"] = hashlib.sha256(
+        (inventory_dist / "rootfs.manifest.json").read_bytes()).hexdigest()
     save(output / "inventory.json", entries)
     location = output / f"root-location-{args.phase}.json"
     if location.exists():
@@ -410,7 +416,7 @@ def main():
         )
     if not marker.exists():
         setup = execute(
-            [worker, "setup", "--root", str(root), "--dist", str(dist)],
+            [worker, "setup", "--root", str(root), "--dist", str(inventory_dist)],
             output / f"setup-{args.phase}",
             env,
             timeout=180,
@@ -451,6 +457,7 @@ def main():
         case_root.mkdir(parents=True, exist_ok=True)
         base = [
             worker,
+            "oneshot",
             "--root",
             str(root),
             "--dist",
@@ -532,6 +539,8 @@ def main():
         return record
 
     selected = [e for e in entries if not args.only or re.search(args.only, e["path"])]
+    if not selected:
+        parser.error("no executable commands selected; check --inventory-dist and --only")
     results = []
     with (
         ThreadPoolExecutor(max_workers=args.jobs) as pool,
@@ -575,6 +584,7 @@ def main():
     report = dict(
         phase=args.phase,
         distribution=str(dist),
+        inventory_distribution=str(inventory_dist),
         updated=run_id,
         harness_sha256={
             p.name: hashlib.sha256(p.read_bytes()).hexdigest()
@@ -589,7 +599,8 @@ def main():
     )
     save(output / f"{args.phase}.json", report)
     print(json.dumps(report["counts"], indent=2))
+    return int(any(r["status"] in ("failed", "timeout", "harness_error") for r in results))
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

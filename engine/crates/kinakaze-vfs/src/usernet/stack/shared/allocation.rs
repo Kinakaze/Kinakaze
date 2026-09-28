@@ -6,6 +6,18 @@ use crate::mount::shared::Store;
 const DIRECTORY: u64 = u64::MAX - 43;
 const BASE: usize = 0x0000_4800_0000_0000;
 const COUNT: usize = 65536;
+
+fn directory() -> Result<Arc<Store>, i32> {
+    static STORE: OnceLock<Arc<Store>> = OnceLock::new();
+    if let Some(store) = STORE.get() {
+        return Ok(store.clone());
+    }
+    let store = Arc::new(Store::user_object(DIRECTORY, true)?);
+    // Keep the address index, while packet sections still follow their users.
+    store.retain_kernel(false, Vec::new())?;
+    let _ = STORE.set(store);
+    Ok(STORE.get().unwrap().clone())
+}
 pub(super) fn offset(address: usize) -> usize {
     address - BASE
 }
@@ -79,7 +91,7 @@ impl SharedEndpoint {
         if addresses.is_empty() || addresses.len() > 2 || ifindex == 0 || id == 0 {
             return Err(EINVAL);
         }
-        let directory = Store::user_object(DIRECTORY, true)?;
+        let directory = directory()?;
         directory.update(|bytes| {
             if bytes.len() % 16 != 0 {
                 return Err(EIO);

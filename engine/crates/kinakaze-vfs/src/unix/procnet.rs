@@ -15,7 +15,9 @@ static DIRECTORY: Mutex<Option<Arc<Store>>> = Mutex::new(None);
 fn directory() -> Result<Arc<Store>, i32> {
     let mut slot = DIRECTORY.lock().map_err(|_| EIO)?;
     if slot.is_none() {
-        *slot = Some(Arc::new(Store::user_object(u64::MAX - 41, true)?));
+        let store = Arc::new(Store::user_object(u64::MAX - 41, true)?);
+        store.retain_kernel(false, Vec::new())?;
+        *slot = Some(store);
     }
     Ok(slot.as_ref().unwrap().clone())
 }
@@ -60,20 +62,33 @@ impl Record {
         self.store.id()
     }
     pub(super) fn passcred(&self) -> Result<bool, i32> {
+        Ok(self.option(28)? != 0)
+    }
+    pub(super) fn set_passcred(&self, enabled: bool) -> Result<(), i32> {
+        self.set_option(28, u8::from(enabled))
+    }
+    pub(super) fn timestamp(&self, name: i32) -> Result<bool, i32> {
+        let mode = self.option(29)?;
+        Ok(i32::from(mode) == name || (name == 63 && mode == 64))
+    }
+    pub(super) fn set_timestamp(&self, name: i32, enabled: bool) -> Result<(), i32> {
+        self.set_option(29, if enabled { name as u8 } else { 0 })
+    }
+    fn option(&self, offset: usize) -> Result<u8, i32> {
         self.store.read_with(|bytes| {
             if bytes.len() < 40 || &bytes[..8] != b"CYUNIX03" {
                 return Err(EIO);
             }
-            Ok(bytes[28] != 0)
+            Ok(bytes[offset])
         })
     }
-    pub(super) fn set_passcred(&self, enabled: bool) -> Result<(), i32> {
+    fn set_option(&self, offset: usize, value: u8) -> Result<(), i32> {
         self.store.update(|bytes| {
             if bytes.len() < 40 || &bytes[..8] != b"CYUNIX03" {
                 return Err(EIO);
             }
             let mut bytes = bytes.to_vec();
-            bytes[28] = u8::from(enabled);
+            bytes[offset] = value;
             Ok((bytes, ()))
         })
     }

@@ -51,6 +51,16 @@ pub(super) fn update<T>(
     action: impl FnOnce(&mut Vec<MountPoint>, &mut u64) -> Result<T, i32>,
 ) -> Result<T, i32> {
     let _guard = shared::topology_guard()?;
+    // A dead writer can abandon the native mutex while init is still finishing
+    // its accepted transaction. Bind every read to the same topology revision.
+    let topology = shared::initial()?;
+    let epoch = loop {
+        let epoch = topology.topology_revision();
+        if epoch & 1 == 0 {
+            break epoch;
+        }
+        std::thread::yield_now();
+    };
     let own = shared::get()?;
     let (_, bytes) = own.read()?;
     let before = decode_table(&bytes)?;
@@ -139,7 +149,8 @@ pub(super) fn update<T>(
     drop(new);
     if !needed {
         let bytes = encode_table_with_next_id(&current.points, current.next)?;
-        own.update(|_| Ok((bytes, ())))?;
+        let dependencies = kernel_dependencies(own.id(), &current.points)?;
+        shared::publish_mounts(epoch, &[(own, bytes, dependencies)])?;
         return Ok(result);
     }
     let mut tables = vec![current];
@@ -291,9 +302,15 @@ pub(super) fn update<T>(
     for (table, bytes) in tables.iter().zip(&encoded) {
         table.store.reserve_update(bytes.len())?;
     }
-    for (table, bytes) in tables.into_iter().zip(encoded) {
-        table.store.update(|_| Ok((bytes, ())))?;
-    }
+    let publications = tables
+        .into_iter()
+        .zip(encoded)
+        .map(|(table, bytes)| {
+            let dependencies = kernel_dependencies(table.store.id(), &table.points)?;
+            Ok((table.store, bytes, dependencies))
+        })
+        .collect::<Result<Vec<_>, i32>>()?;
+    shared::publish_mounts(epoch, &publications)?;
     Ok(result)
 }
 fn destinations(tables: &[Table], group: u64) -> Vec<(usize, MountPoint, bool)> {

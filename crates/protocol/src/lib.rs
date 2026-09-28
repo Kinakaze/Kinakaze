@@ -3,9 +3,11 @@
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::io::{self, Read, Write};
 
-// V2 adds worker-owned image snapshot capabilities. V1 control/launch messages
-// remain accepted so existing controllers can operate a newly built init.
-pub const PROTOCOL_VERSION: u32 = 2;
+pub mod kernel;
+
+// V4 acknowledges completed transactions in the next request envelope. Older
+// control/launch messages remain accepted for host controllers.
+pub const PROTOCOL_VERSION: u32 = 4;
 pub const CONTROL_PROTOCOL_VERSION: u32 = 1;
 pub fn supported_version(version: u32) -> bool {
     (CONTROL_PROTOCOL_VERSION..=PROTOCOL_VERSION).contains(&version)
@@ -77,6 +79,7 @@ pub enum ForkPolicy {
 pub enum Request {
     Hello(Hello),
     Identity,
+    Kernel(kernel::KernelCommand),
     /// Read-only file capability owned by this authenticated native peer.
     ImageSnapshot {
         source: u64,
@@ -207,6 +210,7 @@ pub struct Stats {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub enum Reply {
+    KernelObjects(Vec<u64>),
     Hello {
         epoch: u64,
         process: Option<ProcessIdentity>,
@@ -284,6 +288,9 @@ impl std::error::Error for RpcError {}
 pub struct WireRequest {
     pub id: u64,
     pub request: Request,
+    /// The sender received a terminal reply and will never replay this transaction.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub completed: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -312,10 +319,16 @@ pub fn read_frame<R: Read, T: DeserializeOwned>(reader: &mut R) -> io::Result<T>
 
 /// Serialization and size validation finish before any transport bytes are sent.
 pub fn write_frame<W: Write, T: Serialize>(writer: &mut W, value: &T) -> io::Result<()> {
+    writer.write_all(&encode_frame(value)?)?;
+    writer.flush()
+}
+
+/// Encode once so transports can reject local errors before consuming a sequence ID.
+pub fn encode_frame<T: Serialize>(value: &T) -> io::Result<Vec<u8>> {
     struct BoundedPayload(Vec<u8>);
     impl Write for BoundedPayload {
         fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
-            if bytes.len() > MAX_FRAME_SIZE - self.0.len() {
+            if bytes.len() > MAX_FRAME_SIZE + 4 - self.0.len() {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidInput,
                     "RPC frame exceeds size limit",
@@ -328,23 +341,26 @@ pub fn write_frame<W: Write, T: Serialize>(writer: &mut W, value: &T) -> io::Res
             Ok(())
         }
     }
-    let mut payload = BoundedPayload(Vec::new());
+    // Prefix and payload share a single transport write. Small control RPCs
+    // otherwise incur two named-pipe writes and can wake the peer mid-frame.
+    let mut payload = BoundedPayload(Vec::with_capacity(256));
+    payload.0.extend_from_slice(&[0; 4]);
     serde_json::to_writer(&mut payload, value).map_err(|error| {
         io::Error::new(
             error.io_error_kind().unwrap_or(io::ErrorKind::InvalidData),
             error,
         )
     })?;
-    let payload = payload.0;
-    if payload.is_empty() {
+    let mut payload = payload.0;
+    let length = payload.len() - 4;
+    if length == 0 {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             "RPC frame exceeds size limit",
         ));
     }
-    writer.write_all(&(payload.len() as u32).to_le_bytes())?;
-    writer.write_all(&payload)?;
-    writer.flush()
+    payload[..4].copy_from_slice(&(length as u32).to_le_bytes());
+    Ok(payload)
 }
 
 #[cfg(test)]
@@ -353,13 +369,35 @@ mod tests {
     use std::io::Cursor;
 
     #[test]
+    fn completion_envelope_accepts_legacy_controllers_and_round_trips_acknowledgements() {
+        let legacy: WireRequest = serde_json::from_str(r#"{"id":1,"request":"Stats"}"#).unwrap();
+        assert_eq!(legacy.completed, None);
+        assert!(
+            !String::from_utf8(encode_frame(&legacy).unwrap())
+                .unwrap()
+                .contains("completed")
+        );
+        let next = WireRequest {
+            id: 2,
+            request: Request::Identity,
+            completed: Some(u64::MAX),
+        };
+        assert_eq!(
+            read_frame::<_, WireRequest>(&mut Cursor::new(encode_frame(&next).unwrap())).unwrap(),
+            next
+        );
+    }
+
+    #[test]
     fn concatenated_frames_round_trip_independently() {
         let requests = [
             WireRequest {
+                completed: None,
                 id: 1,
                 request: Request::Identity,
             },
             WireRequest {
+                completed: None,
                 id: 2,
                 request: Request::DefineState {
                     module_id: 1,
@@ -452,5 +490,46 @@ mod tests {
             io::ErrorKind::InvalidInput
         );
         assert!(bytes.is_empty());
+    }
+
+    #[test]
+    fn writes_complete_frames_and_handles_short_writes() {
+        struct Sink {
+            bytes: Vec<u8>,
+            calls: usize,
+            limit: usize,
+        }
+        impl Write for Sink {
+            fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+                self.calls += 1;
+                let length = bytes.len().min(self.limit);
+                self.bytes.extend_from_slice(&bytes[..length]);
+                Ok(length)
+            }
+            fn flush(&mut self) -> io::Result<()> {
+                Ok(())
+            }
+        }
+        for limit in [usize::MAX, 3] {
+            let mut sink = Sink {
+                bytes: Vec::new(),
+                calls: 0,
+                limit,
+            };
+            let value = "x".repeat(MAX_FRAME_SIZE - 2); // JSON quotes fill the limit.
+            write_frame(&mut sink, &value).unwrap();
+            assert_eq!(
+                sink.calls,
+                if limit == usize::MAX {
+                    1
+                } else {
+                    (MAX_FRAME_SIZE + 4).div_ceil(limit)
+                }
+            );
+            assert_eq!(
+                read_frame::<_, String>(&mut Cursor::new(sink.bytes)).unwrap(),
+                value
+            );
+        }
     }
 }

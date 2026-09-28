@@ -6,11 +6,15 @@ pub(crate) struct Directory {
     object: object::Object,
     namespace: String,
     original: std::path::PathBuf,
+    native: Option<crate::mount::native::Description>,
 }
 
 impl Directory {
     fn namespace(&self) -> Result<String, i32> {
         let path = self.object.path()?;
+        if let Some(description) = &self.native {
+            return crate::mount::native::namespace_for_description(description, &path);
+        }
         Ok(if path == self.original {
             self.namespace.clone()
         } else {
@@ -97,6 +101,7 @@ pub fn fchdir(fd: i32) -> Result<(), i32> {
         object,
         namespace,
         original,
+        native: crate::mount::native::reference(entry)?,
     });
     let display = directory.display()?;
     crate::fs_context::update(|s| {
@@ -115,20 +120,50 @@ pub(crate) fn serialize() -> Result<Option<Vec<u8>>, i32> {
     let path = directory.object.path()?;
     // A volume root remains a valid OpenFileById hint after cwd is renamed.
     let hint = path.ancestors().last().ok_or(EIO)?.to_string_lossy();
-    let mut bytes = b"CYCWD001".to_vec();
+    let mut bytes = b"CYCWD002".to_vec();
     crate::state_codec::word(&mut bytes, stat.st_ino);
     crate::state_codec::bytes(&mut bytes, hint.as_bytes());
     crate::state_codec::bytes(&mut bytes, directory.namespace()?.as_bytes());
+    crate::state_codec::word(&mut bytes, u64::from(directory.native.is_some()));
+    if let Some(description) = &directory.native {
+        for value in [
+            description.policy.namespace,
+            description.policy.id,
+            description.policy.flags(),
+        ] {
+            crate::state_codec::word(&mut bytes, value);
+        }
+        crate::state_codec::bytes(&mut bytes, description.path.as_bytes());
+    }
     Ok(Some(bytes))
 }
 pub(crate) fn restore(bytes: &[u8]) -> Result<bool, i32> {
-    let Some(bytes) = bytes.strip_prefix(b"CYCWD001") else {
+    let version_two = bytes.starts_with(b"CYCWD002");
+    let Some(bytes) = bytes.strip_prefix(if version_two {
+        b"CYCWD002"
+    } else {
+        b"CYCWD001"
+    }) else {
         return Ok(false);
     };
     let mut reader = crate::state_codec::Reader(bytes);
     let inode = reader.word()?;
     let hint = reader.text()?;
     let namespace = reader.text()?;
+    let native = if version_two && reader.word()? != 0 {
+        let policy = crate::mount::policy::get(reader.word()?, reader.word()?, reader.word()?)?;
+        let path = reader.text()?;
+        if !path.starts_with('/') {
+            return Err(EINVAL);
+        }
+        Some(crate::mount::native::Description {
+            policy,
+            path,
+            writer: None,
+        })
+    } else {
+        None
+    };
     reader.end()?;
     if !namespace.starts_with('/') {
         return Err(EINVAL);
@@ -142,6 +177,7 @@ pub(crate) fn restore(bytes: &[u8]) -> Result<bool, i32> {
         object,
         namespace,
         original,
+        native,
     });
     let display = directory.display()?;
     crate::fs_context::update(|s| {

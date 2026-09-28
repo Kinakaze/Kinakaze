@@ -17,7 +17,7 @@ use windows_sys::Win32::System::Threading::{
     CreateMutexW, GetCurrentProcess, INFINITE, ReleaseMutex, WaitForSingleObject,
 };
 
-const MAGIC: u64 = u64::from_le_bytes(*b"CYTIME01");
+const MAGIC: u64 = kinakaze_v2_protocol::kernel::TIME_MAGIC;
 const SIZE: usize = 4096;
 const NSEC: i64 = 1_000_000_000;
 #[repr(C)]
@@ -138,7 +138,20 @@ impl Namespace {
         if h.magic.load(Ordering::Acquire) != MAGIC || h.id != id || h.domain != domain as u64 {
             return Err(EIO);
         }
+        result.retain()?;
         Ok(result)
+    }
+    fn retain(&self) -> Result<(), i32> {
+        use kinakaze_v2_protocol::kernel::{KernelCommand, ObjectKey};
+        if kinakaze_runtime::authority::get().is_none() {
+            return Ok(());
+        }
+        let owner = self.header().owner.load(Ordering::Acquire).max(1);
+        kinakaze_runtime::authority::kernel(KernelCommand::Retain {
+            object: ObjectKey::Time(self.header().id),
+            tmpfs: false,
+            dependencies: vec![crate::user_namespace::retain_kernel(owner)?],
+        })
     }
     fn freeze(&self) -> Result<(), i32> {
         if self.header().frozen.load(Ordering::Acquire) != 0 {
@@ -174,10 +187,26 @@ pub(crate) fn allocate_object_id() -> Result<u64, i32> {
         .map_err(|_| EOVERFLOW)
 }
 fn state() -> Result<(Arc<Namespace>, Arc<Namespace>), i32> {
+    if let Some(state) = CURRENT.lock().map_err(|_| EIO)?.as_ref() {
+        return Ok(state.clone());
+    }
+    let pid = crate::job::process_id();
+    let (current, children) = kinakaze_runtime::job::time_namespaces(pid).ok_or(EIO)?;
     let mut slot = CURRENT.lock().map_err(|_| EIO)?;
     if slot.is_none() {
         let root = initial()?;
-        *slot = Some((root.clone(), root));
+        let current = if current == 1 {
+            root
+        } else {
+            Namespace::open(current, false)?
+        };
+        let children = if children == current.header().id {
+            current.clone()
+        } else {
+            Namespace::open(children, false)?
+        };
+        current.freeze()?;
+        *slot = Some((current, children));
     }
     Ok(slot.as_ref().unwrap().clone())
 }
@@ -226,6 +255,7 @@ pub fn prepare_with_user(
     let (monotonic, boottime) = current.offsets();
     child.header().monotonic.store(monotonic, Ordering::Release);
     child.header().boottime.store(boottime, Ordering::Release);
+    child.retain()?;
     Ok(move || publish(current, child))
 }
 pub fn unshare() -> Result<(), i32> {

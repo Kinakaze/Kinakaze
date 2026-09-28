@@ -261,6 +261,13 @@ fn exec_standard_handle(
     readable: bool,
 ) -> std::io::Result<(windows_sys::Win32::Foundation::HANDLE, Option<OwnedHandle>)> {
     match kinakaze_vfs::get(fd) {
+        Err(kinakaze_vfs::EBADF) => Ok((ptr::null_mut(), None)),
+        Err(error) => Err(std::io::Error::other(format!(
+            "standard descriptor {fd}: Linux errno {error}"
+        ))),
+        Ok(entry) if entry.flags.contains(kinakaze_vfs::FdFlags::CLOSE_ON_EXEC) => {
+            Ok((ptr::null_mut(), None))
+        }
         // Many Linux descriptors use a section or event as their lifetime
         // token. Such a token is not a Windows standard I/O handle. The guest
         // descriptor itself is transferred separately by the VFS handoff.
@@ -727,7 +734,9 @@ pub unsafe extern "sysv64" fn kinakaze_abi_execve(
     trace_spawn_phase(&spawn_started, "execve", "image-read");
     // Reject malformed or incompatible images while the calling image and its
     // descriptor table are still intact, before creating a native candidate.
-    if kinakaze_elf::ElfFile::parse(&exec_image).is_err() {
+    if kinakaze_elf::ElfFile::parse(&exec_image).is_err()
+        && !kinakaze_link::process::is_interpreter_image(&exec_image)
+    {
         set_errno(8); // ENOEXEC
         return -1;
     }
@@ -774,6 +783,9 @@ pub unsafe extern "sysv64" fn kinakaze_abi_execve(
     {
         Ok(payload) => payload,
         Err(error) => {
+            kinakaze_runtime::fork_diagnostic(format_args!(
+                "kinakaze: exec snapshot failed path={guest_path:?} errno={error}"
+            ));
             set_errno(error);
             return -1;
         }
@@ -886,6 +898,9 @@ pub unsafe extern "sysv64" fn kinakaze_abi_execve(
         }
         Err(error) => {
             kinakaze_vfs::finish_exec_state(None);
+            kinakaze_runtime::fork_diagnostic(format_args!(
+                "kinakaze: exec process creation failed path={guest_path:?} error={error}"
+            ));
             set_errno(kinakaze_vfs::errno_from_win32(
                 error.raw_os_error().unwrap_or(1) as u32,
             ));

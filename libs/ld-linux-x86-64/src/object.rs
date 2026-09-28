@@ -188,6 +188,11 @@ impl MappedObject {
             object: self.name.clone(),
         };
         let segment = self.elf()?.tls_segment()?.ok_or_else(invalid)?;
+        // A .tbss-only segment has no mapped initializer address. Go emits
+        // p_vaddr=0 here; its nonzero TLS allocation is entirely zero-filled.
+        if segment.file_size == 0 {
+            return kinakaze_tls::relocate_elf_module_image(module, &[]).map_err(|_| invalid());
+        }
         let start = self.resolve_address(segment.virtual_address)?;
         let length = usize::try_from(segment.file_size).map_err(|_| invalid())?;
         let end = start.checked_add(length).ok_or_else(invalid)?;

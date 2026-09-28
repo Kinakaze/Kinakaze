@@ -16,11 +16,9 @@ from guest_deps import ar_members, atomic_write, archive_path, elf_info, OFFICIA
 
 
 def stored_path(name):
-    """Use the VFS's Interix filename encoding for Linux colon/manual names."""
+    """Use the VFS's Interix encoding for Linux names reserved by Windows."""
     name = archive_path(name)
-    if '\\' in name:
-        raise ValueError('VFS does not yet accept a literal backslash: ' + name)
-    return '/'.join(''.join(chr(0xf000 + ord(c)) if c in '<>:"|?*' or ord(c) < 32
+    return '/'.join(''.join(chr(0xf000 + ord(c)) if c in '<>:"|?*\\' or ord(c) < 32
                            or (i == len(part) - 1 and c in '. ') else c
                            for i, c in enumerate(part)) for part in name.split('/'))
 
@@ -74,10 +72,6 @@ def load(lock_path, cache, provided, offline=False, sources=None):
                 if member.name in ('.', './'):
                     continue
                 name = archive_path(member.name)
-                if '\\' in name:
-                    adaptations.append(dict(package=package['package'], path=name,
-                                            reason='literal backslash is unsupported by the VFS'))
-                    continue
                 # Native modules own these SONAMEs; upstream providers would
                 # introduce a second libc/loader ABI into the hosted process.
                 if PurePosixPath(name).name in provided and '/doc/' not in name:

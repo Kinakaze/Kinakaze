@@ -32,6 +32,12 @@ pub fn active_trap_context_pointer() -> usize {
     ACTIVE_TRAP_CONTEXT.with(Cell::get)
 }
 
+#[inline(never)]
+fn restore_trap_context(previous: usize) {
+    // A returns-twice syscall resumes in a fresh native thread after fork.
+    ACTIVE_TRAP_CONTEXT.set(previous);
+}
+
 /// Arguments copied out of a Windows exception context before the raw Linux
 /// syscall dispatcher leaves the guest stack. Keeping this as one pointer
 /// also avoids depending on either ABI's stack-argument layout during the
@@ -173,7 +179,8 @@ pub(crate) fn install_fault_reporter(
 ) {
     use windows_sys::Win32::Foundation::EXCEPTION_ACCESS_VIOLATION;
     use windows_sys::Win32::System::Diagnostics::Debug::{
-        AddVectoredExceptionHandler, CONTEXT, EXCEPTION_POINTERS, SetUnhandledExceptionFilter,
+        AddVectoredExceptionHandler, CONTEXT, EXCEPTION_POINTERS, RtlRestoreContext,
+        SetUnhandledExceptionFilter,
     };
     const EXCEPTION_CONTINUE_EXECUTION: i32 = -1;
 
@@ -431,6 +438,9 @@ pub(crate) fn install_fault_reporter(
             "mov qword ptr [rsp + 32], r10",
             "mov qword ptr [rsp + 40], rdx",
             "mov qword ptr [rsp + 48], r8",
+            "mov qword ptr [rsp + 72], rcx",
+            "mov r10, qword ptr gs:[0x40]",
+            "mov qword ptr [rsp + 80], r10",
             "mov r10, qword ptr gs:[0x08]",
             "mov qword ptr [rsp + 56], r10",
             "mov r10, qword ptr gs:[0x10]",
@@ -454,6 +464,21 @@ pub(crate) fn install_fault_reporter(
             "mov rdx, qword ptr [rsp + 40]",
             "mov r8, qword ptr [rsp + 48]",
             "mov qword ptr [rdx + {used}], r8",
+            // A fork inside the guest handler resumes on copied stacks, but
+            // ntdll's enclosing exception dispatcher still contains parent-only
+            // bookkeeping. Restore the verified guest context directly in the
+            // child, after releasing this lane and restoring its TEB bounds.
+            "cmp eax, -1",
+            "jne 3f",
+            "mov r10, qword ptr gs:[0x40]",
+            "cmp r10, qword ptr [rsp + 80]",
+            "je 3f",
+            "mov rcx, qword ptr [rsp + 72]",
+            "mov rcx, qword ptr [rcx + 8]",
+            "xor edx, edx",
+            "call {restore_context}",
+            "ud2",
+            "3:",
             "mov r10, qword ptr [rsp + 32]",
             "mov rsp, r10",
             "ret",
@@ -466,6 +491,7 @@ pub(crate) fn install_fault_reporter(
             "ret",
             transition_target = sym VEH_HOST_TRANSITION_TARGET,
             body = sym handler_body,
+            restore_context = sym RtlRestoreContext,
             stack_top = const kinakaze_tls::thread_pointer::HOST_CALL_STACK_POINTER_OFFSET,
             used = const kinakaze_tls::thread_pointer::HOST_CALL_STACK_USED_OFFSET,
             lane = const kinakaze_tls::thread_pointer::HOST_CALL_STACK_LANE_SIZE,
@@ -614,13 +640,15 @@ pub(crate) fn install_fault_reporter(
             let ctx = unsafe { (*info).ContextRecord };
             if !ctx.is_null() {
                 let rip = unsafe { (*ctx).Rip as usize };
-                if let Some(target) = crate::execution::guest_gs::redirect(rip) {
+                if let Some(target) = crate::execution::traps::redirect(rip) {
                     unsafe { (*ctx).Rip = target as u64 };
                     return EXCEPTION_CONTINUE_EXECUTION;
                 }
                 if rip != 0 {
                     let buf = unsafe { *(rip as *const [u8; 2]) };
-                    if buf == [0x0f, 0x05] || buf == [0x0f, 0x0b] {
+                    if buf == [0x0f, 0x05]
+                        || buf == [0x0f, 0x0b] && crate::execution::traps::is_syscall(rip)
+                    {
                         let dispatcher = VEH_SYSCALL_DISPATCHER.load(Ordering::Acquire);
                         if dispatcher != 0 {
                             let nr = unsafe { (*ctx).Rax as i64 };
@@ -642,7 +670,7 @@ pub(crate) fn install_fault_reporter(
                             // process-lifetime registrations. The helper copies
                             // every argument before leaving this handler stack.
                             let res = unsafe { dispatch_trap_on_host_stack(&raw const call) };
-                            ACTIVE_TRAP_CONTEXT.with(|slot| slot.set(previous_context));
+                            restore_trap_context(previous_context);
                             unsafe {
                                 (*ctx).Rax = res as u64;
                                 (*ctx).Rip += 2;
@@ -673,6 +701,8 @@ pub(crate) fn install_fault_reporter(
         // RIP) back into the Windows exception context before resuming.
         let fault_target = if code as u32 == EXCEPTION_ACCESS_VIOLATION as u32 {
             parameters[1] as u64
+        } else if code as u32 == 0xc000_0096 {
+            0 // #GP has no page-fault address; Linux SI_KERNEL clears si_addr.
         } else {
             address as u64
         };

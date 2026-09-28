@@ -164,11 +164,11 @@ pub(super) unsafe fn initialize_child(
     true
 }
 pub fn visible_from(pid: u32, viewer: u32) -> Option<u32> {
-    with_table(|base| unsafe {
-        let ns = membership(find(base, viewer)?, PID);
-        number(find(base, pid)?, ns)
-    })
-    .flatten()
+    with_table(|base| unsafe { visible_entry(find(base, pid)?, find(base, viewer)?) }).flatten()
+}
+// Both slots are live and the caller holds the process table mutex.
+pub(super) unsafe fn visible_entry(entry: *mut u8, viewer: *mut u8) -> Option<u32> {
+    unsafe { number(entry, membership(viewer, PID)) }
 }
 pub fn resolve_from(visible: u32, viewer: u32) -> Option<u32> {
     if visible == 0 {
