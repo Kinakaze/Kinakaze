@@ -1654,6 +1654,8 @@ pub fn errno_from_win32(error: u32) -> i32 {
         ERROR_SHARING_VIOLATION, ERROR_TOO_MANY_OPEN_FILES, ERROR_WRITE_PROTECT,
     };
     match error {
+        windows_sys::Win32::Foundation::ERROR_NOACCESS
+        | windows_sys::Win32::Foundation::ERROR_INVALID_USER_BUFFER => EFAULT,
         ERROR_FILE_NOT_FOUND | ERROR_PATH_NOT_FOUND | ERROR_NO_MORE_FILES => ENOENT,
         ERROR_ACCESS_DENIED | ERROR_WRITE_PROTECT => EACCES,
         ERROR_SHARING_VIOLATION => EBUSY,
@@ -4115,6 +4117,40 @@ mod platform {
     ///
     /// Same contract as [`overlapped_transfer`].
     unsafe fn overlapped_attempt(
+        entry: &FdEntry,
+        buffer: *mut u8,
+        len: usize,
+        direction: Direction,
+    ) -> Result<usize, i32> {
+        let result = unsafe { overlapped_attempt_raw(entry, buffer, len, direction) };
+        if result != Err(super::EFAULT) {
+            return result;
+        }
+        // Kernel I/O cannot enter the guest's lazy page-fault handler. Retry a
+        // rejected buffer once after resolving its tmpfs pages; successful I/O
+        // pays no VMA lookup or extra allocation, and no lock covers the wait.
+        let mut length = len.min(u32::MAX as usize);
+        if direction == Direction::Read && entry.kind == FdKind::File {
+            let mut size = 0;
+            if unsafe {
+                windows_sys::Win32::Storage::FileSystem::GetFileSizeEx(entry.raw as _, &mut size)
+            } != 0
+            {
+                length = length.min((size as u64).saturating_sub(entry.offset) as usize);
+            }
+            if length == 0 {
+                return Ok(0);
+            }
+        }
+        super::tmpfs::mapping::prepare_buffer(
+            buffer as usize,
+            length,
+            direction == Direction::Read,
+        )?;
+        unsafe { overlapped_attempt_raw(entry, buffer, length, direction) }
+    }
+
+    unsafe fn overlapped_attempt_raw(
         entry: &FdEntry,
         buffer: *mut u8,
         len: usize,

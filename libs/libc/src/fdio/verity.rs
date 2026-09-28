@@ -608,6 +608,10 @@ pub(super) fn discard(start: usize, end: usize) -> Result<(), i32> {
 
 #[unsafe(no_mangle)]
 pub extern "sysv64" fn kinakaze_abi_mapping_fault_signal(address: usize, access: usize) -> c_int {
+    let tmpfs = tmpfs_mapping::classify(address, access);
+    if tmpfs != 0 {
+        return tmpfs;
+    }
     let epoch = loop {
         let epoch = FAULT_EPOCH.load(Ordering::SeqCst);
         FAULT_READERS[epoch & 1].fetch_add(1, Ordering::SeqCst);

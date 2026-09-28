@@ -265,7 +265,14 @@ pub unsafe extern "sysv64" fn kinakaze_abi_deliver_synchronous_signal(
     context: *mut core::ffi::c_void,
 ) -> c_int {
     ensure_terminate_hook();
-    i32::from(unsafe { signal::deliver_synchronous(signal_number, siginfo, context) })
+    if unsafe { signal::deliver_synchronous(signal_number, siginfo, context) } {
+        1
+    } else {
+        // A hardware fault with no usable handler is a Linux signal death.
+        // Publish it before terminating the host so waitpid sees WIFSIGNALED
+        // and the exact signal, rather than an unreported Windows exception.
+        crate::process::terminate_from_signal(signal_number)
+    }
 }
 
 /// `kill`, in all four of its target forms.

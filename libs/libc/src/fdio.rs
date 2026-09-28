@@ -2372,6 +2372,7 @@ struct Mapping {
     native_inode: Option<verity::NativeId>,
     /// File-origin ownership and exact per-fragment Linux permissions.
     file_origin: Option<file_origin::Info>,
+    tmpfs: Option<tmpfs_mapping::Info>,
 }
 
 // SAFETY: the addresses are process-wide and the registry is behind a mutex; the
@@ -2460,9 +2461,9 @@ mod mapping_fork_handoff {
     use super::*;
 
     const KEY: u64 = 0x4c49_4243_4d4d_4150; // "LIBCMMAP"
-    const VERSION: u32 = 5;
+    const VERSION: u32 = 6;
     const HEADER_SIZE: usize = 8;
-    const ENTRY_SIZE: usize = 168;
+    const ENTRY_SIZE: usize = 232;
 
     unsafe extern "system" fn snapshot(buffer: *mut u8, capacity: usize) -> isize {
         let Ok(registry) = mappings().lock() else {
@@ -2528,7 +2529,11 @@ mod mapping_fork_handoff {
             verity::encode(mapping, &mut output[cursor + 96..cursor + 152]);
             file_origin::encode(
                 mapping.file_origin.as_ref(),
-                &mut output[cursor + 152..cursor + ENTRY_SIZE],
+                &mut output[cursor + 152..cursor + 168],
+            );
+            tmpfs_mapping::encode(
+                mapping.tmpfs.as_ref(),
+                &mut output[cursor + 168..cursor + ENTRY_SIZE],
             );
         }
         required as isize
@@ -2587,7 +2592,13 @@ mod mapping_fork_handoff {
                 Err(error) => return error,
             };
             let mut file_origin = match unsafe {
-                file_origin::decode(&payload[cursor + 152..cursor + ENTRY_SIZE], start, length)
+                file_origin::decode(&payload[cursor + 152..cursor + 168], start, length)
+            } {
+                Ok(value) => value,
+                Err(error) => return error,
+            };
+            let tmpfs = match unsafe {
+                tmpfs_mapping::decode(&payload[cursor + 168..cursor + ENTRY_SIZE], start)
             } {
                 Ok(value) => value,
                 Err(error) => return error,
@@ -2686,7 +2697,7 @@ mod mapping_fork_handoff {
                     info.representation = file_origin::Representation::CopiedUnclassified;
                 }
             }
-            if shared && !retained_shared {
+            if shared && !retained_shared && tmpfs.is_none() {
                 return EINVAL;
             }
             let ordinary = !retained
@@ -2747,6 +2758,7 @@ mod mapping_fork_handoff {
                             verity,
                             native_inode,
                             file_origin,
+                            tmpfs,
                         },
                     )
                     .is_some()
@@ -2761,17 +2773,19 @@ mod mapping_fork_handoff {
             return error;
         }
         *registry = restored;
-        0
+        drop(registry);
+        tmpfs_mapping::restore().err().unwrap_or(0)
     }
 
     fn register() {
+        kinakaze_vfs::tmpfs::mapping::set_buffer_resolver(tmpfs_mapping::prepare_buffer);
         let _ = kinakaze_runtime::register_fork_participant(kinakaze_runtime::ForkParticipant {
             abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
             priority: 30,
             key: KEY,
-            prepare: None,
+            prepare: Some(tmpfs_mapping::fork_prepare),
             snapshot: Some(snapshot),
-            parent: None,
+            parent: Some(tmpfs_mapping::fork_parent),
             child: Some(child),
         });
     }
@@ -2918,10 +2932,19 @@ pub unsafe extern "sysv64" fn kinakaze_abi_mprotect(
     length: usize,
     protection: c_int,
 ) -> c_int {
+    let _tmpfs_transaction = match kinakaze_vfs::tmpfs::mapping::transaction() {
+        Ok(guard) => guard,
+        Err(error) => return posix(Err(error)),
+    };
     let Some(_transaction) = kinakaze_runtime::begin_fork_mapping_transaction() else {
         set_errno(ENOMEM);
         return -1;
     };
+    match tmpfs_mapping::mprotect(address as usize, length, protection) {
+        Ok(true) => return 0,
+        Ok(false) => (),
+        Err(error) => return posix(Err(error)),
+    }
     if verity::present() && length != 0 {
         if let Some(end) = (address as usize).checked_add(length) {
             if let Ok(runs) = verity::ranges(address as usize, end) {
@@ -3316,6 +3339,7 @@ fn discard_private_pages(start: usize, end: usize) -> Result<(), i32> {
 /// The errno-valued body shared by raw `SYS_madvise`, `madvise`, and
 /// `posix_madvise`.
 pub(crate) fn madvise_impl(address: *mut c_void, length: usize, advice: c_int) -> Result<(), i32> {
+    let _tmpfs_transaction = kinakaze_vfs::tmpfs::mapping::transaction()?;
     let (page, _) = memory_geometry();
     if address.is_null() || address as usize % page != 0 {
         return Err(EINVAL);
@@ -3580,6 +3604,7 @@ fn map(
     fd: c_int,
     offset: i64,
 ) -> Result<*mut c_void, i32> {
+    let _tmpfs_transaction = kinakaze_vfs::tmpfs::mapping::transaction()?;
     let (page, granularity) = memory_geometry();
     if length == 0 {
         return Err(EINVAL);
@@ -3613,6 +3638,7 @@ fn map(
     if flags & MAP_ANONYMOUS != 0 {
         let result = map_anonymous(address, length, protection, shared, fixed);
         verity::refresh_fault_index()?;
+        tmpfs_mapping::refresh()?;
         return result;
     }
     let result = map_file(
@@ -3626,6 +3652,7 @@ fn map(
         granularity,
     );
     verity::refresh_fault_index()?;
+    tmpfs_mapping::refresh()?;
     result
 }
 
@@ -3727,7 +3754,8 @@ unsafe fn reserve_placeholder_at(address: *mut c_void, length: usize) -> *mut c_
 
 fn has_fork_mapping_storage(mapping: &Mapping) -> bool {
     !mapping.kind.is_borrowed()
-        && (!mapping.shared
+        && (mapping.tmpfs.is_some()
+            || !mapping.shared
             || mapping
                 .backing
                 .as_ref()
@@ -3988,6 +4016,7 @@ struct PreviousView {
     native_inode: Option<verity::NativeId>,
     file: Option<FileMappingInfo>,
     file_origin: Option<file_origin::Info>,
+    tmpfs: Option<tmpfs_mapping::Info>,
 }
 
 struct PreparedReplacement {
@@ -4067,10 +4096,19 @@ fn map_retained_fragment_locked(
     native_inode: Option<verity::NativeId>,
     file: Option<FileMappingInfo>,
     file_origin: Option<file_origin::Info>,
+    tmpfs: Option<tmpfs_mapping::Info>,
 ) -> Result<(), i32> {
     if !carve_placeholder_locked(registry, address, length)? {
         return Err(EIO);
     }
+    // Keep the section's access ceiling when a revoked fragment is remapped.
+    // A view created with PAGE_NOACCESS cannot later be read for fork's private
+    // page snapshot, even when VirtualProtect restores its logical permissions.
+    let maximum = if backing.is_retained() {
+        backing.maximum_protection()
+    } else {
+        PAGE_EXECUTE_READWRITE
+    };
     let view = unsafe {
         windows_sys::Win32::System::Memory::MapViewOfFile3(
             backing.handle(),
@@ -4079,7 +4117,7 @@ fn map_retained_fragment_locked(
             offset,
             length,
             MEM_REPLACE_PLACEHOLDER,
-            protection,
+            maximum,
             ptr::null_mut(),
             0,
         )
@@ -4096,7 +4134,7 @@ fn map_retained_fragment_locked(
             base: address as *mut c_void,
             length,
             kind: MappingKind::PlaceholderView,
-            shared: false,
+            shared: backing.is_retained_shared(),
             backing: Some(backing.clone()),
             backing_offset: offset,
             view_protection: protection,
@@ -4104,8 +4142,15 @@ fn map_retained_fragment_locked(
             verity,
             native_inode,
             file_origin,
+            tmpfs,
         },
     );
+    if protection != maximum {
+        let mut previous = 0;
+        if unsafe { VirtualProtect(address as _, length, protection, &mut previous) } == 0 {
+            return Err(last_errno());
+        }
+    }
     Ok(())
 }
 
@@ -4137,7 +4182,7 @@ fn prepare_placeholder_locked(
             && mapping
                 .backing
                 .as_ref()
-                .is_some_and(BackingRef::is_remappable)
+                .is_some_and(|backing| backing.is_remappable() || backing.is_retained_shared())
             && start <= address
             && target_end <= end)
             .then(|| (start, mapping.clone()))
@@ -4178,6 +4223,7 @@ fn prepare_placeholder_locked(
             verity: mapping.verity.clone(),
             native_inode: mapping.native_inode,
             file_origin: mapping.file_origin.clone(),
+            tmpfs: mapping.tmpfs.clone(),
         },
     );
     if !carve_placeholder_locked(registry, address, length)? {
@@ -4215,6 +4261,7 @@ fn prepare_placeholder_locked(
                 mapping.native_inode,
                 mapping.file,
                 mapping.file_origin.clone(),
+                mapping.tmpfs.clone(),
             )?;
         }
     }
@@ -4229,6 +4276,7 @@ fn prepare_placeholder_locked(
             native_inode: mapping.native_inode,
             file: mapping.file,
             file_origin: mapping.file_origin,
+            tmpfs: mapping.tmpfs,
         }),
     }))
 }
@@ -4249,6 +4297,7 @@ fn restore_previous_locked(
             previous.native_inode,
             previous.file,
             previous.file_origin.clone(),
+            previous.tmpfs.clone(),
         )?;
     }
     Ok(())
@@ -4359,6 +4408,7 @@ fn replace_private_mapping_in_place_locked(
             verity: None,
             native_inode: None,
             file_origin: None,
+            tmpfs: None,
         },
     );
     let mapping_end = mapping_start + mapping.length;
@@ -4733,6 +4783,7 @@ fn replace_placeholder_private_locked(
             verity: None,
             native_inode: None,
             file_origin: None,
+            tmpfs: None,
         },
     );
     Ok(Some(allocated.Value))
@@ -4799,6 +4850,7 @@ fn replace_placeholder_view(
             verity: placeholder.verity,
             native_inode: placeholder.native_inode,
             file_origin,
+            tmpfs: placeholder.tmpfs,
         },
     );
     Ok(Some(view.Value))
@@ -4922,6 +4974,7 @@ fn map_anonymous(
                 verity: None,
                 native_inode: None,
                 file_origin: None,
+                tmpfs: None,
             },
         );
         return Ok(view);
@@ -5764,6 +5817,7 @@ fn record_mapping(
         verity: None,
         native_inode: None,
         file_origin: None,
+        tmpfs: None,
     };
     if let Ok(mut registry) = mappings().lock() {
         insert_mapping_fragment(&mut registry, user as usize, mapping);
@@ -5821,10 +5875,12 @@ pub unsafe extern "sysv64" fn kinakaze_abi_munmap(address: *mut c_void, length: 
 
 /// The body of `munmap`.
 fn unmap(address: *mut c_void, length: usize) -> Result<(), i32> {
+    let _tmpfs_transaction = kinakaze_vfs::tmpfs::mapping::transaction()?;
     let _transaction = kinakaze_runtime::begin_fork_mapping_transaction().ok_or(ENOMEM)?;
     let result = unmap_impl(address, length);
     let refreshed = verity::refresh_fault_index();
-    result.and(refreshed)
+    let tmpfs = tmpfs_mapping::refresh();
+    result.and(refreshed).and(tmpfs)
 }
 
 fn unmap_impl(address: *mut c_void, length: usize) -> Result<(), i32> {
@@ -5852,10 +5908,9 @@ fn unmap_impl(address: *mut c_void, length: usize) -> Result<(), i32> {
             let registry = mappings().lock().map_err(|_| EIO)?;
             registry.iter().find_map(|(&start, mapping)| {
                 if mapping.kind != MappingKind::PlaceholderView
-                    || !mapping
-                        .backing
-                        .as_ref()
-                        .is_some_and(|backing| backing.is_remappable() || backing.is_cow())
+                    || !mapping.backing.as_ref().is_some_and(|backing| {
+                        backing.is_remappable() || backing.is_cow() || backing.is_retained_shared()
+                    })
                 {
                     return None;
                 }

@@ -79,6 +79,7 @@ print(json.dumps({"ssl":ssl.OPENSSL_VERSION}))' ''')
         './glob-native native', ['/usr/bin/gcc'], 60)
     add('tmpfiles', 'python3 TmpfilesProbe.py', ['/bin/systemd-tmpfiles'])
     add('tmpfs-mapping', 'python3 TmpfsMappingProbe.py')
+    add('tmpfs-eof', 'gcc -O0 TmpfsEofProbe.c -o tmpfs-eof-probe && ./tmpfs-eof-probe', ['/usr/bin/gcc'], 60)
     add('sysusers', 'systemd-sysusers --dry-run basic.conf systemd-journal.conf '
         'systemd-network.conf', ['/bin/systemd-sysusers'])
     add('process-limits', 'python3 ProcessLimitsProbe.py')
@@ -160,7 +161,7 @@ if(json_decode(json_encode(["x"=>42]),true)["x"]!=42) exit(2); echo "PHP_OK\\n";
                 stage.mkdir(parents=True)
                 for fixture in ('InterpreterCommandProbe.py', 'CompilerRuntimeProbe.c', 'AbortStatusProbe.c', 'PosixSemaphoreProbe.c', 'DeepBindProbe.c', 'ExecutableTlsProbe.c', 'StatfsBoundaryProbe.py', 'StandardHandleLifetimeProbe.py', 'NativePermissionProbe.py', 'DirectoryTypeProbe.py', 'DirectoryCursorProbe.py', 'MetadataPathProbe.py', 'ProcessLimitsProbe.py', 'ChildSignalProbe.py', 'SharedListenerProbe.py', 'SharedSocketWaitProbe.py', 'PamRuntimeProbe.py', 'NodeRuntimeProbe.js',
                                 'NamedSemaphoreProbe.c', 'MultiprocessingProbe.py', 'ForkDlopenProbe.c', 'IgnoredSignalIoProbe.c', 'PpollSignalProbe.c', 'AccountForkProbe.c', 'AccountStreamProbe.c', 'PathAccessProbe.py', 'PathReferenceProbe.py', 'RootResolutionProbe.py', 'GlobCallbackProbe.c', 'TmpfilesProbe.py', 'XattrLifetimeProbe.py',
-                                'NginxRuntimeProbe.py', 'RedisRuntimeProbe.py', 'PostgresqlRuntimeProbe.py', 'DescriptorDuplicationProbe.py', 'DatagramRightsProbe.py', 'UnixListenerCustodyProbe.py', 'UnixSocketOptionsProbe.py', 'TmpfsMappingProbe.py', 'NamespaceServicesProbe.py'):
+                                'NginxRuntimeProbe.py', 'RedisRuntimeProbe.py', 'PostgresqlRuntimeProbe.py', 'DescriptorDuplicationProbe.py', 'DatagramRightsProbe.py', 'UnixListenerCustodyProbe.py', 'UnixSocketOptionsProbe.py', 'TmpfsMappingProbe.py', 'TmpfsEofProbe.c', 'NamespaceServicesProbe.py'):
                     shutil.copyfile(source / fixture, stage / fixture)
                 (stage / 'tls.c').write_text('_Thread_local int value=40; int ready; '
                     '__attribute__((constructor)) static void init(void){ready=9;} '

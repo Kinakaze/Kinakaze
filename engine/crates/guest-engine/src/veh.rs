@@ -355,20 +355,25 @@ pub(crate) fn install_fault_reporter(
         }
     }
 
-    fn synchronous_signal(code: u32, target: u64, access: usize) -> crate::fault_action::Action {
-        let mut mapping_result = 0;
-        if code == 0xc000_0005 {
-            let callback = VEH_MAPPING_FAULT_DISPATCHER.load(Ordering::Acquire);
-            if callback != 0 {
-                // The retained canonical provider owns mapping geometry.
-                // The classifier cannot allocate or take a registry lock.
-                // A conversion wait must release its index reader first,
-                // hold no mapping/fork lock, and resolve before retrying.
-                let classify: unsafe extern "sysv64" fn(usize, usize) -> i32 =
-                    unsafe { std::mem::transmute(callback) };
-                mapping_result = unsafe { classify(target as usize, access) };
-            }
+    fn mapping_fault(target: u64, access: usize) -> i32 {
+        let callback = VEH_MAPPING_FAULT_DISPATCHER.load(Ordering::Acquire);
+        if callback != 0 {
+            // The retained canonical provider owns mapping geometry.
+            // Its bounded index lookup releases the reader before the
+            // resolver acquires a transaction or instantiates a page.
+            let classify: unsafe extern "sysv64" fn(usize, usize) -> i32 =
+                unsafe { std::mem::transmute(callback) };
+            return unsafe { classify(target as usize, access) };
         }
+        0
+    }
+
+    fn synchronous_signal(code: u32, target: u64, access: usize) -> crate::fault_action::Action {
+        let mapping_result = if code == 0xc000_0005 {
+            mapping_fault(target, access)
+        } else {
+            0
+        };
         crate::fault_action::classify(code, target, mapping_result)
     }
 
@@ -608,14 +613,33 @@ pub(crate) fn install_fault_reporter(
         // continue through normal Windows exception handling.  Retrying a
         // native AV after touching guest TLS only repeats the same fault and
         // turns one abort into an infinite exception loop.
-        if code as u32 == EXCEPTION_ACCESS_VIOLATION as u32 && address_is_in_host_module(address) {
-            return 0;
-        }
+        let native_mapping_fault = if code as u32 == EXCEPTION_ACCESS_VIOLATION as u32
+            && address_is_in_host_module(address)
+        {
+            // Native memcpy/memset can legitimately touch a lazy guest VMA.
+            // Only the owning mapping provider may admit such a fault; all
+            // unrelated provider/CRT failures retain Windows handling.
+            let result = mapping_fault(parameters[1] as u64, parameters[0]);
+            match result {
+                -1 => return EXCEPTION_CONTINUE_EXECUTION,
+                7 | 11 => Some(crate::fault_action::classify(
+                    code as u32,
+                    parameters[1] as u64,
+                    result,
+                )),
+                _ => return 0,
+            }
+        } else {
+            None
+        };
 
         // AOT handles instructions present while the ELF image is linked.
         // This VEH path is the dynamic fallback for generated code, late
         // mappings and any instruction the AOT walk could not safely prove.
-        if code as u32 == EXCEPTION_ACCESS_VIOLATION as u32 && parameters[0] != 8 {
+        if native_mapping_fault.is_none()
+            && code as u32 == EXCEPTION_ACCESS_VIOLATION as u32
+            && parameters[0] != 8
+        {
             let ctx = unsafe { (*info).ContextRecord };
             if !ctx.is_null()
                 && unsafe {
@@ -706,7 +730,8 @@ pub(crate) fn install_fault_reporter(
         } else {
             address as u64
         };
-        let fault = synchronous_signal(code as u32, fault_target, parameters[0]);
+        let fault = native_mapping_fault
+            .unwrap_or_else(|| synchronous_signal(code as u32, fault_target, parameters[0]));
         if fault == crate::fault_action::Action::Retry {
             return EXCEPTION_CONTINUE_EXECUTION;
         }

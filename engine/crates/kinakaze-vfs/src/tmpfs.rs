@@ -66,6 +66,8 @@ struct Node {
     pages: BTreeMap<u64, u64>,
     opens: Vec<u64>,
     mappings: Vec<(u64, u64, u64)>,
+    mapping_epoch: u64,
+    invalidations: BTreeMap<u64, u64>,
 }
 struct State {
     watches: Vec<(u64, u64)>,
@@ -108,6 +110,8 @@ impl Node {
             pages: BTreeMap::new(),
             opens: Vec::new(),
             mappings: Vec::new(),
+            mapping_epoch: 0,
+            invalidations: BTreeMap::new(),
         }
     }
     fn stat(&self, id: u64, volume: u64) -> Stat {
@@ -157,7 +161,7 @@ impl Node {
 impl State {
     fn decode(data: &[u8]) -> Result<Self, i32> {
         let mut r = Reader(data);
-        if r.word()? != 0x4359544d50465339 {
+        if r.word()? != 0x4359544d50465340 {
             return Err(EIO);
         }
         let mut s = Self {
@@ -203,6 +207,8 @@ impl State {
                 pages: BTreeMap::new(),
                 opens: Vec::new(),
                 mappings: Vec::new(),
+                mapping_epoch: 0,
+                invalidations: BTreeMap::new(),
             };
             let children = r.word()?;
             if children > 1_000_000 {
@@ -232,6 +238,14 @@ impl State {
             for _ in 0..mappings {
                 n.mappings.push((r.word()?, r.word()?, r.word()?));
             }
+            n.mapping_epoch = r.word()?;
+            let invalidations = r.word()?;
+            if invalidations > 1_000_000 {
+                return Err(EIO);
+            }
+            for _ in 0..invalidations {
+                n.invalidations.insert(r.word()?, r.word()?);
+            }
             s.nodes.insert(id, n);
         }
         s.pts = devpts::Instance::decode(&mut r)?;
@@ -250,7 +264,7 @@ impl State {
     fn encode(&self) -> Vec<u8> {
         let mut b = Vec::new();
         for v in [
-            0x4359544d50465339,
+            0x4359544d50465340,
             self.limit,
             self.capacity,
             self.inodes,
@@ -302,6 +316,12 @@ impl State {
                     word(&mut b, value);
                 }
             }
+            word(&mut b, n.mapping_epoch);
+            word(&mut b, n.invalidations.len() as u64);
+            for (&page, &epoch) in &n.invalidations {
+                word(&mut b, page);
+                word(&mut b, epoch);
+            }
         }
         devpts::Instance::encode(&self.pts, &mut b);
         mqueue::Instance::encode(&self.mq, &mut b);
@@ -324,6 +344,9 @@ impl State {
                 .retain(|id| !matches!(shared::pin_user_object(*id), Err(ENOENT)));
             n.mappings
                 .retain(|(id, _, _)| !matches!(shared::pin_user_object(*id), Err(ENOENT)));
+            if n.mappings.is_empty() {
+                n.invalidations.clear();
+            }
         }
         let dead: Vec<_> = self
             .nodes
@@ -492,6 +515,7 @@ impl Volume {
         &self,
         f: impl FnOnce(&mut State) -> Result<T, i32>,
     ) -> Result<(Arc<State>, T), i32> {
+        let _mapping_transaction = mapping::transaction()?;
         if !self
             .message_queues
             .load(std::sync::atomic::Ordering::Acquire)
@@ -578,17 +602,14 @@ impl Volume {
         if n.mode & S_IFMT != S_IFREG {
             return Err(EINVAL);
         }
-        // A live view must never expose a slot recycled into another inode.
-        // Cross-process VMA revocation is not available yet; reject removal of
-        // mapped pages before changing metadata or contents. Growth and changes
-        // within the final mapped page retain their normal semantics.
         let first_removed = length.div_ceil(PAGE);
-        if length < n.size
-            && n.mappings
-                .iter()
-                .any(|(_, start, end)| *end > first_removed && *start < n.size.div_ceil(PAGE))
-        {
-            return Err(EBUSY);
+        if length < n.size {
+            // Revoke every process before any slot can be reused. A later
+            // fault compares epochs, including in an unpublished fork child.
+            mapping::revoke(&n.mappings, first_removed * PAGE)?;
+            n.mapping_epoch = n.mapping_epoch.checked_add(1).ok_or(EOVERFLOW)?;
+            n.invalidations.split_off(&first_removed);
+            n.invalidations.insert(first_removed, n.mapping_epoch);
         }
         let removed = n.pages.split_off(&length.div_ceil(PAGE));
         s.free.extend(removed.into_values());
@@ -1379,6 +1400,7 @@ pub fn openat_resolved(
     open_pinned(l, flags, mode)
 }
 pub fn read(fd: i32, buffer: &mut [u8], position: Option<u64>) -> Result<usize, i32> {
+    let _mapping_transaction = mapping::transaction()?;
     let _observation = Observation::enter();
     if crate::get(fd)?.kind == FdKind::MessageQueue {
         return mqueue::read_status(fd, buffer, position);
@@ -1392,6 +1414,20 @@ pub fn read(fd: i32, buffer: &mut [u8], position: Option<u64>) -> Result<usize, 
         let flags = u64::from_le_bytes(old[old.len() - 8..].try_into().unwrap()) as i32;
         let offset = u64::from_le_bytes(old[old.len() - 16..old.len() - 8].try_into().unwrap());
         let at = position.unwrap_or(offset);
+        let state = v.snapshot()?;
+        let count = if state.sys.is_none() {
+            buffer.len().min(
+                state
+                    .nodes
+                    .get(&l.node)
+                    .ok_or(ENOENT)?
+                    .size
+                    .saturating_sub(at) as usize,
+            )
+        } else {
+            buffer.len()
+        };
+        mapping::prepare_buffer(buffer.as_mut_ptr() as usize, count, true)?;
         let count = v.change(|s| {
             if s.sys.is_some() {
                 return sysfs::read(s, l.node, d.id(), buffer, at);
@@ -1444,6 +1480,7 @@ pub fn read(fd: i32, buffer: &mut [u8], position: Option<u64>) -> Result<usize, 
     })
 }
 pub fn write(fd: i32, buffer: &[u8], position: Option<u64>) -> Result<usize, i32> {
+    let _mapping_transaction = mapping::transaction()?;
     let _observation = Observation::enter();
     if crate::get(fd)?.kind == FdKind::MessageQueue {
         return Err(EINVAL);
@@ -1453,6 +1490,9 @@ pub fn write(fd: i32, buffer: &[u8], position: Option<u64>) -> Result<usize, i32
         return Err(EBADF);
     }
     l.writable()?;
+    // Resolve lazy source pages before decoding mutable filesystem state.
+    // A fault inside the copy could otherwise allocate from an old snapshot.
+    mapping::prepare_buffer(buffer.as_ptr() as usize, buffer.len(), false)?;
     let v = volume(l.volume)?;
     d.update(|old| {
         let flags = u64::from_le_bytes(old[old.len() - 8..].try_into().unwrap()) as i32;

@@ -2,6 +2,25 @@
 //! are duplicated by libc's existing fork mapping transaction.
 use super::*;
 use crate::fs::object::Object;
+mod coordination;
+pub(super) use coordination::revoke;
+static BUFFER_RESOLVER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+pub type BufferResolver = unsafe extern "system" fn(usize, usize, bool) -> i32;
+pub fn set_buffer_resolver(callback: BufferResolver) {
+    BUFFER_RESOLVER.store(callback as usize, std::sync::atomic::Ordering::Release);
+}
+pub(crate) fn prepare_buffer(address: usize, length: usize, writing: bool) -> Result<(), i32> {
+    let callback = BUFFER_RESOLVER.load(std::sync::atomic::Ordering::Acquire);
+    if callback == 0 || length == 0 {
+        return Ok(());
+    }
+    let callback: BufferResolver = unsafe { std::mem::transmute(callback) };
+    match unsafe { callback(address, length, writing) } {
+        0 => Ok(()),
+        error => Err(error),
+    }
+}
+pub use coordination::{Transaction, publish, transaction};
 
 pub struct View {
     section: Object,
@@ -10,6 +29,10 @@ pub struct View {
     pub capacity: usize,
     pub identity: [u64; 3],
     pub maximum: i32,
+    pub volume: u64,
+    pub node: u64,
+    pub lease_id: u64,
+    pub epoch: u64,
     /// (mapping byte offset, section byte offset, byte length).
     pub runs: Vec<(usize, u64, usize)>,
 }
@@ -33,6 +56,7 @@ pub fn prepare(
     shared: bool,
     protection: i32,
 ) -> Result<View, i32> {
+    let _transaction = transaction()?;
     let (descriptor, location, _, flags) = descriptor(fd)?;
     if flags & O_PATH != 0 {
         return Err(EBADF);
@@ -70,6 +94,10 @@ pub fn prepare(
             location.volume,
         ],
         maximum: 1 | if writable { 2 } else { 0 } | if mount_flags & 8 == 0 { 4 } else { 0 },
+        volume: location.volume,
+        node: location.node,
+        lease_id: lease.id(),
+        epoch: 0,
         runs: Vec::new(),
     };
     volume.change(|state| {
@@ -80,22 +108,19 @@ pub fn prepare(
         if node.mode & S_IFMT != S_IFREG {
             return Err(ENODEV);
         }
-        // Until EOF fault/revocation is integrated, never expose other inodes'
-        // pages or manufacture writable anonymous bytes beyond this inode.
-        if end > node.size.div_ceil(PAGE) * PAGE {
-            return Err(ENODEV);
-        }
-        for page in offset / PAGE..end / PAGE {
-            let slot = if let Some(&slot) = node.pages.get(&page) {
-                slot
-            } else {
-                let slot = volume.allocate(state)?;
-                node.pages.insert(page, slot);
-                slot
-            };
+        view.epoch = node.mapping_epoch;
+        let backed_end = end.min(node.size.div_ceil(PAGE) * PAGE);
+        // Mapping sparse or beyond-EOF pages reserves address space only.
+        // Faults allocate real inode pages, so mmap itself cannot consume the
+        // tmpfs quota merely because a large range was requested.
+        for (&page, &slot) in node
+            .pages
+            .range(offset / PAGE..backed_end.max(offset) / PAGE)
+        {
             let delta = (page * PAGE - offset) as usize;
-            if let Some((_, previous, bytes)) = view.runs.last_mut()
+            if let Some((start, previous, bytes)) = view.runs.last_mut()
                 && *previous + *bytes as u64 == slot * PAGE
+                && *start + *bytes == delta
             {
                 *bytes += PAGE as usize;
             } else {
@@ -109,4 +134,68 @@ pub fn prepare(
     })?;
     drop(descriptor);
     Ok(view)
+}
+
+pub struct Page {
+    pub epoch: u64,
+    pub invalidated: bool,
+    pub slot: Option<u64>,
+}
+
+/// Resolve by retained inode identity, never a possibly closed/reused fd.
+pub fn page(
+    volume_id: u64,
+    node_id: u64,
+    offset: u64,
+    epoch: u64,
+    allocate: bool,
+) -> Result<Page, i32> {
+    let _transaction = transaction()?;
+    let volume = volume(volume_id)?;
+    let current = volume.decoded()?;
+    let node = current.nodes.get(&node_id).ok_or(ENOENT)?;
+    let index = offset / PAGE;
+    let invalidated = node
+        .invalidations
+        .range(..=index)
+        .next_back()
+        .is_some_and(|(_, revision)| *revision > epoch);
+    let slot = if index < node.size.div_ceil(PAGE) {
+        node.pages.get(&index).copied()
+    } else {
+        None
+    };
+    if !allocate || slot.is_some() || index >= node.size.div_ceil(PAGE) {
+        return Ok(Page {
+            epoch: node.mapping_epoch,
+            invalidated,
+            slot,
+        });
+    }
+    drop(current);
+    volume.change(|state| {
+        let mut node = state.nodes.get(&node_id).ok_or(ENOENT)?.clone();
+        let index = offset / PAGE;
+        let invalidated = node
+            .invalidations
+            .range(..=index)
+            .next_back()
+            .is_some_and(|(_, revision)| *revision > epoch);
+        let mut slot = if index < node.size.div_ceil(PAGE) {
+            node.pages.get(&index).copied()
+        } else {
+            None
+        };
+        if slot.is_none() && allocate && index < node.size.div_ceil(PAGE) {
+            let allocated = volume.allocate(state)?;
+            node.pages.insert(index, allocated);
+            slot = Some(allocated);
+            state.nodes.insert(node_id, node.clone());
+        }
+        Ok(Page {
+            epoch: node.mapping_epoch,
+            invalidated,
+            slot,
+        })
+    })
 }

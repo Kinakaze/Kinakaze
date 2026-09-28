@@ -181,6 +181,7 @@ pub(super) fn replace(address: *mut c_void, length: usize, protection: u32) -> R
                 verity: None,
                 native_inode: None,
                 file_origin: None,
+                tmpfs: None,
             },
         );
         view.mapped = false;

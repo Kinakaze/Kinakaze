@@ -26,6 +26,7 @@ with tempfile.TemporaryDirectory(prefix='tmpfs-map-') as directory:
         os.posix_fallocate(fd, 0, PAGE * 3)
         assert os.fstat(fd).st_size == PAGE * 3
         assert os.fstat(fd).st_blocks == PAGE * 3 // 512
+        print('TMPFS_MAPPING_ALLOCATED', flush=True)
         with mmap.mmap(fd, PAGE * 3, flags=mmap.MAP_SHARED) as first:
             first[:6] = b'parent'
             assert os.pread(fd, 6, 0) == b'parent'
@@ -37,8 +38,10 @@ with tempfile.TemporaryDirectory(prefix='tmpfs-map-') as directory:
                 assert first[2 * PAGE:2 * PAGE + 5] == b'write'
                 first.flush()
             os.close(other)
+            print('TMPFS_MAPPING_SHARED_VIEWS_OK', flush=True)
             subprocess.run([sys.executable, __file__, 'child', str(fd)], pass_fds=(fd,), check=True, timeout=15)
             assert first[PAGE:PAGE + 5] == b'child'
+            print('TMPFS_MAPPING_EXEC_CHILD_OK', flush=True)
             with mmap.mmap(fd, PAGE * 3, flags=mmap.MAP_PRIVATE) as private:
                 private[:7] = b'private'
                 assert first[:6] == b'parent'
@@ -51,6 +54,7 @@ with tempfile.TemporaryDirectory(prefix='tmpfs-map-') as directory:
                 assert os.waitpid(child, 0) == (child, 0)
                 assert private[:7] == b'private'
                 assert first[2 * PAGE:2 * PAGE + 4] == b'fork'
+            print('TMPFS_MAPPING_PRIVATE_FORK_OK', flush=True)
             os.unlink(path)
             os.close(fd)
             # Force inode collection and fd reuse while the old inode is mapped.
@@ -60,7 +64,9 @@ with tempfile.TemporaryDirectory(prefix='tmpfs-map-') as directory:
             first[:6] = b'pinned'
             assert os.pread(replacement, 11, 0) == b'replacement'
             os.close(replacement)
+            print('TMPFS_MAPPING_UNLINK_PIN_OK', flush=True)
         os.unlink(path)
+        print('TMPFS_MAPPING_UNMAPPED_OK', flush=True)
         fd = os.open(path, os.O_CREAT | os.O_RDWR, 0o600)
         os.ftruncate(fd, PAGE)
         os.close(fd)
@@ -73,8 +79,10 @@ with tempfile.TemporaryDirectory(prefix='tmpfs-map-') as directory:
         with mmap.mmap(fd, PAGE, flags=mmap.MAP_PRIVATE) as private:
             private[:4] = b'copy'
             assert os.pread(fd, 4, 0) == bytes(4)
+        print('TMPFS_MAPPING_READONLY_PRIVATE_OK', flush=True)
         # An already-open descriptor must consult the current attachment policy.
         assert libc.mount(None, encoded, None, 32 | 8, None) == 0, ctypes.get_errno()
+        print('TMPFS_MAPPING_NOEXEC_REMOUNT_OK', flush=True)
         try:
             mmap.mmap(fd, PAGE, flags=mmap.MAP_PRIVATE, prot=mmap.PROT_READ | mmap.PROT_EXEC)
             raise AssertionError('executable mapping accepted after noexec remount')
