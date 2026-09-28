@@ -16,6 +16,7 @@ mod password_lock;
 mod returned;
 mod rhosts;
 mod shadow_stream;
+mod stream;
 
 /// Linux `uid_t` and `gid_t`, both 32-bit unsigned on every Linux ABI.
 pub type Uid = u32;
@@ -1792,51 +1793,15 @@ pub unsafe extern "sysv64" fn kinakaze_abi_fgetpwent_r(
     length: usize,
     result: *mut *mut Passwd,
 ) -> c_int {
-    if result.is_null() {
-        return kinakaze_vfs::EFAULT;
-    }
-    unsafe { *result = ptr::null_mut() };
-    if file.is_null() || entry.is_null() || buffer.is_null() {
-        return kinakaze_vfs::EFAULT;
-    }
-
-    let mut line_buf = [0u8; 1024];
-    loop {
-        let read_res = unsafe {
-            crate::stdio::fgets(line_buf.as_mut_ptr().cast(), line_buf.len() as c_int, file)
-        };
-        if read_res.is_null() {
-            return kinakaze_vfs::ENOENT;
-        }
-        let line_cstr = unsafe { core::ffi::CStr::from_ptr(line_buf.as_ptr().cast()) };
-        let line_str = match line_cstr.to_str() {
-            Ok(s) => s.trim(),
-            Err(_) => continue,
-        };
-        if line_str.is_empty() || line_str.starts_with('#') {
-            continue;
-        }
-        let parts: Vec<&str> = line_str.split(':').collect();
-        if parts.len() < 7 {
-            continue;
-        }
-        let account = UserAccount {
-            name: parts[0].to_string(),
-            password: parts[1].to_string(),
-            uid: parts[2].parse::<u32>().unwrap_or(0),
-            gid: parts[3].parse::<u32>().unwrap_or(0),
-            gecos: parts[4].to_string(),
-            dir: parts[5].to_string(),
-            shell: parts[6].to_string(),
-        };
-        let fill_res = unsafe { fill_passwd_for(&account, entry, buffer, length) };
-        return match fill_res {
-            Ok(()) => {
-                unsafe { *result = entry };
-                0
-            }
-            Err(e) => e,
-        };
+    unsafe {
+        stream::read(
+            file,
+            entry,
+            buffer,
+            length,
+            result,
+            nss_parse::kinakaze_abi__nss_files_parse_pwent,
+        )
     }
 }
 
@@ -1853,24 +1818,7 @@ pub unsafe extern "sysv64" fn fgetpwent_r(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn kinakaze_abi_fgetpwent(file: *mut crate::stdio::File) -> *mut Passwd {
-    static mut STATIC_PW: Passwd = unsafe { core::mem::zeroed() };
-    static mut STATIC_BUF: [c_char; 2048] = [0; 2048];
-    let mut res: *mut Passwd = ptr::null_mut();
-    let code = unsafe {
-        kinakaze_abi_fgetpwent_r(
-            file,
-            core::ptr::addr_of_mut!(STATIC_PW),
-            core::ptr::addr_of_mut!(STATIC_BUF).cast(),
-            2048,
-            core::ptr::addr_of_mut!(res),
-        )
-    };
-    if code == 0 {
-        res
-    } else {
-        crate::set_errno(code);
-        ptr::null_mut()
-    }
+    unsafe { stream::passwd::read(file) }
 }
 
 #[unsafe(no_mangle)]
@@ -1892,79 +1840,15 @@ pub unsafe extern "sysv64" fn kinakaze_abi_fgetgrent_r(
     length: usize,
     result: *mut *mut Group,
 ) -> c_int {
-    if result.is_null() {
-        return kinakaze_vfs::EFAULT;
-    }
-    unsafe { *result = ptr::null_mut() };
-    if file.is_null() || entry.is_null() || buffer.is_null() {
-        return kinakaze_vfs::EFAULT;
-    }
-
-    let mut line_buf = [0u8; 1024];
-    loop {
-        let read_res = unsafe {
-            crate::stdio::fgets(line_buf.as_mut_ptr().cast(), line_buf.len() as c_int, file)
-        };
-        if read_res.is_null() {
-            return kinakaze_vfs::ENOENT;
-        }
-        let line_cstr = unsafe { core::ffi::CStr::from_ptr(line_buf.as_ptr().cast()) };
-        let line_str = match line_cstr.to_str() {
-            Ok(s) => s.trim(),
-            Err(_) => continue,
-        };
-        if line_str.is_empty() || line_str.starts_with('#') {
-            continue;
-        }
-        let parts: Vec<&str> = line_str.split(':').collect();
-        if parts.len() < 3 {
-            continue;
-        }
-        let members: Vec<String> = parts
-            .get(3)
-            .map(|s| {
-                s.split(',')
-                    .map(|m| m.trim().to_string())
-                    .filter(|m| !m.is_empty())
-                    .collect()
-            })
-            .unwrap_or_default();
-        let name = parts[0];
-        let password = parts.get(1).unwrap_or(&"x");
-        let gid = parts
-            .get(2)
-            .and_then(|s| s.parse::<u32>().ok())
-            .unwrap_or(0);
-        let mut packer = Packer::new(buffer, length);
-        let g_name = match packer.string(name) {
-            Ok(s) => s,
-            Err(e) => return e,
-        };
-        let g_pass = match packer.string(password) {
-            Ok(s) => s,
-            Err(e) => return e,
-        };
-        let mut packed_members = Vec::with_capacity(members.len());
-        for member in &members {
-            match packer.string(member) {
-                Ok(s) => packed_members.push(s),
-                Err(e) => return e,
-            }
-        }
-        let mem_array = match packer.pointer_array(&packed_members) {
-            Ok(a) => a,
-            Err(e) => return e,
-        };
-        unsafe {
-            *entry = Group {
-                gr_name: g_name,
-                gr_passwd: g_pass,
-                gr_gid: gid,
-                gr_mem: mem_array,
-            };
-            *result = entry;
-        }
-        return 0;
+    unsafe {
+        stream::read(
+            file,
+            entry,
+            buffer,
+            length,
+            result,
+            nss_parse::kinakaze_abi__nss_files_parse_grent,
+        )
     }
 }
 
@@ -1981,24 +1865,7 @@ pub unsafe extern "sysv64" fn fgetgrent_r(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn kinakaze_abi_fgetgrent(file: *mut crate::stdio::File) -> *mut Group {
-    static mut STATIC_GR: Group = unsafe { core::mem::zeroed() };
-    static mut STATIC_BUF: [c_char; 2048] = [0; 2048];
-    let mut res: *mut Group = ptr::null_mut();
-    let code = unsafe {
-        kinakaze_abi_fgetgrent_r(
-            file,
-            core::ptr::addr_of_mut!(STATIC_GR),
-            core::ptr::addr_of_mut!(STATIC_BUF).cast(),
-            2048,
-            core::ptr::addr_of_mut!(res),
-        )
-    };
-    if code == 0 {
-        res
-    } else {
-        crate::set_errno(code);
-        ptr::null_mut()
-    }
+    unsafe { stream::group::read(file) }
 }
 
 #[unsafe(no_mangle)]

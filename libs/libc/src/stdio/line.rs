@@ -179,3 +179,97 @@ pub(crate) unsafe fn account_line(
         Ok(length)
     })
 }
+
+/// Read and parse an account entry under one FILE lock. A small caller buffer
+/// must leave a seekable stream at the same record for an ERANGE retry.
+pub(crate) unsafe fn account_entry(
+    file: *mut File,
+    buffer: *mut c_char,
+    capacity: usize,
+    mut parse: impl FnMut(*mut c_char) -> c_int,
+) -> c_int {
+    use kinakaze_vfs::{EBADF, EINVAL, ERANGE, ESPIPE};
+    let error = with_oriented(file, -1, EBADF, |stream| {
+        if capacity < 3 {
+            return ERANGE;
+        }
+        loop {
+            let mut length = 0;
+            while length < capacity - 1 {
+                if stream.pushback.is_empty() && stream.input_pos < stream.input_end {
+                    let available =
+                        (stream.input_end - stream.input_pos).min(capacity - 1 - length);
+                    let source = unsafe { stream.input.as_ptr().add(stream.input_pos) };
+                    let end =
+                        unsafe { crate::string::memchr(source.cast(), b'\n' as c_int, available) };
+                    let count = if end.is_null() {
+                        available
+                    } else {
+                        end as usize - source as usize + 1
+                    };
+                    unsafe { ptr::copy_nonoverlapping(source, buffer.add(length).cast(), count) };
+                    stream.input_pos += count;
+                    length += count;
+                    if !end.is_null() {
+                        break;
+                    }
+                } else {
+                    let mut byte = [0];
+                    match stream.read(&mut byte) {
+                        Ok(0) => break,
+                        Ok(_) => {
+                            unsafe { buffer.add(length).write(byte[0] as c_char) };
+                            length += 1;
+                            if byte[0] == b'\n' {
+                                break;
+                            }
+                        }
+                        Err(error) => return if error == ERANGE { EINVAL } else { error },
+                    }
+                }
+            }
+            if length == 0 {
+                return ENOENT;
+            }
+            unsafe { buffer.add(length).write(0) };
+            let parsed = if length == capacity - 1 {
+                -1
+            } else {
+                let bytes = unsafe { core::slice::from_raw_parts(buffer.cast::<u8>(), length) };
+                let leading = bytes.iter().take_while(|b| b.is_ascii_whitespace()).count();
+                if leading == length || bytes[leading] == b'#' || bytes.contains(&0) {
+                    continue;
+                }
+                if leading != 0 {
+                    unsafe { ptr::copy(buffer.add(leading), buffer, length - leading + 1) };
+                }
+                parse(buffer)
+            };
+            match parsed {
+                1 => return 0,
+                0 => continue,
+                _ => {
+                    // Only an ERANGE retry needs a backend position query.
+                    // Account for FILE read-ahead and the bytes just consumed.
+                    let start = stream.seek_backend(0, 1).ok().and_then(|position| {
+                        (position as i64)
+                            .checked_add(stream.buffer.len() as i64)?
+                            .checked_sub(stream.unread() as i64)?
+                            .checked_sub(length as i64)
+                    });
+                    if !start.is_some_and(|offset| stream.seek_backend(offset, 0).is_ok()) {
+                        stream.error = true;
+                        return ESPIPE;
+                    }
+                    stream.discard_input();
+                    stream.eof = false;
+                    return ERANGE;
+                }
+            }
+        }
+    });
+    if error != 0 {
+        crate::set_errno(error);
+    }
+    error
+}
