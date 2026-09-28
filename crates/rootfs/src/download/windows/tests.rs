@@ -23,6 +23,9 @@ fn server(status: u32, body: &'static [u8]) -> (String, thread::JoinHandle<Strin
                 Err(error) => panic!("test HTTP server: {error}"),
             }
         };
+        // Winsock accepts inherit FIONBIO from the listener. Reading the HTTP
+        // request must wait for the client instead of racing its first send.
+        stream.set_nonblocking(false).unwrap();
         stream
             .set_read_timeout(Some(Duration::from_secs(5)))
             .unwrap();

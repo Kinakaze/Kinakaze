@@ -903,11 +903,19 @@ pub fn kill(pid: i32, signal: i32) -> Result<(), i32> {
     match pid {
         0 => signal_process_group(current_pgid(), signal),
         -1 => broadcast(signal),
-        target if target < -1 => signal_process_group(
-            table::namespaces::resolve(target.checked_neg().ok_or(ESRCH)? as u32).ok_or(ESRCH)?
-                as i32,
-            signal,
-        ),
+        target if target < -1 => {
+            let group = target.checked_neg().ok_or(ESRCH)? as u32;
+            // Root-namespace PGIDs are registry IDs, and a process group can
+            // outlive its leader. Resolving it as a live PID loses that group.
+            let group = if table::namespaces::memberships(current_pid())
+                .is_some_and(|ids| ids[table::namespaces::PID] == 1)
+            {
+                group
+            } else {
+                table::namespaces::resolve(group).ok_or(ESRCH)?
+            };
+            signal_process_group(group as i32, signal)
+        }
         target => {
             let target = table::namespaces::resolve(target as u32).ok_or(ESRCH)? as i32;
             if table::lookup(target as u32).is_none() {
