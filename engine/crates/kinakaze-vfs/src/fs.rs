@@ -2122,7 +2122,7 @@ fn stat_with_query(handle: HANDLE, query: &object::Object, symlink: bool) -> Res
     // SAFETY: `info` is a writable local and the handle is live.
     let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
     // SAFETY: the handle carries FILE_READ_ATTRIBUTES access.
-    if unsafe { GetFileInformationByHandle(handle, &mut info) } == 0 {
+    if unsafe { GetFileInformationByHandle(query.raw(), &mut info) } == 0 {
         // SAFETY: GetLastError has no preconditions.
         return Err(errno_from_win32(unsafe { GetLastError() }));
     }

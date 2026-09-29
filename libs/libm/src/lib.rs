@@ -1526,6 +1526,85 @@ pub extern "sysv64" fn fegetround() -> c_int {
 }
 
 #[cfg(target_arch = "x86_64")]
+#[unsafe(export_name = "kinakaze_engine_libm_fegetexcept")]
+pub extern "sysv64" fn fegetexcept() -> c_int {
+    let mut control = 0u16;
+    unsafe {
+        core::arch::asm!("fnstcw [{}]", in(reg) &raw mut control,
+            options(nostack, preserves_flags));
+    }
+    (!control & 0x3d) as c_int
+}
+
+#[cfg(target_arch = "x86_64")]
+fn set_exception_mask(excepts: c_int, enabled: bool) -> c_int {
+    let bits = excepts as u16 & 0x3d;
+    unsafe {
+        let mut control = 0u16;
+        core::arch::asm!("fnstcw [{}]", in(reg) &raw mut control,
+            options(nostack, preserves_flags));
+        let previous = (!control & 0x3d) as c_int;
+        let mxcsr = get_mxcsr();
+        let sse_bits = u32::from(bits) << 7;
+        control = if enabled {
+            control & !bits
+        } else {
+            control | bits
+        };
+        core::arch::asm!("fldcw [{}]", in(reg) &control,
+            options(nostack, preserves_flags));
+        set_mxcsr(if enabled {
+            mxcsr & !sse_bits
+        } else {
+            mxcsr | sse_bits
+        });
+        previous
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+#[unsafe(export_name = "kinakaze_engine_libm_feenableexcept")]
+pub extern "sysv64" fn feenableexcept(excepts: c_int) -> c_int {
+    set_exception_mask(excepts, true)
+}
+
+#[cfg(target_arch = "x86_64")]
+#[unsafe(export_name = "kinakaze_engine_libm_fedisableexcept")]
+pub extern "sysv64" fn fedisableexcept(excepts: c_int) -> c_int {
+    set_exception_mask(excepts, false)
+}
+
+#[test]
+fn exception_masks_preserve_rounding_and_update_x87_and_sse() {
+    unsafe {
+        let mut original = core::mem::MaybeUninit::<fenv_t>::uninit();
+        fegetenv(original.as_mut_ptr());
+        let original = original.assume_init();
+        struct Restore(fenv_t);
+        impl Drop for Restore {
+            fn drop(&mut self) {
+                unsafe {
+                    fesetenv(&self.0);
+                }
+            }
+        }
+        let _restore = Restore(original);
+        fedisableexcept(0x3d);
+        feclearexcept(0x3d);
+        fesetround(0x800);
+        assert_eq!(feenableexcept(0x05), 0);
+        assert_eq!(fegetexcept(), 0x05);
+        assert_eq!((!get_mxcsr() >> 7) & 0x3d, 0x05);
+        assert_eq!(fedisableexcept(0x01), 0x05);
+        assert_eq!(fegetexcept(), 0x04);
+        assert_eq!((!get_mxcsr() >> 7) & 0x3d, 0x04);
+        assert_eq!(fegetround(), 0x800);
+        assert_eq!(fedisableexcept(-1), 0x04);
+        assert_eq!(fegetexcept(), 0);
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
 #[unsafe(export_name = "kinakaze_engine_libm_fesetround")]
 pub extern "sysv64" fn fesetround(round: c_int) -> c_int {
     // glibc's FE_DOWNWARD/UPWARD/TOWARDZERO are 0x400/0x800/0xc00.

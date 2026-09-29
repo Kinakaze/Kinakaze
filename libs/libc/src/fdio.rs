@@ -68,6 +68,7 @@ use crate::stdio::File;
 
 mod file_origin;
 pub(crate) mod program_break;
+pub(crate) mod residency;
 mod temporary;
 mod tmpfs_mapping;
 pub(crate) mod verity;
@@ -1382,10 +1383,13 @@ fn local_readiness(entry: FdEntry, interest: i16, fd: i32) -> i16 {
                 Err(_) => POLLNVAL,
             }
         }
-        // Native IoRing readiness is not yet connected to poll's sleep/wakeup
-        // protocol. Report an explicit error, never fabricate an always-ready
-        // descriptor from the unrelated placeholder event's type.
-        FdKind::IoRing => POLLERR,
+        FdKind::IoRing => match kinakaze_vfs::iouring::linux::poll(fd) {
+            Ok((readable, writable)) => {
+                (if readable { interest & POLLIN } else { 0 })
+                    | (if writable { interest & POLLOUT } else { 0 })
+            }
+            Err(_) => POLLERR,
+        },
         FdKind::SysfsFile => match kinakaze_vfs::sysfs::poll(fd) {
             Ok(events) => (events as i16) & (interest | POLLERR | POLLHUP),
             Err(_) => POLLNVAL,
@@ -1652,7 +1656,10 @@ fn poll_wait(entries: &mut [PollFd], timeout_ms: c_int) -> Result<c_int, i32> {
                 if matches!(
                     table_entry.kind,
                     FdKind::Socket | FdKind::UnixSocket | FdKind::Fifo
-                ) || table_entry.kind == FdKind::EventFd && timeout_ms != 0
+                ) || (table_entry.kind == FdKind::EventFd
+                    || table_entry.kind == FdKind::IoRing
+                        && kinakaze_vfs::iouring::linux::supported(entry.fd))
+                    && timeout_ms != 0
                 {
                     evented.push(index);
                 } else {
@@ -2470,10 +2477,13 @@ mod mapping_fork_handoff {
         let Ok(registry) = mappings().lock() else {
             return -(EIO as isize);
         };
-        let count = registry
-            .values()
-            .filter(|mapping| has_fork_mapping_storage(mapping))
-            .count();
+        let fragments: Vec<_> = registry
+            .iter()
+            .filter(|(_, mapping)| has_fork_mapping_storage(mapping))
+            .flat_map(|(&start, mapping)| fork_advice::fragments(start, mapping))
+            .filter(|(_, _, behavior)| *behavior != kinakaze_runtime::ForkMappingBehavior::Omit)
+            .collect();
+        let count = fragments.len();
         let Some(required) = count
             .checked_mul(ENTRY_SIZE)
             .and_then(|entries| entries.checked_add(HEADER_SIZE))
@@ -2489,13 +2499,9 @@ mod mapping_fork_handoff {
         let output = unsafe { core::slice::from_raw_parts_mut(buffer, required) };
         output[0..4].copy_from_slice(&VERSION.to_le_bytes());
         output[4..8].copy_from_slice(&(count as u32).to_le_bytes());
-        for (index, (&start, mapping)) in registry
-            .iter()
-            .filter(|(_, mapping)| has_fork_mapping_storage(mapping))
-            .enumerate()
-        {
+        for (index, (start, mapping, _)) in fragments.iter().enumerate() {
             let cursor = HEADER_SIZE + index * ENTRY_SIZE;
-            output[cursor..cursor + 8].copy_from_slice(&(start as u64).to_le_bytes());
+            output[cursor..cursor + 8].copy_from_slice(&(*start as u64).to_le_bytes());
             output[cursor + 8..cursor + 16]
                 .copy_from_slice(&(mapping.base as usize as u64).to_le_bytes());
             output[cursor + 16..cursor + 24]
@@ -3162,6 +3168,10 @@ const MADV_WILLNEED: c_int = 3;
 const MADV_DONTNEED: c_int = 4;
 const MADV_FREE: c_int = 8;
 const MADV_NOHUGEPAGE: c_int = 15;
+const MADV_DONTDUMP: c_int = 16;
+const MADV_DODUMP: c_int = 17;
+mod dump_advice;
+mod fork_advice;
 
 /// Validates that one interval is wholly covered by mappings known to the Linux
 /// VMA registry. `private_only` additionally requires anonymous private storage,
@@ -3382,6 +3392,15 @@ pub(crate) fn madvise_impl(address: *mut c_void, length: usize, advice: c_int) -
         // No mapping in this backend is created with MEM_LARGE_PAGES, so the
         // negative huge-page advice is already satisfied after VMA validation.
         MADV_NOHUGEPAGE => validate_madvise_range(start, end, false),
+        MADV_DONTDUMP | MADV_DODUMP => {
+            let _transaction = kinakaze_runtime::begin_fork_mapping_transaction().ok_or(ENOMEM)?;
+            residency::validate(start, end)?;
+            dump_advice::set(start, end, advice == MADV_DONTDUMP)
+        }
+        10 | 11 | 18 | 19 => {
+            let _transaction = kinakaze_runtime::begin_fork_mapping_transaction().ok_or(ENOMEM)?;
+            fork_advice::set(start, end, advice)
+        }
         // THP promotion and the remaining Linux policies need observable state
         // that this backend does not yet own. Refuse them explicitly.
         _ => Err(EINVAL),
@@ -3621,6 +3640,24 @@ fn map(
     offset: i64,
 ) -> Result<*mut c_void, i32> {
     let _tmpfs_transaction = kinakaze_vfs::tmpfs::mapping::transaction()?;
+    let _transaction = kinakaze_runtime::begin_fork_mapping_transaction().ok_or(ENOMEM)?;
+    let mapped = map_new(address, length, protection, flags, fd, offset)?;
+    if let Err(error) = dump_advice::clear(mapped as usize, length) {
+        let _ = unmap(mapped, length);
+        return Err(error);
+    }
+    fork_advice::clear(mapped as usize, length)?;
+    Ok(mapped)
+}
+
+fn map_new(
+    address: *mut c_void,
+    length: usize,
+    protection: c_int,
+    flags: c_int,
+    fd: c_int,
+    offset: i64,
+) -> Result<*mut c_void, i32> {
     let (page, granularity) = memory_geometry();
     if length == 0 {
         return Err(EINVAL);
@@ -3648,14 +3685,17 @@ fn map(
     // Linux VMA mutation.  Holding the process-shared transaction prevents fork
     // from observing the Windows mapping before its registry record (or the
     // inverse during replacement).
-    let _fork_mapping_transaction =
-        kinakaze_runtime::begin_fork_mapping_transaction().ok_or(ENOMEM)?;
-
     if flags & MAP_ANONYMOUS != 0 {
         let result = map_anonymous(address, length, protection, shared, fixed);
         verity::refresh_fault_index()?;
         tmpfs_mapping::refresh()?;
         return result;
+    }
+    if kinakaze_vfs::iouring::is_ring(fd) {
+        if !shared {
+            return Err(EINVAL);
+        }
+        return map_io_ring(address, length, protection, fixed, fd, offset as u64);
     }
     let result = map_file(
         address,
@@ -3670,6 +3710,85 @@ fn map(
     verity::refresh_fault_index()?;
     tmpfs_mapping::refresh()?;
     result
+}
+
+fn map_io_ring(
+    address: *mut c_void,
+    length: usize,
+    protection: c_int,
+    fixed: bool,
+    fd: c_int,
+    offset: u64,
+) -> Result<*mut c_void, i32> {
+    let length = page_rounded_length(length)?;
+    let (handle, capacity) = kinakaze_vfs::iouring::linux::mmap_section(fd, offset)?;
+    let section = handle as *mut c_void;
+    if length > capacity {
+        unsafe {
+            CloseHandle(section);
+        }
+        return Err(EINVAL);
+    }
+    let backing = match BackingRef::new_retained_shared(section, capacity, PAGE_READWRITE) {
+        Ok(backing) => backing,
+        Err(error) => {
+            unsafe {
+                CloseHandle(section);
+            }
+            return Err(error);
+        }
+    };
+    let protect = page_protection(protection, false)?;
+    if fixed {
+        if let Some(view) =
+            replace_placeholder_view(section, address, length, 0, protect, true, Some(&backing))?
+        {
+            return Ok(view);
+        }
+    }
+    let view = unsafe {
+        MapViewOfFileEx(
+            section,
+            view_access(PROT_READ | PROT_WRITE, false),
+            0,
+            0,
+            length,
+            if fixed { address } else { ptr::null_mut() },
+        )
+    };
+    if view.is_null() {
+        return Err(last_errno());
+    }
+    let mut previous = 0;
+    if protect != PAGE_READWRITE
+        && unsafe { VirtualProtect(view, length, protect, &mut previous) } == 0
+    {
+        let error = last_errno();
+        unsafe {
+            UnmapViewOfFile(view);
+        }
+        return Err(error);
+    }
+    let mut registry = mappings().lock().map_err(|_| EIO)?;
+    insert_mapping_fragment(
+        &mut registry,
+        view as usize,
+        Mapping {
+            base: view,
+            length,
+            kind: MappingKind::View,
+            shared: true,
+            backing: Some(backing),
+            backing_offset: 0,
+            view_protection: protect,
+            file: None,
+            verity: None,
+            native_inode: None,
+            file_origin: None,
+            tmpfs: None,
+        },
+    );
+    Ok(view)
 }
 
 #[repr(C)]
@@ -3780,53 +3899,57 @@ fn has_fork_mapping_storage(mapping: &Mapping) -> bool {
 
 fn register_fork_fragment(start: usize, mapping: &Mapping) {
     if has_fork_mapping_storage(mapping) {
-        let (storage, backing_slot, backing_offset, view_protection) =
-            match (&mapping.kind, &mapping.backing) {
-                (MappingKind::Placeholder, _) => {
-                    (kinakaze_runtime::ForkMappingStorage::Placeholder, 0, 0, 0)
-                }
-                (_, Some(backing)) if backing.is_retained_shared() => (
-                    kinakaze_runtime::ForkMappingStorage::RetainedSection,
-                    backing.handle_slot(),
-                    mapping.backing_offset,
-                    backing.maximum_protection(),
-                ),
-                (_, Some(backing)) if backing.is_snapshot() => (
-                    kinakaze_runtime::ForkMappingStorage::AnonymousSnapshot,
-                    backing.handle_slot(),
-                    mapping.backing_offset,
-                    backing.maximum_protection(),
-                ),
-                (_, Some(backing)) if backing.is_cow() => (
-                    kinakaze_runtime::ForkMappingStorage::CopyOnWriteSection,
-                    backing.handle_slot(),
-                    mapping.backing_offset,
-                    backing.maximum_protection(),
-                ),
-                (MappingKind::PlaceholderView, Some(backing)) => (
-                    kinakaze_runtime::ForkMappingStorage::Section,
-                    backing.handle_slot(),
-                    mapping.backing_offset,
-                    0,
-                ),
-                _ => (kinakaze_runtime::ForkMappingStorage::Ordinary, 0, 0, 0),
-            };
-        kinakaze_runtime::register_fork_mapping(kinakaze_runtime::ForkMapping {
-            base: start,
-            len: mapping.length,
-            behavior: kinakaze_runtime::ForkMappingBehavior::Copy,
-            storage,
-            backing_slot,
-            backing_offset,
-            view_protection,
-            domain: kinakaze_runtime::ForkMappingDomain::GuestMm,
-        });
+        for (start, mapping, behavior) in fork_advice::fragments(start, mapping) {
+            let (storage, backing_slot, backing_offset, view_protection) =
+                match (&mapping.kind, &mapping.backing) {
+                    (MappingKind::Placeholder, _) => {
+                        (kinakaze_runtime::ForkMappingStorage::Placeholder, 0, 0, 0)
+                    }
+                    (_, Some(backing)) if backing.is_retained_shared() => (
+                        kinakaze_runtime::ForkMappingStorage::RetainedSection,
+                        backing.handle_slot(),
+                        mapping.backing_offset,
+                        backing.maximum_protection(),
+                    ),
+                    (_, Some(backing)) if backing.is_snapshot() => (
+                        kinakaze_runtime::ForkMappingStorage::AnonymousSnapshot,
+                        backing.handle_slot(),
+                        mapping.backing_offset,
+                        backing.maximum_protection(),
+                    ),
+                    (_, Some(backing)) if backing.is_cow() => (
+                        kinakaze_runtime::ForkMappingStorage::CopyOnWriteSection,
+                        backing.handle_slot(),
+                        mapping.backing_offset,
+                        backing.maximum_protection(),
+                    ),
+                    (MappingKind::PlaceholderView, Some(backing)) => (
+                        kinakaze_runtime::ForkMappingStorage::Section,
+                        backing.handle_slot(),
+                        mapping.backing_offset,
+                        0,
+                    ),
+                    _ => (kinakaze_runtime::ForkMappingStorage::Ordinary, 0, 0, 0),
+                };
+            kinakaze_runtime::register_fork_mapping(kinakaze_runtime::ForkMapping {
+                base: start,
+                len: mapping.length,
+                behavior,
+                storage,
+                backing_slot,
+                backing_offset,
+                view_protection,
+                domain: kinakaze_runtime::ForkMappingDomain::GuestMm,
+            });
+        }
     }
 }
 
 fn unregister_fork_fragment(start: usize, mapping: &Mapping) {
     if has_fork_mapping_storage(mapping) {
-        kinakaze_runtime::unregister_fork_mapping(start);
+        for (start, _, _) in fork_advice::fragments(start, mapping) {
+            kinakaze_runtime::unregister_fork_mapping(start);
+        }
     }
 }
 
@@ -5896,7 +6019,9 @@ fn unmap(address: *mut c_void, length: usize) -> Result<(), i32> {
     let result = unmap_impl(address, length);
     let refreshed = verity::refresh_fault_index();
     let tmpfs = tmpfs_mapping::refresh();
-    result.and(refreshed).and(tmpfs)
+    result.and(refreshed).and(tmpfs)?;
+    dump_advice::clear(address as usize, length)?;
+    fork_advice::clear(address as usize, length)
 }
 
 fn unmap_impl(address: *mut c_void, length: usize) -> Result<(), i32> {

@@ -15,6 +15,14 @@ with tempfile.TemporaryDirectory(prefix='native-permissions-') as temporary:
     os.chmod(path, 0o444)
     # root must obtain a writable open without changing Linux mode or identity.
     before = path.stat()
+    # GNU cp uses a write-only open when overwriting read-only configuration.
+    # fstat must query the inode even when that data handle lacks read rights.
+    fd = os.open(path, os.O_WRONLY)
+    try:
+        info = os.fstat(fd)
+        assert info.st_ino == before.st_ino and info.st_mode & 0o777 == 0o444
+    finally:
+        os.close(fd)
     fd = os.open(path, os.O_RDWR | os.O_TRUNC)
     try:
         os.write(fd, b'root')

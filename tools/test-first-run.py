@@ -76,7 +76,8 @@ def main():
         for name in ('kinakaze-probe-lib', 'kinakaze-probe-app'):
             package = repo / name
             (package / 'DEBIAN').mkdir(parents=True)
-            dependency = 'Depends: kinakaze-probe-lib (= 1)\n' if name.endswith('-app') else ''
+            dependency = ('Depends: kinakaze-probe-lib (= 1), python3:any (>= 3.10), '
+                          'perl:any, perlapi-5.36.0\n') if name.endswith('-app') else ''
             control = f'Package: {name}\nVersion: 1\nArchitecture: amd64\nMaintainer: Test <test@example.invalid>\n{dependency}Description: First-run transaction probe\n'
             controls[name] = control
             (package / 'DEBIAN/control').write_text(control, encoding='utf-8', newline='\n')

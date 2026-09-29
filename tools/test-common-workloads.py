@@ -58,6 +58,7 @@ assert subprocess.check_output(["/bin/echo","child"])==b"child\\n"
 with concurrent.futures.ThreadPoolExecutor(4) as p: assert sum(p.map(lambda n:n*n,range(100)))==328350
 print(json.dumps({"ssl":ssl.OPENSSL_VERSION}))' ''')
     add('statfs-boundaries', 'python3 StatfsBoundaryProbe.py')
+    add('raw-epoll-create', 'python3 RawEpollCreateProbe.py')
     add('standard-handle-lifetimes', 'python3 StandardHandleLifetimeProbe.py')
     add('native-permissions', 'python3 NativePermissionProbe.py')
     add('directory-types', 'python3 DirectoryTypeProbe.py')
@@ -128,6 +129,8 @@ gcc -rdynamic DeepBindProbe.c -ldl -o deepbind
 gcc -O2 -fno-pie -no-pie ExecutableTlsProbe.c -pthread -o tls-exec
 ./tls-exec | grep -q EXECUTABLE_TLS_OK''', ['/usr/bin/gcc'], 120)
     add('node', shlex.quote(args.node) + ' NodeRuntimeProbe.js', [args.node], 120)
+    add('cpp-futures', 'clang++ -O2 -std=c++17 CppFutureProbe.cpp -pthread -o cpp-futures; '
+        './cpp-futures | grep -q CPP_FUTURES_OK', ['/usr/bin/clang++'], 120)
     add('go', shlex.quote(args.go) + ' run program.go', [args.go], 180)
     add('php', '''php -r '$p=new PDO("sqlite::memory:"); if($p->query("select 42")->fetchColumn()!=42) exit(1);
 if(json_decode(json_encode(["x"=>42]),true)["x"]!=42) exit(2); echo "PHP_OK\\n";' ''', ['/usr/bin/php'])
@@ -135,6 +138,12 @@ if(json_decode(json_encode(["x"=>42]),true)["x"]!=42) exit(2); echo "PHP_OK\\n";
     add('service-namespace-primitives', 'python3 NamespaceServicesProbe.py', ['/usr/bin/python3'], 45)
     add('redis', 'python3 RedisRuntimeProbe.py', ['/usr/bin/redis-server'], 150)
     add('postgresql', 'python3 PostgresqlRuntimeProbe.py', ['/usr/lib/postgresql/15/bin/postgres'], 180)
+    add('mariadb', 'python3 MariadbRuntimeProbe.py', ['/usr/sbin/mariadbd', '/usr/bin/mariadb-install-db'], 240)
+    add('sqlite-processes', 'python3 SqliteProcessBoundaryProbe.py', ['/usr/bin/python3'], 90)
+    add('ffmpeg', 'python3 FfmpegRuntimeProbe.py', ['/usr/bin/ffmpeg', '/usr/bin/ffprobe'], 180)
+    add('java', '/usr/lib/jvm/java-17-openjdk-amd64/bin/javac JavaRuntimeProbe.java; '
+        '/usr/lib/jvm/java-17-openjdk-amd64/bin/java -cp . JavaRuntimeProbe spawn',
+        ['/usr/lib/jvm/java-17-openjdk-amd64/bin/javac'], 180)
     for app in ('codex', 'claude'):
         path = getattr(args, app)
         add(app + '-startup', shlex.quote(path) + ' --version; ' + shlex.quote(path) + ' --help > help; test -s help',
@@ -160,6 +169,7 @@ if(json_decode(json_encode(["x"=>42]),true)["x"]!=42) exit(2); echo "PHP_OK\\n";
                 stage = root / guest.lstrip('/')
                 stage.mkdir(parents=True)
                 for fixture in ('InterpreterCommandProbe.py', 'CompilerRuntimeProbe.c', 'AbortStatusProbe.c', 'PosixSemaphoreProbe.c', 'DeepBindProbe.c', 'ExecutableTlsProbe.c', 'StatfsBoundaryProbe.py', 'StandardHandleLifetimeProbe.py', 'NativePermissionProbe.py', 'DirectoryTypeProbe.py', 'DirectoryCursorProbe.py', 'MetadataPathProbe.py', 'ProcessLimitsProbe.py', 'ChildSignalProbe.py', 'SharedListenerProbe.py', 'SharedSocketWaitProbe.py', 'PamRuntimeProbe.py', 'NodeRuntimeProbe.js',
+                                'CppFutureProbe.cpp', 'RawEpollCreateProbe.py', 'MariadbRuntimeProbe.py', 'SqliteProcessBoundaryProbe.py', 'FfmpegRuntimeProbe.py', 'JavaRuntimeProbe.java',
                                 'NamedSemaphoreProbe.c', 'MultiprocessingProbe.py', 'ForkDlopenProbe.c', 'IgnoredSignalIoProbe.c', 'PpollSignalProbe.c', 'AccountForkProbe.c', 'AccountStreamProbe.c', 'PathAccessProbe.py', 'PathReferenceProbe.py', 'RootResolutionProbe.py', 'GlobCallbackProbe.c', 'TmpfilesProbe.py', 'XattrLifetimeProbe.py',
                                 'NginxRuntimeProbe.py', 'RedisRuntimeProbe.py', 'PostgresqlRuntimeProbe.py', 'DescriptorDuplicationProbe.py', 'DatagramRightsProbe.py', 'UnixListenerCustodyProbe.py', 'UnixSocketOptionsProbe.py', 'TmpfsMappingProbe.py', 'TmpfsEofProbe.c', 'NamespaceServicesProbe.py'):
                     shutil.copyfile(source / fixture, stage / fixture)

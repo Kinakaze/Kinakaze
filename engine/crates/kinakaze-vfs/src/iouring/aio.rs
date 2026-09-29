@@ -147,6 +147,7 @@ pub fn setup(entries: u32, output: usize) -> Result<i64, i32> {
                 requests: HashMap::new(),
                 next_cookie: 1,
                 local_pending: VecDeque::new(),
+                cancellations: Vec::new(),
                 completions: VecDeque::new(),
                 waiters: Vec::new(),
             },

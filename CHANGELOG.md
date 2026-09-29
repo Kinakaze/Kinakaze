@@ -1,5 +1,14 @@
 # 更新记录
 
+## 0.6.0 — 2026-09-29
+
+- 会话服务改用 socketpair 接收信号唤醒，避免和终端 poll 混在同一集合时被迫周期回扫。默认不再启动客体 udev：相关单元要存在 `/etc/kinakaze/enable-udev` 才会运行，设备仍由兼容层初始化。
+- 接入 Linux `io_uring` 的 setup、enter、register 和 SQ/CQ 映射，支持 nop、读写、fsync 以及按 user data 取消。只读兴趣的 epoll 可以等待 ring 完成事件。旧编号 `epoll_create` 也可分派。
+- signalfd 在一次等待内复用共享掩码映射，并读取当前发布值。inotify 对未变化的空原生监视集只检查队列头，不再每次重编码监视表。
+- 动态链接器按客体路径解析 `$ORIGIN/..`，Python wheel 里常见的兄弟库路径不再被 Windows 字面路径丢掉。只写打开的文件仍可 `fstat` 到 inode。新线程继承创建者的阻塞信号掩码。
+- 补齐 `log1pl`、`__getcwd_chk`、`srand48@GLIBC_2.2.5`、`mincore`，以及 `feenableexcept` / `fedisableexcept` / `fegetexcept`。`madvise` 支持转储排除和匿名页 `MADV_DONTNEED`；`MADV_FREE` 仍返回 `EINVAL`。基础包保留 ucf 模板和虚拟 Provides。
+- Oracle MySQL 8.4 可以完成初始化、事务提交/回滚和并发客户端，但正常关机仍会停住，重启和崩溃恢复不能计为通过。固定 Debian 清单的功能覆盖率仍约 59%。不宣称完整 Linux ABI，也不宣称性能已比肩原生 Linux。
+
 ## 0.5.0 — 2026-09-29
 
 - 修复并发回收子进程时的等待错误：每次等待持有自己的句柄引用；已消失或已被其他等待者取走的退出记录会重新扫描，不再误报完整性错误。过期快照打开的句柄不再写回 fork 登记表，避免槽位耗尽后无关的 `fork` 返回 `EAGAIN`。

@@ -41,8 +41,26 @@ pub fn create(fd: i32, signals: u64, flags: i32) -> Result<i32, i32> {
     object.descriptor_kind(FdKind::SignalFd, fs::special_fd_flags(flags))
 }
 pub fn poll(fd: i32) -> Result<bool, i32> {
-    crate::job::drain_external();
-    Ok(signal::pending() & mask(fd)? != 0)
+    PollView::new(fd)?.poll()
+}
+
+/// Pin the shared mask mapping for one wait, but read its current publication
+/// each time. A signalfd mask can be changed through an alias in another worker.
+pub(crate) struct PollView(Store);
+impl PollView {
+    pub(crate) fn new(fd: i32) -> Result<Self, i32> {
+        Ok(Self(store(fd)?))
+    }
+
+    pub(crate) fn poll(&self) -> Result<bool, i32> {
+        crate::job::drain_external();
+        self.0.read_with(|data| {
+            if data.len() != 16 || &data[..8] != MAGIC {
+                return Err(EIO);
+            }
+            Ok(signal::pending() & u64::from_le_bytes(data[8..].try_into().unwrap()) != 0)
+        })
+    }
 }
 fn record(signal: signal::PendingSignal, buffer: &mut [u8]) {
     buffer.fill(0);
@@ -109,5 +127,29 @@ pub fn read(fd: i32, buffer: &mut [u8]) -> Result<usize, i32> {
         unsafe {
             WaitForSingleObject(interrupt, 10);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wait_view_observes_mask_changes_and_consumption() {
+        let selected = 1 << (signal::SIGUSR1 - 1);
+        let old = signal::swap_blocked_mask(selected);
+        let fd = create(-1, 0, 0o4000).unwrap();
+        let view = PollView::new(fd).unwrap();
+        signal::raise_signal(signal::SIGUSR1).unwrap();
+        assert!(!view.poll().unwrap());
+        create(fd, selected, 0).unwrap();
+        assert!(view.poll().unwrap());
+        assert_eq!(
+            signal::take_pending(selected).unwrap().signal,
+            signal::SIGUSR1
+        );
+        assert!(!view.poll().unwrap());
+        crate::close(fd).unwrap();
+        signal::swap_blocked_mask(old);
     }
 }

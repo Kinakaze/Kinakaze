@@ -4,6 +4,17 @@
 
 默认 Debian manifest 使用 systemd 和 `kinakaze-session.service`。会话服务拥有 PTY，通过真实 `fork → setsid → TIOCSCTTY → execve` 创建 Bash、裸 ELF、Codex 或其他程序。Bash 内的命令仍由 Bash 创建和等待，外部启动不再指定任意 `--parent`。
 
+进程列表中的常驻 `python3` 是这个会话服务，运行 `/usr/lib/kinakaze/session.py`，负责终端断开重连、输入输出和子进程回收。它使用 Debian 内的 Python，不需要 Windows 安装 Python。会话事件通过 socket 唤醒；关闭它会中断终端会话管理。
+
+默认启动目标只请求 SSH、D-Bus socket 和终端会话。普通服务按需拉起的日志、临时目录等 systemd 服务仍可使用。udev 服务、控制 socket、内核 socket 和 trigger/settle 单元默认因条件不满足而跳过，即使其他服务拉起 `sysinit.target` 也不会启动它们。设备由兼容层初始化。需要测试客体 udev 时可显式启用：
+
+```sh
+touch /etc/kinakaze/enable-udev
+systemctl start systemd-udevd.service
+```
+
+移除该文件并停止 udev 服务及两个 socket 可恢复默认状态。此开关不提供 Windows 设备驱动或完整 Linux 硬件热插拔支持。
+
 ## 使用
 
 双击 `init.exe`，或运行 `worker.exe`。首次启动安装 rootfs，后续连接同一环境。Windows 不需要 Python：EXE 实现原生入口、托盘和终端客户端；默认会话服务使用随 Debian rootfs 下载的 Python。

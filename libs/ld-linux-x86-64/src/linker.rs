@@ -1272,6 +1272,16 @@ impl Linker {
                 kinakaze_vfs::path::resolve_linux_path_from(&self.paths.host_directory, &guest)
                     .ok()?
             }
+        } else if self.paths.process_namespace
+            && candidate
+                .components()
+                .any(|part| part == std::path::Component::ParentDir)
+        {
+            // $ORIGIN may be a verbatim Windows path. Native file lookup does
+            // not interpret its '..' components (common in Python wheels).
+            // Resolve through the guest VFS so symlinks before '..' keep their
+            // Linux semantics instead of collapsing the path lexically.
+            kinakaze_vfs::resolve_linux_path(&kinakaze_vfs::path::to_guest_path(candidate)).ok()?
         } else {
             candidate.to_path_buf()
         };
@@ -1761,6 +1771,33 @@ mod tests {
             expanded[0],
             PathBuf::from("/usr/lib/x86_64-linux-gnu/pulseaudio")
         );
+    }
+
+    #[test]
+    fn verbatim_origin_parent_resolves_a_wheel_sibling() {
+        let directory =
+            std::env::temp_dir().join(format!("kinakaze-origin-{}", std::process::id()));
+        std::fs::create_dir_all(directory.join("PIL")).unwrap();
+        std::fs::create_dir_all(directory.join("pillow.libs")).unwrap();
+        let library = directory.join("pillow.libs/libprobe.so");
+        std::fs::write(&library, b"lookup fixture").unwrap();
+        let previous = kinakaze_vfs::path::system_root().unwrap();
+        kinakaze_vfs::path::set_system_root(directory.clone());
+        let linker = Linker::new(
+            SearchPaths::with_host_directory(directory.clone()).with_process_namespace(),
+        );
+        let origin = directory.join("PIL").canonicalize().unwrap();
+        let search = expand_search_path("$ORIGIN/../pillow.libs", &origin, &directory);
+        let resolved = linker.resolve_candidate(&search[0].join("libprobe.so"));
+        kinakaze_vfs::path::set_system_root(previous);
+        assert_eq!(
+            resolved.unwrap().canonicalize().unwrap(),
+            library.canonicalize().unwrap()
+        );
+        std::fs::remove_file(library).unwrap();
+        std::fs::remove_dir(directory.join("PIL")).unwrap();
+        std::fs::remove_dir(directory.join("pillow.libs")).unwrap();
+        std::fs::remove_dir(directory).unwrap();
     }
 
     #[test]

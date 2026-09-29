@@ -472,6 +472,7 @@ struct ThreadStart {
     argument: usize,
     locale: usize,
     gs_base: usize,
+    signal_mask: u64,
     inheritance: FsInheritance,
     cancel: Arc<CancelState>,
     published: Arc<(Mutex<ThreadStartup>, Condvar)>,
@@ -489,6 +490,7 @@ unsafe extern "system" fn native_thread_start(packet: *mut c_void) -> u32 {
         argument,
         locale,
         gs_base,
+        signal_mask,
         inheritance,
         cancel,
         published,
@@ -508,6 +510,9 @@ unsafe extern "system" fn native_thread_start(packet: *mut c_void) -> u32 {
     });
     inheritance.adopt();
     drop(inheritance);
+    // POSIX threads inherit the creator's blocked mask. Restore it before TLS
+    // initialization can reach a signal delivery point or run guest callbacks.
+    kinakaze_vfs::signal::swap_blocked_mask(signal_mask);
     kinakaze_tls::set_locale(locale);
     let stack_ready = stack::prepare_current();
     let tls_ready = stack_ready && initialize_process_thread_tls();
@@ -699,6 +704,7 @@ pub unsafe extern "sysv64" fn pthread_create(
         argument,
         locale: kinakaze_tls::locale(),
         gs_base: kinakaze_tls::guest_gs_base(),
+        signal_mask: kinakaze_vfs::signal::blocked_mask(),
         inheritance,
         cancel,
         published: Arc::clone(&published),

@@ -11,12 +11,13 @@ use windows_sys::Win32::Foundation::{
     CloseHandle, ERROR_HANDLE_EOF, ERROR_OPERATION_ABORTED, HANDLE, WAIT_OBJECT_0, WAIT_TIMEOUT,
 };
 use windows_sys::Win32::Storage::FileSystem::{
-    BuildIoRingReadFile, BuildIoRingWriteFile, CloseIoRing, CreateIoRing, FILE_APPEND_DATA,
-    FILE_READ_ATTRIBUTES, FILE_READ_DATA, FILE_WRITE_DATA, HIORING, IORING_BUFFER_REF,
-    IORING_BUFFER_REF_0, IORING_CQE, IORING_CREATE_FLAGS, IORING_HANDLE_REF, IORING_HANDLE_REF_0,
-    IORING_OP_READ as WINDOWS_OP_READ, IORING_OP_WRITE as WINDOWS_OP_WRITE, IORING_REF_RAW,
-    IORING_VERSION_1, IORING_VERSION_2, IORING_VERSION_3, IsIoRingOpSupported, PopIoRingCompletion,
-    SetIoRingCompletionEvent, SubmitIoRing,
+    BuildIoRingFlushFile, BuildIoRingReadFile, BuildIoRingWriteFile, CloseIoRing, CreateIoRing,
+    FILE_APPEND_DATA, FILE_READ_ATTRIBUTES, FILE_READ_DATA, FILE_WRITE_DATA, HIORING,
+    IORING_BUFFER_REF, IORING_BUFFER_REF_0, IORING_CQE, IORING_CREATE_FLAGS, IORING_HANDLE_REF,
+    IORING_HANDLE_REF_0, IORING_OP_FLUSH as WINDOWS_OP_FLUSH, IORING_OP_READ as WINDOWS_OP_READ,
+    IORING_OP_WRITE as WINDOWS_OP_WRITE, IORING_REF_RAW, IORING_VERSION_1, IORING_VERSION_2,
+    IORING_VERSION_3, IsIoRingOpSupported, PopIoRingCompletion, SetIoRingCompletionEvent,
+    SubmitIoRing,
 };
 use windows_sys::Win32::System::IO::CancelIoEx;
 use windows_sys::Win32::System::Threading::{
@@ -25,6 +26,7 @@ use windows_sys::Win32::System::Threading::{
 
 pub mod aio;
 pub(crate) mod flush;
+pub mod linux;
 mod memory;
 #[cfg(test)]
 mod tests;
@@ -32,6 +34,8 @@ mod tests;
 pub const IORING_OP_NOP: u8 = 0;
 pub const IORING_OP_READV: u8 = 1;
 pub const IORING_OP_WRITEV: u8 = 2;
+pub const IORING_OP_FSYNC: u8 = 3;
+pub const IORING_OP_ASYNC_CANCEL: u8 = 14;
 pub const IORING_OP_READ_FIXED: u8 = 4;
 pub const IORING_OP_WRITE_FIXED: u8 = 5;
 pub const IORING_OP_READ: u8 = 22;
@@ -103,6 +107,7 @@ struct Request {
     targets: Vec<memory::Segment>,
     offset: u64,
     read: bool,
+    flush: bool,
     user_data: u64,
     submitted: bool,
 }
@@ -115,6 +120,7 @@ struct State {
     requests: HashMap<usize, Request>,
     next_cookie: usize,
     local_pending: VecDeque<CompletionEntry>,
+    cancellations: Vec<(u64, u64, u32)>,
     completions: VecDeque<CompletionEntry>,
     /// Notification for CQEs another enter/reap moved into the software queue.
     waiters: Vec<Weak<Event>>,
@@ -124,6 +130,7 @@ struct Ring {
     completion_event: Event,
     closed_event: Event,
     state: Mutex<State>,
+    linux: OnceLock<Arc<linux::Queues>>,
 }
 static RINGS: OnceLock<Mutex<HashMap<i32, Arc<Ring>>>> = OnceLock::new();
 fn rings() -> &'static Mutex<HashMap<i32, Arc<Ring>>> {
@@ -209,6 +216,7 @@ pub fn setup(entries: u32, flags: u32) -> Result<i32, i32> {
         requests: HashMap::new(),
         next_cookie: 1,
         local_pending: VecDeque::new(),
+        cancellations: Vec::new(),
         completions: VecDeque::new(),
         waiters: Vec::new(),
     };
@@ -232,6 +240,7 @@ pub fn setup(entries: u32, flags: u32) -> Result<i32, i32> {
                 completion_event,
                 closed_event,
                 state: Mutex::new(state),
+                linux: OnceLock::new(),
             }),
         );
         Ok(())
@@ -271,6 +280,7 @@ fn native_opcode(opcode: u8) -> Option<i32> {
     match opcode {
         IORING_OP_READ | IORING_OP_READV => Some(WINDOWS_OP_READ),
         IORING_OP_WRITE | IORING_OP_WRITEV => Some(WINDOWS_OP_WRITE),
+        IORING_OP_FSYNC => Some(WINDOWS_OP_FLUSH),
         _ => None,
     }
 }
@@ -280,7 +290,7 @@ pub fn opcode_supported(fd: i32, opcode: u8) -> Result<bool, i32> {
     if state.closing {
         return Err(EBADF);
     }
-    if opcode == IORING_OP_NOP {
+    if matches!(opcode, IORING_OP_NOP | IORING_OP_ASYNC_CANCEL) {
         return Ok(true);
     }
     Ok(native_opcode(opcode)
@@ -303,6 +313,13 @@ fn hresult(result: i32) -> Result<(), i32> {
 }
 fn prepare(entry: &SubmissionEntry) -> Result<Request, i32> {
     let (pinned, descriptor) = Object::from_fd_with_entry(entry.fd)?;
+    prepare_file(entry, pinned, descriptor)
+}
+fn prepare_file(
+    entry: &SubmissionEntry,
+    pinned: Object,
+    descriptor: FdEntry,
+) -> Result<Request, i32> {
     if descriptor.kind == FdKind::Directory {
         return Err(crate::EISDIR);
     }
@@ -317,6 +334,7 @@ fn prepare(entry: &SubmissionEntry) -> Result<Request, i32> {
         return Err(EINVAL);
     }
     let read = matches!(entry.opcode, IORING_OP_READ | IORING_OP_READV);
+    let flush = entry.opcode == IORING_OP_FSYNC;
     let original_access = Object::granted_access(pinned.raw())?;
     let access = if read {
         FILE_READ_DATA
@@ -349,7 +367,11 @@ fn prepare(entry: &SubmissionEntry) -> Result<Request, i32> {
         pinned.raw(),
         data_access | (original_access & FILE_READ_ATTRIBUTES),
     )?;
-    let targets = memory::segments(entry)?;
+    let targets = if flush {
+        Vec::new()
+    } else {
+        memory::segments(entry)?
+    };
     let length = targets.iter().map(|segment| segment.length).sum();
     let mut buffer = Vec::new();
     buffer
@@ -366,6 +388,7 @@ fn prepare(entry: &SubmissionEntry) -> Result<Request, i32> {
         targets,
         offset: if append { u64::MAX } else { entry.offset },
         read,
+        flush,
         user_data: entry.user_data,
         submitted: false,
     })
@@ -378,6 +401,14 @@ fn prepare(entry: &SubmissionEntry) -> Result<Request, i32> {
 /// callers cannot rely on Rust aliasing guarantees across this syscall boundary.
 /// Native requests retain no guest pointers.
 pub unsafe fn push(fd: i32, entry: &SubmissionEntry) -> Result<(), i32> {
+    unsafe { push_with_file(fd, entry, None) }
+}
+
+unsafe fn push_with_file(
+    fd: i32,
+    entry: &SubmissionEntry,
+    file: Option<(Object, FdEntry)>,
+) -> Result<(), i32> {
     let ring = lookup(fd)?;
     let mut state = ring.state.lock().map_err(|_| EIO)?;
     if state.closing {
@@ -393,9 +424,20 @@ pub unsafe fn push(fd: i32, entry: &SubmissionEntry) -> Result<(), i32> {
         .try_reserve(1)
         .map_err(|_| crate::ENOMEM)?;
     state.requests.try_reserve(1).map_err(|_| crate::ENOMEM)?;
+    if entry.opcode == IORING_OP_ASYNC_CANCEL && entry.flags == 0 && entry.op_flags & !1 == 0 {
+        state
+            .cancellations
+            .try_reserve(1)
+            .map_err(|_| crate::ENOMEM)?;
+        state
+            .cancellations
+            .push((entry.address, entry.user_data, entry.op_flags));
+        state.pending += 1;
+        return Ok(());
+    }
     let prepared = if entry.flags != 0
         || entry.ioprio != 0
-        || entry.op_flags != 0
+        || (entry.op_flags != 0 && !(entry.opcode == IORING_OP_FSYNC && entry.op_flags == 1))
         || entry.buffer_index != 0
         || entry.personality != 0
     {
@@ -406,7 +448,11 @@ pub unsafe fn push(fd: i32, entry: &SubmissionEntry) -> Result<(), i32> {
         if unsafe { IsIoRingOpSupported(state.handle as HIORING, opcode) } == 0 {
             Err(crate::EOPNOTSUPP)
         } else {
-            prepare(entry).map(Some)
+            match file {
+                Some((file, descriptor)) => prepare_file(entry, file, descriptor),
+                None => prepare(entry),
+            }
+            .map(Some)
         }
     } else {
         Err(
@@ -461,6 +507,9 @@ impl Request {
             hresult(completion.ResultCode)?;
         }
         let count = completion.Information as usize;
+        if self.flush {
+            return Ok(0);
+        }
         if count > self.buffer.len() {
             return Err(EIO);
         }
@@ -511,10 +560,11 @@ impl State {
         self.handle = 0;
         self.requests.clear();
         self.local_pending.clear();
+        self.cancellations.clear();
         self.completions.clear();
     }
     fn queue_native(&mut self, mut request: Request) -> Result<(), i32> {
-        if request.buffer.is_empty() {
+        if request.buffer.is_empty() && !request.flush {
             self.local_pending.push_back(CompletionEntry {
                 user_data: request.user_data,
                 result: 0,
@@ -544,7 +594,9 @@ impl State {
             },
         };
         let native = unsafe {
-            if request.read {
+            if request.flush {
+                BuildIoRingFlushFile(self.handle as HIORING, file, 0, cookie, 0)
+            } else if request.read {
                 BuildIoRingReadFile(
                     self.handle as HIORING,
                     file,
@@ -625,7 +677,7 @@ impl State {
     }
     fn submit(&mut self) -> Result<u32, i32> {
         self.completions
-            .try_reserve(self.local_pending.len())
+            .try_reserve(self.local_pending.len() + self.cancellations.len())
             .map_err(|_| crate::ENOMEM)?;
         if self.pending == 0 {
             return Ok(0);
@@ -646,6 +698,32 @@ impl State {
         // and counters; local CQEs also become visible only after submission.
         for request in self.requests.values_mut() {
             request.submitted = true;
+        }
+        for (target, user_data, flags) in std::mem::take(&mut self.cancellations) {
+            let mut canceled = 0;
+            for request in self
+                .requests
+                .values()
+                .filter(|request| request.user_data == target)
+            {
+                if unsafe { CancelIoEx(request.file.raw(), std::ptr::null()) } != 0 {
+                    canceled += 1;
+                }
+                if flags == 0 {
+                    break;
+                }
+            }
+            self.completions.push_back(CompletionEntry {
+                user_data,
+                result: if canceled == 0 {
+                    -crate::ENOENT
+                } else if flags == 0 {
+                    0
+                } else {
+                    canceled
+                },
+                flags: 0,
+            });
         }
         self.completions.append(&mut self.local_pending);
         let consumed = std::mem::take(&mut self.pending);

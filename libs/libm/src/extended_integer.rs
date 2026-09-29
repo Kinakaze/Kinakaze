@@ -272,6 +272,46 @@ pub unsafe extern "sysv64" fn log10l() {
     core::arch::naked_asm!("fldlg2", "fld tbyte ptr [rsp + 8]", "fyl2x", "ret",);
 }
 
+extern "sysv64" fn log1pl_errno(significand: u64, exponent: u16) {
+    if exponent == 0xffff && significand & 0x7fff_ffff_ffff_ffff != 0 {
+        return;
+    }
+    kinakaze_tls::set_errno(if exponent == 0xbfff && significand == 1 << 63 {
+        34
+    } else {
+        33
+    });
+}
+
+#[unsafe(export_name = "kinakaze_engine_libm_log1pl")]
+#[unsafe(naked)]
+pub unsafe extern "sysv64" fn log1pl() {
+    core::arch::naked_asm!(
+        "movzx esi, word ptr [rsp + 16]",
+        "cmp esi, 0xbfff",
+        "jb 2f",
+        "mov rdi, qword ptr [rsp + 8]",
+        "sub rsp, 8",
+        "call {error}",
+        "add rsp, 8",
+        "2:",
+        "fldln2",
+        "fld tbyte ptr [rsp + 8]",
+        "movzx eax, word ptr [rsp + 16]",
+        "and eax, 0x7fff",
+        "cmp eax, 0x3ffd",
+        "jae 3f",
+        "fyl2xp1",
+        "ret",
+        "3:",
+        "fld1",
+        "faddp",
+        "fyl2x",
+        "ret",
+        error = sym log1pl_errno,
+    );
+}
+
 #[unsafe(export_name = "kinakaze_engine_libm_fmodl")]
 #[unsafe(naked)]
 pub unsafe extern "sysv64" fn fmodl() {

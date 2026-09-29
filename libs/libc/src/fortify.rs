@@ -73,6 +73,16 @@ fn check(length: usize, destlen: usize) {
     }
 }
 
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi___getcwd_chk(
+    buffer: *mut c_char,
+    size: usize,
+    buffer_length: usize,
+) -> *mut c_char {
+    check(size, buffer_length);
+    unsafe { crate::fs::getcwd(buffer, size) }
+}
+
 // ---------------------------------------------------------------------------
 // The memory and string family: `size_t destlen` is the LAST argument.
 // ---------------------------------------------------------------------------

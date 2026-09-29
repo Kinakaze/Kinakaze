@@ -279,6 +279,7 @@ fn supports_epoll(kind: FdKind) -> bool {
             | FdKind::NetlinkSocket
             | FdKind::EventFd
             | FdKind::TimerFd
+            | FdKind::IoRing
             | FdKind::SignalFd
             | FdKind::ProcMounts
             | FdKind::MessageQueue
@@ -899,6 +900,7 @@ fn control_set(
     }
     if operation != EPOLL_CTL_DEL
         && (!supports_epoll(entry.kind)
+            || (entry.kind == FdKind::IoRing && !crate::iouring::linux::supported(fd))
             || (entry.kind == FdKind::Console && !crate::tty::is_console(fd)))
     {
         return Err(EPERM);
@@ -917,6 +919,7 @@ fn control_set(
             FdKind::Event
                 | FdKind::EventFd
                 | FdKind::TimerFd
+                | FdKind::IoRing
                 | FdKind::SignalFd
                 | FdKind::MessageQueue
                 | FdKind::SysfsFile
@@ -1390,6 +1393,7 @@ fn epoll_wait_inner(
 ) -> Result<usize, i32> {
     let mut mount_views = HashMap::<RegistrationKey, crate::procfs::mount_watch::PollView>::new();
     let mut timer_views = HashMap::<RegistrationKey, crate::timerfd::PollView>::new();
+    let mut signal_views = HashMap::<RegistrationKey, crate::signalfd::PollView>::new();
     let mut inotify_views = HashMap::<RegistrationKey, crate::inotify::PollView>::new();
     'wait: loop {
         // Snapshot the registrations so the set is not locked across the wait.
@@ -1506,6 +1510,7 @@ fn epoll_wait_inner(
         let wake_handle = wake_source.raw();
         mount_views.retain(|key, _| eventfd_pending.iter().any(|(active, _)| active == key));
         timer_views.retain(|key, _| eventfd_pending.iter().any(|(active, _)| active == key));
+        signal_views.retain(|key, _| eventfd_pending.iter().any(|(active, _)| active == key));
         inotify_views.retain(|key, _| inotify_pending.iter().any(|(active, _)| active == key));
 
         let polled_watched = unix_pending.len()
@@ -1672,11 +1677,14 @@ fn epoll_wait_inner(
         let mut eventfd_ready = Vec::new();
         let mut eventfd_waits = Vec::new();
         let mut native_eventfds = 0;
+        let mut ring_waits = Vec::new();
+        let mut native_rings = 0;
         for (key, registration) in &eventfd_pending {
             let mut sampled = *registration;
             let mut sampled_edges = registration.eventfd_edges;
             let fd = registration.poll_fd;
             let previous_waits = eventfd_waits.len();
+            let previous_ring_waits = ring_waits.len();
             if fd < 0 {
                 if let Some((reported, edges)) = target::poll(registration)? {
                     if edges[0] != registration.eventfd_edges[0] {
@@ -1725,7 +1733,25 @@ fn epoll_wait_inner(
                 }
                 let (readable, writable, overflow) = match entry.kind {
                     FdKind::Event => (poll_readable(fd)?, false, false),
-                    FdKind::SignalFd => (crate::signalfd::poll(fd)?, false, false),
+                    FdKind::IoRing => {
+                        let (readable, writable) = crate::iouring::linux::poll(fd)?;
+                        if timeout_ms != 0
+                            && !readable
+                            && registration.interest & !(EPOLLIN | EPOLLRDNORM | EPOLLONESHOT) == 0
+                        {
+                            ring_waits.push(crate::iouring::linux::read_wait(fd)?);
+                            native_rings += 1;
+                        }
+                        (readable, writable, false)
+                    }
+                    FdKind::SignalFd => {
+                        if let std::collections::hash_map::Entry::Vacant(entry) =
+                            signal_views.entry(*key)
+                        {
+                            entry.insert(crate::signalfd::PollView::new(fd)?);
+                        }
+                        (signal_views.get(key).ok_or(EIO)?.poll()?, false, false)
+                    }
                     FdKind::TimerFd => {
                         if let std::collections::hash_map::Entry::Vacant(entry) =
                             timer_views.entry(*key)
@@ -1768,6 +1794,8 @@ fn epoll_wait_inner(
                 // readiness result and any native source prepared by it.
                 native_eventfds -= eventfd_waits.len() - previous_waits;
                 eventfd_waits.truncate(previous_waits);
+                native_rings -= ring_waits.len() - previous_ring_waits;
+                ring_waits.truncate(previous_ring_waits);
                 continue;
             };
             if PIPE_STATE_TRACE_ACTIVE.load(Ordering::Acquire) {
@@ -1785,7 +1813,7 @@ fn epoll_wait_inner(
             }
         }
 
-        let polled_watched = polled_watched - native_eventfds - native_unix_reads;
+        let polled_watched = polled_watched - native_eventfds - native_unix_reads - native_rings;
         let mut netlink_ready = Vec::new();
         let mut netlink_waits = Vec::new();
         for (key, registration) in &netlink_pending {
@@ -2078,6 +2106,7 @@ fn epoll_wait_inner(
                     || !fifo_waits.is_empty()
                     || !netlink_waits.is_empty()
                     || !eventfd_waits.is_empty()
+                    || !ring_waits.is_empty()
                     || !unix_waits.is_empty()
                     || !unix_write_waits.is_empty())
             {
@@ -2095,6 +2124,9 @@ fn epoll_wait_inner(
                     }
                 }
                 for source in &netlink_waits {
+                    unsafe { group.add(source.raw())? };
+                }
+                for source in &ring_waits {
                     unsafe { group.add(source.raw())? };
                 }
                 for wait in &eventfd_waits {
@@ -2280,6 +2312,7 @@ fn epoll_wait_inner(
             // wake `epoll_wait` immediately instead of on the next sweep.
             let mut waitables: Vec<HANDLE> = vec![wake_handle];
             waitables.extend(netlink_waits.iter().map(native_wait::Source::raw));
+            waitables.extend(ring_waits.iter().map(native_wait::Source::raw));
             waitables.extend(
                 eventfd_waits
                     .iter()
@@ -2306,7 +2339,7 @@ fn epoll_wait_inner(
             // native source. Pinned stream/listener notifications close the
             // readiness-to-wait race without a timer.
             let repolled = (unix_pending.len() - native_unix_reads)
-                + (eventfd_pending.len() - native_eventfds)
+                + (eventfd_pending.len() - native_eventfds - native_rings)
                 + inotify_pending.len()
                 + pipe_pending.len();
             if repolled > 0 || (polled_watched > 0 && waitables.is_empty()) {

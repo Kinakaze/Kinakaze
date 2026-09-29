@@ -1,5 +1,6 @@
 """Read every payload of the locked standard installation, without host extraction."""
 from concurrent.futures import ThreadPoolExecutor
+from email.parser import Parser
 import hashlib
 import io
 import json
@@ -66,6 +67,17 @@ def load(lock_path, cache, provided, offline=False, sources=None):
     hardlinks = {}
     for package, path in zip(packages, paths):
         archive = ar_members(path.read_bytes())
+        # Preserve virtual dependencies (for example perlapi-5.36.0) from the
+        # authenticated control archive as well as the concrete package name.
+        control = next(data for name, data in archive.items() if name.startswith('control.tar'))
+        with tarfile.open(fileobj=io.BytesIO(control), mode='r:*') as tar:
+            member = next(member for member in tar if member.name in ('control', './control'))
+            fields = Parser().parsestr(tar.extractfile(member).read().decode('utf-8'))
+            if package['package'] == 'ucf':
+                templates = next(member for member in tar.getmembers()
+                                 if member.name in ('templates', './templates'))
+                files['usr/share/kinakaze/ucf.templates'] = tar.extractfile(templates).read()
+        package['provides'] = ' '.join(fields.get('Provides', '').split())
         payload = next(data for name, data in archive.items() if name.startswith('data.tar.'))
         with tarfile.open(fileobj=io.BytesIO(payload), mode='r:*') as tar:
             for member in tar:

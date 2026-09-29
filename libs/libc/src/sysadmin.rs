@@ -1943,6 +1943,9 @@ pub const SYS_MREMAP: i64 = 25;
 pub const SYS_MSYNC: i64 = 26;
 pub const SYS_MINCORE: i64 = 27;
 pub const SYS_MADVISE: i64 = 28;
+pub const SYS_IO_URING_SETUP: i64 = 425;
+pub const SYS_IO_URING_ENTER: i64 = 426;
+pub const SYS_IO_URING_REGISTER: i64 = 427;
 pub const SYS_SHMGET: i64 = 29;
 pub const SYS_SHMAT: i64 = 30;
 pub const SYS_SHMCTL: i64 = 31;
@@ -2075,6 +2078,7 @@ pub const SYS_IO_DESTROY: i64 = 207;
 pub const SYS_IO_GETEVENTS: i64 = 208;
 pub const SYS_IO_SUBMIT: i64 = 209;
 pub const SYS_IO_CANCEL: i64 = 210;
+pub const SYS_EPOLL_CREATE: i64 = 213;
 pub const SYS_GETDENTS64: i64 = 217;
 pub const SYS_SET_TID_ADDRESS: i64 = 218;
 pub const SYS_CLOCK_SETTIME: i64 = 227;
@@ -3590,6 +3594,29 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
                 argument2 as *mut crate::time::TimeSpec,
             ) as i64
         }),
+        SYS_IO_URING_SETUP => {
+            kinakaze_vfs::iouring::linux::setup(argument1 as u32, argument2 as usize)
+                .map(i64::from)
+                .unwrap_or_else(|error| -i64::from(error))
+        }
+        SYS_IO_URING_ENTER => kinakaze_vfs::iouring::linux::enter(
+            argument1 as i32,
+            argument2 as u32,
+            argument3 as u32,
+            argument4 as u32,
+            argument5 as usize,
+            argument6 as usize,
+        )
+        .map(i64::from)
+        .unwrap_or_else(|error| -i64::from(error)),
+        SYS_IO_URING_REGISTER => kinakaze_vfs::iouring::linux::register(
+            argument1 as i32,
+            argument2 as u32,
+            argument3 as usize,
+            argument4 as u32,
+        )
+        .map(i64::from)
+        .unwrap_or_else(|error| -i64::from(error)),
         SYS_MADVISE => {
             let res = crate::fdio::madvise_impl(
                 argument1 as *mut c_void,
@@ -4723,6 +4750,10 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
                     argument4 as c_int,
                 )
             };
+            to_kernel(res as i64)
+        }
+        SYS_EPOLL_CREATE => {
+            let res = crate::net::kinakaze_abi_epoll_create(argument1 as c_int);
             to_kernel(res as i64)
         }
         SYS_EPOLL_CREATE1 => {

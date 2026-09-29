@@ -138,6 +138,17 @@ impl DirectoryQueue {
         }
         Ok(())
     }
+    /// Observe readiness without consuming notifications owned by another
+    /// reader. The same publisher mutex protects both this check and push.
+    pub fn pending(&self) -> io::Result<bool> {
+        let _guard = self.lock()?;
+        let header = unsafe { &*self.view.Value.cast::<Header>() };
+        if header.length > CAPACITY {
+            return Err(io::Error::other("invalid directory queue"));
+        }
+        Ok(header.length != 0 || header.overflow || header.ended)
+    }
+
     pub fn drain(&self) -> io::Result<(Vec<Vec<u8>>, bool, bool)> {
         let _guard = self.lock()?;
         unsafe {

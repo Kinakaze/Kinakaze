@@ -4622,15 +4622,13 @@ pub unsafe extern "sysv64" fn kinakaze_abi_mincore(
     length: usize,
     vec: *mut u8,
 ) -> c_int {
-    if addr.is_null() || vec.is_null() {
-        crate::set_errno(kinakaze_vfs::EFAULT);
-        return -1;
+    match crate::fdio::residency::mincore(addr as usize, length, vec as usize) {
+        Ok(()) => 0,
+        Err(error) => {
+            crate::set_errno(error);
+            -1
+        }
     }
-    let page_count = (length + 4095) / 4096;
-    unsafe {
-        core::ptr::write_bytes(vec, 1, page_count);
-    }
-    0
 }
 
 #[unsafe(no_mangle)]

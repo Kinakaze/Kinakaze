@@ -83,6 +83,27 @@ def inventory(dist):
     return result
 
 
+def coverage(entries, results):
+    executable = {entry["path"]: entry for entry in entries if entry["executable"]}
+    outcomes = {row["path"]: row["status"] for row in results}
+    passed = {path for path in executable if outcomes.get(path) == "passed"}
+    targets = {entry["target"] for entry in executable.values()}
+    passed_targets = {executable[path]["target"] for path in passed}
+    return dict(
+        scope="Fixed manifest executable paths; functional and startup phases are separate. "
+        "Missing, unselected and untested commands remain in the denominator. "
+        "A target passes when at least one of its command paths passes.",
+        executable_paths=len(executable),
+        passed_paths=len(passed),
+        passed_percent=100 * len(passed) / len(executable) if executable else None,
+        unselected_paths=sum(path not in outcomes for path in executable),
+        alias_paths=sum(entry["alias"] for entry in executable.values()),
+        distinct_targets=len(targets),
+        passed_targets=len(passed_targets),
+        target_passed_percent=100 * len(passed_targets) / len(targets) if targets else None,
+    )
+
+
 class ProcessTree:
     """Assign a suspended supervisor before any guest descendant can start."""
 
@@ -595,6 +616,7 @@ def main():
         },
         images=images,
         counts=dict(Counter(r["status"] for r in results)),
+        coverage=coverage(entries, results),
         results=sorted(results, key=lambda r: r["path"]),
     )
     save(output / f"{args.phase}.json", report)

@@ -251,9 +251,16 @@ EXPORTS
   kinakaze_engine_libm_feclearexcept
   "feclearexcept"=kinakaze_engine_libm_feclearexcept PRIVATE
   "feclearexcept@GLIBC_2.2.5"=kinakaze_engine_libm_feclearexcept PRIVATE
+  kinakaze_engine_libm_fedisableexcept
+  "fedisableexcept"=kinakaze_engine_libm_fedisableexcept PRIVATE
+  "fedisableexcept@GLIBC_2.2.5"=kinakaze_engine_libm_fedisableexcept PRIVATE
+  kinakaze_engine_libm_feenableexcept
+  "feenableexcept"=kinakaze_engine_libm_feenableexcept PRIVATE
   kinakaze_engine_libm_fegetenv
   "fegetenv"=kinakaze_engine_libm_fegetenv PRIVATE
   "fegetenv@GLIBC_2.2.5"=kinakaze_engine_libm_fegetenv PRIVATE
+  kinakaze_engine_libm_fegetexcept
+  "fegetexcept"=kinakaze_engine_libm_fegetexcept PRIVATE
   kinakaze_engine_libm_fegetround
   "fegetround"=kinakaze_engine_libm_fegetround PRIVATE
   "fegetround@GLIBC_2.2.5"=kinakaze_engine_libm_fegetround PRIVATE
@@ -421,6 +428,9 @@ EXPORTS
   kinakaze_engine_libm_log1pf
   "log1pf"=kinakaze_engine_libm_log1pf PRIVATE
   "log1pf@GLIBC_2.2.5"=kinakaze_engine_libm_log1pf PRIVATE
+  kinakaze_engine_libm_log1pl
+  "log1pl"=kinakaze_engine_libm_log1pl PRIVATE
+  "log1pl@GLIBC_2.2.5"=kinakaze_engine_libm_log1pl PRIVATE
   kinakaze_engine_libm_log2
   "log2"=kinakaze_engine_libm_log2 PRIVATE
   "log2@GLIBC_2.2.5"=kinakaze_engine_libm_log2 PRIVATE

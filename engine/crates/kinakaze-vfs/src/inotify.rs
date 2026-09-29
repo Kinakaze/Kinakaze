@@ -156,7 +156,13 @@ fn owner(fd: i32) -> Result<Store, i32> {
     shared::object_entry(entry)
 }
 fn update<T>(owner: &Store, action: impl FnOnce(&mut State) -> Result<T, i32>) -> Result<T, i32> {
-    let (result, retired) = owner.update(|data| {
+    update_observed(owner, action).map(|(_, result)| result)
+}
+fn update_observed<T>(
+    owner: &Store,
+    action: impl FnOnce(&mut State) -> Result<T, i32>,
+) -> Result<(u64, T), i32> {
+    let (revision, (result, retired)) = owner.update_with_revision(|data| {
         let mut state = State::decode(data)?;
         let result = action(&mut state);
         Ok((state.encode(), (result, state.retired)))
@@ -166,7 +172,7 @@ fn update<T>(owner: &Store, action: impl FnOnce(&mut State) -> Result<T, i32>) -
     for watch in retired {
         release(owner, &watch)?;
     }
-    result
+    result.map(|value| (revision, value))
 }
 pub fn create_inotify(flags: i32) -> Result<i32, i32> {
     if flags & !(IN_CLOEXEC | IN_NONBLOCK) != 0 {
@@ -366,21 +372,29 @@ fn release(store: &Store, watch: &Watch) -> Result<(), i32> {
     })
 }
 fn collect(_store: &Store, s: &mut State) -> Result<(), i32> {
-    collect_with_queues(s, &mut HashMap::new())
+    collect_with_queues(s, &mut HashMap::new(), &mut HashMap::new())
 }
 
 fn collect_with_queues(
     s: &mut State,
     queues: &mut HashMap<i32, (u64, DirectoryQueue)>,
+    memory_queues: &mut HashMap<i32, (u64, crate::tmpfs::watch::Watch)>,
 ) -> Result<(), i32> {
     let _observation = crate::tmpfs::Observation::enter();
     let mut events = Vec::new();
     let mut ignored = Vec::new();
     for (&wd, watch) in &mut s.watches {
         if watch.volume != 0 {
-            for event in
-                crate::tmpfs::watch::Watch::open(watch.volume, watch.node, watch.id)?.drain(wd)?
-            {
+            if memory_queues.get(&wd).is_none_or(|(id, _)| *id != watch.id) {
+                memory_queues.insert(
+                    wd,
+                    (
+                        watch.id,
+                        crate::tmpfs::watch::Watch::open(watch.volume, watch.node, watch.id)?,
+                    ),
+                );
+            }
+            for event in memory_queues.get(&wd).ok_or(crate::EIO)?.1.drain(wd)? {
                 if u32::from_ne_bytes(event[4..8].try_into().unwrap()) & IN_IGNORED != 0 {
                     ignored.push(wd);
                 }
@@ -472,6 +486,11 @@ fn collect_with_queues(
             .get(wd)
             .is_some_and(|watch| watch.volume == 0 && watch.id == *id)
     });
+    memory_queues.retain(|wd, (id, _)| {
+        s.watches
+            .get(wd)
+            .is_some_and(|watch| watch.volume != 0 && watch.id == *id)
+    });
     Ok(())
 }
 pub fn rm_watch(fd: i32, wd: i32) -> Result<(), i32> {
@@ -533,24 +552,50 @@ pub(crate) fn poll_store(store: &Store) -> Result<bool, i32> {
 }
 
 /// Mappings borrowed for one epoll wait. Init still owns directory I/O and
-/// shared queue lifetime; every scan reads the current shared watch table.
+/// shared queue lifetime. An unchanged, empty native watch set can inspect
+/// queue headers without decoding and re-encoding every watch on each scan.
 pub(crate) struct PollView {
     store: Store,
     queues: HashMap<i32, (u64, DirectoryQueue)>,
+    memory_queues: HashMap<i32, (u64, crate::tmpfs::watch::Watch)>,
+    empty_native_revision: Option<u64>,
 }
 impl PollView {
     pub(crate) fn new(fd: i32) -> Result<Self, i32> {
         Ok(Self {
             store: owner(fd)?,
             queues: HashMap::new(),
+            memory_queues: HashMap::new(),
+            empty_native_revision: None,
         })
     }
 
     pub(crate) fn poll(&mut self) -> Result<bool, i32> {
-        update(&self.store, |state| {
-            collect_with_queues(state, &mut self.queues)?;
-            Ok(!state.queue.is_empty())
-        })
+        if let Some(revision) = self.empty_native_revision
+            && self.store.revision() == revision
+        {
+            let mut pending = false;
+            for (_, queue) in self.queues.values() {
+                pending |= queue.pending().map_err(errno_from_io)?;
+            }
+            // A concurrent reader may have moved packets into the shared
+            // inotify queue, or another worker may have changed the watches.
+            if !pending && self.store.revision() == revision {
+                return Ok(false);
+            }
+        }
+        self.empty_native_revision = None;
+        let (revision, (ready, native_only)) = update_observed(&self.store, |state| {
+            collect_with_queues(state, &mut self.queues, &mut self.memory_queues)?;
+            Ok((
+                !state.queue.is_empty(),
+                state.watches.values().all(|watch| watch.volume == 0),
+            ))
+        })?;
+        if !ready && native_only {
+            self.empty_native_revision = Some(revision);
+        }
+        Ok(ready)
     }
 }
 pub fn close_inotify(entry: crate::FdEntry, last_local: bool) {
@@ -694,6 +739,19 @@ mod tests {
             let wd = add_watch(fd, temp_dir.clone(), IN_CREATE).unwrap();
             assert!(!view.poll().unwrap());
             assert_eq!(view.queues.len(), 1);
+            // Exercise the unchanged empty fast path, then a native publisher
+            // whose queue changed without changing the inotify watch table.
+            assert!(!view.poll().unwrap());
+            let path = temp_dir.join("published");
+            std::fs::write(&path, b"event").unwrap();
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+            while !view.poll().unwrap() {
+                assert!(std::time::Instant::now() < deadline);
+                std::thread::sleep(std::time::Duration::from_millis(1));
+            }
+            let mut buffer = [0; 128];
+            read_inotify(fd, &mut buffer, true).unwrap();
+            std::fs::remove_file(path).unwrap();
             rm_watch(fd, wd).unwrap();
             assert!(view.poll().unwrap());
             assert!(view.queues.is_empty());

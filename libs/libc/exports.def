@@ -156,6 +156,9 @@ EXPORTS
   kinakaze_abi___gconv_transliterate
   "__gconv_transliterate"=kinakaze_abi___gconv_transliterate PRIVATE
   "__gconv_transliterate@GLIBC_PRIVATE"=kinakaze_abi___gconv_transliterate PRIVATE
+  kinakaze_abi___getcwd_chk
+  "__getcwd_chk"=kinakaze_abi___getcwd_chk PRIVATE
+  "__getcwd_chk@GLIBC_2.4"=kinakaze_abi___getcwd_chk PRIVATE
   kinakaze_abi___getdelim
   "__getdelim"=kinakaze_abi___getdelim PRIVATE
   "__getdelim@GLIBC_2.2.5"=kinakaze_abi___getdelim PRIVATE
@@ -3743,6 +3746,7 @@ EXPORTS
   "srand@GLIBC_2.2.5"=kinakaze_abi_srand PRIVATE
   kinakaze_abi_srand48
   "srand48"=kinakaze_abi_srand48 PRIVATE
+  "srand48@GLIBC_2.2.5"=kinakaze_abi_srand48 PRIVATE
   kinakaze_abi_srand48_r
   "srand48_r"=kinakaze_abi_srand48_r PRIVATE
   kinakaze_abi_srandom

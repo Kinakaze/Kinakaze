@@ -555,8 +555,7 @@ def probe(directory):
         ctl('start', unit)
         assert ctl('is-active', unit) == 'active'
         assert ctl('show', unit, '-p', 'Result', '--value') == 'success'
-    for unit in ('systemd-journald.service', 'systemd-udevd.service',
-                 'systemd-tmpfiles-setup.service'):
+    for unit in ('systemd-journald.service', 'systemd-tmpfiles-setup.service'):
         case('standard-' + unit, lambda unit=unit: standard_service(unit))
     def journal_roundtrip():
         marker = 'kinakaze-journal-' + str(os.getpid()) + '-' + str(time.monotonic_ns())
@@ -566,13 +565,25 @@ def probe(directory):
         command('/bin/journalctl', '--rotate')
         assert marker in command('/bin/journalctl', '--no-pager', '-t', 'goal-journal', '-o', 'cat')
     case('journal-write-sync-read-and-rotate', journal_roundtrip)
-    case('udev-control-ping', lambda: command('udevadm', 'control', '--ping', '--timeout=5'))
     def udev_control():
-        path = command('udevadm', 'info', '--query=path', '--path=/sys/class/net/lo')
-        assert path.endswith('/net/lo'), path
-        command('udevadm', 'control', '--reload', '--timeout=5')
-        command('udevadm', 'settle', '--timeout=5')
-    case('udev-device-query-reload-and-settle', udev_control)
+        marker = Path('/etc/kinakaze/enable-udev')
+        assert not marker.exists(), 'test requires default hosted udev policy'
+        ctl('start', 'systemd-udevd.service')
+        assert ctl('is-active', 'systemd-udevd.service', expected=3) == 'inactive'
+        assert ctl('show', 'systemd-udevd.service', '-p', 'ConditionResult', '--value') == 'no'
+        marker.touch()
+        try:
+            standard_service('systemd-udevd.service')
+            command('udevadm', 'control', '--ping', '--timeout=5')
+            path = command('udevadm', 'info', '--query=path', '--path=/sys/class/net/lo')
+            assert path.endswith('/net/lo'), path
+            command('udevadm', 'control', '--reload', '--timeout=5')
+            command('udevadm', 'settle', '--timeout=5')
+        finally:
+            ctl('stop', 'systemd-udevd.service', 'systemd-udevd-control.socket',
+                'systemd-udevd-kernel.socket')
+            marker.unlink()
+    case('udev-default-off-and-explicit-opt-in', udev_control)
     return int(any(item['status'] != 'passed' for item in checks))
 
 

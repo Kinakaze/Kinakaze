@@ -39,7 +39,13 @@ def main():
     send({'role': 'broker', 'token': config['token']})
     poller = select.poll()
     poller.register(control, select.POLLIN)
-    wake_r, wake_w = os.pipe2(os.O_NONBLOCK | os.O_CLOEXEC)
+    # Stream sockets have a native readiness notification in the hosted VFS.
+    # A pipe in this mixed poll set would force a periodic readiness sweep.
+    wake_reader, wake_writer = socket.socketpair()
+    for wake_socket in (wake_reader, wake_writer):
+        wake_socket.setblocking(False)
+        wake_socket.set_inheritable(False)
+    wake_r, wake_w = wake_reader.fileno(), wake_writer.fileno()
     poller.register(wake_r, select.POLLIN)
     signal.set_wakeup_fd(wake_w)
     stopping = False
@@ -78,8 +84,8 @@ def main():
                 for fd in (0, 1, 2):
                     os.dup2(slave, fd)
                 control.close()
-                os.close(wake_r)
-                os.close(wake_w)
+                wake_reader.close()
+                wake_writer.close()
                 for fd in list(masters) + [master, slave]:
                     if fd > 2:
                         os.close(fd)

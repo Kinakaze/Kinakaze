@@ -47,6 +47,12 @@ def configure_service_dispatch(files):
 def configure_standard(files, links, preset):
     configure_pam(files)
     configure_service_dispatch(files)
+    # ucf's templates belong to the adapted base, not a configured ucf dpkg
+    # record. Retain its real templates and point the helper at their owner.
+    if 'usr/share/kinakaze/ucf.templates' in files:
+        files['usr/bin/ucf'] = files['usr/bin/ucf'].replace(
+            b'$(dpkg-query --control-path ucf templates)',
+            b'/usr/share/kinakaze/ucf.templates')
     # Retain Debian's account IDs/shells, plus service accounts from the manifest.
     for name in ('passwd', 'group'):
         path = 'etc/' + name
@@ -111,6 +117,10 @@ def configure_packages(files, locked, packages, native_packages, version, links=
     files['usr/share/kinakaze/bootstrap-packages.json'] = (json.dumps(dict(schema=1, packages=records, native_packages=native_packages), indent=2) + '\n').encode()
     provided = sorted(set(packages) | set(native_packages))
     provides = ', '.join(f'{name} (= {locked[name]["version"]})' for name in provided)
+    virtual = sorted({item.strip() for name in packages
+                      for item in locked[name].get('provides', '').split(',') if item.strip()})
+    if virtual:
+        provides += ', ' + ', '.join(virtual)
     # The manifest pin hides these real packages from APT so explicit installs
     # select kinakaze-base; a stale list would let dpkg collide with its files.
     pin = files.get('etc/apt/preferences.d/kinakaze-base')
@@ -121,7 +131,9 @@ def configure_packages(files, locked, packages, native_packages, version, links=
     digest = lambda name: hashlib.md5(files[name], usedforsecurity=False).hexdigest()
     control = (f'Package: kinakaze-base\nStatus: install ok installed\nPriority: required\n'
                f'Section: misc\nEssential: yes\nMaintainer: mitsukina <mitsukazee@outlook.com>\n'
-               f'Architecture: amd64\nVersion: {version}\nProvides: {provides}\n'
+               # Versioned :any dependencies require an allowed provider,
+               # including Python and Perl used by ordinary package scripts.
+               f'Architecture: amd64\nMulti-Arch: allowed\nVersion: {version}\nProvides: {provides}\n'
                f'Description: Kinakaze native runtime and adapted Debian base tools\n'
                f' Bundled components are recorded in /usr/share/kinakaze/bootstrap-packages.json.\n'
                f'Conffiles:\n' + ''.join(f' /{name} {digest(name)}\n' for name in conffiles) + '\n')
