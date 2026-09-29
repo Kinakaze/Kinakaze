@@ -77,6 +77,52 @@ pub fn poll(fd: i32) -> Result<u32, i32> {
         })
 }
 
+/// A read view for one active epoll wait. Authoritative snapshots and mount
+/// revisions remain in init-retained shared objects; this only pins mappings.
+pub(crate) struct PollView {
+    data: shared::Store,
+    namespace: shared::Store,
+    snapshot_revision: u64,
+    acknowledged: u64,
+}
+
+impl PollView {
+    pub(crate) fn new(fd: i32) -> Result<Self, i32> {
+        let data = data(fd)?;
+        let (snapshot_revision, (namespace, acknowledged)) = data.read_with_revision(|bytes| {
+            let (namespace, revision, _, _) = decode(bytes)?;
+            Ok((namespace, revision))
+        })?;
+        Ok(Self {
+            data,
+            namespace: shared::namespace(namespace)?,
+            snapshot_revision,
+            acknowledged,
+        })
+    }
+
+    pub(crate) fn poll(&mut self) -> Result<u32, i32> {
+        if self.data.revision() != self.snapshot_revision {
+            let (version, (namespace, acknowledged)) = self.data.read_with_revision(|bytes| {
+                let (namespace, revision, _, _) = decode(bytes)?;
+                Ok((namespace, revision))
+            })?;
+            if namespace != self.namespace.id() {
+                self.namespace = shared::namespace(namespace)?;
+            }
+            self.snapshot_revision = version;
+            self.acknowledged = acknowledged;
+        }
+        Ok(epoll::EPOLLIN
+            | epoll::EPOLLRDNORM
+            | if self.namespace.revision() != self.acknowledged {
+                epoll::EPOLLPRI | epoll::EPOLLERR
+            } else {
+                0
+            })
+    }
+}
+
 pub(crate) fn path(fd: i32) -> Result<String, i32> {
     let bytes = data(fd)?.read()?.1;
     Ok(decode(&bytes)?.2.to_owned())

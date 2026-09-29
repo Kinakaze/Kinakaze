@@ -11,7 +11,8 @@ use windows_sys::Win32::System::Threading::{
 
 type Cpu = (u16, u32);
 
-pub(super) struct Processor {
+pub(crate) struct Processor {
+    pub id: u32,
     pub package: usize,
     pub core: usize,
     pub cores: usize,
@@ -19,6 +20,14 @@ pub(super) struct Processor {
 }
 
 pub(super) fn query() -> Option<Vec<Processor>> {
+    query_with_affinity(true)
+}
+
+pub(crate) fn query_system() -> Option<Vec<Processor>> {
+    query_with_affinity(false)
+}
+
+fn query_with_affinity(restrict: bool) -> Option<Vec<Processor>> {
     let mut groups = vec![0u16; 64];
     let mut count = groups.len() as u16;
     // SAFETY: both output buffers are valid and their capacities are supplied.
@@ -33,7 +42,7 @@ pub(super) fn query() -> Option<Vec<Processor>> {
         && unsafe { GetProcessAffinityMask(GetCurrentProcess(), &mut affinity, &mut system) } != 0
         && affinity != 0;
     let allowed = |(group, bit): Cpu| {
-        groups.contains(&group) && (!restricted || affinity & (1usize << bit) != 0)
+        !restrict || (groups.contains(&group) && (!restricted || affinity & (1usize << bit) != 0))
     };
     let mut storage = vec![0u64; 512];
     let length = loop {
@@ -125,6 +134,7 @@ fn assemble(cores: &[BTreeSet<Cpu>], packages: &[BTreeSet<Cpu>]) -> Option<Vec<P
                     .insert(
                         *cpu,
                         Processor {
+                            id: u32::from(cpu.0) * 64 + cpu.1,
                             package,
                             core: *core_id,
                             cores: members.len(),

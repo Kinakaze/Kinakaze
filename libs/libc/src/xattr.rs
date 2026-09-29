@@ -154,6 +154,17 @@ impl Target {
                         _write: None,
                     });
                 }
+                if kinakaze_vfs::tmpfs::owns(&absolute) {
+                    // A virtual inode has no native EA handle. Resolve it first
+                    // so missing paths still report ENOENT, then reject the
+                    // unsupported backend instead of leaking host-path EINVAL.
+                    if follow {
+                        fs::stat(&absolute)?;
+                    } else {
+                        fs::lstat(&absolute)?;
+                    }
+                    return Err(EOPNOTSUPP);
+                }
                 let overlay =
                     kinakaze_vfs::mount::overlay::is_overlay_path(&absolute, follow, false)?;
                 if write {

@@ -287,11 +287,23 @@ pub fn gettime(fd: i32) -> Result<Itimerspec, i32> {
     Ok(remaining(state, now))
 }
 pub fn poll(fd: i32) -> Result<(bool, bool), i32> {
-    let (timer, _) = Timer::from_fd(fd)?;
-    let mut guard = timer.lock()?;
-    let state = guard.state();
-    refresh(state, now(state.clock)?);
-    Ok((state.ticks != 0 || canceled(state)?, false))
+    PollView::new(fd)?.poll()
+}
+
+/// Pins one shared mapping for an active wait, never a cached timer value.
+/// Rearms and reads by other workers are observed under the shared mutex.
+pub(crate) struct PollView(Timer);
+impl PollView {
+    pub(crate) fn new(fd: i32) -> Result<Self, i32> {
+        Ok(Self(Timer::from_fd(fd)?.0))
+    }
+
+    pub(crate) fn poll(&self) -> Result<(bool, bool), i32> {
+        let mut guard = self.0.lock()?;
+        let state = guard.state();
+        refresh(state, now(state.clock)?);
+        Ok((state.ticks != 0 || canceled(state)?, false))
+    }
 }
 pub fn read(fd: i32, buffer: &mut [u8]) -> Result<usize, i32> {
     if buffer.len() < 8 {
@@ -419,6 +431,39 @@ mod tests {
         assert_eq!(read(fd, &mut bytes), Err(EAGAIN));
         crate::close(alias).unwrap();
         crate::close(fd).unwrap();
+    }
+
+    #[test]
+    fn poll_view_observes_rearm_disarm_and_reads_through_an_alias() {
+        let fd = create(1, 0o4000).unwrap();
+        let view = PollView::new(fd).unwrap();
+        let duplicate =
+            crate::fs::object::Object::duplicate(crate::get(fd).unwrap().raw as _).unwrap();
+        let alias = crate::install(
+            duplicate.into_raw() as usize,
+            FdKind::TimerFd,
+            FdFlags::NONBLOCK,
+        )
+        .unwrap();
+        assert_eq!(view.poll(), Ok((false, false)));
+        let expired = Itimerspec {
+            interval: Timespec::default(),
+            value: Timespec { sec: 0, nsec: 1 },
+        };
+        settime(alias, 1, expired).unwrap();
+        assert_eq!(view.poll(), Ok((true, false)));
+        let mut bytes = [0; 8];
+        read(alias, &mut bytes).unwrap();
+        assert_eq!(u64::from_ne_bytes(bytes), 1);
+        assert_eq!(view.poll(), Ok((false, false)));
+        settime(alias, 1, expired).unwrap();
+        assert_eq!(view.poll(), Ok((true, false)));
+        settime(alias, 0, Itimerspec::default()).unwrap();
+        assert_eq!(view.poll(), Ok((false, false)));
+        crate::close(fd).unwrap();
+        settime(alias, 1, expired).unwrap();
+        assert_eq!(view.poll(), Ok((true, false)));
+        crate::close(alias).unwrap();
     }
 
     #[test]

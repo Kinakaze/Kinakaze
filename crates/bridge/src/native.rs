@@ -158,13 +158,15 @@ fn borrowed_exports(bytes: &[u8]) -> Result<BorrowedExports<'_>> {
     };
     let string = |rva: u32| -> Result<&str> {
         let at = offset(rva, 1)?;
-        let length = bytes[at..]
-            .iter()
-            .take(4097)
-            .position(|&byte| byte == 0)
-            .ok_or_else(|| invalid("unterminated PE string"))?;
+        // Use the standard library's byte search for long Rust export names.
+        // Keep the existing length cap and section check; discovery still
+        // validates every name in each worker's pinned immutable image.
+        let tail = &bytes[at..];
+        let name = std::ffi::CStr::from_bytes_until_nul(&tail[..tail.len().min(4097)])
+            .map_err(|_| invalid("unterminated PE string"))?;
+        let length = name.to_bytes().len();
         offset(rva, length + 1)?;
-        std::str::from_utf8(&bytes[at..at + length]).map_err(|_| invalid("non-UTF8 PE name"))
+        name.to_str().map_err(|_| invalid("non-UTF8 PE name"))
     };
     let rva = dword(bytes, optional + 112)?;
     let length = dword(bytes, optional + 116)?;

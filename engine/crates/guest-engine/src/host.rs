@@ -224,7 +224,9 @@ pub fn exec(
     // AT_EXECFN is a guest-visible Linux path. The mapped object's retained
     // path is the canonical Windows provider path, which makes consumers
     // such as CPython parse `E:/...` as a program named merely `E`.
-    auxiliary.executable_path = arguments.first().cloned();
+    // argv[0] is caller-controlled and can be only a basename (or empty).
+    // AT_EXECFN names the executed file, not that display name.
+    auxiliary.executable_path = Some(kinakaze_vfs::to_guest_path(path));
 
     if super::report_traps_enabled() {
         let trapped = kinakaze_link::trap::trapped_symbols();
@@ -338,7 +340,19 @@ pub fn exec(
         );
     }
     let image = kinakaze_link::stack::build(arguments, &environment, &auxiliary);
+    let auxv_offset = image.stack_pointer_offset + (arguments.len() + environment.len() + 3) * 8;
+    let auxv_size = image.bytes[auxv_offset..]
+        .chunks_exact(16)
+        .position(|pair| pair[..8] == [0; 8])
+        .map(|entries| (entries + 1) * 16)
+        .ok_or(LinkError::AddressOverflow)?;
     let placed = kinakaze_link::launch::PlacedStack::place(image)?;
+    // Copy after relocation so AT_RANDOM/AT_EXECFN refer to the live guest
+    // stack, exactly as seen by _start. This precedes every guest initializer.
+    let auxv = unsafe {
+        std::slice::from_raw_parts((placed.base() + auxv_offset) as *const u8, auxv_size)
+    };
+    kinakaze_vfs::procfs::publish_auxv(auxv.to_vec());
     libc::startup::publish_initial_stack(placed.stack_pointer());
     linker.link_all()?;
     super::trace_spawn_loader_phase("guest-stack-ready");

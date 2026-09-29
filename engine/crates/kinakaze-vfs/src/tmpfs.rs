@@ -1560,6 +1560,10 @@ pub fn write(fd: i32, buffer: &[u8], position: Option<u64>) -> Result<usize, i32
         ))
     })
 }
+pub(crate) fn position(fd: i32) -> Result<u64, i32> {
+    descriptor(fd).map(|(_, _, position, _)| position)
+}
+
 pub fn seek(fd: i32, offset: i64, whence: i32) -> Result<u64, i32> {
     let _observation = Observation::enter();
     let (d, l, _, flags) = descriptor(fd)?;
@@ -1577,6 +1581,44 @@ pub fn seek(fd: i32, offset: i64, whence: i32) -> Result<u64, i32> {
     }
     d.update(|old| {
         let position = u64::from_le_bytes(old[old.len() - 16..old.len() - 8].try_into().unwrap());
+        if matches!(whence, 3 | 4) {
+            if offset < 0 {
+                return Err(EINVAL);
+            }
+            if get(fd)?.kind != FdKind::TmpfsFile {
+                return Err(EINVAL);
+            }
+            let state = volume(l.volume)?.snapshot()?;
+            let node = state.nodes.get(&l.node).ok_or(ENOENT)?;
+            let start = offset as u64;
+            if start >= node.size {
+                return Err(ENXIO);
+            }
+            let page = start / PAGE;
+            let next = if whence == 3 {
+                let (&allocated, _) = node.pages.range(page..).next().ok_or(ENXIO)?;
+                if allocated == page {
+                    start
+                } else {
+                    allocated * PAGE
+                }
+            } else if !node.pages.contains_key(&page) {
+                start
+            } else {
+                let mut hole = page;
+                for (&allocated, _) in node.pages.range(page..) {
+                    if allocated != hole {
+                        break;
+                    }
+                    hole += 1;
+                }
+                (hole * PAGE).min(node.size)
+            };
+            if next >= node.size && whence == 3 {
+                return Err(ENXIO);
+            }
+            return Ok((encode_descriptor(&l, next, flags), next));
+        }
         let base = match whence {
             0 => 0,
             1 => position,

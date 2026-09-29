@@ -318,6 +318,38 @@ impl Default for Tm {
     }
 }
 
+/// The Linux kernel's `struct rtc_time` (36 bytes).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct RtcTime {
+    pub tm_sec: c_int,
+    pub tm_min: c_int,
+    pub tm_hour: c_int,
+    pub tm_mday: c_int,
+    pub tm_mon: c_int,
+    pub tm_year: c_int,
+    pub tm_wday: c_int,
+    pub tm_yday: c_int,
+    pub tm_isdst: c_int,
+}
+
+pub(crate) fn current_rtc_time() -> RtcTime {
+    let (seconds, _) = read_realtime(true);
+    let mut tm = Tm::default();
+    fields_from_seconds(seconds, &mut tm);
+    RtcTime {
+        tm_sec: tm.tm_sec,
+        tm_min: tm.tm_min,
+        tm_hour: tm.tm_hour,
+        tm_mday: tm.tm_mday,
+        tm_mon: tm.tm_mon,
+        tm_year: tm.tm_year,
+        tm_wday: tm.tm_wday,
+        tm_yday: tm.tm_yday,
+        tm_isdst: 0,
+    }
+}
+
 /// The Linux `struct itimerval`: two `timeval`s, 32 bytes.
 #[repr(C)]
 #[derive(Clone, Copy, Default)]

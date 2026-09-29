@@ -25,7 +25,15 @@ def main():
                         help='boot the manifest default target and check ssh on an isolated loopback port')
     parser.add_argument('--boot-only', action='store_true',
                         help='measure readiness and shutdown without running the lifecycle suite')
+    parser.add_argument('--idle-seconds', type=float, default=0,
+                        help='sample owned session CPU after readiness, before shutdown')
+    parser.add_argument('--idle-processes', action='store_true',
+                        help='include owned native process CPU attribution (requires psutil)')
     args = parser.parse_args()
+    if not 0 <= args.idle_seconds <= 120:
+        parser.error('idle-seconds must be between 0 and 120')
+    if args.idle_processes:
+        import psutil
     root, dist, output = (value.resolve() for value in (args.root, args.dist, args.output))
     output.mkdir(parents=True, exist_ok=True)
     repository = Path(__file__).resolve().parents[1]
@@ -153,8 +161,9 @@ def main():
             result = pool.run(['/bin/sh', '-ec', '\n'.join(commands)],
                 environment=environment)
             assert result['status'] == 'passed', result
-        report['machine_id_before'] = (root / 'etc/machine-id').read_text().strip()
-        with InitPool(root, dist, output / 'session', size=1, timeout=45 if args.boot_only else 180) as pool:
+        identity_path = root / 'etc/machine-id'
+        report['machine_id_before'] = identity_path.read_text().strip() if identity_path.exists() else ''
+        with InitPool(root, dist, output / 'session', size=1, timeout=(45 if args.boot_only else 180) + args.idle_seconds + 2) as pool:
             report['pool_preparation_ms'] = pool.preparation_ms
             started = time.monotonic()
             manager = pool.launch([*manifest['startup']['command'],
@@ -179,6 +188,46 @@ def main():
             if report['probe']['request_to_ready_ms'] is not None:
                 report['manager_to_ready_ms'] = (probe_started-started)*1000 + report['probe']['request_to_ready_ms']
             report['lifecycle_ms'] = (time.monotonic()-started)*1000
+            if args.idle_seconds:
+                # Allow probe exit and background worker replenishment to settle.
+                time.sleep(2)
+                report['idle_samples'] = []
+                report['idle_after_readiness_passed'] = report['probe']['status'] == 'passed'
+                remaining = args.idle_seconds
+                while remaining > 0:
+                    duration = min(5, remaining)
+                    processes = []
+                    if args.idle_processes:
+                        for process in psutil.process_iter(['pid', 'name', 'create_time']):
+                            if pool.child.owns_process(process.pid):
+                                try:
+                                    cpu = process.cpu_times()
+                                    processes.append((process, cpu.user + cpu.system))
+                                except psutil.Error:
+                                    pass
+                    before = pool.child.cpu_metrics()
+                    start = time.monotonic()
+                    time.sleep(duration)
+                    elapsed = time.monotonic() - start
+                    after = pool.child.cpu_metrics()
+                    delta = {key: after[key] - before[key] for key in after}
+                    sample = dict(wall_seconds=elapsed, cpu_metrics=delta,
+                        one_core_percent=delta['total_cpu_ms'] / (elapsed * 10))
+                    if args.idle_processes:
+                        sample['processes'] = []
+                        for process, initial_cpu in processes:
+                            try:
+                                if not process.is_running():
+                                    continue
+                                cpu = process.cpu_times()
+                                sample['processes'].append(dict(pid=process.pid, name=process.info['name'],
+                                    birth=process.info['create_time'],
+                                    one_core_percent=(cpu.user + cpu.system - initial_cpu) / elapsed * 100))
+                            except psutil.Error:
+                                pass
+                    report['idle_samples'].append(sample)
+                    remaining -= duration
+                report['idle_scope'] = 'owned init, workers, PID 1 and services; 100 percent equals one CPU core'
             begin = time.monotonic()
             report['shutdown_request'] = pool.run(['/bin/systemctl', '--no-block', 'exit'],
                                                   environment=environment, parent_pid=1)

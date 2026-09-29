@@ -2716,7 +2716,17 @@ pub mod job {
         // zero magic means nobody has claimed it yet; the named mutex is what
         // stops two first-time creators from racing.
         GUARD.store(guard as usize, Ordering::Release);
-        let acquired = acquire(guard);
+        let Some(locked) = acquire(guard) else {
+            // Never initialize shared memory without its cross-process lock.
+            unsafe {
+                UnmapViewOfFile(view);
+                CloseHandle(mapping);
+                CloseHandle(guard);
+            }
+            SECTION.store(0, Ordering::Release);
+            GUARD.store(0, Ordering::Release);
+            return None;
+        };
         // SAFETY: `base` addresses SECTION_SIZE writable bytes and the header
         // offsets are within it.
         unsafe {
@@ -2741,9 +2751,7 @@ pub mod job {
                 store64(base, HEADER_MAGIC, MAGIC);
             }
         }
-        if acquired {
-            release(guard);
-        }
+        drop(locked);
 
         // SAFETY: the header was just validated or written by this process.
         let compatible = unsafe {
@@ -2795,19 +2803,27 @@ pub mod job {
             .filter(|id| *id != 0)
     }
 
-    /// Takes the named mutex, reporting whether it must be released.
+    struct TableLock(HANDLE);
+
+    impl Drop for TableLock {
+        fn drop(&mut self) {
+            release(self.0);
+        }
+    }
+
+    /// Takes the named mutex, retaining ownership until the guard is dropped.
     ///
     /// `WAIT_ABANDONED` means the previous owner died while holding it. The
     /// table is still usable: every field is an independently written machine
     /// word, so an interrupted writer leaves a stale value rather than a torn
     /// one, and the liveness sweep removes it.
-    fn acquire(guard: HANDLE) -> bool {
+    fn acquire(guard: HANDLE) -> Option<TableLock> {
         if guard.is_null() {
-            return false;
+            return None;
         }
         // SAFETY: the handle belongs to this process and stays open.
         let waited = unsafe { WaitForSingleObject(guard, INFINITE) };
-        waited == WAIT_OBJECT_0 || waited == WAIT_ABANDONED
+        (waited == WAIT_OBJECT_0 || waited == WAIT_ABANDONED).then(|| TableLock(guard))
     }
 
     fn release(guard: HANDLE) {
@@ -2825,11 +2841,8 @@ pub mod job {
     fn with_table<T>(body: impl FnOnce(*mut u8) -> T) -> Option<T> {
         let base = map()?;
         let guard = GUARD.load(Ordering::Acquire) as HANDLE;
-        let acquired = acquire(guard);
+        let _locked = acquire(guard)?;
         let result = body(base);
-        if acquired {
-            release(guard);
-        }
         Some(result)
     }
 
@@ -5085,6 +5098,53 @@ pub mod job {
         use super::*;
 
         #[test]
+        fn table_lock_rejects_missing_mutex() {
+            assert!(acquire(core::ptr::null_mut()).is_none());
+        }
+
+        #[test]
+        fn table_lock_releases_on_unwind() {
+            let raw = unsafe { CreateMutexW(core::ptr::null(), 0, core::ptr::null()) };
+            assert!(!raw.is_null());
+            let result = std::panic::catch_unwind(|| {
+                let _locked = acquire(raw).expect("mutex acquired");
+                panic!("exercise unwind while owning the table lock");
+            });
+            assert!(result.is_err());
+            // A different thread distinguishes a released mutex from recursive
+            // acquisition by its original owner.
+            let address = raw as usize;
+            let waited = std::thread::spawn(move || {
+                let handle = address as HANDLE;
+                let waited = unsafe { WaitForSingleObject(handle, 1000) };
+                if waited == WAIT_OBJECT_0 || waited == WAIT_ABANDONED {
+                    release(handle);
+                }
+                waited
+            })
+            .join()
+            .unwrap();
+            unsafe { CloseHandle(raw) };
+            assert_eq!(waited, WAIT_OBJECT_0);
+        }
+
+        #[test]
+        fn table_lock_accepts_abandoned_mutex_and_releases_it() {
+            let raw = unsafe { CreateMutexW(core::ptr::null(), 0, core::ptr::null()) };
+            assert!(!raw.is_null());
+            let address = raw as usize;
+            std::thread::spawn(move || {
+                let locked = acquire(address as HANDLE).expect("mutex acquired");
+                // Thread exit abandons a mutex whose guard was not dropped.
+                std::mem::forget(locked);
+            })
+            .join()
+            .unwrap();
+            drop(acquire(raw).expect("abandoned mutex transfers ownership"));
+            unsafe { CloseHandle(raw) };
+        }
+
+        #[test]
         fn fresh_pid_allocator_starts_at_one_and_skips_occupied_ids() {
             // A private table tests initial allocation without resetting the
             // session-wide namespace used by running applications.
@@ -5847,10 +5907,39 @@ mod windows {
     const WAIT_EVENT_STOPPED: i32 = 2;
     const WAIT_EVENT_CONTINUED: i32 = 4;
 
-    #[derive(Clone, Copy)]
     struct WaitCandidate {
         entry: super::job::Entry,
-        handle: Option<usize>,
+        handle: Option<std::os::windows::io::OwnedHandle>,
+    }
+
+    impl WaitCandidate {
+        fn raw_handle(&self) -> Option<HANDLE> {
+            use std::os::windows::io::AsRawHandle;
+            self.handle.as_ref().map(|handle| handle.as_raw_handle())
+        }
+    }
+
+    // Called while the child registry lock is held. Another waiter may reap
+    // or rebind the registry entry as soon as that lock is released; each wait
+    // therefore pins its own reference to the exact native process object.
+    fn retain_wait_handle(raw: usize) -> Result<std::os::windows::io::OwnedHandle, i32> {
+        use std::os::windows::io::{FromRawHandle, OwnedHandle};
+        let mut retained = ptr::null_mut();
+        let ok = unsafe {
+            DuplicateHandle(
+                GetCurrentProcess(),
+                raw as HANDLE,
+                GetCurrentProcess(),
+                &mut retained,
+                0,
+                0,
+                DUPLICATE_SAME_ACCESS,
+            )
+        };
+        if ok == 0 {
+            return Err(5);
+        }
+        Ok(unsafe { OwnedHandle::from_raw_handle(retained) })
     }
     const MARKER: &[u16] = &[
         b'-' as u16,
@@ -8751,6 +8840,7 @@ mod windows {
         'rescan: loop {
             let candidates = match collect_wait_candidates(pid) {
                 Ok(candidates) => candidates,
+                Err(11) => continue 'rescan, // exec changed the native identity
                 Err(error) => return -error,
             };
             if candidates.is_empty() {
@@ -8792,7 +8882,7 @@ mod windows {
                 // A missing handle means the process was already gone when an
                 // exact handle was opened.  The shared zombie report is then
                 // sufficient; it is never replaced with a guessed host status.
-                match child_process_has_exited(*candidate) {
+                match child_process_has_exited(candidate) {
                     Ok(true) => {}
                     Ok(false) => continue,
                     Err(error) => return -error,
@@ -8863,16 +8953,22 @@ mod windows {
             // not enough information to invent Linux wait status. Preserve an
             // explicit integrity failure in the shared row.
             for candidate in &candidates {
-                let Some(handle) = candidate.handle else {
+                let Some(handle) = candidate.raw_handle() else {
                     continue;
                 };
-                // SAFETY: the process-local registry owns this live handle.
+                // SAFETY: the candidate owns this live handle.
                 if unsafe { WaitForSingleObject(handle as HANDLE, 0) } == WAIT_OBJECT_0
                     && super::job::peek_report(candidate.entry.namespace_pid).is_none()
                 {
-                    if super::job::lookup(candidate.entry.namespace_pid).is_some_and(|current| {
-                        current.pid != candidate.entry.pid || current.token != candidate.entry.token
+                    if super::job::lookup(candidate.entry.namespace_pid).is_none_or(|current| {
+                        current.pid != candidate.entry.pid
+                            || current.token != candidate.entry.token
+                            || current.flags & super::job::FLAG_ZOMBIE != 0
                     }) {
+                        // Another waiter may have claimed the zombie report
+                        // and be removing its row. This is not an unreported
+                        // native death; do not replace the consumed status with
+                        // an integrity error or fail the competing waiter.
                         continue 'rescan;
                     }
                     if wait_trace_enabled() {
@@ -8933,9 +9029,8 @@ mod windows {
             // with a timeout so a stop report is noticed shortly after.
             let handles: Vec<HANDLE> = candidates
                 .iter()
-                .filter_map(|candidate| candidate.handle)
+                .filter_map(|candidate| candidate.raw_handle())
                 .take(MAX_WAIT_HANDLES)
-                .map(|handle| handle as HANDLE)
                 .collect();
             if handles.is_empty() {
                 // Shared zombie/report state has no process-local wait handle.
@@ -8943,8 +9038,8 @@ mod windows {
                 // a guessed compatibility path.
                 std::thread::sleep(std::time::Duration::from_millis(u64::from(POLL_MS)));
             } else {
-                // SAFETY: every handle came from the process-local registry and
-                // stays open for the duration of this wait.
+                // SAFETY: candidates retain every handle for this wait, even
+                // if another thread reaps or rebinds a registry entry.
                 unsafe {
                     WaitForMultipleObjects(handles.len() as u32, handles.as_ptr(), 0, POLL_MS)
                 };
@@ -9078,6 +9173,17 @@ mod windows {
         let mut children = super::child_processes().lock().map_err(|_| EIO)?;
         let mut candidates = Vec::new();
         for entry in selected {
+            // children_of is a snapshot. A competing waiter can reap an entry
+            // before we acquire the handle registry; exec can also replace it.
+            let Some(current) = super::job::lookup(entry.namespace_pid) else {
+                continue;
+            };
+            if current.pid != entry.pid || current.token != entry.token {
+                return Err(11);
+            }
+            if current.ppid != own.namespace_pid {
+                continue;
+            }
             if let Some(handle) = children.get(entry.namespace_pid) {
                 // Exec retires its old worker immediately. A retained handle
                 // for that worker says nothing about the replacement image's
@@ -9092,7 +9198,7 @@ mod windows {
                 }
             }
             let handle = if let Some(handle) = children.get(entry.namespace_pid) {
-                Some(handle)
+                Some(retain_wait_handle(handle)?)
             } else {
                 // A termination report is published just before the native
                 // process object becomes signalled.  Open the exact live object
@@ -9100,19 +9206,32 @@ mod windows {
                 // not merely status publication.  If it is already gone,
                 // `open_exact_child` validates the retained zombie and returns
                 // no handle.
-                let Some(handle) = open_exact_child(entry)? else {
+                let opened = match open_exact_child(entry) {
+                    Ok(opened) => opened,
+                    Err(error) => match super::job::lookup(entry.namespace_pid) {
+                        None => continue, // reaped since the snapshot
+                        Some(current)
+                            if current.pid != entry.pid || current.token != entry.token =>
+                        {
+                            return Err(11);
+                        }
+                        Some(_) => return Err(error),
+                    },
+                };
+                let Some(handle) = opened else {
                     candidates.push(WaitCandidate {
                         entry,
                         handle: None,
                     });
                     continue;
                 };
-                if !children.insert(entry.namespace_pid, handle) {
-                    // SAFETY: this call owns the handle until insertion succeeds.
-                    unsafe { CloseHandle(handle as HANDLE) };
-                    return Err(EIO);
-                }
-                Some(handle)
+                // This reference belongs only to the current wait. Do not
+                // republish it into the fork registry: another waiter may
+                // have removed that entry and be about to remove the shared
+                // row. Reinsertion in that window leaks an uncollectable
+                // registry slot and eventually makes unrelated forks fail.
+                use std::os::windows::io::{FromRawHandle, OwnedHandle};
+                Some(unsafe { OwnedHandle::from_raw_handle(handle as HANDLE) })
             };
             candidates.push(WaitCandidate { entry, handle });
         }
@@ -9124,9 +9243,9 @@ mod windows {
     /// The report contains the only unambiguous Linux status, while the process
     /// handle is the authority for completion of descriptor and handle teardown.
     /// Both facts are required when both are available.
-    fn child_process_has_exited(candidate: WaitCandidate) -> Result<bool, i32> {
+    fn child_process_has_exited(candidate: &WaitCandidate) -> Result<bool, i32> {
         const EIO: i32 = 5;
-        let Some(handle) = candidate.handle else {
+        let Some(handle) = candidate.raw_handle() else {
             return Ok(true);
         };
         match unsafe { WaitForSingleObject(handle as HANDLE, 0) } {
@@ -9521,19 +9640,22 @@ mod windows {
             assert!(!event.is_null());
             let candidate = WaitCandidate {
                 entry: super::super::job::Entry::default(),
-                handle: Some(event as usize),
+                handle: Some(retain_wait_handle(event as usize).unwrap()),
             };
 
-            assert_eq!(child_process_has_exited(candidate), Ok(false));
+            assert_eq!(child_process_has_exited(&candidate), Ok(false));
             assert_ne!(unsafe { SetEvent(event) }, 0);
-            assert_eq!(child_process_has_exited(candidate), Ok(true));
+            assert_eq!(child_process_has_exited(&candidate), Ok(true));
 
             unsafe { CloseHandle(event) };
+            // Reaping/rebinding closes the registry's handle, but must not
+            // invalidate an already collected wait candidate.
+            assert_eq!(child_process_has_exited(&candidate), Ok(true));
             let handleless = WaitCandidate {
                 entry: super::super::job::Entry::default(),
                 handle: None,
             };
-            assert_eq!(child_process_has_exited(handleless), Ok(true));
+            assert_eq!(child_process_has_exited(&handleless), Ok(true));
         }
 
         #[test]

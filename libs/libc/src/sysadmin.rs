@@ -3209,6 +3209,60 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
         );
     }
     let res = match number {
+        295 | 296 | 327 | 328 => {
+            // Linux's raw ABI splits pos_l/pos_h; v2 puts flags in arg 6.
+            // pos_l is an unsigned long, so retain its high bits on LP64.
+            let offset = (argument4 | argument5.wrapping_shl(32)) as i64;
+            let fd = argument1 as c_int;
+            let iov = argument2 as *const crate::fdio::IoVec;
+            let count = argument3 as c_int;
+            let result = unsafe {
+                match number {
+                    295 => crate::fdio::kinakaze_abi_preadv64(fd, iov, count, offset),
+                    296 => crate::fdio::kinakaze_abi_pwritev64(fd, iov, count, offset),
+                    327 => crate::fdio::kinakaze_abi_preadv64v2(
+                        fd,
+                        iov,
+                        count,
+                        offset,
+                        argument6 as c_int,
+                    ),
+                    _ => crate::fdio::kinakaze_abi_pwritev64v2(
+                        fd,
+                        iov,
+                        count,
+                        offset,
+                        argument6 as c_int,
+                    ),
+                }
+            };
+            to_kernel(result as i64)
+        }
+        316 => to_kernel(unsafe {
+            crate::fsextra::kinakaze_abi_renameat2(
+                argument1 as c_int,
+                argument2 as *const c_char,
+                argument3 as c_int,
+                argument4 as *const c_char,
+                argument5 as u32,
+            )
+        } as i64),
+        40 => to_kernel(unsafe {
+            crate::fdio::kinakaze_abi_sendfile64(
+                argument1 as c_int,
+                argument2 as c_int,
+                argument3 as *mut i64,
+                argument4 as usize,
+            )
+        } as i64),
+        221 => -i64::from(unsafe {
+            crate::fdio::kinakaze_abi_posix_fadvise64(
+                argument1 as c_int,
+                argument2 as i64,
+                argument3 as i64,
+                argument4 as c_int,
+            )
+        }),
         187 => kinakaze_vfs::fs::readahead(argument1 as i32, argument2 as i64, argument3 as usize)
             .map_or_else(|error| -i64::from(error), |()| 0),
         310 | 311 => crate::process_memory::transfer(

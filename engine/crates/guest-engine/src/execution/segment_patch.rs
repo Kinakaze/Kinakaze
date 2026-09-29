@@ -756,12 +756,16 @@ fn trace_control_flow(
                 }
                 FlowControl::IndirectBranch => {
                     for target in object.into_iter().flat_map(|object| {
-                        super::code_roots::relative_switch_entries(
+                        let mut targets = super::code_roots::relative_switch_entries(
                             object,
                             &recent,
                             segments,
                             |address| visited.contains(address),
-                        )
+                        );
+                        targets.extend(super::code_roots::absolute_switch_entries(
+                            object, &recent, segments,
+                        ));
+                        targets
                     }) {
                         protected.insert(target);
                         if !visited.contains(target) {

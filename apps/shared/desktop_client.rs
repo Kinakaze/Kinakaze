@@ -637,3 +637,29 @@ fn attach(mut stream: TcpStream, name: &str) -> Result<i32> {
     let _ = reader.get_ref().shutdown(Shutdown::Both);
     Ok(if status < 0 { 128 - status } else { status })
 }
+
+#[cfg(test)]
+mod console_tests {
+    use super::*;
+
+    #[test]
+    #[ignore = "requires a private ConPTY; driven by tools/test-terminal-input.py"]
+    fn ctrl_c_bytes_reach_guest_transport() {
+        let console = Console::raw();
+        assert!(console.input_mode.is_some(), "test requires a real console");
+        println!("CONSOLE_INPUT_READY");
+        io::stdout().flush().unwrap();
+        let mut observed = Vec::new();
+        while observed.len() < 2 {
+            let mut bytes = [0u8; 4096];
+            let count = read_input(&mut bytes).unwrap();
+            assert!(count > 0);
+            observed.extend_from_slice(&bytes[..count]);
+        }
+        assert_eq!(observed, [3, 3]);
+        let mut wire = Vec::new();
+        write(&mut wire, &json!({"op":"input", "data":hex(&observed)})).unwrap();
+        assert_eq!(read(&mut &wire[..]).unwrap()["data"], "0303");
+        println!("CONSOLE_CTRL_C_OK");
+    }
+}

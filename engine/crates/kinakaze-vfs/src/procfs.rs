@@ -18,11 +18,12 @@ use std::fmt::Write as _;
 use std::path::Path;
 
 mod cpu_times;
-mod cpu_topology;
+pub(crate) mod cpu_topology;
 mod fd_snapshot;
 mod key_defaults;
 pub(crate) mod mounts;
 mod network;
+mod process_files;
 
 // Tests sharing the process/network namespace must serialize intentional
 // sysctl mutations against assertions about the initial value. Production
@@ -84,6 +85,7 @@ enum Node {
     Filesystems,
     Swaps,
     Devices,
+    CmdlineSys,
     // Network
     NetDir,
     NetDev,
@@ -96,6 +98,8 @@ enum Node {
     NetArp,
     // Sysctl
     SysDir,
+    SysVmDir,
+    SysVmOvercommitMemory,
     SysNetDir,
     SysNetIpv4Dir,
     SysNetIpv6Dir,
@@ -137,6 +141,12 @@ enum Node {
     Environ,
     Stat(u32),
     Status(u32),
+    Statm(u32),
+    Io(u32),
+    SmapsRollup(u32),
+    Auxv(u32),
+    FdInfoDir(u32),
+    FdInfo(u32, i32),
     FdDir(u32),
     FdEntry(u32, i32),
     Mountinfo(u32),
@@ -148,6 +158,7 @@ enum Node {
     Comm(u32),
     Limits(u32),
     OomScoreAdj(u32),
+    OomScore(u32),
     TimensOffsets(u32),
     OomAdj(u32),
     TaskDir(u32),
@@ -329,17 +340,24 @@ fn classify(path: &str) -> Option<Node> {
         let Some(third) = parts.next() else {
             return Some(Node::ProcessRoot(process.entry.namespace_pid));
         };
-        if third == "fd" {
+        if third == "fd" || third == "fdinfo" {
             let Some(fourth) = parts.next() else {
-                return Some(Node::FdDir(process.entry.namespace_pid));
+                return Some(if third == "fd" {
+                    Node::FdDir(process.entry.namespace_pid)
+                } else {
+                    Node::FdInfoDir(process.entry.namespace_pid)
+                });
             };
             if parts.next().is_some() {
                 return None;
             }
-            return fourth
-                .parse::<i32>()
-                .ok()
-                .map(|fd| Node::FdEntry(process.entry.namespace_pid, fd));
+            return fourth.parse::<i32>().ok().filter(|fd| *fd >= 0).map(|fd| {
+                if third == "fd" {
+                    Node::FdEntry(process.entry.namespace_pid, fd)
+                } else {
+                    Node::FdInfo(process.entry.namespace_pid, fd)
+                }
+            });
         }
         if third == "ns" {
             let Some(fourth) = parts.next() else {
@@ -409,17 +427,32 @@ fn classify(path: &str) -> Option<Node> {
                     _ => None,
                 };
             }
-            if sub == "fd" {
+            if sub == "fd" || sub == "fdinfo" {
                 let Some(target) = parts.next() else {
-                    return Some(Node::FdDir(process.entry.namespace_pid));
+                    return Some(if sub == "fd" {
+                        Node::FdDir(process.entry.namespace_pid)
+                    } else {
+                        Node::FdInfoDir(process.entry.namespace_pid)
+                    });
                 };
                 if parts.next().is_some() {
                     return None;
                 }
-                return target
-                    .parse::<i32>()
-                    .ok()
-                    .map(|fd| Node::FdEntry(process.entry.namespace_pid, fd));
+                return target.parse::<i32>().ok().filter(|fd| *fd >= 0).map(|fd| {
+                    if sub == "fd" {
+                        Node::FdEntry(process.entry.namespace_pid, fd)
+                    } else {
+                        Node::FdInfo(process.entry.namespace_pid, fd)
+                    }
+                });
+            }
+            if matches!(sub, "statm" | "io" | "smaps_rollup" | "auxv") && parts.next().is_none() {
+                return Some(match sub {
+                    "statm" => Node::Statm(process.entry.namespace_pid),
+                    "io" => Node::Io(process.entry.namespace_pid),
+                    "smaps_rollup" => Node::SmapsRollup(process.entry.namespace_pid),
+                    _ => Node::Auxv(process.entry.namespace_pid),
+                });
             }
             if matches!(sub, "timens_offsets" | "uid_map" | "gid_map" | "setgroups")
                 && parts.next().is_none()
@@ -454,6 +487,10 @@ fn classify(path: &str) -> Option<Node> {
             "environ" if own => Some(Node::Environ),
             "stat" => Some(Node::Stat(process.entry.namespace_pid)),
             "status" => Some(Node::Status(process.entry.namespace_pid)),
+            "statm" => Some(Node::Statm(process.entry.namespace_pid)),
+            "io" => Some(Node::Io(process.entry.namespace_pid)),
+            "smaps_rollup" => Some(Node::SmapsRollup(process.entry.namespace_pid)),
+            "auxv" => Some(Node::Auxv(process.entry.namespace_pid)),
             "mounts" => Some(Node::Mounts(process.entry.namespace_pid)),
             "mountinfo" => Some(Node::Mountinfo(process.entry.namespace_pid)),
             "mountstats" => Some(Node::Mountstats(process.entry.namespace_pid)),
@@ -464,6 +501,7 @@ fn classify(path: &str) -> Option<Node> {
             "comm" => Some(Node::Comm(process.entry.namespace_pid)),
             "limits" => Some(Node::Limits(process.entry.namespace_pid)),
             "oom_score_adj" => Some(Node::OomScoreAdj(process.entry.namespace_pid)),
+            "oom_score" => Some(Node::OomScore(process.entry.namespace_pid)),
             "timens_offsets" => Some(Node::TimensOffsets(process.entry.namespace_pid)),
             "oom_adj" => Some(Node::OomAdj(process.entry.namespace_pid)),
             _ => None,
@@ -521,6 +559,15 @@ fn classify(path: &str) -> Option<Node> {
                         return Some(Node::SysNetIpv6ConfItem);
                     }
                 }
+            }
+            return None;
+        }
+        if third == "vm" {
+            let Some(fourth) = parts.next() else {
+                return Some(Node::SysVmDir);
+            };
+            if fourth == "overcommit_memory" && parts.next().is_none() {
+                return Some(Node::SysVmOvercommitMemory);
             }
             return None;
         }
@@ -638,6 +685,7 @@ fn classify(path: &str) -> Option<Node> {
         "filesystems" => Some(Node::Filesystems),
         "swaps" => Some(Node::Swaps),
         "devices" => Some(Node::Devices),
+        "cmdline" => Some(Node::CmdlineSys),
         "cgroup" => Some(Node::Cgroup(crate::job::process_id())),
         _ => None,
     }
@@ -696,6 +744,7 @@ pub fn writable(path: &str) -> bool {
                 | Node::SysKernelPty("max" | "reserve")
                 | Node::SysKernelKeyLimit(_)
                 | Node::SysNetIpv6ConfItem
+                | Node::SysVmOvercommitMemory
         )
     )
 }
@@ -709,6 +758,7 @@ pub fn read_file(path: &str) -> Result<Vec<u8>, i32> {
         | Node::ProcessRoot(_)
         | Node::NetDir
         | Node::SysDir
+        | Node::SysVmDir
         | Node::SysNetDir
         | Node::SysNetIpv4Dir
         | Node::SysNetIpv6Dir
@@ -723,6 +773,7 @@ pub fn read_file(path: &str) -> Result<Vec<u8>, i32> {
         | Node::SysFsInotifyDir
         | Node::NsDir(_)
         | Node::TaskDir(_)
+        | Node::FdInfoDir(_)
         | Node::FdDir(_) => Err(crate::EISDIR),
         Node::SysNetIpv6ConfItem => Ok(b"0\n".to_vec()),
         Node::CpuInfo => Ok(cpuinfo().into_bytes()),
@@ -787,6 +838,15 @@ pub fn read_file(path: &str) -> Result<Vec<u8>, i32> {
         Node::Environ => Ok(environ()),
         Node::Stat(pid) => Ok(stat_file(pid)?.into_bytes()),
         Node::Status(pid) => Ok(status_file(pid)?.into_bytes()),
+        Node::Statm(pid) => process_files::statm(pid).map(String::into_bytes),
+        Node::Io(pid) => process_files::io(pid).map(String::into_bytes),
+        Node::SmapsRollup(pid) => process_files::smaps_rollup(pid).map(String::into_bytes),
+        Node::Auxv(pid) => process_files::auxv(pid),
+        Node::FdInfo(pid, fd) => process_files::fdinfo(pid, fd).map(String::into_bytes),
+        Node::CmdlineSys => Ok(cmdline_sys().into_bytes()),
+        Node::SysVmOvercommitMemory => {
+            Ok(format!("{}\n", sysctl_vm_overcommit_memory(None)?).into_bytes())
+        }
         Node::Cgroup(pid) => {
             let path = kinakaze_runtime::job::cgroup_path(pid).ok_or(crate::ENOENT)?;
             Ok(format!("0::{}\n", crate::namespaces::cgroup_relative(&path)?).into_bytes())
@@ -794,17 +854,7 @@ pub fn read_file(path: &str) -> Result<Vec<u8>, i32> {
         Node::UidMap(pid) => crate::user_namespace::read_map(pid, false),
         Node::GidMap(pid) => crate::user_namespace::read_map(pid, true),
         Node::Setgroups(pid) => crate::user_namespace::groups(pid, None),
-        Node::Comm(pid) => {
-            if let Ok(info) = process_info(pid) {
-                let name = std::path::Path::new(&info.executable)
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("process");
-                Ok(format!("{name}\n").into_bytes())
-            } else {
-                Ok(b"process\n".to_vec())
-            }
-        }
+        Node::Comm(pid) => Ok(format!("{}\n", process_comm(&process_info(pid)?)).into_bytes()),
         Node::Limits(pid) => Ok(limits(pid)?.into_bytes()),
         Node::TimensOffsets(pid) => crate::time_namespace::read_offsets(pid),
         Node::OomScoreAdj(pid) | Node::OomAdj(pid) => {
@@ -819,6 +869,15 @@ pub fn read_file(path: &str) -> Result<Vec<u8>, i32> {
                 value
             };
             Ok(format!("{value}\n").into_bytes())
+        }
+        Node::OomScore(pid) => {
+            let (adj, _) = kinakaze_runtime::job::oom_adjustment(pid).ok_or(crate::ESRCH)?;
+            let score = if adj <= -1000 {
+                0
+            } else {
+                (adj.max(0) as u32).min(1000)
+            };
+            Ok(format!("{score}\n").into_bytes())
         }
         Node::NsEntry(pid, kind) => {
             let inumber = process_namespace_inode(pid, kind)?;
@@ -974,6 +1033,18 @@ pub fn write_file(path: &str, bytes: &[u8], offset: u64) -> Result<usize, i32> {
             }
             Ok(bytes.len())
         }
+        Node::SysVmOvercommitMemory => {
+            if offset != 0 {
+                return Err(crate::EINVAL);
+            }
+            let text = write_text(bytes)?.trim();
+            let val = text.parse::<i32>().map_err(|_| crate::EINVAL)?;
+            if !(0..=2).contains(&val) {
+                return Err(crate::EINVAL);
+            }
+            sysctl_vm_overcommit_memory(Some(val))?;
+            Ok(bytes.len())
+        }
         _ => Err(crate::EACCES),
     }
 }
@@ -1096,6 +1167,7 @@ pub fn list_directory(path: &str) -> Result<Vec<String>, i32> {
             entries.extend(
                 [
                     "cpuinfo",
+                    "cmdline",
                     "meminfo",
                     "vmstat",
                     "uptime",
@@ -1119,6 +1191,11 @@ pub fn list_directory(path: &str) -> Result<Vec<String>, i32> {
             entries.extend(
                 [
                     "stat",
+                    "statm",
+                    "io",
+                    "smaps_rollup",
+                    "auxv",
+                    "fdinfo",
                     "status",
                     "mounts",
                     "mountinfo",
@@ -1133,6 +1210,7 @@ pub fn list_directory(path: &str) -> Result<Vec<String>, i32> {
                     "comm",
                     "limits",
                     "oom_score_adj",
+                    "oom_score",
                     "timens_offsets",
                     "oom_adj",
                     "ns",
@@ -1150,6 +1228,9 @@ pub fn list_directory(path: &str) -> Result<Vec<String>, i32> {
             }
         }
         Node::TaskDir(pid) => entries.push(visible(pid).to_string()),
+        Node::FdInfoDir(pid) => {
+            entries.extend(fd_numbers(pid)?.into_iter().map(|fd| fd.to_string()))
+        }
         Node::NsDir(_) => entries.extend(
             [
                 "cgroup",
@@ -1171,7 +1252,8 @@ pub fn list_directory(path: &str) -> Result<Vec<String>, i32> {
                 .into_iter()
                 .map(String::from),
         ),
-        Node::SysDir => entries.extend(["net", "kernel", "fs"].into_iter().map(String::from)),
+        Node::SysDir => entries.extend(["net", "kernel", "fs", "vm"].into_iter().map(String::from)),
+        Node::SysVmDir => entries.extend(["overcommit_memory"].into_iter().map(String::from)),
         Node::SysNetDir => entries.extend(["ipv4", "ipv6"].into_iter().map(String::from)),
         Node::SysNetIpv4Dir => entries.extend(["ip_forward"].into_iter().map(String::from)),
         Node::SysNetIpv6Dir => entries.extend(["conf"].into_iter().map(String::from)),
@@ -1266,6 +1348,7 @@ pub fn metadata(path: &str) -> Result<ProcMetadata, i32> {
             | Node::ProcessRoot(_)
             | Node::NetDir
             | Node::SysDir
+            | Node::SysVmDir
             | Node::SysNetDir
             | Node::SysNetIpv4Dir
             | Node::SysNetIpv6Dir
@@ -1280,6 +1363,7 @@ pub fn metadata(path: &str) -> Result<ProcMetadata, i32> {
             | Node::SysFsInotifyDir
             | Node::NsDir(_)
             | Node::TaskDir(_)
+            | Node::FdInfoDir(_)
             | Node::FdDir(_)
     ) {
         return Ok(ProcMetadata {
@@ -1324,6 +1408,9 @@ pub fn metadata(path: &str) -> Result<ProcMetadata, i32> {
             size: target.len() as u64,
             target: Some(target),
         });
+    }
+    if let Node::FdInfo(pid, fd) = node {
+        fd_link_target(pid, fd).map_err(|e| if e == crate::EBADF { crate::ENOENT } else { e })?;
     }
     Ok(ProcMetadata {
         kind: ProcKind::File,
@@ -2573,6 +2660,46 @@ fn version() -> String {
     )
 }
 
+/// Builds `/proc/cmdline`.
+fn cmdline_sys() -> String {
+    if let Some(custom) = std::env::var_os("KINAKAZE_CMDLINE") {
+        let mut s = custom.to_string_lossy().into_owned();
+        if !s.ends_with('\n') {
+            s.push('\n');
+        }
+        s
+    } else {
+        // There is no booted Linux kernel or /dev/sda1. An empty command line
+        // is preferable to advertising a nonexistent boot device.
+        String::from("\n")
+    }
+}
+
+static PUBLISHED_AUXV: std::sync::OnceLock<Vec<u8>> = std::sync::OnceLock::new();
+
+/// Registers the caller's initial ELF auxiliary vector.
+pub fn publish_auxv(bytes: Vec<u8>) {
+    let _ = PUBLISHED_AUXV.set(bytes);
+}
+
+pub(crate) fn published_auxv() -> Option<Vec<u8>> {
+    PUBLISHED_AUXV.get().cloned()
+}
+
+pub(crate) fn sysctl_vm_overcommit_memory(set: Option<i32>) -> Result<i32, i32> {
+    // Windows owns commit admission. In particular, accepting mode 2 without
+    // enforcing Linux's strict commit limit would make a false guarantee.
+    if let Some(value) = set {
+        if !(0..=2).contains(&value) {
+            return Err(crate::EINVAL);
+        }
+        if value != 0 {
+            return Err(crate::EOPNOTSUPP);
+        }
+    }
+    Ok(0)
+}
+
 /// Builds `/proc/loadavg`.
 fn loadavg() -> String {
     format!("0.12 0.08 0.05 1/128 {}\n", crate::job::process_id())
@@ -2719,6 +2846,7 @@ pub(crate) fn local_fd_link_target(fd: i32) -> Result<String, i32> {
         crate::FdKind::Zero => Ok(String::from("/dev/zero")),
         crate::FdKind::Random => Ok(String::from("/dev/urandom")),
         crate::FdKind::Full => Ok(String::from("/dev/full")),
+        crate::FdKind::Rtc => Ok(String::from("/dev/rtc0")),
         crate::FdKind::Pipe => Ok(format!("pipe:[{}]", crate::fs::fstat(fd)?.st_ino)),
         crate::FdKind::Fifo => crate::fifo::link_target(fd, entry),
         crate::FdKind::UnixSocket | crate::FdKind::Socket | crate::FdKind::NetlinkSocket => {
@@ -2817,6 +2945,15 @@ mod tests {
         assert_eq!(text(&score), "500\n");
         assert_eq!(write_file(&legacy, b"15", 0), Ok(2));
         assert_eq!(text(&score), "1000\n");
+        let oom_score_path = format!("/proc/{pid}/oom_score");
+        assert!(
+            list_directory("/proc/self")
+                .unwrap()
+                .contains(&"oom_score".to_owned())
+        );
+        let score_val: u32 = text(&oom_score_path).trim().parse().unwrap();
+        assert_eq!(score_val, 1000);
+        assert_eq!(write_file(&oom_score_path, b"100", 0), Err(crate::EACCES));
         assert_eq!(write_file(&legacy, b"1", 0), Err(crate::EACCES));
         assert_eq!(write_file(&score, b"-1", 0), Err(crate::EACCES));
         for invalid in [
@@ -3598,6 +3735,72 @@ mod tests {
             crate::fs::lstat("/proc/self/task/4294967295/ns/net").err(),
             Some(crate::ENOENT)
         );
+    }
+
+    #[test]
+    fn smaps_rollup_auxv_cmdline_and_overcommit_memory_roundtrip() {
+        let _sysctl = sysctl_test_lock();
+        // /proc/cmdline
+        assert!(
+            list_directory("/proc")
+                .unwrap()
+                .contains(&"cmdline".to_owned())
+        );
+        let cmd = text("/proc/cmdline");
+        assert!(cmd.contains("BOOT_IMAGE=") || !cmd.is_empty());
+        assert_eq!(metadata("/proc/cmdline").unwrap().kind, ProcKind::File);
+
+        // /proc/self/smaps_rollup
+        let self_entries = list_directory("/proc/self").unwrap();
+        assert!(self_entries.contains(&"smaps_rollup".to_owned()));
+        assert!(self_entries.contains(&"auxv".to_owned()));
+        let rollup = text("/proc/self/smaps_rollup");
+        assert!(rollup.contains("[rollup]"));
+        assert!(rollup.contains("Rss:"));
+        assert_eq!(
+            metadata("/proc/self/smaps_rollup").unwrap().kind,
+            ProcKind::File
+        );
+
+        // /proc/self/auxv
+        let aux = read_file("/proc/self/auxv").unwrap();
+        assert!(!aux.is_empty());
+        assert_eq!(aux.len() % 16, 0);
+        assert_eq!(metadata("/proc/self/auxv").unwrap().kind, ProcKind::File);
+
+        // /proc/sys/vm directory and overcommit_memory
+        assert!(
+            list_directory("/proc/sys")
+                .unwrap()
+                .contains(&"vm".to_owned())
+        );
+        assert_eq!(metadata("/proc/sys/vm").unwrap().kind, ProcKind::Directory);
+        assert!(
+            list_directory("/proc/sys/vm")
+                .unwrap()
+                .contains(&"overcommit_memory".to_owned())
+        );
+        assert_eq!(
+            metadata("/proc/sys/vm/overcommit_memory").unwrap().kind,
+            ProcKind::File
+        );
+
+        let orig = text("/proc/sys/vm/overcommit_memory");
+        assert!(orig == "0\n" || orig == "1\n" || orig == "2\n");
+        assert_eq!(
+            write_file("/proc/sys/vm/overcommit_memory", b"1\n", 0),
+            Err(crate::EOPNOTSUPP)
+        );
+        assert_eq!(text("/proc/sys/vm/overcommit_memory"), "0\n");
+        assert_eq!(
+            write_file("/proc/sys/vm/overcommit_memory", b"99\n", 0).err(),
+            Some(crate::EINVAL)
+        );
+        assert_eq!(
+            write_file("/proc/sys/vm/overcommit_memory", orig.as_bytes(), 0).unwrap(),
+            orig.len()
+        );
+        assert_eq!(text("/proc/sys/vm/overcommit_memory"), orig);
     }
 }
 

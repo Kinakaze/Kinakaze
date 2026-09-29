@@ -455,6 +455,93 @@ pub(super) fn relative_switch_entries(
     targets
 }
 
+/// Non-PIE LLVM output (Bun's Zig code) dispatches through an absolute table:
+/// `jmp *table(,index,8)`. An exhaustive enum switch carries no `cmp; ja`
+/// guard, so the table is bounded by its index width and ends at the first
+/// entry that is not code local to the jump. Adjacent tables of the same
+/// function continue that run, but they only contribute real branch targets.
+pub(super) fn absolute_switch_entries(
+    object: &Image<'_>,
+    recent: &VecDeque<Instruction>,
+    segments: &[(usize, usize)],
+) -> Vec<usize> {
+    const LOCAL: usize = 1 << 20;
+    let Some(jump) = recent.back() else {
+        return Vec::new();
+    };
+    if jump.mnemonic() != Mnemonic::Jmp
+        || jump.op0_kind() != OpKind::Memory
+        || jump.memory_base() != Register::None
+        || jump.memory_index() == Register::None
+        || jump.memory_index_scale() != 8
+        || jump.segment_prefix() != Register::None
+    {
+        return Vec::new();
+    }
+    let table = jump.memory_displacement64();
+    // Absolute tables only exist in objects mapped at their link address.
+    if table % 8 != 0 || object.resolve_address(table).ok() != usize::try_from(table).ok() {
+        return Vec::new();
+    }
+    let index = jump.memory_index().full_register();
+    let limit = recent
+        .iter()
+        .rev()
+        .skip(1)
+        .find(|instruction| writes(instruction, index))
+        .map_or(1024, |source| {
+            let width = match source.op1_kind() {
+                OpKind::Memory => source.memory_size().size(),
+                OpKind::Register => source.op1_register().size(),
+                _ => 0,
+            };
+            match source.mnemonic() {
+                Mnemonic::Movzx if width == 1 => 256,
+                Mnemonic::And
+                    if matches!(
+                        source.op1_kind(),
+                        OpKind::Immediate8to32 | OpKind::Immediate32 | OpKind::Immediate8to64
+                    ) && source.immediate(1) < 1024 =>
+                {
+                    source.immediate(1) as usize + 1
+                }
+                _ => 1024,
+            }
+        });
+    let Ok(elf) = object.elf() else {
+        return Vec::new();
+    };
+    let Ok(headers) = elf.program_headers() else {
+        return Vec::new();
+    };
+    let Some(bytes) = headers.iter().find_map(|header| {
+        if header.kind != kinakaze_elf::PT_LOAD
+            || header.flags & kinakaze_elf::PF_X != 0
+            || table < header.virtual_address
+            || table - header.virtual_address >= header.file_size
+        {
+            return None;
+        }
+        let delta = table - header.virtual_address;
+        let available = (header.file_size - delta).min(limit as u64 * 8) as usize;
+        let offset = usize::try_from(header.offset.checked_add(delta)?).ok()?;
+        object.bytes.get(offset..offset.checked_add(available)?)
+    }) else {
+        return Vec::new();
+    };
+    let origin = jump.ip() as usize;
+    bytes
+        .chunks_exact(8)
+        .map(|word| u64::from_le_bytes(word.try_into().unwrap()) as usize)
+        .take_while(|target| {
+            target.abs_diff(origin) < LOCAL
+                && segments
+                    .iter()
+                    .any(|(start, length)| *target >= *start && target - start < *length)
+        })
+        .collect()
+}
+
 fn relative_switch_table(
     recent: &VecDeque<Instruction>,
     previous_base: impl Fn(Register, usize) -> Option<usize>,

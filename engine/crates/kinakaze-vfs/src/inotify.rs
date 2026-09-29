@@ -366,6 +366,13 @@ fn release(store: &Store, watch: &Watch) -> Result<(), i32> {
     })
 }
 fn collect(_store: &Store, s: &mut State) -> Result<(), i32> {
+    collect_with_queues(s, &mut HashMap::new())
+}
+
+fn collect_with_queues(
+    s: &mut State,
+    queues: &mut HashMap<i32, (u64, DirectoryQueue)>,
+) -> Result<(), i32> {
     let _observation = crate::tmpfs::Observation::enter();
     let mut events = Vec::new();
     let mut ignored = Vec::new();
@@ -381,8 +388,17 @@ fn collect(_store: &Store, s: &mut State) -> Result<(), i32> {
             }
             continue;
         }
-        let queue = DirectoryQueue::open(kinakaze_runtime::authority::domain_id(), watch.id, false)
-            .map_err(errno_from_io)?;
+        if queues.get(&wd).is_none_or(|(id, _)| *id != watch.id) {
+            queues.insert(
+                wd,
+                (
+                    watch.id,
+                    DirectoryQueue::open(kinakaze_runtime::authority::domain_id(), watch.id, false)
+                        .map_err(errno_from_io)?,
+                ),
+            );
+        }
+        let (_, queue) = queues.get(&wd).ok_or(crate::EIO)?;
         let (packets, overflow, ended) = queue.drain().map_err(errno_from_io)?;
         if overflow {
             events.push(encode_event(-1, 0x4000, 0, &[]));
@@ -451,6 +467,11 @@ fn collect(_store: &Store, s: &mut State) -> Result<(), i32> {
             s.retired.push(watch);
         }
     }
+    queues.retain(|wd, (id, _)| {
+        s.watches
+            .get(wd)
+            .is_some_and(|watch| watch.volume == 0 && watch.id == *id)
+    });
     Ok(())
 }
 pub fn rm_watch(fd: i32, wd: i32) -> Result<(), i32> {
@@ -509,6 +530,28 @@ pub(crate) fn poll_store(store: &Store) -> Result<bool, i32> {
         collect(store, s)?;
         Ok(!s.queue.is_empty())
     })
+}
+
+/// Mappings borrowed for one epoll wait. Init still owns directory I/O and
+/// shared queue lifetime; every scan reads the current shared watch table.
+pub(crate) struct PollView {
+    store: Store,
+    queues: HashMap<i32, (u64, DirectoryQueue)>,
+}
+impl PollView {
+    pub(crate) fn new(fd: i32) -> Result<Self, i32> {
+        Ok(Self {
+            store: owner(fd)?,
+            queues: HashMap::new(),
+        })
+    }
+
+    pub(crate) fn poll(&mut self) -> Result<bool, i32> {
+        update(&self.store, |state| {
+            collect_with_queues(state, &mut self.queues)?;
+            Ok(!state.queue.is_empty())
+        })
+    }
 }
 pub fn close_inotify(entry: crate::FdEntry, last_local: bool) {
     if kinakaze_runtime::authority::get().is_some() || !last_local {
@@ -637,6 +680,30 @@ mod tests {
 
         crate::close(fd).expect("close");
         let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn poll_view_refreshes_watches_and_releases_retired_queues() {
+        let temp_dir =
+            std::env::temp_dir().join(format!("kinakaze-inotify-view-{}", std::process::id()));
+        std::fs::create_dir_all(&temp_dir).unwrap();
+        let fd = create_inotify(IN_NONBLOCK).unwrap();
+        let mut view = PollView::new(fd).unwrap();
+        assert!(!view.poll().unwrap());
+        for _ in 0..2 {
+            let wd = add_watch(fd, temp_dir.clone(), IN_CREATE).unwrap();
+            assert!(!view.poll().unwrap());
+            assert_eq!(view.queues.len(), 1);
+            rm_watch(fd, wd).unwrap();
+            assert!(view.poll().unwrap());
+            assert!(view.queues.is_empty());
+            let mut buffer = [0; 128];
+            read_inotify(fd, &mut buffer, true).unwrap();
+            assert!(!view.poll().unwrap());
+        }
+        drop(view);
+        crate::close(fd).unwrap();
+        std::fs::remove_dir(temp_dir).unwrap();
     }
 
     #[test]

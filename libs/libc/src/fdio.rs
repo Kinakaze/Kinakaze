@@ -1366,6 +1366,7 @@ fn local_readiness(entry: FdEntry, interest: i16, fd: i32) -> i16 {
         | FdKind::Zero
         | FdKind::Random
         | FdKind::Full
+        | FdKind::Rtc
         | FdKind::BpfProgram
         | FdKind::Unknown => interest & (POLLIN | POLLOUT),
         // Polling an epoll descriptor observes its ready list without consuming
@@ -3445,21 +3446,36 @@ pub unsafe extern "sysv64" fn kinakaze_abi_readahead(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn kinakaze_abi_posix_fadvise(
-    _fd: c_int,
-    _offset: i64,
-    _len: i64,
-    _advice: c_int,
+    fd: c_int,
+    offset: i64,
+    len: i64,
+    advice: c_int,
 ) -> c_int {
-    0
+    unsafe { kinakaze_abi_posix_fadvise64(fd, offset, len, advice) }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn kinakaze_abi_posix_fadvise64(
-    _fd: c_int,
-    _offset: i64,
-    _len: i64,
-    _advice: c_int,
+    fd: c_int,
+    offset: i64,
+    len: i64,
+    advice: c_int,
 ) -> c_int {
+    let entry = match kinakaze_vfs::get(fd) {
+        Ok(entry) => entry,
+        Err(error) => return error,
+    };
+    if entry.flags.contains(FdFlags::PATH_ONLY) {
+        return kinakaze_vfs::EBADF;
+    }
+    if matches!(entry.kind, FdKind::Pipe | FdKind::Fifo) {
+        return kinakaze_vfs::ESPIPE;
+    }
+    if offset < 0 || len < 0 || !(0..=5).contains(&advice) {
+        return kinakaze_vfs::EINVAL;
+    }
+    // Advice may be ignored by the host cache; validation and POSIX's positive
+    // error return are still mandatory. Do not modify errno here.
     0
 }
 

@@ -1,5 +1,14 @@
 # 更新记录
 
+## 0.5.0 — 2026-09-29
+
+- 修复并发回收子进程时的等待错误：每次等待持有自己的句柄引用；已消失或已被其他等待者取走的退出记录会重新扫描，不再误报完整性错误。过期快照打开的句柄不再写回 fork 登记表，避免槽位耗尽后无关的 `fork` 返回 `EAGAIN`。
+- 补齐当前进程的 `/proc/<pid>/statm`、`io`、`smaps_rollup`、`auxv`、`fdinfo` 与 `comm`。`auxv` 从已重定位的 ELF 初始栈发布。其他进程没有共享偏移时，`fdinfo` 返回 `EACCES`。
+- sysfs 公布来自 Windows 拓扑的 CPU `core_id`、`physical_package_id`、sibling 列表与掩码，以及 NUMA `cpumap`。虚拟文件缺少 xattr 后端时返回 `EOPNOTSUPP`；设置 RTC 和未实现的 overcommit 策略不再伪造成功。`/proc/cmdline` 默认为空行。
+- 原始 syscall 增加 `sendfile`、`fadvise64`、`preadv`、`pwritev`、`renameat2`、`preadv2`、`pwritev2`。tmpfs 按已分配页支持 `SEEK_DATA` / `SEEK_HOLE`。
+- 降低日常路径开销：原生镜像导出名改为有界搜索；内容未变的 epoll 关闭、重绑和空闲扫描不再重写共享集合。已有完整原生通知的 Unix 只读、非 ET epoll 不再做 10 ms 周期回扫。单次等待内复用 mountinfo、timerfd 与 inotify 的共享映射，权威状态仍由 init 持有。
+- systemd 空闲时仍有明显单核占用；timerfd、signalfd、inotify 的完整事件通知尚未补齐。不宣称完整 Linux ABI。
+
 ## 0.4.0 — 2026-09-28
 
 - 修复托盘“回到终端”打开的窗口一片空白、输入无回显：常驻 init 的标准句柄指向日志与空设备，终端客户端不再继承它们，改为使用新控制台自身的输入输出。

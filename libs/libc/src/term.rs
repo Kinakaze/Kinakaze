@@ -86,6 +86,24 @@ pub const TIOCSIG: u64 = 0x4004_5436;
 /// `_IO('T', 0x37)`: simulate a hangup on the terminal.
 pub const TIOCVHANGUP: u64 = 0x5437;
 
+// RTC requests from <linux/rtc.h>.
+/// `_IO('p', 0x01)`: Alarm interrupt enable on.
+pub const RTC_AIE_ON: u64 = 0x7001;
+/// `_IO('p', 0x02)`: Alarm interrupt enable off.
+pub const RTC_AIE_OFF: u64 = 0x7002;
+/// `_IO('p', 0x03)`: Update interrupt enable on.
+pub const RTC_UIE_ON: u64 = 0x7003;
+/// `_IO('p', 0x04)`: Update interrupt enable off.
+pub const RTC_UIE_OFF: u64 = 0x7004;
+/// `_IO('p', 0x05)`: Periodic interrupt enable on.
+pub const RTC_PIE_ON: u64 = 0x7005;
+/// `_IO('p', 0x06)`: Periodic interrupt enable off.
+pub const RTC_PIE_OFF: u64 = 0x7006;
+/// `_IOR('p', 0x09, struct rtc_time)`: Read RTC time.
+pub const RTC_RD_TIME: u64 = 0x8024_7009;
+/// `_IOW('p', 0x0a, struct rtc_time)`: Set RTC time.
+pub const RTC_SET_TIME: u64 = 0x4024_700a;
+
 /// Revoke access through the caller's controlling pseudoterminal.
 #[unsafe(no_mangle)]
 pub extern "sysv64" fn kinakaze_abi_vhangup() -> c_int {
@@ -867,6 +885,68 @@ pub unsafe extern "sysv64" fn kinakaze_abi_ioctl(
                 }
             }
         },
+        RTC_RD_TIME => {
+            let entry = match kinakaze_vfs::get(fd) {
+                Ok(entry) => entry,
+                Err(error) => {
+                    set_errno(error);
+                    return -1;
+                }
+            };
+            if entry.kind != kinakaze_vfs::FdKind::Rtc {
+                set_errno(kinakaze_vfs::ENOTTY);
+                return -1;
+            }
+            if argument.is_null() {
+                set_errno(kinakaze_vfs::EFAULT);
+                return -1;
+            }
+            let rtc_time = crate::time::current_rtc_time();
+            unsafe {
+                core::ptr::write_unaligned(argument.cast::<crate::time::RtcTime>(), rtc_time);
+            }
+            0
+        }
+        RTC_SET_TIME => {
+            let entry = match kinakaze_vfs::get(fd) {
+                Ok(entry) => entry,
+                Err(error) => {
+                    set_errno(error);
+                    return -1;
+                }
+            };
+            if entry.kind != kinakaze_vfs::FdKind::Rtc {
+                set_errno(kinakaze_vfs::ENOTTY);
+                return -1;
+            }
+            if argument.is_null() {
+                set_errno(kinakaze_vfs::EFAULT);
+                return -1;
+            }
+            // Do not claim to change an RTC that has no writable backend.
+            // The host clock must not be changed by this compatibility device.
+            if crate::userdb::kinakaze_abi_geteuid() != 0 {
+                set_errno(kinakaze_vfs::EPERM);
+                return -1;
+            }
+            set_errno(kinakaze_vfs::EOPNOTSUPP);
+            -1
+        }
+        RTC_UIE_ON | RTC_UIE_OFF | RTC_PIE_ON | RTC_PIE_OFF | RTC_AIE_ON | RTC_AIE_OFF => {
+            let entry = match kinakaze_vfs::get(fd) {
+                Ok(entry) => entry,
+                Err(error) => {
+                    set_errno(error);
+                    return -1;
+                }
+            };
+            if entry.kind != kinakaze_vfs::FdKind::Rtc {
+                set_errno(kinakaze_vfs::ENOTTY);
+                return -1;
+            }
+            set_errno(kinakaze_vfs::ENOTTY);
+            -1
+        }
         _ => {
             set_errno(kinakaze_vfs::ENOTTY);
             -1
@@ -2199,5 +2279,73 @@ mod tests {
             // SAFETY: this fixture owns the handle; the table entry was borrowed.
             unsafe { CloseHandle(self.handle) };
         }
+    }
+
+    #[test]
+    fn rtc_ioctls_read_and_set_time() {
+        let fd = kinakaze_vfs::fs::open("/dev/rtc0", kinakaze_vfs::fs::O_RDWR, 0)
+            .expect("open /dev/rtc0");
+        let mut rtc_tm = crate::time::RtcTime::default();
+
+        let ret = unsafe { kinakaze_abi_ioctl(fd, RTC_RD_TIME, (&raw mut rtc_tm).cast()) };
+        assert_eq!(ret, 0, "RTC_RD_TIME ioctl must succeed");
+        assert!(
+            rtc_tm.tm_year >= 120,
+            "year must be 2020 or later: {}",
+            rtc_tm.tm_year
+        );
+        assert!(
+            (0..=11).contains(&rtc_tm.tm_mon),
+            "month must be 0..=11: {}",
+            rtc_tm.tm_mon
+        );
+        assert!(
+            (1..=31).contains(&rtc_tm.tm_mday),
+            "day must be 1..=31: {}",
+            rtc_tm.tm_mday
+        );
+        assert!(
+            (0..=23).contains(&rtc_tm.tm_hour),
+            "hour must be 0..=23: {}",
+            rtc_tm.tm_hour
+        );
+        assert!(
+            (0..=59).contains(&rtc_tm.tm_min),
+            "min must be 0..=59: {}",
+            rtc_tm.tm_min
+        );
+        assert!(
+            (0..=60).contains(&rtc_tm.tm_sec),
+            "sec must be 0..=60: {}",
+            rtc_tm.tm_sec
+        );
+        assert!(
+            (0..=6).contains(&rtc_tm.tm_wday),
+            "wday must be 0..=6: {}",
+            rtc_tm.tm_wday
+        );
+        assert!(
+            (0..=365).contains(&rtc_tm.tm_yday),
+            "yday must be 0..=365: {}",
+            rtc_tm.tm_yday
+        );
+
+        let ret_set = unsafe { kinakaze_abi_ioctl(fd, RTC_SET_TIME, (&raw mut rtc_tm).cast()) };
+        assert_eq!(ret_set, -1, "RTC_SET_TIME has no writable backend");
+        assert_eq!(crate::kinakaze_errno(), kinakaze_vfs::EOPNOTSUPP);
+
+        let ret_uie = unsafe { kinakaze_abi_ioctl(fd, RTC_UIE_ON, core::ptr::null_mut()) };
+        assert_eq!(ret_uie, -1);
+        assert_eq!(crate::kinakaze_errno(), kinakaze_vfs::ENOTTY);
+
+        let null_fd = kinakaze_vfs::fs::open("/dev/null", kinakaze_vfs::fs::O_RDWR, 0)
+            .expect("open /dev/null");
+        let ret_null =
+            unsafe { kinakaze_abi_ioctl(null_fd, RTC_RD_TIME, (&raw mut rtc_tm).cast()) };
+        assert_eq!(ret_null, -1);
+        assert_eq!(crate::kinakaze_errno(), kinakaze_vfs::ENOTTY);
+
+        let _ = kinakaze_vfs::close(null_fd);
+        let _ = kinakaze_vfs::close(fd);
     }
 }

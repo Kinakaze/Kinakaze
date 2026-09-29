@@ -193,6 +193,7 @@ fn tree(netns: u64) -> Result<BTreeMap<String, Attribute>, i32> {
         dir(&mut out, p);
     }
     let (cpus, nodes) = topology()?;
+    let processors = crate::procfs::cpu_topology::query_system().ok_or(EIO)?;
     let cpu_list = crate::cgroup::fixed_defaults::format_list(&cpus);
     let node_list = crate::cgroup::fixed_defaults::format_list(&nodes);
     for name in ["online", "possible", "present"] {
@@ -212,6 +213,33 @@ fn tree(netns: u64) -> Result<BTreeMap<String, Attribute>, i32> {
         let path = format!("devices/system/cpu/cpu{cpu}");
         dir(&mut out, &path);
         ro(&mut out, &format!("{path}/online"), "1\n");
+        let processor = processors.iter().find(|p| p.id == cpu).ok_or(EIO)?;
+        let thread_siblings = processors
+            .iter()
+            .filter(|p| p.core == processor.core && p.package == processor.package)
+            .map(|p| p.id)
+            .collect();
+        let core_siblings = processors
+            .iter()
+            .filter(|p| p.package == processor.package)
+            .map(|p| p.id)
+            .collect();
+        for (name, value) in [
+            ("core_id", format!("{}\n", processor.core)),
+            ("physical_package_id", format!("{}\n", processor.package)),
+            (
+                "thread_siblings_list",
+                crate::cgroup::fixed_defaults::format_list(&thread_siblings),
+            ),
+            (
+                "core_siblings_list",
+                crate::cgroup::fixed_defaults::format_list(&core_siblings),
+            ),
+            ("thread_siblings", cpu_mask(&thread_siblings)),
+            ("core_siblings", cpu_mask(&core_siblings)),
+        ] {
+            ro(&mut out, &format!("{path}/topology/{name}"), value);
+        }
         link(
             &mut out,
             &format!("{path}/subsystem"),
@@ -241,6 +269,7 @@ fn tree(netns: u64) -> Result<BTreeMap<String, Attribute>, i32> {
         let path = format!("devices/system/node/node{node}");
         dir(&mut out, &path);
         let cpus = node_cpus(node)?;
+        ro(&mut out, &format!("{path}/cpumap"), cpu_mask(&cpus));
         ro(
             &mut out,
             &format!("{path}/cpulist"),
@@ -505,6 +534,22 @@ mod tests {
             }
         }
     }
+}
+
+fn cpu_mask(cpus: &BTreeSet<u32>) -> String {
+    let mut words = vec![0u32; cpus.last().map_or(1, |last| (*last as usize / 32) + 1)];
+    for &cpu in cpus {
+        words[cpu as usize / 32] |= 1 << (cpu % 32);
+    }
+    format!(
+        "{}\n",
+        words
+            .iter()
+            .rev()
+            .map(|w| format!("{w:08x}"))
+            .collect::<Vec<_>>()
+            .join(",")
+    )
 }
 
 fn node_cpus(node: u32) -> Result<BTreeSet<u32>, i32> {

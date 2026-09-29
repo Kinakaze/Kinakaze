@@ -716,6 +716,17 @@ pub fn descriptor_closed(description_id: u64, survivor: Option<(i32, crate::FdEn
             survivor.map(|(fd, entry)| (fd, entry.raw))
         );
     }
+    // Looking up an unrelated descriptor is not a shared-state mutation.
+    // Avoid DerefMut: it makes SetsGuard encode every shared epoll set on drop.
+    if !sets.values().any(|set| {
+        (description_id != 0 && set.description_id == description_id)
+            || set
+                .registrations
+                .keys()
+                .any(|key| key.description_id == description_id)
+    }) {
+        return;
+    }
     // Closing any alias preserves the set while another fd owns the same
     // description. Wake in-flight waiters before the old native handle closes.
     sets.retain(|_, set| {
@@ -791,6 +802,13 @@ pub fn descriptor_rebound(fd: i32, entry: crate::FdEntry) {
     let Ok(mut sets) = lock_sets(12) else {
         return;
     };
+    if !sets.values().any(|set| {
+        set.registrations
+            .keys()
+            .any(|key| key.description_id == entry.description_id)
+    }) {
+        return;
+    }
     for set in sets.values_mut() {
         let mut changed = false;
         for (key, registration) in &mut set.registrations {
@@ -823,6 +841,13 @@ pub fn readiness_consumed(description_id: u64, events: u32) {
     let Ok(mut sets) = lock_sets(13) else {
         return;
     };
+    if !sets.values().any(|set| {
+        set.registrations.iter().any(|(key, registration)| {
+            key.description_id == description_id && registration.interest & events != 0
+        })
+    }) {
+        return;
+    }
     for set in sets.values_mut() {
         let mut changed = false;
         for (key, registration) in &mut set.registrations {
@@ -1363,6 +1388,9 @@ fn epoll_wait_inner(
     interrupted: &mut bool,
     consume: bool,
 ) -> Result<usize, i32> {
+    let mut mount_views = HashMap::<RegistrationKey, crate::procfs::mount_watch::PollView>::new();
+    let mut timer_views = HashMap::<RegistrationKey, crate::timerfd::PollView>::new();
+    let mut inotify_views = HashMap::<RegistrationKey, crate::inotify::PollView>::new();
     'wait: loop {
         // Snapshot the registrations so the set is not locked across the wait.
         let (
@@ -1476,6 +1504,9 @@ fn epoll_wait_inner(
             )
         };
         let wake_handle = wake_source.raw();
+        mount_views.retain(|key, _| eventfd_pending.iter().any(|(active, _)| active == key));
+        timer_views.retain(|key, _| eventfd_pending.iter().any(|(active, _)| active == key));
+        inotify_views.retain(|key, _| inotify_pending.iter().any(|(active, _)| active == key));
 
         let polled_watched = unix_pending.len()
             + eventfd_pending.len()
@@ -1569,6 +1600,7 @@ fn epoll_wait_inner(
         }
         let mut unix_waits = Vec::new();
         let mut unix_write_waits = Vec::new();
+        let mut native_unix_reads = 0;
         for (key, registration) in &unix_pending {
             let fd = registration.poll_fd;
             if PIPE_STATE_TRACE_ACTIVE.load(Ordering::Acquire) {
@@ -1588,6 +1620,13 @@ fn epoll_wait_inner(
                 if let Some(Some(wait)) = query_registration(fd, key.description_id, |_| {
                     crate::unix::readiness::prepare(fd)
                 })? {
+                    // This source wakes on data, listener connections and peer
+                    // close, including another worker dying. A read-only level
+                    // registration needs no periodic readiness sweep. Keep the
+                    // fallback for ET, message sockets and other interests.
+                    if registration.interest & !(EPOLLIN | EPOLLRDNORM | EPOLLONESHOT) == 0 {
+                        native_unix_reads += 1;
+                    }
                     unix_waits.push(wait);
                 }
             }
@@ -1678,14 +1717,22 @@ fn epoll_wait_inner(
                     );
                 }
                 if entry.kind == FdKind::ProcMounts {
-                    return Ok(crate::procfs::mount_watch::poll(fd)?
+                    if !mount_views.contains_key(key) {
+                        mount_views.insert(*key, crate::procfs::mount_watch::PollView::new(fd)?);
+                    }
+                    return Ok(mount_views.get_mut(key).ok_or(EIO)?.poll()?
                         & (registration.interest | EPOLLERR | EPOLLHUP));
                 }
                 let (readable, writable, overflow) = match entry.kind {
                     FdKind::Event => (poll_readable(fd)?, false, false),
                     FdKind::SignalFd => (crate::signalfd::poll(fd)?, false, false),
                     FdKind::TimerFd => {
-                        let (r, w) = crate::timerfd::poll(fd)?;
+                        if let std::collections::hash_map::Entry::Vacant(entry) =
+                            timer_views.entry(*key)
+                        {
+                            entry.insert(crate::timerfd::PollView::new(fd)?);
+                        }
+                        let (r, w) = timer_views.get(key).ok_or(EIO)?.poll()?;
                         (r, w, false)
                     }
                     FdKind::MessageQueue => {
@@ -1738,7 +1785,7 @@ fn epoll_wait_inner(
             }
         }
 
-        let polled_watched = polled_watched - native_eventfds;
+        let polled_watched = polled_watched - native_eventfds - native_unix_reads;
         let mut netlink_ready = Vec::new();
         let mut netlink_waits = Vec::new();
         for (key, registration) in &netlink_pending {
@@ -1765,7 +1812,12 @@ fn epoll_wait_inner(
         for (key, registration) in &inotify_pending {
             let Some(readable) =
                 query_registration(registration.poll_fd, key.description_id, |_| {
-                    crate::inotify::poll_inotify(registration.poll_fd)
+                    if let std::collections::hash_map::Entry::Vacant(entry) =
+                        inotify_views.entry(*key)
+                    {
+                        entry.insert(crate::inotify::PollView::new(registration.poll_fd)?);
+                    }
+                    inotify_views.get_mut(key).ok_or(EIO)?.poll()
                 })?
             else {
                 continue;
@@ -2081,10 +2133,8 @@ fn epoll_wait_inner(
                 // socket in an earlier batch is not delayed behind a quiet one.
                 let mut batch_timeout = if filled == 0 {
                     let remaining = remaining_timeout(timeout_ms, deadline);
-                    // A watched Unix socket has to be re-polled, so the AFD wait
-                    // cannot be allowed to sleep past the poll interval or a
-                    // pipe becoming readable would go unnoticed until a socket
-                    // happened to wake this up.
+                    // Only registrations without a complete native wake source
+                    // need periodic re-polling alongside AFD sockets.
                     if polled_watched > 0 {
                         Some(
                             remaining
@@ -2252,9 +2302,10 @@ fn epoll_wait_inner(
                 })
                 .collect();
             waitables.extend(pty_events.iter().map(native_wait::Source::raw));
-            // A set holding only Unix sockets, eventfds or pipes must come back
-            // to re-poll them rather than sleeping out the whole timeout.
-            let repolled = unix_pending.len()
+            // Retain fallback polling only for registrations not covered by a
+            // native source. Pinned stream/listener notifications close the
+            // readiness-to-wait race without a timer.
+            let repolled = (unix_pending.len() - native_unix_reads)
                 + (eventfd_pending.len() - native_eventfds)
                 + inotify_pending.len()
                 + pipe_pending.len();
@@ -2387,12 +2438,22 @@ fn clear_absent_readiness(epoll_fd: i32, key: RegistrationKey, current: u32) {
         );
     }
     let Some(registration) = sets
-        .get_mut(&epoll_fd)
-        .and_then(|set| set.registrations.get_mut(&key))
+        .get(&epoll_fd)
+        .and_then(|set| set.registrations.get(&key))
     else {
         return;
     };
-    registration.reported &= current;
+    let reported = registration.reported & current;
+    if reported != registration.reported {
+        // The same lock still protects the entry. Only real edge-history
+        // changes need encoding and publication; idle scans are read-only.
+        sets.get_mut(&epoll_fd)
+            .unwrap()
+            .registrations
+            .get_mut(&key)
+            .unwrap()
+            .reported = reported;
+    }
 }
 
 pub fn notify_read(fd: i32) {

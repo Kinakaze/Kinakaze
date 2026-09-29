@@ -31,7 +31,7 @@ use windows_sys::Win32::Storage::FileSystem::{
     FILE_READ_EA, FILE_RENAME_INFO, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE,
     FILE_WRITE_ATTRIBUTES, FILE_WRITE_DATA, FileDispositionInfoEx, FileRenameInfoEx,
     GetFileInformationByHandle, GetFinalPathNameByHandleW, OPEN_ALWAYS, OPEN_EXISTING,
-    READ_CONTROL, RemoveDirectoryW, SYNCHRONIZE, SetFileInformationByHandle,
+    READ_CONTROL, SYNCHRONIZE, SetFileInformationByHandle,
 };
 use windows_sys::Win32::System::Threading::GetCurrentProcess;
 use windows_sys::Win32::System::WindowsProgramming::{
@@ -535,7 +535,7 @@ fn reopen_local_fd(fd: i32, flags: i32) -> Result<i32, i32> {
     }
     if matches!(
         source.kind,
-        FdKind::Null | FdKind::Zero | FdKind::Random | FdKind::Full
+        FdKind::Null | FdKind::Zero | FdKind::Random | FdKind::Full | FdKind::Rtc
     ) {
         let mut fd_flags = special_fd_flags(flags);
         if path_only {
@@ -892,6 +892,7 @@ pub(crate) fn open_device_value(device: u64, mode: u32, flags: i32) -> Result<i3
         (5, 0) => crate::tty::open_controlling(flags),
         (5, 2) => crate::tty::open_master(flags),
         (136, number) => crate::tty::open_slave(number, flags),
+        (254, 0) | (10, 135) => crate::install_dev_special(crate::FdKind::Rtc, fd_flags),
         // The inode is real, but no host driver implements this device.
         _ => Err(crate::ENXIO),
     }
@@ -995,6 +996,10 @@ pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32>
         "/dev/full" => {
             check_character_device_open(flags, 1, 7)?;
             return crate::install_dev_special(crate::FdKind::Full, special_fd_flags(flags));
+        }
+        "/dev/rtc" | "/dev/rtc0" | "/dev/misc/rtc" => {
+            check_character_device_open(flags, 254, 0)?;
+            return crate::install_dev_special(crate::FdKind::Rtc, special_fd_flags(flags));
         }
         // Opening the multiplexer *creates* a terminal, which is the whole of
         // how a pty is allocated on Linux: there is no separate call.
@@ -2380,6 +2385,15 @@ fn stat_path_resolved(
                 ..Stat::default()
             });
         }
+        "/dev/rtc" | "/dev/rtc0" | "/dev/misc/rtc" => {
+            return Ok(Stat {
+                st_mode: S_IFCHR | 0o660,
+                st_rdev: (254 << 8) | 0,
+                st_blksize: 4096,
+                st_nlink: 1,
+                ..Stat::default()
+            });
+        }
         "/dev" | "/dev/shm" | "/dev/pts" | "/dev/snd" => {
             return Ok(Stat {
                 st_mode: S_IFDIR | 0o755,
@@ -2620,6 +2634,13 @@ pub fn fstat(fd: i32) -> Result<Stat, i32> {
         FdKind::Random => Ok(Stat {
             st_mode: S_IFCHR | 0o666,
             st_rdev: (1 << 8) | 9,
+            st_blksize: 4096,
+            st_nlink: 1,
+            ..Stat::default()
+        }),
+        FdKind::Rtc => Ok(Stat {
+            st_mode: S_IFCHR | 0o660,
+            st_rdev: (254 << 8) | 0,
             st_blksize: 4096,
             st_nlink: 1,
             ..Stat::default()
@@ -2929,12 +2950,25 @@ pub fn rmdir(path: &str) -> Result<(), i32> {
         return Err(ENOTDIR);
     }
     let wide_path = wide(&resolved)?;
-    // SAFETY: `wide_path` is null-terminated and outlives the call.
-    if unsafe { RemoveDirectoryW(wide_path.as_ptr()) } == 0 {
-        // SAFETY: GetLastError has no preconditions.
+    // POSIX disposition detaches the name while cwd/open-directory references
+    // retain the inode. RemoveDirectoryW only requests delayed deletion.
+    let handle = unsafe {
+        CreateFileW(
+            wide_path.as_ptr(),
+            DELETE,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            ptr::null(),
+            OPEN_EXISTING,
+            FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+            ptr::null_mut(),
+        )
+    };
+    if handle.is_null() || handle as isize == -1 {
         return Err(errno_from_win32(unsafe { GetLastError() }));
     }
-    Ok(())
+    let result = unlink_inode(handle);
+    unsafe { CloseHandle(handle) };
+    result
 }
 
 /// Renames a path with Linux replacement semantics.
@@ -3424,6 +3458,36 @@ pub fn access(path: &str, mode: i32) -> Result<(), i32> {
     }
     let info = stat(path)?;
     if mode == F_OK {
+        return Ok(());
+    }
+    if info.st_mode & S_IFMT == S_IFCHR {
+        let caller = crate::credentials::filesystem();
+        if caller.uid == 0 {
+            if mode & X_OK != 0 && (info.st_mode & 0o111 == 0) {
+                return Err(EACCES);
+            }
+            return Ok(());
+        }
+        let perm = if caller.uid == info.st_uid {
+            (info.st_mode >> 6) & 7
+        } else if caller.gid == info.st_gid || crate::credentials::group_member(info.st_gid) {
+            (info.st_mode >> 3) & 7
+        } else {
+            info.st_mode & 7
+        };
+        let mut needed = 0;
+        if mode & R_OK != 0 {
+            needed |= 4;
+        }
+        if mode & W_OK != 0 {
+            needed |= 2;
+        }
+        if mode & X_OK != 0 {
+            needed |= 1;
+        }
+        if perm & needed != needed {
+            return Err(EACCES);
+        }
         return Ok(());
     }
     if mode & W_OK != 0 {
@@ -4091,6 +4155,54 @@ mod rename_tests {
         drop(old);
         std::fs::remove_file(target).unwrap();
         std::fs::remove_dir(root).unwrap();
+    }
+
+    #[test]
+    fn rmdir_detaches_name_while_directory_handle_survives() {
+        let root = directory("rmdir-open");
+        let target = root.join("child");
+        std::fs::create_dir(&target).unwrap();
+        let guest = crate::to_guest_path(&target);
+        let fd = open(&guest, O_PATH | O_DIRECTORY, 0).unwrap();
+        let inode = fstat(fd).unwrap().st_ino;
+        rmdir(&guest).unwrap();
+        assert!(!target.exists());
+        assert_eq!(fstat(fd).unwrap().st_ino, inode);
+        std::fs::create_dir(&target).unwrap();
+        assert_ne!(stat(&guest).unwrap().st_ino, inode);
+        crate::close(fd).unwrap();
+        std::fs::write(target.join("file"), b"retained").unwrap();
+        assert_eq!(rmdir(&guest), Err(crate::ENOTEMPTY));
+        std::fs::remove_file(target.join("file")).unwrap();
+        rmdir(&guest).unwrap();
+        std::fs::remove_dir(root).unwrap();
+    }
+
+    #[test]
+    fn rtc_character_device_stat_open_and_io_semantics() {
+        for path in ["/dev/rtc0", "/dev/rtc", "/dev/misc/rtc"] {
+            let st = stat(path).expect("rtc stat failed");
+            assert_eq!(st.st_mode & S_IFMT, S_IFCHR);
+            assert_eq!(st.st_rdev, (254 << 8) | 0);
+            assert_eq!(access(path, F_OK), Ok(()));
+            assert_eq!(access(path, R_OK), Ok(()));
+            assert_eq!(access(path, W_OK), Ok(()));
+            assert_eq!(access(path, X_OK), Err(crate::EACCES));
+
+            let fd = open(path, O_RDONLY, 0).expect("rtc open failed");
+            let fst = fstat(fd).expect("rtc fstat failed");
+            assert_eq!(fst.st_mode & S_IFMT, S_IFCHR);
+            assert_eq!(fst.st_rdev, (254 << 8) | 0);
+
+            let mut buf = [0u8; 16];
+            assert_eq!(crate::read(fd, &mut buf), Err(crate::EINVAL));
+            assert_eq!(crate::write(fd, b"123"), Err(crate::EBADF));
+
+            let link = crate::procfs::read_file(&format!("/proc/self/fd/{fd}")).unwrap();
+            assert_eq!(String::from_utf8_lossy(&link), "/dev/rtc0");
+
+            assert_eq!(crate::close(fd), Ok(()));
+        }
     }
 }
 

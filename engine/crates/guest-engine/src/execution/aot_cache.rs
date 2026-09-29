@@ -13,9 +13,10 @@ use std::path::Path;
 use super::ExecutionError;
 use super::Image;
 
-// Version 33 requires a proven callee invocation or TLS cleanup registration;
-// executable-segment literals must never become instruction patch sites.
-const CACHE_MAGIC: &[u8; 8] = b"CRYAOT33";
+// Version 34 follows absolute (non-PIE) jump tables, which reach syscall sites
+// that version 33 left native. Executable-segment literals must still never
+// become instruction patch sites.
+const CACHE_MAGIC: &[u8; 8] = b"CRYAOT34";
 const ARCH_X86_64: u32 = 1;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

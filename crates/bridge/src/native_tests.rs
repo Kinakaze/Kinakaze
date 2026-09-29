@@ -111,6 +111,29 @@ fn malformed_exports_are_rejected_even_when_the_name_is_rust_only() {
 }
 
 #[test]
+fn export_names_keep_the_length_cap_and_cannot_cross_sections() {
+    let mut bytes = fixture();
+    bytes.resize(0x2400, 0);
+    let section = 0x188 + 40;
+    put32(&mut bytes, section + 8, 0x2000);
+    put32(&mut bytes, section + 16, 0x2000);
+    put32(&mut bytes, 0x250, 0x2100);
+    bytes[0x500..0x1500].fill(b'a');
+    bytes[0x500] = b'_';
+    assert_eq!(
+        borrowed_exports(&bytes).unwrap().symbols[0].name.len(),
+        4096
+    );
+    bytes[0x1500] = b'a';
+    assert!(borrowed_exports(&bytes).is_err());
+    bytes[0x1500] = 0;
+    // The terminator exists in the file, but lies outside the name's section.
+    put32(&mut bytes, section + 8, 0x1100);
+    put32(&mut bytes, section + 16, 0x1100);
+    assert!(borrowed_exports(&bytes).is_err());
+}
+
+#[test]
 fn command_facade_identity_survives_rebuilds_but_rejects_noncode_exports() {
     let mut bytes = fixture();
     assert!(matches_command_facade(

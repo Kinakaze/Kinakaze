@@ -266,6 +266,8 @@ pub enum FdKind {
     TmpfsDirectory,
     MessageQueue,
     SysfsFile,
+    /// A hardware Real Time Clock character device (/dev/rtc0).
+    Rtc,
 }
 
 #[cfg(windows)]
@@ -318,6 +320,7 @@ impl FdKind {
             Self::TmpfsDirectory => 32,
             Self::MessageQueue => 33,
             Self::SysfsFile => 34,
+            Self::Rtc => 37,
             Self::Unknown => 14,
         }
     }
@@ -360,6 +363,7 @@ impl FdKind {
             32 => Self::TmpfsDirectory,
             33 => Self::MessageQueue,
             34 => Self::SysfsFile,
+            37 => Self::Rtc,
             14 => Self::Unknown,
             _ => Self::Unknown,
         }
@@ -385,6 +389,7 @@ impl FdKind {
                 | Self::Full
                 | Self::CgroupFile
                 | Self::ProcSysctl
+                | Self::Rtc
         )
     }
 }
@@ -3306,6 +3311,10 @@ fn read_inner(fd: i32, buffer: &mut [u8]) -> Result<usize, i32> {
         return Ok(0);
     }
     #[cfg(windows)]
+    if entry.kind == FdKind::Rtc {
+        return Err(EINVAL);
+    }
+    #[cfg(windows)]
     if entry.kind == FdKind::Zero || entry.kind == FdKind::Full {
         buffer.fill(0);
         advance_offset(fd, entry.generation, buffer.len());
@@ -3476,6 +3485,10 @@ fn write_inner(fd: i32, buffer: &[u8]) -> Result<usize, i32> {
     #[cfg(windows)]
     if entry.kind == FdKind::BpfProgram {
         return Err(EINVAL);
+    }
+    #[cfg(windows)]
+    if entry.kind == FdKind::Rtc {
+        return Err(EBADF);
     }
     #[cfg(windows)]
     if matches!(entry.kind, FdKind::Null | FdKind::Zero | FdKind::Random) {
@@ -3725,7 +3738,7 @@ impl RetiredDescriptor {
         if entry.raw == 0
             && matches!(
                 entry.kind,
-                FdKind::Null | FdKind::Zero | FdKind::Random | FdKind::Full
+                FdKind::Null | FdKind::Zero | FdKind::Random | FdKind::Full | FdKind::Rtc
             )
         {
             return Ok(());
