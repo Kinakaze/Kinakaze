@@ -4327,6 +4327,17 @@ mod tests {
         }
     }
 
+    fn wait_past_spurious_wakeups(mut wait: impl FnMut() -> i32) -> i32 {
+        let started = std::time::Instant::now();
+        loop {
+            let result = wait();
+            if result != 0 {
+                return result;
+            }
+            assert!(started.elapsed() < Duration::from_secs(2));
+        }
+    }
+
     #[test]
     fn cond_timedwait_times_out_holding_the_mutex() {
         let mut mutex: usize = 0;
@@ -4343,7 +4354,12 @@ mod tests {
         assert_eq!(unsafe { pthread_mutex_lock(&raw mut mutex) }, 0);
         let deadline = deadline_in(Duration::from_millis(50));
         assert_eq!(
-            unsafe { pthread_cond_timedwait(&raw mut cond, &raw mut mutex, &raw const deadline) },
+            wait_past_spurious_wakeups(|| unsafe {
+                let result =
+                    pthread_cond_timedwait(&raw mut cond, &raw mut mutex, &raw const deadline);
+                assert_eq!(pthread_mutex_trylock(&raw mut mutex), EBUSY);
+                result
+            }),
             ETIMEDOUT
         );
         // The mutex comes back held on the timeout path, so this release is the
@@ -5007,8 +5023,9 @@ mod tests {
             tv_nsec: mono_deadline.subsec_nanos() as i64,
         };
         let start = std::time::Instant::now();
-        let ret =
-            unsafe { pthread_cond_timedwait(&raw mut cond, &raw mut mutex, &raw const mono_ts) };
+        let ret = wait_past_spurious_wakeups(|| unsafe {
+            pthread_cond_timedwait(&raw mut cond, &raw mut mutex, &raw const mono_ts)
+        });
         let elapsed = start.elapsed();
         assert_eq!(
             ret, ETIMEDOUT,
@@ -5030,9 +5047,9 @@ mod tests {
             tv_nsec: target_real.subsec_nanos() as i64,
         };
         let start = std::time::Instant::now();
-        let ret = unsafe {
+        let ret = wait_past_spurious_wakeups(|| unsafe {
             pthread_cond_timedwait(&raw mut realtime_cond, &raw mut mutex, &raw const real_ts)
-        };
+        });
         let elapsed = start.elapsed();
         assert_eq!(
             ret, ETIMEDOUT,
@@ -5131,14 +5148,14 @@ mod tests {
             tv_sec: deadline.as_secs() as i64,
             tv_nsec: deadline.subsec_nanos() as i64,
         };
-        let res = unsafe {
+        let res = wait_past_spurious_wakeups(|| unsafe {
             pthread_cond_clockwait(
                 &raw mut cond,
                 &raw mut mutex,
                 CLOCK_MONOTONIC,
                 &raw const ts,
             )
-        };
+        });
         assert_eq!(res, ETIMEDOUT);
         assert_eq!(unsafe { pthread_mutex_unlock(&raw mut mutex) }, 0);
 
