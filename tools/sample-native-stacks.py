@@ -4,7 +4,7 @@ Candidates are executable-looking words, not a reconstructed call stack.
 Threads are resumed before symbol lookup or writing output.
 """
 import argparse
-import ctypes as ctypes
+import ctypes
 from ctypes import wintypes
 import json
 import os
@@ -20,6 +20,7 @@ def sample(pid):
     kernel = ctypes.WinDLL('kernel32', use_last_error=True)
     kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
     kernel.OpenProcess.restype = wintypes.HANDLE
+    kernel.GetProcessTimes.argtypes = [wintypes.HANDLE, *([ctypes.POINTER(wintypes.FILETIME)] * 4)]
     kernel.OpenThread.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
     kernel.OpenThread.restype = wintypes.HANDLE
     for name in ('SuspendThread', 'ResumeThread'):
@@ -27,6 +28,8 @@ def sample(pid):
         getattr(kernel, name).restype = wintypes.DWORD
     kernel.CloseHandle.argtypes = [wintypes.HANDLE]
     kernel.GetThreadContext.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
+    kernel.GetProcessIdOfThread.argtypes = [wintypes.HANDLE]
+    kernel.GetProcessIdOfThread.restype = wintypes.DWORD
     kernel.ReadProcessMemory.argtypes = [wintypes.HANDLE, ctypes.c_void_p, ctypes.c_void_p,
                                        ctypes.c_size_t, ctypes.POINTER(ctypes.c_size_t)]
     kernel.VirtualQueryEx.argtypes = [wintypes.HANDLE, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t]
@@ -39,12 +42,20 @@ def sample(pid):
         raise ctypes.WinError(ctypes.get_last_error())
     report = dict(pid=pid, birth=birth, command=process.cmdline(), threads=[], addresses={})
     try:
-        if process.create_time() != birth:
+        times = [wintypes.FILETIME() for _ in range(4)]
+        if not kernel.GetProcessTimes(handle, *(ctypes.byref(value) for value in times)):
+            raise ctypes.WinError(ctypes.get_last_error())
+        ticks = (times[0].dwHighDateTime << 32) | times[0].dwLowDateTime
+        if abs((ticks - 116444736000000000) / 10000000 - birth) > .00001:
             raise RuntimeError('Process identity changed')
         for thread in process.threads():
             native = kernel.OpenThread(0x4a, False, thread.id)
             if not native:
                 report['threads'].append(dict(tid=thread.id, error=ctypes.get_last_error()))
+                continue
+            if kernel.GetProcessIdOfThread(native) != pid:
+                kernel.CloseHandle(native)
+                report['threads'].append(dict(tid=thread.id, error='thread identity changed'))
                 continue
             suspended = False
             row = dict(tid=thread.id, user_time=thread.user_time, system_time=thread.system_time)
@@ -66,10 +77,13 @@ def sample(pid):
                         struct.unpack('<17Q', ctypes.string_at(context + 120, 136))))
                     kernel.ReadProcessMemory(handle, row['rsp'], stack, len(stack), ctypes.byref(copied))
             finally:
-                if suspended and kernel.ResumeThread(native) == 0xffffffff:
-                    raise ctypes.WinError(ctypes.get_last_error())
-                kernel.CloseHandle(native)
+                try:
+                    if suspended and kernel.ResumeThread(native) == 0xffffffff:
+                        raise ctypes.WinError(ctypes.get_last_error())
+                finally:
+                    kernel.CloseHandle(native)
             if 'rip' in row:
+                row['stack_hex'] = stack.raw[:copied.value].hex()
                 words = [(-1, row['rip']), *enumerate(struct.unpack(
                     '<' + 'Q' * (copied.value // 8), stack.raw[:copied.value // 8 * 8]))]
                 row['candidates'] = []

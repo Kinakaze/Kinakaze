@@ -50,6 +50,13 @@ use windows_sys::Win32::System::Threading::{
     GetCurrentProcess, GetCurrentThreadStackLimits, GetProcessAffinityMask,
 };
 
+type ShmReader = fn() -> Result<Vec<u8>, i32>;
+static SHM_READER: std::sync::OnceLock<ShmReader> = std::sync::OnceLock::new();
+
+pub fn install_shm_reader(reader: ShmReader) {
+    let _ = SHM_READER.set(reader);
+}
+
 /// Whether a `/proc` path behaves as a directory, a regular file or a symlink.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ProcKind {
@@ -74,6 +81,8 @@ pub struct ProcMetadata {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Node {
     Root,
+    SysvDir,
+    SysvShm,
     CpuInfo,
     MemInfo,
     VmStat,
@@ -669,6 +678,13 @@ fn classify(path: &str) -> Option<Node> {
         return None;
     }
 
+    if second == "sysvipc" {
+        return match (parts.next(), parts.next()) {
+            (None, None) => Some(Node::SysvDir),
+            (Some("shm"), None) => Some(Node::SysvShm),
+            _ => None,
+        };
+    }
     if parts.next().is_some() {
         return None;
     }
@@ -754,7 +770,9 @@ pub fn read_file(path: &str) -> Result<Vec<u8>, i32> {
     let (path, _scope) = instance::enter(path)?;
     let path = path.as_str();
     match classify(path).ok_or(crate::ENOENT)? {
-        Node::Root
+        Node::SysvShm => SHM_READER.get().ok_or(crate::ENOSYS)?(),
+        Node::SysvDir
+        | Node::Root
         | Node::ProcessRoot(_)
         | Node::NetDir
         | Node::SysDir
@@ -1166,6 +1184,7 @@ pub fn list_directory(path: &str) -> Result<Vec<String>, i32> {
             entries.extend(pids.into_iter().map(|pid| pid.to_string()));
             entries.extend(
                 [
+                    "sysvipc",
                     "cpuinfo",
                     "cmdline",
                     "meminfo",
@@ -1187,6 +1206,7 @@ pub fn list_directory(path: &str) -> Result<Vec<String>, i32> {
                 .map(String::from),
             );
         }
+        Node::SysvDir => entries.push(String::from("shm")),
         Node::ProcessRoot(pid) => {
             entries.extend(
                 [
@@ -1344,7 +1364,8 @@ pub fn metadata(path: &str) -> Result<ProcMetadata, i32> {
     let node = classify(path).ok_or(crate::ENOENT)?;
     if matches!(
         node,
-        Node::Root
+        Node::SysvDir
+            | Node::Root
             | Node::ProcessRoot(_)
             | Node::NetDir
             | Node::SysDir

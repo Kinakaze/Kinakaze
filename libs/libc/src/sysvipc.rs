@@ -26,6 +26,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 mod lifecycle;
+mod proc_snapshot;
 mod registry;
 
 use kinakaze_vfs::{
@@ -1186,6 +1187,13 @@ pub unsafe extern "sysv64" fn kinakaze_abi_shmdt(shmaddr: *const c_void) -> c_in
     kinakaze_runtime::unregister_fork_mapping(shmaddr as usize);
 
     let _ = attachment_change(&segment, false);
+    let retired = shm_lock(&segment).is_ok_and(|_guard| {
+        let header = unsafe { &*(segment.control as *const ShmHeader) };
+        header.removed.load(Ordering::Acquire) != 0 && header.nattch == 0
+    });
+    if retired && segment.namespace == ipc_namespace() {
+        registry::forget(IpcKind::Memory, segment.private_lock as i32);
+    }
     0
 }
 
@@ -1274,11 +1282,18 @@ pub unsafe extern "sysv64" fn kinakaze_abi_shmctl(
             // SAFETY: the control view is live while the Arc is held.
             let header = unsafe { &mut *(segment.control as *mut ShmHeader) };
             header.removed.store(1, Ordering::Release);
+            header.key = IPC_PRIVATE;
+            collect_attachments(header);
+            let attached = header.nattch != 0;
             header.ctime = now_seconds();
             drop(_lock);
             // A lost reply is safe: init's collector also observes the removal bit.
             let _ = kinakaze_vfs::namespaces::remove_ipc(IpcKind::Memory, segment.namespace, id);
-            registry::forget(IpcKind::Memory, id);
+            if attached {
+                registry::withdraw_memory_key(id);
+            } else {
+                registry::forget(IpcKind::Memory, id);
+            }
 
             let Ok(mut state) = state().lock() else {
                 return fail(EIO);

@@ -1899,6 +1899,7 @@ fn epoll_wait_inner(
         }
 
         let mut pty_ready = Vec::new();
+        let mut native_pty_waits = Vec::new();
         if PIPE_STATE_TRACE_ACTIVE.load(Ordering::Acquire) {
             let fds = pty_pending
                 .iter()
@@ -1912,6 +1913,15 @@ fn epoll_wait_inner(
         }
         for (key, registration) in &pty_pending {
             let fd = registration.poll_fd;
+            if timeout_ms != 0
+                && matches!(registration.kind, FdKind::PtyMaster | FdKind::PtySlave)
+                && registration.interest & (EPOLLIN | EPOLLRDNORM) != 0
+                && registration.interest & !(EPOLLIN | EPOLLRDNORM | EPOLLONESHOT) == 0
+            {
+                if let Ok(source) = native_wait::Source::for_fd(fd, key.description_id) {
+                    native_pty_waits.push(source);
+                }
+            }
             if PIPE_STATE_TRACE_ACTIVE.load(Ordering::Acquire) {
                 eprintln!("kinakaze pipe epoll pty: fd={fd} before-readiness");
             }
@@ -1936,6 +1946,10 @@ fn epoll_wait_inner(
                 pty_ready.push((*key, *registration, reported));
             }
         }
+
+        // A PTY's read event covers data and hangup even alongside TCP sockets.
+        // Keep polling for other interests and edge-triggered registrations.
+        let polled_watched = polled_watched - native_pty_waits.len();
 
         let mut filled = 0usize;
 
@@ -2107,6 +2121,7 @@ fn epoll_wait_inner(
                     || !netlink_waits.is_empty()
                     || !eventfd_waits.is_empty()
                     || !ring_waits.is_empty()
+                    || !native_pty_waits.is_empty()
                     || !unix_waits.is_empty()
                     || !unix_write_waits.is_empty())
             {
@@ -2127,6 +2142,9 @@ fn epoll_wait_inner(
                     unsafe { group.add(source.raw())? };
                 }
                 for source in &ring_waits {
+                    unsafe { group.add(source.raw())? };
+                }
+                for source in &native_pty_waits {
                     unsafe { group.add(source.raw())? };
                 }
                 for wait in &eventfd_waits {

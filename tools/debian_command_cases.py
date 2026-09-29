@@ -1,9 +1,11 @@
 """Explicit, bounded functional scenarios for Debian's standard command set."""
 
+import base64
 import bz2
 import gzip
 import hashlib
 import io
+import json
 import lzma
 from pathlib import Path, PurePosixPath
 import shlex
@@ -425,7 +427,23 @@ def cases():
     output("lsfd", "-p $$", "(COMMAND|bash)", "file descriptor metadata query")
     output("lslocks", "", ".*", "active file lock query")
     output("lslogins", "-u", "root", "account information table")
-    output("lsipc ipcs", "", ".*", "System V IPC inventory")
+    add(
+        "ipcs",
+        'identifier=$(ipcmk -M 4096 | sed "s/.*: //"); '
+        'trap \'ipcrm -m "$identifier"\' EXIT; '
+        '"$1" -m -i "$identifier" > out; grep -q "bytes=4096" out; '
+        '"$1" -m > inventory; '
+        'awk -v id="$identifier" \'$2 == id && $5 == 4096 {found=1} END {exit !found}\' inventory',
+        "enumerate and inspect an existing cross-process shared memory segment",
+    )
+    add(
+        "lsipc",
+        'identifier=$(ipcmk -M 4096 | sed "s/.*: //"); '
+        'trap \'ipcrm -m "$identifier"\' EXIT; '
+        '"$1" --shmems --bytes --noheadings --output ID,SIZE > out; '
+        'awk -v id="$identifier" \'$1 == id && $2 == 4096 {found=1} END {exit !found}\' out',
+        "list actual shared memory identifiers and byte sizes",
+    )
     output("lsns", "-p $$", "(NS|TYPE)", "process namespaces")
     output("lscpu", "", "CPU", "CPU topology query")
     output("lsmem", "", "(RANGE|Memory)", "memory layout query")
@@ -1261,6 +1279,94 @@ def cases():
         "detect chroot state with documented status",
         codes=(0, 1, 2),
     )
+    add(
+        "grops",
+        'troff -Tps -man sample.1 > intermediate; "$1" intermediate > out; '
+        "grep -q '^%!PS-Adobe' out; grep -q '^%%Pages:' out",
+        "render roff intermediate output as PostScript",
+    )
+    add(
+        "grotty",
+        'troff -Tascii -man sample.1 > intermediate; "$1" -c intermediate > out; '
+        "test -s out; col -b < out > plain; grep -qi sample plain",
+        "render roff intermediate output as terminal text",
+    )
+    add(
+        "helpztags",
+        'mkdir documentation; printf "*audit-tag* audit documentation\\n" > documentation/audit.txt; '
+        '"$1" documentation; grep -q "^audit-tag" documentation/tags',
+        "generate searchable Vim documentation tags",
+    )
+    add(
+        "gettext.sh",
+        '. "$1"; NAME=audit; export NAME; eval_gettext \'Hello $NAME\' > out; '
+        'printf "Hello audit" > expected; cmp out expected',
+        "substitute shell variables through gettext helpers",
+    )
+    add(
+        "ipcmk",
+        'identifier=$("$1" -M 4096 | sed "s/.*: //"); '
+        'trap \'ipcrm -m "$identifier"\' EXIT; '
+        'python3 shm-check.py "$identifier" write; python3 shm-check.py "$identifier" read',
+        "create and inspect a real System V shared memory segment",
+    )
+    add(
+        "ipcrm",
+        'identifier=$(ipcmk -M 4096 | sed "s/.*: //"); '
+        'trap \'ipcrm -m "$identifier" 2>/dev/null || true\' EXIT; '
+        'python3 shm-check.py "$identifier" write; python3 shm-check.py "$identifier" read; '
+        '"$1" -m "$identifier"; '
+        'python3 shm-check.py "$identifier" absent',
+        "remove a System V shared memory segment and verify its absence",
+    )
+    add(
+        "scriptreplay",
+        'script -q -e --log-out recording --log-timing timing -c "printf replay-ok"; '
+        '"$1" --timing timing --log-out recording > out; grep -q replay-ok out',
+        "replay terminal bytes using a deterministic timing file",
+    )
+    add(
+        "iconvconfig",
+        'mkdir conversion; "$1" --nostdlib --output "$PWD/conversion/cache" '
+        '/usr/lib/x86_64-linux-gnu/gconv; test -s conversion/cache',
+        "generate a conversion-module cache in an isolated directory",
+    )
+    for command in ("dbus-daemon", "dbus-send"):
+        daemon = '"$1"' if command == "dbus-daemon" else "dbus-daemon"
+        sender = '"$1"' if command == "dbus-send" else "dbus-send"
+        add(
+            command,
+            daemon + ' --session --address="unix:path=$PWD/bus" --fork --print-pid > daemon.pid; '
+            'trap \'kill "$(cat daemon.pid)"\' EXIT; '
+            'export DBUS_SESSION_BUS_ADDRESS="unix:path=$PWD/bus"; '
+            + sender + ' --session --type=method_call --print-reply '
+            '--dest=org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus.ListNames > out; '
+            'grep -q \'string "org.freedesktop.DBus"\' out',
+            "query names on a private session bus using an actual method call",
+        )
+    add(
+        "dbus-monitor",
+        'dbus-daemon --session --address="unix:path=$PWD/bus" --fork --print-pid > daemon.pid; '
+        'monitor=; trap \'test -z "$monitor" || kill "$monitor" 2>/dev/null || true; '
+        'kill "$(cat daemon.pid)"\' EXIT; '
+        'export DBUS_SESSION_BUS_ADDRESS="unix:path=$PWD/bus"; '
+        '"$1" --session "type=signal,interface=org.example.Audit" > out & monitor=$!; '
+        'for attempt in $(seq 1 20); do '
+        'dbus-send --session --type=signal /org/example/Audit org.example.Audit.Changed string:audit-payload; '
+        'grep -q audit-payload out && break; sleep 0.05; done; '
+        'grep -q "member=Changed" out; grep -q audit-payload out',
+        "observe a real signal payload on an isolated D-Bus session",
+    )
+    add(
+        "gpgv",
+        'export GNUPGHOME="$PWD/gnupg"; mkdir "$GNUPGHOME"; chmod 700 "$GNUPGHOME"; '
+        '"$1" --keyring "$PWD/trusted.gpg" message.sig message.txt; '
+        'printf tampered >> message.txt; code=0; '
+        '"$1" --keyring "$PWD/trusted.gpg" message.sig message.txt > out 2> err || code=$?; '
+        'test "$code" = 1; grep -q "BAD signature" err',
+        "verify a real Ed25519 signature and reject altered content",
+        timeout=45,
+    )
     # Prefix every direct-argument fragment with the actual command path.
     for case in result.values():
         if case["script"].startswith(("-", "disk.img;", "sourcefs ")):
@@ -1269,7 +1375,39 @@ def cases():
 
 
 def prepare(root: Path, case):
+    if "trusted.gpg" in case["script"]:
+        fixture_path = Path(__file__).resolve().parents[1] / "tests/guest/gpgv-fixture.json"
+        fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+        for filename, key in [
+            ("trusted.gpg", "public_key_base64"),
+            ("message.sig", "signature_base64"),
+            ("message.txt", "message_base64"),
+        ]:
+            (root / filename).write_bytes(base64.b64decode(fixture[key], validate=True))
     fixtures = {
+        "shm-check.py": '''import ctypes, errno, sys
+lib = ctypes.CDLL(None, use_errno=True)
+lib.shmat.restype = ctypes.c_void_p
+lib.shmat.argtypes = [ctypes.c_int, ctypes.c_void_p, ctypes.c_int]
+lib.shmdt.argtypes = [ctypes.c_void_p]
+lib.shmctl.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_void_p]
+identifier = int(sys.argv[1])
+stat = ctypes.create_string_buffer(112)
+result = lib.shmctl(identifier, 2, stat)
+if sys.argv[2] == 'absent':
+    assert result == -1 and ctypes.get_errno() in (errno.EINVAL, errno.EIDRM)
+else:
+    assert result == 0, ctypes.get_errno()
+    assert int.from_bytes(stat.raw[48:56], 'little') == 4096
+    address = lib.shmat(identifier, None, 0)
+    assert address not in (None, ctypes.c_void_p(-1).value), ctypes.get_errno()
+    try:
+        if sys.argv[2] == 'write':
+            ctypes.c_uint64.from_address(address).value = 0x123456789abcdef
+        assert ctypes.c_uint64.from_address(address).value == 0x123456789abcdef
+    finally:
+        assert lib.shmdt(address) == 0
+''',
         "text.txt": "alpha beta\nBeta gamma\nalpha beta\n",
         "ascii.txt": "hello\n",
         "lines.txt": "one\ntwo\nthree\n",

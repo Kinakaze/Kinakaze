@@ -86,7 +86,7 @@ fn decode(bytes: &[u8]) -> Result<Vec<Entry>, i32> {
             let kind = u32::from_le_bytes(row[..4].try_into().unwrap());
             let key = i32::from_le_bytes(row[4..8].try_into().unwrap());
             let id = i32::from_le_bytes(row[8..].try_into().unwrap());
-            if kind > 1 || key == IPC_PRIVATE || id <= 0 {
+            if kind > 1 || id <= 0 {
                 return Err(EIO);
             }
             Ok((kind, key, id))
@@ -110,7 +110,13 @@ pub(super) fn get<T>(
 ) -> Result<T, i32> {
     // Private means a new unkeyed object; its ID is still usable by other tasks.
     if key == IPC_PRIVATE {
-        return action(kinakaze_vfs::namespaces::allocate_ipc_id()?, true);
+        return kinakaze_vfs::namespaces::ipc_registry(|bytes| {
+            let mut entries = decode(bytes)?;
+            let id = kinakaze_vfs::namespaces::allocate_ipc_id()?;
+            let result = action(id, true)?;
+            entries.push((kind as u32, key, id));
+            Ok((encode(&entries), result))
+        });
     }
     kinakaze_vfs::namespaces::ipc_registry(|bytes| {
         let mut entries = decode(bytes)?;
@@ -141,6 +147,31 @@ pub(super) fn forget(kind: IpcKind, id: i32) {
     let _ = kinakaze_vfs::namespaces::ipc_registry(|bytes| {
         let mut entries = decode(bytes)?;
         entries.retain(|row| row.0 != kind as u32 || row.2 != id);
+        Ok((encode(&entries), ()))
+    });
+}
+
+pub(super) fn ids(kind: IpcKind) -> Result<Vec<i32>, i32> {
+    kinakaze_vfs::namespaces::ipc_registry(|bytes| {
+        let entries = decode(bytes)?;
+        Ok((
+            bytes.to_vec(),
+            entries
+                .into_iter()
+                .filter_map(|entry| (entry.0 == kind as u32).then_some(entry.2))
+                .collect(),
+        ))
+    })
+}
+
+pub(super) fn withdraw_memory_key(id: i32) {
+    let _ = kinakaze_vfs::namespaces::ipc_registry(|bytes| {
+        let mut entries = decode(bytes)?;
+        for entry in &mut entries {
+            if entry.0 == IpcKind::Memory as u32 && entry.2 == id {
+                entry.1 = IPC_PRIVATE;
+            }
+        }
         Ok((encode(&entries), ()))
     });
 }

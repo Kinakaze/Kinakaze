@@ -2190,27 +2190,23 @@ pub unsafe extern "sysv64" fn pthread_cond_wait(cond: *mut usize, mutex: *mut us
     if cond.is_null() || mutex.is_null() {
         return EINVAL;
     }
-    loop {
-        cancel_condition_wait(cond);
-        // Native condition variables cannot wait on a separate cancellation
-        // handle. Bound each sleep so cancellation cannot miss the interval
-        // between checking the request and atomically releasing the mutex.
-        let woke = unsafe { SleepConditionVariableSRW(cond.cast(), mutex.cast(), 100, 0) };
-        let error = if woke == 0 {
-            unsafe { GetLastError() }
-        } else {
-            0
-        };
-        record_owner(mutex);
-        // The caller's mutex is held before running its GNU cleanup handlers.
-        cancel_condition_wait(cond);
-        if woke != 0 {
-            return 0;
-        }
-        if error != ERROR_TIMEOUT {
-            return EINVAL;
-        }
+    cancel_condition_wait(cond);
+    // Native condition variables cannot wait on a separate cancellation
+    // handle. Bound each sleep so cancellation cannot miss the interval
+    // between checking the request and atomically releasing the mutex.
+    let woke = unsafe { SleepConditionVariableSRW(cond.cast(), mutex.cast(), 100, 0) };
+    let error = if woke == 0 {
+        unsafe { GetLastError() }
+    } else {
+        0
+    };
+    record_owner(mutex);
+    // The caller's mutex is held before running its GNU cleanup handlers.
+    cancel_condition_wait(cond);
+    if woke != 0 || error == ERROR_TIMEOUT {
+        return 0;
     }
+    EINVAL
 }
 
 #[cfg(all(windows, target_arch = "x86_64"))]
@@ -2280,37 +2276,40 @@ unsafe fn cond_wait_deadline(
     clock_id: i32,
     deadline: Timespec,
 ) -> i32 {
-    loop {
-        cancel_condition_wait(cond);
-        let left = match remaining_until(&deadline, clock_id) {
-            Ok(Some(left)) => left,
-            Ok(None) => return ETIMEDOUT,
-            Err(error) => return error,
-        };
-        // Round fractional milliseconds up and bound cancellation latency as
-        // for untimed waits. Recheck the absolute clock after each timeout.
-        let milliseconds = left.as_nanos().div_ceil(1_000_000).min(100) as u32;
-        let woke = unsafe {
-            SleepConditionVariableSRW(
-                cond.cast::<CONDITION_VARIABLE>(),
-                mutex.cast::<SRWLOCK>(),
-                milliseconds,
-                0,
-            )
-        };
-        let error = if woke == 0 {
-            unsafe { GetLastError() }
-        } else {
-            0
-        };
-        record_owner(mutex);
-        cancel_condition_wait(cond);
-        if woke != 0 {
-            return 0;
-        }
-        if error != ERROR_TIMEOUT {
-            return EINVAL;
-        }
+    cancel_condition_wait(cond);
+    let left = match remaining_until(&deadline, clock_id) {
+        Ok(Some(left)) => left,
+        Ok(None) => return ETIMEDOUT,
+        Err(error) => return error,
+    };
+    // Round fractional milliseconds up and bound cancellation latency as
+    // for untimed waits. Recheck the absolute clock after each timeout.
+    let milliseconds = left.as_nanos().div_ceil(1_000_000).min(100) as u32;
+    let woke = unsafe {
+        SleepConditionVariableSRW(
+            cond.cast::<CONDITION_VARIABLE>(),
+            mutex.cast::<SRWLOCK>(),
+            milliseconds,
+            0,
+        )
+    };
+    let error = if woke == 0 {
+        unsafe { GetLastError() }
+    } else {
+        0
+    };
+    record_owner(mutex);
+    cancel_condition_wait(cond);
+    if woke != 0 {
+        return 0;
+    }
+    if error != ERROR_TIMEOUT {
+        return EINVAL;
+    }
+    match remaining_until(&deadline, clock_id) {
+        Ok(Some(_)) => 0,
+        Ok(None) => ETIMEDOUT,
+        Err(error) => error,
     }
 }
 

@@ -5,9 +5,11 @@ from pathlib import Path
 from init_pool import InitPool, distribution_hashes
 
 CASES = {
+    'raw-mincore': ('RawMincoreProbe', 'RAW_MINCORE_RESIDENCY_BOUNDS_HOLES_OK'),
     'uring': ('LinuxUringProbe', 'LINUX_URING_MMAP_ASYNC_RW_VECTORS_OVERFLOW_WAKE_OK'),
     'memory-advice': ('MadvisePolicyProbe', 'MADVISE_DUMP_FORK_ZERO_RESTORE_OK'),
     'pthread-mask': ('PthreadSignalMaskProbe', 'PTHREAD_MASK_INHERIT_SIGWAIT_OK'),
+    'pty-wait': ('PtyMixedWaitProbe', 'PTY_TCP_NATIVE_WAKE_HANGUP_OK'),
 }
 
 

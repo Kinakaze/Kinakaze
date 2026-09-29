@@ -512,7 +512,11 @@ def probe(directory):
         command('/usr/sbin/service', 'goal-simple', 'restart', timeout=30)
         command('/usr/sbin/service', 'goal-simple', 'stop', timeout=30)
         assert ctl('is-active', 'goal-simple', expected=3) == 'inactive'
-    case('enumerate-socket-unit-files', lambda: ctl('list-unit-files', '--full', '--type=socket', timeout=30))
+    # This asks the manager for every unit before the client filters sockets.
+    # A full installed application root can exceed the bus's default 25s budget;
+    # preserve its elapsed time in the report independently of correctness.
+    case('enumerate-socket-unit-files', lambda: command('/usr/bin/env', 'SYSTEMD_BUS_TIMEOUT=90s',
+        '/bin/systemctl', '--no-pager', 'list-unit-files', '--full', '--type=socket', timeout=95))
     case('debian-service-dispatch', service)
     for index in range(5):
         case(f'systemctl-warm-show-{index}', lambda: ctl('show', '-p', 'Version', '--value'))

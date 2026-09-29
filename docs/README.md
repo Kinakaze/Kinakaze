@@ -19,6 +19,7 @@
 ## 兼容性与性能
 
 - [集成验证记录](validation.md) 与 [开发进度](progress.md)。
+- [默认启动、数据库与 io_uring](server-performance-2026-09-29.md)：udev 默认策略、常驻 Python、内存策略、MariaDB/AstrBot 运行结果和剩余边界。
 - [关闭响应与国内源验收](shutdown-mirror-validation-2026-09-27.md)：托盘退出延迟、整树回收及中科大镜像直连安装。
 - [软件运行边界](software-boundaries-2026-09-22.md) 与 [浏览器启动](browser-startup-2026-09-22.md)。
 - [Minecraft 渲染](minecraft-rendering-2026-09-23.md)、[GNOME](gnome.md) 与 [网易云音乐](netease-cloud-music-2026-09-22.md)。

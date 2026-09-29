@@ -80,3 +80,94 @@ MySQL 已完成 `--initialize-insecure`、启动就绪、真实 InnoDB 提交/�
 为缩小范围增加 `CppFutureProbe.cpp`：真实 libstdc++ 的 shared future、超时等待、detached 线程 promise、`set_value_at_thread_exit`、`std::async` 和 broken promise 行为通过，见 `cpp-futures/results.json`。这排除了该探针范围内的通用故障，不排除 MySQL 特有的并发竞态。
 
 MySQL 的正常重启、崩溃恢复尚未越过关机阻塞点，不能报告通过。后续优先采集非日志方式的线程等待/调用栈证据，再对最小复现修复。NUMA `get_mempolicy`/`mbind` 仍返回未实现，MySQL 明确告警并回退；尚未宣称这些能力已经补齐。
+
+## 第三轮：修复条件变量丢失通知
+
+第二轮的关机阻塞现在已有可复现根因及修复。首先，旧候选包在五次重复中仅两次完整通过，另外三次失败，见 `oracle-stack-repeat/results.json`；单次成功不能证明稳定性。测试工具新增 `--repeat`，保留每轮失败并在全部轮次通过时才报告成功。
+
+新增 `tools/sample-native-stacks.py`，对明确选定的 Windows 进程短暂挂起单个线程、采集寄存器和栈内存后立即恢复，再分析可执行地址候选。它记录进程创建时间并验证线程所属进程；候选地址不是正式回溯栈，可能含旧栈值。实际快照为 `mysql-stacks-77900.json` 和 `mysql-snapshot-21596-*.json`。结合 MySQL ELF 反汇编，主线程的返回地址 `srv_pre_dd_shutdown+0x6ea` 位于等待 purge worker 退出的循环；间隔采样显示主线程仍执行，并非 nanosleep 永久挂住。剩余 worker 在条件变量等待。
+
+根因是 pthread 条件变量为了检查取消而使用 100 ms 的内部超时，但将内部超时完全吞掉：
+
+1. 等待者从原生条件变量队列超时离开，随后阻塞于重新获得互斥锁。
+2. 持锁的通知者更新条件并发出通知，此时原生等待队列已没有该等待者。
+3. 等待者获得锁后，旧实现因内部超时重新等待，未返回应用检查已经改变的条件。
+
+`pthread_cond_wait` 现在将内部超时作为 POSIX 允许的伪唤醒返回；`pthread_cond_timedwait` 和 `pthread_cond_clockwait` 在绝对截止时间未到时同样返回伪唤醒，真正到期仍返回 ETIMEDOUT。取消检查与重新持有互斥锁的语义保留。
+
+`CondReacquireNotifyProbe.c` 用通知者持锁 250 ms 强制覆盖窗口，测试普通等待、realtime 定时等待、monotonic clockwait，以及真正超时后仍持有互斥锁。旧包在 15 秒外部超时前未完成，见 `cond-reacquire-before/results.json`；修复后与 C++ future 测试一起重复三次全部通过，见 `cond-reacquire-after/results.json`。取消清理、Oracle ABI 和 binary80 power 回归通过，见 `cond-cancel-regression/`。
+
+候选包 `cond-candidate` 的 Oracle MySQL 五轮默认 30 秒关机超时测试全部通过，见 `oracle-cond-fixed/results.json`。共验证十次正常关机、五次重启和五次 SIGKILL 后恢复；每轮重新初始化独立数据目录，并核对提交、回滚、并发行数及总和。
+
+| 应用内部计时 | 本轮中位数 |
+| --- | ---: |
+| 初始化 | 5843.91 ms |
+| 启动至 SQL 就绪 | 1911.28 ms |
+| 32 次并发事务 | 4717.62 ms |
+| 正常关机，10 个样本 | 1199.68 ms |
+| 正常重启至 SQL 就绪 | 1782.84 ms |
+| 崩溃恢复至 SQL 就绪 | 2626.98 ms |
+
+正常关机范围 873.35–1478.80 ms。以上是功能测试中的观测，不是 native 对照基准；部分测试与其他回归同时运行。候选构建还包含同期版本变更，不能将所有版本间时间差归因于此修复。
+
+Python、Nginx、Redis、PostgreSQL、MariaDB 和 Java 回归全部通过，见 `cond-app-regression/results.json`。Release 构建与构建时的导出/格式检查通过，见 `cond-build.log`；最终 pthread 单文件格式检查和 Python 语法检查通过。后续全仓格式检查发现同期 `libs/libc/src/fdio.rs` 改动有格式差异，未在本轮修改该文件；没有执行全 workspace 单元测试。
+
+整体目标仍进行中：本轮只证明所列 MySQL 场景与回归通过，NUMA、其他 syscall/libc 缺口、Debian 99% 功能覆盖以及 native 性能对照仍需继续。
+
+## 第四轮：扩展 Debian 功能矩阵
+
+新增十二个命令的真实功能场景：`grops`、`grotty`、`helpztags`、`gettext.sh`、`ipcmk`、`ipcrm`、`scriptreplay`、`iconvconfig`、`dbus-daemon`、`dbus-send`、`dbus-monitor`、`gpgv`。
+
+- 渲染测试先生成 roff 中间格式，再核对 PostScript 标识或终端文本；文档标签、变量替换、转换缓存和终端录制重放都有结果断言。
+- D-Bus 使用每个测试目录下的私有 Unix socket，实际调用 ListNames、发送并捕获信号内容，退出时关闭自己的 daemon/monitor。
+- 共享内存由独立进程创建，另一个进程检查 IPC_STAT、大小、挂接并写入内容，再由第三个进程重新挂接读取。删除测试先验证对象存在和内容正确，再执行 ipcrm 并验证对象不存在，避免“本来不存在”的假通过。
+- gpgv 使用固定公开测试密钥和 Ed25519 签名验证内容，并要求篡改后出现 BAD signature。没有把 gpg 私钥或签名程序作为 Debian 测试依赖；`tests/guest/gpgv-fixture.json` 只包含公开密钥、签名和测试消息，报告记录该文件哈希。
+
+专项十二项全部通过，见 `artifacts/goal-20260929/debian-expanded/functional.json`。随后对相同 758 路径清单重跑完整功能矩阵，首轮结果为 464 通过、60 失败、2 超时、232 未测试。唯一从旧基线通过转为失败的是 lessfile（未返回临时输出路径）；串行复测通过，保留原始 jsonl 失败记录，尚未断言其根因或稳定性已解决。
+
+复测合并后的最新结果为 **465/758，61.35%**；59 失败、2 超时、232 未测试。去重后 657 个目标中 416 个至少有一个路径通过，63.32%。见 `debian-expanded-full/functional.json`。相对第一轮，十二项从未测试转为通过，dig/mdig 也通过；版本差异和测试并发条件不同，不能把所有变化归因于本轮测试新增，更不能将该固定清单视为整个 Debian 软件仓库。
+
+调查同时确认一个需要后续处理的兼容性差异：`ipcs -m -i ID` 报不存在时，对同一个 ID 的 shmctl/shmat/shmdt 实际成功。因此不能把 ipcs 输出直接当作共享内存生命周期证据；其枚举/查询路径需要单独修复。
+
+本轮没有修改 runtime 或性能实现。Python 语法检查和 diff 空白检查通过，整体 Goal 保持进行中。
+
+## 第五轮：真实 SysV 共享内存查询
+
+根据 util-linux 2.38.1 的 `ipc_shm_get_info`，ipcs 首先读取 `/proc/sysvipc/shm`，仅在该文件缺失时尝试 SHM_INFO/SHM_STAT 枚举。因此对已知 ID 的 IPC_STAT 成功，并不能保证 ipcs 能查到它；第四轮的差异来自这一接口缺口。
+
+新增 `/proc/sysvipc` 目录与动态 `shm` 查询。libc 在初始化时将元数据读取函数注册到 VFS；每次打开文件都读取当前 IPC 命名空间的真实共享段，并在对象锁下更新已失效进程的挂接计数。原有键目录现在也登记 IPC_PRIVATE 对象，避免漏掉无键段。
+
+删除语义同时完善了查询可见性：IPC_RMID 立即释放原键；仍有挂接的段保留在查询中并带 SHM_DEST 标志，最后解除挂接后消失。原键可在旧段仍挂接期间创建新的独立 ID。失效登记在查询时清理，普通无挂接删除及当前命名空间的最后解除挂接也会主动清理登记。
+
+这里输出十四个已有权威元数据字段，不编造 RSS 和交换页统计。uid/gid 字段仍沿用现有 SysV provider 的 root-only 元数据限制；本轮没有补齐其所有用户权限语义，也没有实现 SHM_INFO、SHM_STAT 或消息队列。
+
+验证记录均位于 `artifacts/goal-20260929/`：
+
+- `sysv-before/results.json`：旧包因缺少查询目录失败。
+- `sysv-after/results.json`：私有段、跨进程 ipcs 查询、挂接计数、延迟删除、IPC 命名空间隔离，三轮全部通过。
+- `sysv-key-reuse/results.json`：增加旧段仍挂接时的键复用测试，三轮全部通过。
+- `ipc-command-tests/functional.json`：ipcs、lsipc、ipcmk、ipcrm 四项全部通过。原先 ipcs/lsipc 的空输出可通过场景已替换为真实段 ID、大小及枚举断言。
+- `ipc-services/results.json`：命名空间基础场景、PostgreSQL、MariaDB 全部通过。
+- `ipc-build-retry.log`：Release 原生包构建、导出及格式检查通过。首次构建的一处 usize/pointer 类型错误已修正；没有执行全 workspace 单元测试。
+
+查询支持是兼容性进展，不是吞吐或 native 性能结论。本轮未重跑完整 Debian 矩阵，不能据此修改上一轮完整覆盖率；整体目标继续进行中。
+
+## 第六轮：原始 mincore 与完整回归
+
+`mincore` 的 libc 驻留查询已经使用真实 Windows 工作集，但 syscall 27 尚未分派。本轮将其接入同一个实现，保留负 errno 转换；静态审计变为 266 个分派入口、1 个明确拒绝和 108 个未分派。分派数量不代表完整语义覆盖。
+
+新增 `RawMincoreProbe.py`，同时验证原始 syscall 和 libc：已触碰页面的驻留位、非整页长度向上取整、输出哨兵字节、未对齐地址 EINVAL、无效输出地址 EFAULT、部分 munmap 后的空洞 ENOMEM，以及相邻映射的数据完整性。
+
+测试初稿在部分 munmap 后直接要求邻页驻留，暴露了测试假设不成立：宿主拆分映射后页面可以暂时不驻留。最终测试先实际读取并核对邻页内容，再查询驻留位。保留初始失败报告，不将此项记为运行时修复。旧候选包最终探针在首次 raw mincore 调用返回 ENOSYS；新包全部通过。
+
+本轮报告位于 `artifacts/goal-20260929/continued/`：
+
+- `build-retry.log`：Release 原生包构建、导出和格式检查通过。初次构建受沙箱临时目录权限阻止；重新执行成功。未运行全 workspace 单元测试。
+- `mincore-baseline/`：旧包 ENOSYS；`mincore-final/`：原始驻留查询与既有内存策略探针各重复三次，六项全部通过。首次沙箱控制管道失败另保存在 `mincore-before/`。
+- `mysql/`：Oracle MySQL 8.4.11 三轮全部通过，覆盖初始化、提交/回滚、并发事务、正常关闭和重启、SIGKILL 后恢复及持久数据检查；每轮完整运行分别为 18.892、18.853、18.609 秒。
+- `apps/`：Python、Nginx、Redis、PostgreSQL、MariaDB、SQLite 多进程、FFmpeg、Java 八项全部通过。
+- `debian/functional.json`：相同固定清单完整重跑，465/758 通过（61.35%）、59 失败、2 超时、232 未测试，与上轮完整统计一致。`capsh` 和 `tasksel` 超时，`ionice`、`uclampset` 等缺口仍明确保留。
+- `startup/results.json`：十次正式样本、两次预热、交替版本顺序，Bash 完整启动中位数旧包 98.115 ms、新包 95.336 ms；最大值分别为 105.844 和 107.141 ms。差异较小且尾部未改善，不据此宣称启动优化成功。
+- `startup-profile/`：另行三次诊断，manager-start 中位数 12.709 ms（含 guest-process-create 6.554 ms），providers-total 9.919 ms（含 discover 5.954 ms、bind 1.997 ms），worker-open-runtime 4.814 ms、manager-cleanup 3.899 ms。计时存在嵌套，不能相加；后续优化应优先隔离进程创建和 provider 元数据发现成本。
+
+功能矩阵完成后才执行启动测量，诊断与无诊断测量分开。Python 语法检查和 diff 空白检查通过。本机仍未配置 WSL/原生 Linux 对照环境，以上不能证明已比肩 native；99% 命令覆盖、剩余 syscall/libc 能力和原生性能目标尚未完成。

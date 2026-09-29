@@ -328,22 +328,22 @@ checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
 
 [[package]]
 name = "kinakaze-abi"
-version = "0.6.0"
+version = "0.7.0"
 
 [[package]]
 name = "kinakaze-alloc"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "windows-sys 0.61.2",
 ]
 
 [[package]]
 name = "kinakaze-elf"
-version = "0.6.0"
+version = "0.7.0"
 
 [[package]]
 name = "kinakaze-guest-engine"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "blake3",
  "gimli",
@@ -360,7 +360,7 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-kernel"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "kinakaze-abi",
  "kinakaze-alloc",
@@ -370,7 +370,7 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-link"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "gimli",
  "kinakaze-alloc",
@@ -383,7 +383,7 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-tls"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "kinakaze-alloc",
  "kinakaze-kernel",
@@ -392,25 +392,25 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-v2-abi"
-version = "0.6.0"
+version = "0.7.0"
 
 [[package]]
 name = "kinakaze-v2-bridge"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "kinakaze-v2-host-win",
 ]
 
 [[package]]
 name = "kinakaze-v2-host-win"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "windows-sys 0.61.2",
 ]
 
 [[package]]
 name = "kinakaze-v2-init"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "blake3",
  "kinakaze-v2-host-win",
@@ -424,7 +424,7 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-v2-libasound"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "kinakaze-alloc",
  "kinakaze-tls",
@@ -435,7 +435,7 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-v2-libc"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "kinakaze-abi",
  "kinakaze-alloc",
@@ -453,7 +453,7 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-v2-libcuda"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "kinakaze-kernel",
  "kinakaze-tls",
@@ -463,22 +463,22 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-v2-libdisplay"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "kinakaze-kernel",
 ]
 
 [[package]]
 name = "kinakaze-v2-libdl"
-version = "0.6.0"
+version = "0.7.0"
 
 [[package]]
 name = "kinakaze-v2-libegl"
-version = "0.6.0"
+version = "0.7.0"
 
 [[package]]
 name = "kinakaze-v2-libgl"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "kinakaze-alloc",
  "kinakaze-v2-libdisplay",
@@ -488,15 +488,15 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-v2-libglesv2"
-version = "0.6.0"
+version = "0.7.0"
 
 [[package]]
 name = "kinakaze-v2-libglx"
-version = "0.6.0"
+version = "0.7.0"
 
 [[package]]
 name = "kinakaze-v2-libm"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "kinakaze-tls",
  "libm",
@@ -504,11 +504,11 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-v2-libopengl"
-version = "0.6.0"
+version = "0.7.0"
 
 [[package]]
 name = "kinakaze-v2-libpipewire"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "kinakaze-tls",
  "kinakaze-v2-libc",
@@ -519,7 +519,7 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-v2-libpthread"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "kinakaze-kernel",
  "kinakaze-tls",
@@ -529,7 +529,7 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-v2-libpulse"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "kinakaze-alloc",
  "kinakaze-kernel",
@@ -540,14 +540,14 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-v2-libresolv"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "kinakaze-v2-libc",
 ]
 
 [[package]]
 name = "kinakaze-v2-librt"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "kinakaze-kernel",
  "kinakaze-v2-libc",
@@ -558,7 +558,7 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-v2-libvulkan"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "iced-x86",
  "kinakaze-tls",
@@ -569,7 +569,7 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-v2-libx11"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "kinakaze-alloc",
  "kinakaze-kernel",
@@ -580,11 +580,11 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-v2-libx11-xcb"
-version = "0.6.0"
+version = "0.7.0"
 
 [[package]]
 name = "kinakaze-v2-libxcb"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "kinakaze-alloc",
  "kinakaze-kernel",
@@ -596,11 +596,11 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-v2-libxcursor"
-version = "0.6.0"
+version = "0.7.0"
 
 [[package]]
 name = "kinakaze-v2-libxext"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "kinakaze-alloc",
  "kinakaze-kernel",
@@ -611,7 +611,7 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-v2-libxi"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "kinakaze-alloc",
  "kinakaze-kernel",
@@ -621,11 +621,11 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-v2-libxinerama"
-version = "0.6.0"
+version = "0.7.0"
 
 [[package]]
 name = "kinakaze-v2-libxrandr"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "kinakaze-alloc",
  "kinakaze-v2-libx11",
@@ -634,15 +634,15 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-v2-libxrender"
-version = "0.6.0"
+version = "0.7.0"
 
 [[package]]
 name = "kinakaze-v2-libxxf86vm"
-version = "0.6.0"
+version = "0.7.0"
 
 [[package]]
 name = "kinakaze-v2-loader"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "kinakaze-kernel",
  "kinakaze-link",
@@ -653,7 +653,7 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-v2-manager"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "getrandom 0.3.4",
  "kinakaze-v2-protocol",
@@ -662,14 +662,14 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-v2-packager"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "kinakaze-v2-bridge",
 ]
 
 [[package]]
 name = "kinakaze-v2-protocol"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -677,7 +677,7 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-v2-rootfs"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "flate2",
  "http",
@@ -693,7 +693,7 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-v2-runtime"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "kinakaze-guest-engine",
  "kinakaze-kernel",
@@ -707,7 +707,7 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-v2-worker"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "kinakaze-v2-abi",
  "kinakaze-v2-bridge",
@@ -720,7 +720,7 @@ dependencies = [
 
 [[package]]
 name = "kinakaze-vfs"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "kinakaze-kernel",
  "kinakaze-tls",

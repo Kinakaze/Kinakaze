@@ -163,7 +163,9 @@ def main():
             assert result['status'] == 'passed', result
         identity_path = root / 'etc/machine-id'
         report['machine_id_before'] = identity_path.read_text().strip() if identity_path.exists() else ''
-        with InitPool(root, dist, output / 'session', size=1, timeout=(45 if args.boot_only else 180) + args.idle_seconds + 2) as pool:
+        # The full suite includes a separately bounded 95s all-unit enumeration.
+        # Its budget must not consume the time reserved for the lifecycle cases.
+        with InitPool(root, dist, output / 'session', size=1, timeout=(45 if args.boot_only else 275) + args.idle_seconds + 2) as pool:
             report['pool_preparation_ms'] = pool.preparation_ms
             started = time.monotonic()
             manager = pool.launch([*manifest['startup']['command'],

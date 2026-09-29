@@ -59,6 +59,9 @@ with concurrent.futures.ThreadPoolExecutor(4) as p: assert sum(p.map(lambda n:n*
 print(json.dumps({"ssl":ssl.OPENSSL_VERSION}))' ''')
     add('statfs-boundaries', 'python3 StatfsBoundaryProbe.py')
     add('raw-epoll-create', 'python3 RawEpollCreateProbe.py')
+    add('sysv-proc', 'python3 SysvProcProbe.py', timeout=60)
+    add('cond-reacquire-notify', 'gcc -O2 CondReacquireNotifyProbe.c -pthread -o cond-reacquire; '
+        './cond-reacquire | grep -q COND_REACQUIRE_NOTIFY_OK', ['/usr/bin/gcc'], 15)
     add('standard-handle-lifetimes', 'python3 StandardHandleLifetimeProbe.py')
     add('native-permissions', 'python3 NativePermissionProbe.py')
     add('directory-types', 'python3 DirectoryTypeProbe.py')
@@ -169,7 +172,7 @@ if(json_decode(json_encode(["x"=>42]),true)["x"]!=42) exit(2); echo "PHP_OK\\n";
                 stage = root / guest.lstrip('/')
                 stage.mkdir(parents=True)
                 for fixture in ('InterpreterCommandProbe.py', 'CompilerRuntimeProbe.c', 'AbortStatusProbe.c', 'PosixSemaphoreProbe.c', 'DeepBindProbe.c', 'ExecutableTlsProbe.c', 'StatfsBoundaryProbe.py', 'StandardHandleLifetimeProbe.py', 'NativePermissionProbe.py', 'DirectoryTypeProbe.py', 'DirectoryCursorProbe.py', 'MetadataPathProbe.py', 'ProcessLimitsProbe.py', 'ChildSignalProbe.py', 'SharedListenerProbe.py', 'SharedSocketWaitProbe.py', 'PamRuntimeProbe.py', 'NodeRuntimeProbe.js',
-                                'CppFutureProbe.cpp', 'RawEpollCreateProbe.py', 'MariadbRuntimeProbe.py', 'SqliteProcessBoundaryProbe.py', 'FfmpegRuntimeProbe.py', 'JavaRuntimeProbe.java',
+                                'SysvProcProbe.py', 'CondReacquireNotifyProbe.c', 'CppFutureProbe.cpp', 'RawEpollCreateProbe.py', 'MariadbRuntimeProbe.py', 'SqliteProcessBoundaryProbe.py', 'FfmpegRuntimeProbe.py', 'JavaRuntimeProbe.java',
                                 'NamedSemaphoreProbe.c', 'MultiprocessingProbe.py', 'ForkDlopenProbe.c', 'IgnoredSignalIoProbe.c', 'PpollSignalProbe.c', 'AccountForkProbe.c', 'AccountStreamProbe.c', 'PathAccessProbe.py', 'PathReferenceProbe.py', 'RootResolutionProbe.py', 'GlobCallbackProbe.c', 'TmpfilesProbe.py', 'XattrLifetimeProbe.py',
                                 'NginxRuntimeProbe.py', 'RedisRuntimeProbe.py', 'PostgresqlRuntimeProbe.py', 'DescriptorDuplicationProbe.py', 'DatagramRightsProbe.py', 'UnixListenerCustodyProbe.py', 'UnixSocketOptionsProbe.py', 'TmpfsMappingProbe.py', 'TmpfsEofProbe.c', 'NamespaceServicesProbe.py'):
                     shutil.copyfile(source / fixture, stage / fixture)

@@ -1,6 +1,6 @@
 # 发布流程
 
-`v*` 标签工作流在 Windows 检查通过后生成源码 ZIP、SHA-256 校验文件并正式发布。版本说明必须预先提交到 `docs/releases/<tag>.md`。若该版本已经发布，工作流只更新源码附件，保留版本说明与二进制附件。
+`v*` 标签工作流在 Windows 检查通过后构建和验证运行包，生成运行包、源码 ZIP 及 SHA-256 校验文件并正式发布。版本说明必须预先提交到 `docs/releases/<tag>.md`。若该版本已经发布，工作流更新附件并保留版本说明。
 
 ## 准备版本
 
@@ -22,7 +22,7 @@ git push origin "v$Version"
 
 ## 检查发行内容
 
-推送标签前核对本地产物，发布后确认 `Source release` 成功并核对 Releases 附件：
+推送标签前核对本地产物，发布后确认 `Release` 成功并核对 Releases 附件：
 
 - 源码包来自标签提交，包含构建源码、测试、许可证与第三方声明。
 - SHA-256 与下载到本机的 ZIP 匹配。
@@ -34,7 +34,7 @@ git push origin "v$Version"
 
 ## 二进制发行
 
-源码工作流不自动打包开发机的 `artifacts/` 或客体环境。提供 Windows 二进制前，还需：
+发布工作流独立构建二进制，不打包开发机的 `artifacts/` 或客体环境。手工提供 Windows 二进制时，还需：
 
 1. 从独立构建目录运行 `./tools/build.ps1 -Release -TargetDirectory target/release-v0.1.0 -DistDirectory artifacts/release-v0.1.0`，保留对应提交和测试记录。
 2. 构建默认生成完整基础 rootfs 与首次安装清单。运行 `tools/test-release-runtime.py` 验证入口、原生模块、首次安装及进程树，再运行 `tools/test-first-run.py --network` 验证默认 shell、权限、APT 签名源及安装卸载。说明测试主机环境，不能把临时目录测试称为全新主机测试。

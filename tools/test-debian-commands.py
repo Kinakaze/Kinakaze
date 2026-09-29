@@ -612,6 +612,7 @@ def main():
             for p in (
                 Path(__file__),
                 Path(__file__).with_name("debian_command_cases.py"),
+                Path(__file__).resolve().parents[1] / "tests/guest/gpgv-fixture.json",
             )
         },
         images=images,

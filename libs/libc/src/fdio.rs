@@ -1656,9 +1656,11 @@ fn poll_wait(entries: &mut [PollFd], timeout_ms: c_int) -> Result<c_int, i32> {
                 if matches!(
                     table_entry.kind,
                     FdKind::Socket | FdKind::UnixSocket | FdKind::Fifo
-                ) || (table_entry.kind == FdKind::EventFd
-                    || table_entry.kind == FdKind::IoRing
-                        && kinakaze_vfs::iouring::linux::supported(entry.fd))
+                ) || (matches!(
+                    table_entry.kind,
+                    FdKind::EventFd | FdKind::PtyMaster | FdKind::PtySlave
+                ) || table_entry.kind == FdKind::IoRing
+                    && kinakaze_vfs::iouring::linux::supported(entry.fd))
                     && timeout_ms != 0
                 {
                     evented.push(index);

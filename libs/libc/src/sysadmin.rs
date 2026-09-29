@@ -3409,6 +3409,16 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
             };
             to_kernel(res as i64)
         }
+        SYS_MINCORE => {
+            let res = unsafe {
+                crate::fsextra::kinakaze_abi_mincore(
+                    argument1 as *mut c_void,
+                    argument2 as usize,
+                    argument3 as *mut u8,
+                )
+            };
+            to_kernel(res as i64)
+        }
         SYS_STATFS => {
             let res = unsafe {
                 crate::fsextra::kinakaze_abi_statfs(

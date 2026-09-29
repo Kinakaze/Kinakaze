@@ -1,5 +1,14 @@
 # 更新记录
 
+## 0.7.0 — 2026-09-29
+
+- 修复 pthread 条件变量内部超时后重新获取互斥锁时可能丢失通知的问题；Oracle MySQL 8.4.11 的事务、正常关机、重启和崩溃恢复重复测试通过。
+- 增加真实 `/proc/sysvipc/shm` 查询，支持 IPC_PRIVATE 段枚举、跨进程挂接计数、延迟删除和删除后的键复用，完善 ipcs/lsipc 功能验证。
+- PTY 原生就绪事件接入混合 TCP/PTY 的 poll/epoll 等待，降低终端会话空闲轮询；补充数据、挂断和重置回归。
+- 接通原始 `mincore` syscall，验证真实驻留位、输出边界、无效地址和部分解除映射后的空洞。
+- 扩展 Debian 命令功能场景；固定清单完整复测 465/758 通过（61.35%）。MySQL 三轮及 Python、Nginx、Redis、PostgreSQL、MariaDB、SQLite、FFmpeg、Java 回归通过。
+- 尚未达到 Debian 99% 命令覆盖，仍有 syscall/libc 和内核设备能力缺口；没有原生 Linux 性能对照，不宣称已比肩 native。
+
 ## 0.6.0 — 2026-09-29
 
 - 会话服务改用 socketpair 接收信号唤醒，避免和终端 poll 混在同一集合时被迫周期回扫。默认不再启动客体 udev：相关单元要存在 `/etc/kinakaze/enable-udev` 才会运行，设备仍由兼容层初始化。
