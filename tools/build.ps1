@@ -69,7 +69,8 @@ try {
     Invoke-Checked (Join-Path $binaryDir 'kinakaze-packager.exe') $packageArgs
     & (Join-Path $PSScriptRoot 'copy-runtime-dlls.ps1') -DistDirectory $DistDirectory
     if (-not $NativeOnly) {
-        $rootfsArgs = @('tools/prepare-release-rootfs.py', '--dist', $DistDirectory)
+        $rootfsArgs = @('tools/prepare-release-rootfs.py', '--dist', $DistDirectory,
+            '--elf-imports', (Join-Path $binaryDir 'elf-imports'))
         if ($Offline) { $rootfsArgs += '--offline' }
         if ($Release) { $rootfsArgs += '--online' }
         Invoke-Checked 'python' $rootfsArgs

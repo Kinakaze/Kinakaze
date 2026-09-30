@@ -1,5 +1,15 @@
 # 更新记录
 
+## 0.8.0 — 2026-09-30
+
+- 修复 Claude 文件工具使用 proc 目录描述符路径时的创建、打开、元数据和原子替换问题。已关闭的描述符、`O_NOFOLLOW`、目录重命名和 tmpfs 保留 inode 均按客体路径处理。
+- 通过现有共享交接传递 `execve` / `posix_spawn` 的 argv，不再把长参数写进 Windows 命令行。Codex 约 38,500 字符的 shell 准备命令不再间歇返回 `ENAMETOOLONG`。当前进程的 `/proc/self/cmdline` 使用初始 argv；其他进程的长 cmdline 仍受共享进程表字段限制。
+- 首次安装在 Debian 多架构目录提供 ELF 链接接口，GCC、Clang 和 Cargo 不再把原生 PE 库当作链接输入。补齐 CMake 需要的 `__wmemcpy_chk@GLIBC_2.4`。
+- 减少 provider 发现的临时导出列表和重复区段查询，并复用目录枚举已有的文件类型。同机启动中位数约有小幅下降，最慢样本和部分尾延迟没有改善。
+- 不宣称所有 agent、语言版本或 Debian 命令均已兼容，也没有同硬件原生 Linux 对照。
+
+
+
 ## 0.7.0 — 2026-09-29
 
 - 修复 pthread 条件变量内部超时后重新获取互斥锁时可能丢失通知的问题；Oracle MySQL 8.4.11 的事务、正常关机、重启和崩溃恢复重复测试通过。

@@ -17,7 +17,9 @@ from process_sample import ProcessSample
 
 
 def distribution_hashes(dist):
-    paths = [dist / 'worker.exe', dist / 'init.exe', *sorted((dist / 'rootfs/lib').glob('*'))]
+    native = dist / 'native' if (dist / 'native').is_dir() else dist / 'rootfs/lib'
+    paths = [dist / 'worker.exe', dist / 'init.exe', dist / 'rootfs.manifest.json',
+             *sorted(dist.glob('*.dll')), *sorted(native.glob('*'))]
     result = {}
     for path in paths:
         if path.is_file():

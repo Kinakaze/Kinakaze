@@ -623,6 +623,9 @@ EXPORTS
   kinakaze_abi___wctype_l
   "__wctype_l"=kinakaze_abi___wctype_l PRIVATE
   "__wctype_l@GLIBC_2.2.5"=kinakaze_abi___wctype_l PRIVATE
+  kinakaze_abi___wmemcpy_chk
+  "__wmemcpy_chk"=kinakaze_abi___wmemcpy_chk PRIVATE
+  "__wmemcpy_chk@GLIBC_2.4"=kinakaze_abi___wmemcpy_chk PRIVATE
   kinakaze_abi___wprintf_chk
   "__wprintf_chk"=kinakaze_abi___wprintf_chk PRIVATE
   "__wprintf_chk@GLIBC_2.4"=kinakaze_abi___wprintf_chk PRIVATE

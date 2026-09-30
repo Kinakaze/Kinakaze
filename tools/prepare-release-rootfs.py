@@ -15,7 +15,7 @@ from rootfs_bootstrap import configure_packages, configure_standard
 from debian_standard import load as load_standard, stored_path
 
 
-def prepare(dist, cache, preset_path, online=False):
+def prepare(dist, cache, preset_path, online=False, elf_imports=None):
     preset = json.loads(preset_path.read_text(encoding='utf-8'))
     if preset.get('schema') != 1:
         raise ValueError('unsupported rootfs package preset')
@@ -73,6 +73,7 @@ def prepare(dist, cache, preset_path, online=False):
         if not any(f'{directory}/{name}' in payloads or f'{directory}/{name}' in links
                    for directory in ('bin', 'usr/bin', 'sbin', 'usr/sbin')):
             links[f'bin/{name}'] = '/bin/busybox'
+    linker_targets = set()
     native_files = [*sorted(path for path in (dist / 'rootfs/lib').iterdir() if path.is_file()),
                     dist / 'rootfs/usr/share/doc/kinakaze-libc/copyright']
     for source in native_files:
@@ -84,6 +85,16 @@ def prepare(dist, cache, preset_path, online=False):
         payloads[target] = source.read_bytes()
         if online and source.parent == dist / 'rootfs/lib':
             preparer['atomic_write'](dist / 'native' / source.name, payloads[target])
+            if elf_imports is not None and source.name in {
+                    'libc.so.6', 'libm.so.6', 'libpthread.so.0', 'libdl.so.2',
+                    'librt.so.1', 'libresolv.so.2', 'ld-linux-x86-64.so.2'}:
+                interface = (elf_imports / source.name).read_bytes()
+                if not interface.startswith(b'\x7fELF'):
+                    raise ValueError(f'invalid ELF linker interface: {source.name}')
+                directory = 'usr/lib' if source.name == 'ld-linux-x86-64.so.2' else 'lib'
+                interface_target = f'{directory}/x86_64-linux-gnu/{source.name}'
+                payloads[interface_target] = interface
+                linker_targets.add(interface_target)
     configure_packages(payloads, locked, packages, preset['native_packages'], version, links)
     for name in payloads:
         links.pop(name, None)
@@ -114,8 +125,13 @@ def prepare(dist, cache, preset_path, online=False):
     for target, data in sorted(payloads.items()):
         digest = hashlib.sha256(data).hexdigest()
         if online:
-            if target.startswith('lib/') and (dist / 'native' / Path(target).name).is_file():
+            native_source = dist / 'native' / Path(target).name
+            if target.startswith('lib/') and native_source.is_file() and native_source.read_bytes() == data:
                 entry = dict(source='native/' + Path(target).name, sha256=digest)
+            elif target in linker_targets:
+                seed = f'rootfs-seed/{digest}'
+                preparer['atomic_write'](dist / seed, data)
+                entry = dict(source=seed, sha256=digest)
             elif digest in by_hash:
                 entry = by_hash[digest]
             else:
@@ -163,11 +179,12 @@ def main():
     parser.add_argument('--dist', type=Path, required=True)
     parser.add_argument('--offline', action='store_true')
     parser.add_argument('--online', action='store_true', help='generate a small release that downloads Debian packages on first launch')
+    parser.add_argument('--elf-imports', type=Path, help='generated ELF interfaces for native C libraries')
     parser.add_argument('--cache', type=Path, default=WORKSPACE / 'artifacts/guest-deps')
     parser.add_argument('--preset', type=Path, default=WORKSPACE / 'config/rootfs.packages.json')
     args = parser.parse_args()
     cache = preparer['PackageCache'](WORKSPACE / 'tools/guest-deps/dependencies.lock.json', args.cache, args.offline)
-    prepare(args.dist.resolve(), cache, args.preset, args.online)
+    prepare(args.dist.resolve(), cache, args.preset, args.online, args.elf_imports)
 
 
 if __name__ == '__main__':

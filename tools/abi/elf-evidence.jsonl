@@ -4615,3 +4615,4 @@
 {"path":"artifacts/perf-services-20260929/app-root/tmp/oracle-mysql-1107e18e63e34ed4b4c0544931b733e8/prefix/usr/lib/mysql/private/libprotobuf.so.24.4.0","sha256":"cc2a7b68d85d06e67cc9fd6f3ba9509327338ff81057485c90b27761c62bc122"}
 {"path":"artifacts/perf-services-20260929/app-root/tmp/oracle-mysql-1107e18e63e34ed4b4c0544931b733e8/prefix/usr/lib/x86_64-linux-gnu/libmecab.so.2.0.0","sha256":"0cc0372a341044b8c7aa1eaeda39c5f9e8ecc533022f42ca5497595f5d46c422"}
 {"path":"artifacts/perf-services-20260929/app-root/tmp/oracle-mysql-1107e18e63e34ed4b4c0544931b733e8/prefix/usr/sbin/mysqld","sha256":"2bbe2fee3f8f9e7bbf3172488386d06ad1c5deb816b20c0b0d3e685d4678d332"}
+{"path":"artifacts/agent-toolchains-20260929/development-root/usr/bin/cmake","sha256":"bad2e2bae7a1cc2c885d1aa06f19ae91be6684819aaeaf03f89410cf4854ecea"}

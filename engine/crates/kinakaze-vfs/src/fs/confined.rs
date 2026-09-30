@@ -220,7 +220,7 @@ fn create(parent: i32, name: &str, flags: i32, mode: u32) -> Result<i32, i32> {
     }
     let entry = get(parent)?;
     if entry.kind == FdKind::TmpfsDirectory {
-        return crate::tmpfs::openat_resolved(parent, name, flags | O_NOFOLLOW | O_EXCL, mode, 8);
+        return crate::tmpfs::openat(parent, name, flags | O_NOFOLLOW | O_EXCL, mode);
     }
     if entry.kind != FdKind::Directory {
         return Err(crate::EROFS);
@@ -270,8 +270,57 @@ pub(super) fn stat(path: &str, follow: bool) -> Result<Stat, i32> {
 
 pub(super) fn canonical_guest(name: &str, follow: bool) -> Result<String, i32> {
     let flags = O_PATH | O_CLOEXEC | if follow { 0 } else { O_NOFOLLOW };
-    let descriptor = Descriptor(open(AT_FDCWD, name, flags, 0, 0)?);
+    let descriptor = Descriptor(if crate::procfs::owns(name) {
+        open_procfs(name, flags, 0)?
+    } else {
+        open(AT_FDCWD, name, flags, 0, 0)?
+    });
     path(descriptor.0)
+}
+
+pub(super) fn open_below_proc(prefix: &str, tail: &str, flags: i32, mode: u32) -> Result<i32, i32> {
+    let parent = Descriptor(open_procfs(prefix, O_PATH | O_DIRECTORY | O_CLOEXEC, 0)?);
+    open(parent.0, tail, flags, mode, 0)
+}
+
+pub(super) fn stat_below_proc(prefix: &str, tail: &str, follow: bool) -> Result<Stat, i32> {
+    let flags = O_PATH | O_CLOEXEC | if follow { 0 } else { O_NOFOLLOW };
+    let descriptor = Descriptor(open_below_proc(prefix, tail, flags, 0)?);
+    fstat(descriptor.0)
+}
+
+pub(super) fn mkdir_proc(pathname: &str, mode: u32) -> Result<(), i32> {
+    let (parent, name) = pathname
+        .trim_end_matches('/')
+        .rsplit_once('/')
+        .ok_or(crate::EEXIST)?;
+    let parent = Descriptor(super::open(
+        if parent.is_empty() { "/" } else { parent },
+        O_PATH | O_DIRECTORY | O_CLOEXEC,
+        0,
+    )?);
+    if matches!(name, "" | "." | "..") {
+        return Err(crate::EEXIST);
+    }
+    if get(parent.0)?.kind == FdKind::TmpfsDirectory {
+        return crate::tmpfs::mkdirat(parent.0, name, mode);
+    }
+    let parent = path(parent.0)?;
+    let target = format!("{}/{name}", parent.trim_end_matches('/'));
+    if target == pathname.trim_end_matches('/') {
+        return Err(if super::lstat(pathname).is_ok() {
+            crate::EEXIST
+        } else {
+            crate::EROFS
+        });
+    }
+    super::mkdir(&target, mode)
+}
+
+pub(super) fn mutation_path(pathname: &str) -> Result<String, i32> {
+    let (parent, name) = pathname.rsplit_once('/').ok_or(EINVAL)?;
+    let parent = canonical_guest(if parent.is_empty() { "/" } else { parent }, true)?;
+    Ok(format!("{}/{name}", parent.trim_end_matches('/')))
 }
 
 pub(super) fn open(

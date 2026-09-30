@@ -25,6 +25,7 @@ def main():
     parser.add_argument('--only', help='regular expression selecting case names')
     parser.add_argument('--repeat', type=int, default=1)
     for key, default in [('node', '/usr/bin/node'), ('go', '/usr/bin/go'),
+                         ('bun', '/usr/local/bin/bun'),
                          ('codex', '/usr/local/bin/codex'), ('claude', '/usr/local/bin/claude')]:
         parser.add_argument('--' + key, default=default, help='absolute guest executable path')
     args = parser.parse_args()
@@ -132,9 +133,82 @@ gcc -rdynamic DeepBindProbe.c -ldl -o deepbind
 gcc -O2 -fno-pie -no-pie ExecutableTlsProbe.c -pthread -o tls-exec
 ./tls-exec | grep -q EXECUTABLE_TLS_OK''', ['/usr/bin/gcc'], 120)
     add('node', shlex.quote(args.node) + ' NodeRuntimeProbe.js', [args.node], 120)
+    add('bun-filesystem', shlex.quote(args.bun) + ' BunAgentFilesystemProbe.js', [args.bun], 45)
     add('cpp-futures', 'clang++ -O2 -std=c++17 CppFutureProbe.cpp -pthread -o cpp-futures; '
         './cpp-futures | grep -q CPP_FUTURES_OK', ['/usr/bin/clang++'], 120)
     add('go', shlex.quote(args.go) + ' run program.go', [args.go], 180)
+    add('cargo', '''mkdir -p src
+cat > Cargo.toml <<'EOF'
+[package]
+name = "compatibility-fixture"
+version = "0.1.0"
+edition = "2021"
+EOF
+cat > src/lib.rs <<'EOF'
+pub fn total(values: &[i64]) -> i64 { values.iter().sum() }
+#[cfg(test)] mod tests {
+    use super::total;
+    #[test] fn empty() { assert_eq!(total(&[]), 0); }
+    #[test] fn signed() { assert_eq!(total(&[-2, 3, 7]), 8); }
+    #[test] fn threads_and_processes() {
+        let threads: Vec<_> = (0..8).map(|value| std::thread::spawn(move || value * value)).collect();
+        assert_eq!(threads.into_iter().map(|thread| thread.join().unwrap()).sum::<i32>(), 140);
+        let result = std::process::Command::new("/bin/echo").arg("child").output().unwrap();
+        assert!(result.status.success());
+        assert_eq!(result.stdout, b"child\\n");
+    }
+}
+EOF
+export CARGO_HOME="$PWD/cargo-home"
+cargo test --offline -- --test-threads=2 > out 2> err
+cat out err
+grep -q '3 passed; 0 failed' out
+cargo test --offline -- --test-threads=2 > out 2> err
+grep -q '3 passed; 0 failed' out
+! grep -q 'Compiling compatibility-fixture' err''', ['/usr/bin/cargo', '/usr/bin/rustc'], 180)
+    add('cmake-ninja', '''cat > CMakeLists.txt <<'EOF'
+cmake_minimum_required(VERSION 3.16)
+project(compatibility_fixture C)
+enable_testing()
+add_executable(fixture main.c)
+add_test(NAME output COMMAND fixture)
+set_tests_properties(output PROPERTIES PASS_REGULAR_EXPRESSION "CMAKE_RUNTIME_OK")
+EOF
+printf '#include <stdio.h>\\nint main(void) { puts("CMAKE_RUNTIME_OK"); return 0; }\\n' > main.c
+cmake -S . -B build -G Ninja
+cmake --build build --parallel 4
+ctest --test-dir build --output-on-failure
+ninja -C build -n > out
+grep -q 'no work to do' out''', ['/usr/bin/cmake', '/usr/bin/ninja', '/usr/bin/gcc'], 120)
+    add('python-venv', '''python3 -m venv environment
+environment/bin/python -m pip --version
+environment/bin/python -c 'import sys, pathlib, subprocess; assert sys.prefix != sys.base_prefix; assert pathlib.Path(sys.prefix).name == "environment"; assert subprocess.check_output([sys.executable,"-c","print(42)"]).strip() == b"42"'
+environment/bin/python -m compileall -q environment/lib''', ['/usr/bin/python3'], 120)
+    add('npm-lifecycle', '''cat > package.json <<'EOF'
+{"name":"compatibility-fixture","version":"1.0.0","scripts":{"pretest":"node prepare.cjs","test":"node test.cjs"}}
+EOF
+printf '%s' 'require("fs").writeFileSync("pretest","ok");' > prepare.cjs
+cat > test.cjs <<'EOF'
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const child = require('node:child_process');
+assert.equal(fs.readFileSync('pretest', 'utf8'), 'ok');
+assert.equal(process.env.npm_lifecycle_event, 'test');
+assert.equal(child.execFileSync(process.execPath, ['-p', '6*7'], {encoding:'utf8'}).trim(), '42');
+console.log('NPM_LIFECYCLE_OK');
+EOF
+export npm_config_cache="$PWD/npm-cache"
+npm --offline test > out
+cat out
+grep -q NPM_LIFECYCLE_OK out''', ['/usr/bin/node', '/usr/bin/npm'], 120)
+    add('ruby', '''ruby -rjson -rdigest -ropen3 -e '
+payload=JSON.generate({"values"=>[2,3,7]}); File.write("payload.json",payload)
+raise unless JSON.parse(File.read("payload.json"))["values"].sum==12
+raise unless Digest::SHA256.hexdigest(payload).size==64
+raise unless (0...8).map{|value| Thread.new { value*value }}.map(&:value).sum==140
+output,status=Open3.capture2("/bin/echo","ruby-child")
+raise unless status.success? && output.strip=="ruby-child"
+puts "RUBY_RUNTIME_OK"' ''', ['/usr/bin/ruby'], 60)
     add('php', '''php -r '$p=new PDO("sqlite::memory:"); if($p->query("select 42")->fetchColumn()!=42) exit(1);
 if(json_decode(json_encode(["x"=>42]),true)["x"]!=42) exit(2); echo "PHP_OK\\n";' ''', ['/usr/bin/php'])
     add('nginx', 'python3 NginxRuntimeProbe.py', ['/usr/sbin/nginx'], 150)
@@ -172,7 +246,7 @@ if(json_decode(json_encode(["x"=>42]),true)["x"]!=42) exit(2); echo "PHP_OK\\n";
                 stage = root / guest.lstrip('/')
                 stage.mkdir(parents=True)
                 for fixture in ('InterpreterCommandProbe.py', 'CompilerRuntimeProbe.c', 'AbortStatusProbe.c', 'PosixSemaphoreProbe.c', 'DeepBindProbe.c', 'ExecutableTlsProbe.c', 'StatfsBoundaryProbe.py', 'StandardHandleLifetimeProbe.py', 'NativePermissionProbe.py', 'DirectoryTypeProbe.py', 'DirectoryCursorProbe.py', 'MetadataPathProbe.py', 'ProcessLimitsProbe.py', 'ChildSignalProbe.py', 'SharedListenerProbe.py', 'SharedSocketWaitProbe.py', 'PamRuntimeProbe.py', 'NodeRuntimeProbe.js',
-                                'SysvProcProbe.py', 'CondReacquireNotifyProbe.c', 'CppFutureProbe.cpp', 'RawEpollCreateProbe.py', 'MariadbRuntimeProbe.py', 'SqliteProcessBoundaryProbe.py', 'FfmpegRuntimeProbe.py', 'JavaRuntimeProbe.java',
+                                'BunAgentFilesystemProbe.js', 'SysvProcProbe.py', 'CondReacquireNotifyProbe.c', 'CppFutureProbe.cpp', 'RawEpollCreateProbe.py', 'MariadbRuntimeProbe.py', 'SqliteProcessBoundaryProbe.py', 'FfmpegRuntimeProbe.py', 'JavaRuntimeProbe.java',
                                 'NamedSemaphoreProbe.c', 'MultiprocessingProbe.py', 'ForkDlopenProbe.c', 'IgnoredSignalIoProbe.c', 'PpollSignalProbe.c', 'AccountForkProbe.c', 'AccountStreamProbe.c', 'PathAccessProbe.py', 'PathReferenceProbe.py', 'RootResolutionProbe.py', 'GlobCallbackProbe.c', 'TmpfilesProbe.py', 'XattrLifetimeProbe.py',
                                 'NginxRuntimeProbe.py', 'RedisRuntimeProbe.py', 'PostgresqlRuntimeProbe.py', 'DescriptorDuplicationProbe.py', 'DatagramRightsProbe.py', 'UnixListenerCustodyProbe.py', 'UnixSocketOptionsProbe.py', 'TmpfsMappingProbe.py', 'TmpfsEofProbe.c', 'NamespaceServicesProbe.py'):
                     shutil.copyfile(source / fixture, stage / fixture)

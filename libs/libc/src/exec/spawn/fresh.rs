@@ -53,7 +53,10 @@ pub(super) unsafe fn launch(
         let mut native_created = false;
         let mut stage = "arguments";
         let result = (|| -> Result<u32, c_int> {
-            let arguments = unsafe { string_vector(argv) }?;
+            let mut arguments = unsafe { string_vector(argv) }?;
+            if arguments.is_empty() {
+                arguments.push(path.to_owned());
+            }
             let environment = unsafe { string_vector(envp) }?;
             stage = "task-limit";
             let limit = kinakaze_runtime::services::task_creation_errno();
@@ -77,24 +80,25 @@ pub(super) unsafe fn launch(
             stage = "descriptor-snapshot";
             let descriptors = kinakaze_vfs::exec_descriptor_snapshot()?;
             stage = "state-serialization";
-            let payload =
-                kinakaze_vfs::prepare_spawn_state_from_image(&environment, &image, mask, defaults)?;
+            let payload = kinakaze_vfs::prepare_spawn_state_from_image(
+                &environment,
+                &image,
+                &arguments,
+                mask,
+                defaults,
+            )?;
             let mut handoff_owner = Handoff(true);
             trace_spawn_phase(&started, "posix_spawn", "handoff-serialized");
             let loader = loader_path().map_err(|_| kinakaze_vfs::EIO)?;
             let cwd = kinakaze_vfs::resolve_linux_path(&kinakaze_vfs::fs::getcwd())
                 .ok()
                 .filter(|p| p.is_dir());
-            let mut command = vec![
+            let command = vec![
                 loader.display().to_string(),
                 "--kinakaze-exec".to_owned(),
                 host_path.to_string_lossy().into_owned(),
+                "<exec-handoff>".to_owned(),
             ];
-            if arguments.is_empty() {
-                command.push(path.to_owned());
-            } else {
-                command.extend(arguments);
-            }
             stage = "native-process-create";
             let child = spawn_suspended_exec(
                 loader,

@@ -83,6 +83,20 @@ pub unsafe extern "sysv64" fn kinakaze_abi___getcwd_chk(
     unsafe { crate::fs::getcwd(buffer, size) }
 }
 
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi___wmemcpy_chk(
+    destination: *mut i32,
+    source: *const i32,
+    length: usize,
+    destination_length: usize,
+) -> *mut i32 {
+    check(length, destination_length);
+    if length != 0 {
+        unsafe { core::ptr::copy_nonoverlapping(source, destination, length) };
+    }
+    destination
+}
+
 // ---------------------------------------------------------------------------
 // The memory and string family: `size_t destlen` is the LAST argument.
 // ---------------------------------------------------------------------------

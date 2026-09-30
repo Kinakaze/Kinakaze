@@ -1299,6 +1299,8 @@ pub(crate) fn replace_fork_socket(
 const FORK_STATE_MAGIC: u64 = 0x4352_5956_4653_4730; // "CRYVFSG0"
 #[cfg(windows)]
 const EXEC_IMAGE_SECTION: u32 = 9;
+#[cfg(windows)]
+const EXEC_ARGUMENTS_SECTION: u32 = 30;
 
 #[cfg(windows)]
 fn append_fork_section(frame: &mut Vec<u8>, tag: u32, payload: &[u8]) -> Result<(), i32> {
@@ -1455,6 +1457,7 @@ pub fn restore_fork_state(frame: &[u8]) -> bool {
             // guest libc is mapped. Reaching it here means the stable image was
             // structurally valid; libc itself does not need a second copy.
             EXEC_IMAGE_SECTION => true,
+            EXEC_ARGUMENTS_SECTION => deserialize_environment(payload).is_some(),
             _ => false,
         };
         if fork_trace_enabled() {
@@ -1949,7 +1952,7 @@ fn restore_environment(payload: &[u8]) -> bool {
 /// Serializes VFS state across `execve`, excluding descriptors with `CLOSE_ON_EXEC`.
 #[cfg(windows)]
 fn serialize_exec_state_with_image(env: &[String], image: Option<&[u8]>) -> Result<Vec<u8>, i32> {
-    serialize_launch_state(env, image, None)
+    serialize_launch_state(env, image, None, None)
 }
 
 #[cfg(windows)]
@@ -1957,6 +1960,7 @@ fn serialize_launch_state(
     env: &[String],
     image: Option<&[u8]>,
     spawn: Option<(Option<u64>, u64)>,
+    arguments: Option<&[String]>,
 ) -> Result<Vec<u8>, i32> {
     let table = table().read().map_err(|_| EIO)?;
     let lock_closes = if spawn.is_some() {
@@ -2061,6 +2065,9 @@ fn serialize_launch_state(
     if !env.is_empty() {
         sections.push((8, serialize_environment(env)?));
     }
+    if let Some(arguments) = arguments {
+        sections.push((EXEC_ARGUMENTS_SECTION, serialize_environment(arguments)?));
+    }
     // Reserve the complete frame once: growing after each section repeatedly
     // copies process state, and appending image padding can copy the whole ELF.
     let capacity = sections
@@ -2108,7 +2115,7 @@ pub fn prepare_exec_state(env: &[String], executable: &std::path::Path) -> Resul
             .map(|code| errno_from_win32(code as u32))
             .unwrap_or(EIO)
     })?;
-    prepare_exec_state_from_image(env, &image)
+    prepare_exec_state_from_image(env, &image, None)
 }
 
 /// Begins an exec handoff from an image the caller has already resolved.
@@ -2117,13 +2124,17 @@ pub fn prepare_exec_state(env: &[String], executable: &std::path::Path) -> Resul
 /// Accepting that stable copy here avoids reopening and rereading an ELF before
 /// publishing the same bytes to the replacement loader.
 #[cfg(windows)]
-pub fn prepare_exec_state_from_image(env: &[String], image: &[u8]) -> Result<Vec<u8>, i32> {
+pub fn prepare_exec_state_from_image(
+    env: &[String],
+    image: &[u8],
+    arguments: Option<&[String]>,
+) -> Result<Vec<u8>, i32> {
     unix::prepare_process_handoff()?;
     if let Err(error) = socket::prepare_process_exec() {
         unix::finish_process_handoff(0);
         return Err(error);
     }
-    match serialize_exec_state_with_image(env, Some(image)) {
+    match serialize_launch_state(env, Some(image), None, arguments) {
         Ok(payload) => Ok(payload),
         Err(error) => {
             socket::finish_process_fork(0);
@@ -2140,6 +2151,7 @@ pub fn prepare_exec_state_from_image(env: &[String], image: &[u8]) -> Result<Vec
 pub fn prepare_spawn_state_from_image(
     env: &[String],
     image: &[u8],
+    arguments: &[String],
     mask: Option<u64>,
     defaults: u64,
 ) -> Result<Vec<u8>, i32> {
@@ -2149,7 +2161,7 @@ pub fn prepare_spawn_state_from_image(
         unix::finish_process_handoff(0);
         return Err(error);
     }
-    match serialize_launch_state(env, Some(image), Some((mask, defaults))) {
+    match serialize_launch_state(env, Some(image), Some((mask, defaults)), Some(arguments)) {
         Ok(payload) => Ok(payload),
         Err(error) => {
             socket::finish_process_fork(0);
@@ -2370,6 +2382,7 @@ pub fn consume_exec_handoff() -> Result<bool, ()> {
 pub struct ExecLaunchState {
     pub image: kinakaze_runtime::immutable::ImmutableBytes,
     pub environment: Vec<String>,
+    pub arguments: Option<Vec<String>>,
 }
 
 /// Copies the stable executable snapshot and exact guest environment without
@@ -2400,7 +2413,14 @@ pub fn peek_exec_launch_state() -> Result<Option<ExecLaunchState>, ()> {
             Some(range) => deserialize_environment(&frame[range]).ok_or(())?,
             None => Vec::new(),
         };
-        Ok(ExecLaunchState { image, environment })
+        let arguments = fork_section_range(frame, EXEC_ARGUMENTS_SECTION)
+            .map(|range| deserialize_environment(&frame[range]).ok_or(()))
+            .transpose()?;
+        Ok(ExecLaunchState {
+            image,
+            environment,
+            arguments,
+        })
     })?;
     if state.is_some() {
         // Both the frame handle and immutable image now have child ownership.

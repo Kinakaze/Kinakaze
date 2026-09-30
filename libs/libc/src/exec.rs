@@ -684,7 +684,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_execve(
     };
 
     // Handle shebang scripts (e.g. #!/bin/sh, #!/usr/bin/env, etc.)
-    let (host_path, arguments) = if original_image.starts_with(b"#!") {
+    let (host_path, mut arguments) = if original_image.starts_with(b"#!") {
         if let Some(newline_pos) = original_image
             .iter()
             .position(|&b| b == b'\n' || b == b'\r')
@@ -759,16 +759,15 @@ pub unsafe extern "sysv64" fn kinakaze_abi_execve(
         .ok()
         .filter(|p| p.is_dir());
 
-    let mut cmd_args = vec![
+    if arguments.is_empty() {
+        arguments.push(guest_path.clone());
+    }
+    let cmd_args = vec![
         loader.display().to_string(),
         "--kinakaze-exec".to_string(),
         host_path.to_string_lossy().into_owned(),
+        "<exec-handoff>".to_string(),
     ];
-    if arguments.is_empty() {
-        cmd_args.push(guest_path.clone());
-    } else {
-        cmd_args.extend(arguments.clone());
-    }
 
     if crate::fork_trace_enabled() {
         eprintln!(
@@ -779,8 +778,11 @@ pub unsafe extern "sysv64" fn kinakaze_abi_execve(
     // A recoverable exec error leaves this guest image running. In particular,
     // a vfork child may retry exec or do cleanup before `_exit`; only committed
     // replacement or actual exit may release its suspended parent.
-    let exec_payload = match kinakaze_vfs::prepare_exec_state_from_image(&environment, &exec_image)
-    {
+    let exec_payload = match kinakaze_vfs::prepare_exec_state_from_image(
+        &environment,
+        &exec_image,
+        Some(&arguments),
+    ) {
         Ok(payload) => payload,
         Err(error) => {
             kinakaze_runtime::fork_diagnostic(format_args!(

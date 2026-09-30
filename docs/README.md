@@ -18,6 +18,8 @@
 
 ## 兼容性与性能
 
+- [Agent 与开发工具链](agent-toolchains-2026-09-30.md)：Codex/Claude/pi 工具闭环、长 argv、默认编译链接接口与性能对照。
+
 - [集成验证记录](validation.md) 与 [开发进度](progress.md)。
 - [默认启动、数据库与 io_uring](server-performance-2026-09-29.md)：udev 默认策略、常驻 Python、内存策略、MariaDB/AstrBot 运行结果和剩余边界。
 - [关闭响应与国内源验收](shutdown-mirror-validation-2026-09-27.md)：托盘退出延迟、整树回收及中科大镜像直连安装。

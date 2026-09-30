@@ -94,6 +94,32 @@ fn runtime() -> Vec<u8> {
 }
 
 #[test]
+fn discovery_retains_only_markers_but_validates_discarded_exports() {
+    let bytes = fixture(&[
+        ("_Rust_private", false),
+        ("kinakaze_module_object_v1", false),
+        ("kinakaze_provider_initialize_v1", false),
+        ("kinakaze_runtime_open_v1", false),
+        ("ordinary_guest_export", false),
+    ]);
+    let retained = selected_exports::<false>(&bytes).unwrap();
+    assert_eq!(retained.symbols.len(), 3);
+    assert!(
+        retained
+            .symbols
+            .iter()
+            .all(|symbol| symbol.name.starts_with("kinakaze_"))
+    );
+    assert_eq!(borrowed_exports(&bytes).unwrap().symbols.len(), 5);
+    let mut invalid = bytes.clone();
+    invalid[0x2c0..0x2c2].copy_from_slice(&99u16.to_le_bytes());
+    assert!(selected_exports::<false>(&invalid).is_err());
+    let mut invalid = bytes;
+    invalid[0x240..0x244].copy_from_slice(&0u32.to_le_bytes());
+    assert!(selected_exports::<false>(&invalid).is_err());
+}
+
+#[test]
 fn catalog_defers_layout_loading_and_pins_pending_files() {
     let directory = Directory::new();
     directory.write("libruntime.so", &runtime());

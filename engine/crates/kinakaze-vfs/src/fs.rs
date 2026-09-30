@@ -325,7 +325,28 @@ pub fn open(path: &str, flags: i32, mode: u32) -> Result<i32, i32> {
 }
 
 /// Serves a `/proc` path by materializing its text into a descriptor.
+fn proc_descendant(path: &str) -> Option<(&str, &str)> {
+    for (index, _) in path.match_indices('/') {
+        let prefix = &path[..index];
+        let tail = &path[index + 1..];
+        let candidate = prefix.rsplit_once('/').is_some_and(|(parent, name)| {
+            parent.ends_with("/fd") || matches!(name, "cwd" | "root" | "exe")
+        });
+        if candidate
+            && !tail.is_empty()
+            && (crate::procfs::fd_magic_link(prefix).is_some()
+                || crate::procfs::directory_magic_link(prefix))
+        {
+            return Some((prefix, tail));
+        }
+    }
+    None
+}
+
 fn open_procfs(path: &str, flags: i32, mode: u32) -> Result<i32, i32> {
+    if let Some((prefix, tail)) = proc_descendant(path) {
+        return confined::open_below_proc(prefix, tail, flags, mode);
+    }
     if let Some(target) = crate::procfs::directory_link(path, flags & O_NOFOLLOW == 0)? {
         return open(&target, flags, mode);
     }
@@ -2223,6 +2244,9 @@ pub fn read_link_fd(fd: i32) -> Result<String, i32> {
 /// directories, and never fails because the file is in use for writing.
 /// Builds a `Stat` for a synthetic `/proc` path.
 fn stat_procfs(path: &str, follow_symlinks: bool) -> Result<Stat, i32> {
+    if let Some((prefix, tail)) = proc_descendant(path) {
+        return confined::stat_below_proc(prefix, tail, follow_symlinks);
+    }
     use crate::procfs::ProcKind;
     if let Some(target) = crate::procfs::directory_link(path, follow_symlinks)? {
         return stat_path(&target, follow_symlinks);
@@ -2906,6 +2930,9 @@ pub(crate) fn unlink_inode(handle: HANDLE) -> Result<(), i32> {
 
 /// Creates a directory. The Linux `mode` has no Windows equivalent.
 pub fn mkdir(path: &str, mode: u32) -> Result<(), i32> {
+    if crate::procfs::owns(path) {
+        return confined::mkdir_proc(path, mode);
+    }
     if crate::tmpfs::create(
         path,
         S_IFDIR | (mode & 0o7777 & !crate::fs_context::umask()),
@@ -2977,6 +3004,19 @@ pub fn rename(from: &str, to: &str) -> Result<(), i32> {
 }
 
 pub fn rename_with_flags(from: &str, to: &str, flags: u32) -> Result<(), i32> {
+    if proc_descendant(from).is_some() || proc_descendant(to).is_some() {
+        let source = if proc_descendant(from).is_some() {
+            confined::mutation_path(from)?
+        } else {
+            from.to_owned()
+        };
+        let target = if proc_descendant(to).is_some() {
+            confined::mutation_path(to)?
+        } else {
+            to.to_owned()
+        };
+        return rename_with_flags(&source, &target, flags);
+    }
     if crate::tmpfs::rename(from, to, flags)? {
         return Ok(());
     }

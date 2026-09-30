@@ -5,6 +5,10 @@ from pathlib import Path
 from init_pool import InitPool, distribution_hashes
 
 CASES = {
+    'large-exec-arguments': ('LargeExecArgumentProbe', 'LARGE_EXEC_ARGUMENTS_OK'),
+    'long-proc-cmdline': ('LongCmdlineProbe', 'LONG_PROC_CMDLINE_OK'),
+    'wide-memory-fortify': ('WideMemoryFortifyProbe', 'WIDE_MEMORY_FORTIFY_OK'),
+    'proc-fd-mkdir': ('ProcFdMkdirProbe', 'PROC_FD_MKDIR_LIVE_DIRECTORY_OK'),
     'raw-mincore': ('RawMincoreProbe', 'RAW_MINCORE_RESIDENCY_BOUNDS_HOLES_OK'),
     'uring': ('LinuxUringProbe', 'LINUX_URING_MMAP_ASYNC_RW_VECTORS_OVERFLOW_WAKE_OK'),
     'memory-advice': ('MadvisePolicyProbe', 'MADVISE_DUMP_FORK_ZERO_RESTORE_OK'),
@@ -28,7 +32,7 @@ def main():
     for iteration in range(args.repeat):
         for name in args.only or CASES:
             probe, marker = CASES[name]
-            source = (Path(__file__).resolve().parents[1] / 'tests/guest' / (probe + '.py')).read_text()
+            source = (Path(__file__).resolve().parents[1] / 'tests/guest' / (probe + '.py')).read_text(encoding='utf-8')
             try:
                 with InitPool(root, dist, output / f'{name}-{iteration}', size=1, timeout=90) as pool:
                     row = pool.run(['/usr/bin/python3', '-c', source], expect=[marker])

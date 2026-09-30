@@ -103,6 +103,10 @@ pub fn matches_command_facade(bytes: &[u8], native_name: &str, functions: &[&str
 // own the guest ABI subset; borrow the remaining names from the pinned file
 // instead of allocating and then discarding thousands of mangled strings.
 fn borrowed_exports(bytes: &[u8]) -> Result<BorrowedExports<'_>> {
+    selected_exports::<true>(bytes)
+}
+
+fn selected_exports<const ALL: bool>(bytes: &[u8]) -> Result<BorrowedExports<'_>> {
     if span(bytes, 0, 2)? != b"MZ" {
         return Err(invalid("expected PE image"));
     }
@@ -144,28 +148,29 @@ fn borrowed_exports(bytes: &[u8]) -> Result<BorrowedExports<'_>> {
         }
         sections.push((rva, end, raw, raw_size, flags));
     }
-    let offset = |rva: u32, size: usize| -> Result<usize> {
+    let backing = |rva: u32, size: usize| -> Result<(usize, usize)> {
         for &(start, _, raw, raw_size, _) in &sections {
             if let Some(relative) = rva.checked_sub(start)
                 && (relative as u64) + size as u64 <= raw_size as u64
             {
                 let at = raw as usize + relative as usize;
-                span(bytes, at, size)?;
-                return Ok(at);
+                return Ok((at, (raw_size - relative) as usize));
             }
         }
         Err(invalid("unbacked PE RVA"))
     };
+    let offset = |rva: u32, size: usize| -> Result<usize> {
+        let (at, _) = backing(rva, size)?;
+        Ok(at)
+    };
     let string = |rva: u32| -> Result<&str> {
-        let at = offset(rva, 1)?;
+        let (at, available) = backing(rva, 1)?;
         // Use the standard library's byte search for long Rust export names.
         // Keep the existing length cap and section check; discovery still
         // validates every name in each worker's pinned immutable image.
-        let tail = &bytes[at..];
-        let name = std::ffi::CStr::from_bytes_until_nul(&tail[..tail.len().min(4097)])
+        let tail = &bytes[at..at + available.min(4097)];
+        let name = std::ffi::CStr::from_bytes_until_nul(tail)
             .map_err(|_| invalid("unterminated PE string"))?;
-        let length = name.to_bytes().len();
-        offset(rva, length + 1)?;
         name.to_str().map_err(|_| invalid("non-UTF8 PE name"))
     };
     let rva = dword(bytes, optional + 112)?;
@@ -186,7 +191,7 @@ fn borrowed_exports(bytes: &[u8]) -> Result<BorrowedExports<'_>> {
     let addresses = offset(dword(bytes, directory + 28)?, functions * 4)?;
     let pointers = offset(dword(bytes, directory + 32)?, names * 4)?;
     let ordinals = offset(dword(bytes, directory + 36)?, names * 2)?;
-    let mut symbols = Vec::with_capacity(names);
+    let mut symbols = Vec::with_capacity(if ALL { names } else { 3 });
     let mut previous = None;
     for index in 0..names {
         let name = string(dword(bytes, pointers + index * 4)?)?;
@@ -215,7 +220,16 @@ fn borrowed_exports(bytes: &[u8]) -> Result<BorrowedExports<'_>> {
             }
             Some(flags & 0x2000_0000 == 0)
         };
-        symbols.push(BorrowedExport { name, object });
+        if ALL
+            || matches!(
+                name,
+                "kinakaze_runtime_open_v1"
+                    | "kinakaze_provider_initialize_v1"
+                    | "kinakaze_module_object_v1"
+            )
+        {
+            symbols.push(BorrowedExport { name, object });
+        }
     }
     Ok(BorrowedExports { name, symbols })
 }
@@ -408,26 +422,31 @@ impl ModuleCatalog {
     pub fn discover(directory: &Path) -> Result<Self> {
         let directory = directory.canonicalize()?;
         let mut paths = fs::read_dir(&directory)?
-            .map(|entry| entry.map(|entry| entry.path()))
+            .map(|entry| {
+                let entry = entry?;
+                Ok((entry.path(), entry.file_type()?))
+            })
             .collect::<std::io::Result<Vec<_>>>()?;
-        paths.sort();
+        paths.sort_by(|first, second| first.0.cmp(&second.0));
         let mut set = Self {
             modules: Vec::new(),
             shared_libraries: Vec::new(),
             images: Vec::new(),
         };
-        for path in paths {
+        for (path, file_type) in paths {
             let Some(filename) = path.file_name().and_then(|name| name.to_str()) else {
                 continue;
             };
-            if !is_shared_object(filename) || !path.is_file() {
+            if !is_shared_object(filename)
+                || !(file_type.is_file() || file_type.is_symlink() && path.is_file())
+            {
                 continue;
             }
             let bytes = read(&path)?;
             if bytes.starts_with(b"\x7fELF") {
                 continue;
             } // The ELF linker owns ordinary guest libraries.
-            let native = borrowed_exports(&bytes)?;
+            let native = selected_exports::<false>(&bytes)?;
             let runtime = native
                 .symbols
                 .iter()

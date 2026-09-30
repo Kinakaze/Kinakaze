@@ -304,7 +304,7 @@ fn hosted_main() -> i32 {
         return 1;
     }
     let path = config.executable.clone();
-    let guest_arguments = if config.arguments.is_empty() {
+    let mut guest_arguments = if config.arguments.is_empty() {
         vec![kinakaze_vfs::to_guest_path(&path)]
     } else {
         config.arguments.clone()
@@ -313,7 +313,7 @@ fn hosted_main() -> i32 {
     // `--kinakaze-exec` argument distinguishes execve's argv layout, not whether
     // a handoff exists; probing the mapping is the authoritative test and also
     // lets posix_spawn consume the already-pinned executable image.
-    let shared_launch = match kinakaze_vfs::peek_exec_launch_state() {
+    let mut shared_launch = match kinakaze_vfs::peek_exec_launch_state() {
         Ok(state) => state,
         Err(()) => {
             report_loader_error(format_args!("ELF exec handoff is malformed"));
@@ -321,6 +321,12 @@ fn hosted_main() -> i32 {
         }
     };
     trace_spawn_loader_phase("exec-image-peeked");
+    if let Some(arguments) = shared_launch
+        .as_mut()
+        .and_then(|state| state.arguments.take())
+    {
+        guest_arguments = arguments;
+    }
     if shared_launch.is_some() {
         if let Err(error) = host::consume_exec_handoff() {
             report_loader_error(format_args!(
@@ -461,6 +467,7 @@ fn hosted_main() -> i32 {
         .filter(|name| !name.is_empty())
         .unwrap_or("kinakaze");
     kinakaze_vfs::job::set_process_identity(comm, &guest_executable, &guest_arguments);
+    kinakaze_vfs::procfs::publish_cmdline(&guest_arguments);
     trace_spawn_loader_phase("guest-identity-set");
 
     if kernel_entry || elf_expects_kernel_entry(&root_image) {

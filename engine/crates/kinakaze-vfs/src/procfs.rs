@@ -852,7 +852,14 @@ pub fn read_file(path: &str) -> Result<Vec<u8>, i32> {
             std::fs::read(path)
                 .map_err(|error| error.raw_os_error().map_or(crate::EIO, errno_from_io))
         }
-        Node::Cmdline(pid) => Ok(process_info(pid)?.cmdline),
+        Node::Cmdline(pid) => {
+            if pid == crate::job::process_id() {
+                if let Some(arguments) = PUBLISHED_CMDLINE.get() {
+                    return Ok(arguments.clone());
+                }
+            }
+            Ok(process_info(pid)?.cmdline)
+        }
         Node::Environ => Ok(environ()),
         Node::Stat(pid) => Ok(stat_file(pid)?.into_bytes()),
         Node::Status(pid) => Ok(status_file(pid)?.into_bytes()),
@@ -2697,6 +2704,16 @@ fn cmdline_sys() -> String {
 }
 
 static PUBLISHED_AUXV: std::sync::OnceLock<Vec<u8>> = std::sync::OnceLock::new();
+static PUBLISHED_CMDLINE: std::sync::OnceLock<Vec<u8>> = std::sync::OnceLock::new();
+
+pub fn publish_cmdline(arguments: &[String]) {
+    let mut bytes = Vec::new();
+    for argument in arguments {
+        bytes.extend_from_slice(argument.as_bytes());
+        bytes.push(0);
+    }
+    let _ = PUBLISHED_CMDLINE.set(bytes);
+}
 
 /// Registers the caller's initial ELF auxiliary vector.
 pub fn publish_auxv(bytes: Vec<u8>) {

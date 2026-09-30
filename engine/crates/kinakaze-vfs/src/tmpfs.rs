@@ -1200,9 +1200,12 @@ pub fn openat(fd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32> {
     // Normal attachment resolution sees submounts; retained directory fds use
     // their pinned inode after detach, rather than the now-uncovered directory.
     let guest = format!("{}/{path}", l.path.trim_end_matches('/'));
-    if resolve_location(&l.path, true, 0)?.is_some_and(|p| p.volume == l.volume && p.node == l.node)
-    {
-        return fs::open(&guest, flags, mode);
+    match resolve_location(&l.path, true, 0) {
+        Ok(Some(current)) if current.volume == l.volume && current.node == l.node => {
+            return fs::open(&guest, flags, mode);
+        }
+        Ok(_) | Err(ENOENT) | Err(ENOTDIR) => {}
+        Err(error) => return Err(error),
     }
     l.tail = path.into();
     open_pinned(l, flags, mode)
@@ -1708,6 +1711,21 @@ pub fn create(path: &str, mode: u32, device: u64, target: &str) -> Result<bool, 
         Ok(())
     })?;
     Ok(true)
+}
+pub(crate) fn mkdirat(fd: i32, name: &str, mode: u32) -> Result<(), i32> {
+    let (_, location, _, _) = descriptor(fd)?;
+    location.writable()?;
+    volume(location.volume)?.change(|state| {
+        state.insert(
+            location.node,
+            name,
+            Node::new(
+                S_IFDIR | (mode & 0o7777 & !fs_context::umask()),
+                location.node,
+            ),
+        )?;
+        Ok(())
+    })
 }
 pub fn unlink(path: &str, directory: bool) -> Result<bool, i32> {
     let Some(l) = location(path)? else {
