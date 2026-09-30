@@ -6114,6 +6114,7 @@ fn clear_child_tid() {
 fn exit_current_guest_thread(status: i32) -> ! {
     robust::exit_current();
     clear_child_tid();
+    libpthread::retire_raw_thread();
     if kinakaze_runtime::retire_guest_thread() {
         crate::process::kinakaze_abi__exit(status);
     }
