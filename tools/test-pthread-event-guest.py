@@ -16,6 +16,7 @@ PROBES = {
     'event': ('PthreadEventParkingProbe', ['PTHREAD_EVENT_TIMED_OK',
                                          'PTHREAD_EVENT_SIGNAL_OK', 'PTHREAD_EVENT_FORK_OK']),
     'robust': ('PthreadRobustProbe', ['PTHREAD_ROBUST_MUTEX_OK']),
+    'shared': ('PthreadSharedMutexProbe', ['PTHREAD_SHARED_MUTEX_OK']),
 }
 
 
@@ -50,11 +51,13 @@ def main():
     report = dict(root=str(args.root.resolve()), dist=str(args.dist.resolve()), robust_cancel=args.robust_cancel,
                   staging=str(staging), fixture_sha256=inputs,
                   distribution_sha256=distribution_hashes(args.dist), rows=[])
-    previous = os.environ.get('KINAKAZE_PTHREAD_PARK_OPT')
+    switches = ('KINAKAZE_PTHREAD_PARK_OPT', 'KINAKAZE_PTHREAD_SHARED_CACHE_OPT')
+    previous = {name: os.environ.get(name) for name in switches}
     try:
         for enabled in (False, True):
             # A prewarmed worker caches this native switch before guest environ.
-            os.environ['KINAKAZE_PTHREAD_PARK_OPT'] = str(int(enabled))
+            for name in switches:
+                os.environ[name] = str(int(enabled))
             for key in selected:
                 name, markers = PROBES[key]
                 command = ['/usr/bin/python3.11', guest + '/' + name + '.py']
@@ -65,7 +68,7 @@ def main():
                 with InitPool(args.root, args.dist, case, size=1, timeout=args.timeout) as pool:
                     row = pool.run(command, expect=markers,
                                    environment=['PATH=/usr/bin:/bin', 'LC_ALL=C',
-                                                'KINAKAZE_PTHREAD_PARK_OPT=' + str(int(enabled))])
+                                                *[name + '=' + str(int(enabled)) for name in switches]])
                 row.update(probe=key, optimized=enabled)
                 report['rows'].append(row)
                 print(json.dumps(dict(probe=key, optimized=enabled, status=row['status'],
@@ -73,10 +76,11 @@ def main():
                 report['passed'] = all(row['status'] == 'passed' for row in report['rows'])
                 (args.output / 'report.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
     finally:
-        if previous is None:
-            os.environ.pop('KINAKAZE_PTHREAD_PARK_OPT', None)
-        else:
-            os.environ['KINAKAZE_PTHREAD_PARK_OPT'] = previous
+        for name, value in previous.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
     return int(not report['passed'])
 
 

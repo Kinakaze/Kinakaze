@@ -528,15 +528,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_pthread_mutexattr_setpshared(
     attr: *mut c_void,
     pshared: i32,
 ) -> i32 {
-    if attr.is_null() || !matches!(pshared, 0 | 1) {
-        kinakaze_vfs::EINVAL
-    } else if pshared == 1 {
-        // The mutex implementation parks on process-local Windows waits.
-        // Like condattr_setpshared, do not promise interprocess wakeups.
-        95 // ENOTSUP
-    } else {
-        0
-    }
+    unsafe { libpthread::pthread_mutexattr_setpshared(attr.cast(), pshared) }
 }
 
 #[unsafe(no_mangle)]
@@ -685,4 +677,12 @@ mod tests {
 #[unsafe(no_mangle)]
 pub extern "sysv64" fn kinakaze_abi_thrd_exit(result: i32) -> ! {
     libpthread::pthread_exit(result as isize as *mut c_void)
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_pthread_mutexattr_getpshared(
+    attr: *const c_void,
+    pshared: *mut i32,
+) -> i32 {
+    unsafe { libpthread::pthread_mutexattr_getpshared(attr.cast(), pshared) }
 }

@@ -4522,3 +4522,9 @@ EXPORTS
   "pthread_mutexattr_setrobust_np"=libpthread.so.0.pthread_mutexattr_setrobust PRIVATE
   "pthread_mutexattr_setrobust_np@GLIBC_2.4"=libpthread.so.0.pthread_mutexattr_setrobust PRIVATE
   "pthread_mutexattr_getrobust@GLIBC_2.34"=libpthread.so.0.pthread_mutexattr_getrobust PRIVATE
+
+  kinakaze_abi_pthread_mutexattr_getpshared
+  "pthread_mutexattr_getpshared"=kinakaze_abi_pthread_mutexattr_getpshared PRIVATE
+  "pthread_mutexattr_getpshared@GLIBC_2.2.5"=kinakaze_abi_pthread_mutexattr_getpshared PRIVATE
+  "pthread_mutexattr_getpshared@GLIBC_2.34"=kinakaze_abi_pthread_mutexattr_getpshared PRIVATE
+  "pthread_mutexattr_setpshared@GLIBC_2.2.5"=kinakaze_abi_pthread_mutexattr_setpshared PRIVATE
