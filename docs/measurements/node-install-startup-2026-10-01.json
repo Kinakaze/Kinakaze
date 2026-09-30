@@ -1,0 +1,959 @@
+{
+  "diagnostic": true,
+  "passed": true,
+  "install_ms": 290299.4522,
+  "processes": 5432,
+  "adopted_forks": 3412,
+  "observer_and_repository_cpu_seconds": 3.796875,
+  "native_stack_observer": {
+    "diagnostic": true,
+    "errors": [],
+    "samples": 64,
+    "observer_cpu_seconds": 2.8125
+  },
+  "fork_install": {
+    "prepare": {
+      "count": 3399,
+      "sum_ms": 2365.721,
+      "median_us": 447,
+      "p95_us": 752
+    },
+    "freeze": {
+      "count": 3399,
+      "sum_ms": 79.671,
+      "median_us": 21,
+      "p95_us": 39
+    },
+    "create": {
+      "count": 3399,
+      "sum_ms": 576.207,
+      "median_us": 89,
+      "p95_us": 155
+    },
+    "ready": {
+      "count": 3399,
+      "sum_ms": 507.284,
+      "median_us": 12,
+      "p95_us": 61
+    },
+    "suspend": {
+      "count": 3399,
+      "sum_ms": 9.947,
+      "median_us": 2,
+      "p95_us": 5
+    },
+    "image": {
+      "count": 3399,
+      "sum_ms": 12.229,
+      "median_us": 3,
+      "p95_us": 6
+    },
+    "arena": {
+      "count": 3399,
+      "sum_ms": 3040.067,
+      "median_us": 835,
+      "p95_us": 1278
+    },
+    "mappings": {
+      "count": 3399,
+      "sum_ms": 16115.108,
+      "median_us": 2178,
+      "p95_us": 11945
+    },
+    "stack": {
+      "count": 3399,
+      "sum_ms": 0.002,
+      "median_us": 0,
+      "p95_us": 0
+    },
+    "resume": {
+      "count": 3399,
+      "sum_ms": 6.681,
+      "median_us": 2,
+      "p95_us": 4
+    },
+    "thaw": {
+      "count": 3399,
+      "sum_ms": 50.339,
+      "median_us": 13,
+      "p95_us": 27
+    },
+    "total": {
+      "count": 3399,
+      "sum_ms": 23207.791,
+      "median_us": 4744,
+      "p95_us": 14676
+    },
+    "handoff_restore_wait": {
+      "count": 3399,
+      "sum_ms": 30519.366,
+      "median_us": 8593,
+      "p95_us": 12595
+    }
+  },
+  "fork_whole_session": {
+    "prepare": {
+      "count": 3412,
+      "sum_ms": 2417.282,
+      "median_us": 447.0,
+      "p95_us": 752
+    },
+    "freeze": {
+      "count": 3412,
+      "sum_ms": 79.998,
+      "median_us": 21.0,
+      "p95_us": 39
+    },
+    "create": {
+      "count": 3412,
+      "sum_ms": 588.266,
+      "median_us": 89.0,
+      "p95_us": 156
+    },
+    "ready": {
+      "count": 3412,
+      "sum_ms": 539.455,
+      "median_us": 12.0,
+      "p95_us": 62
+    },
+    "suspend": {
+      "count": 3412,
+      "sum_ms": 9.985,
+      "median_us": 2.0,
+      "p95_us": 5
+    },
+    "image": {
+      "count": 3412,
+      "sum_ms": 12.277,
+      "median_us": 3.0,
+      "p95_us": 6
+    },
+    "arena": {
+      "count": 3412,
+      "sum_ms": 3050.976,
+      "median_us": 834.5,
+      "p95_us": 1274
+    },
+    "mappings": {
+      "count": 3412,
+      "sum_ms": 16185.474,
+      "median_us": 2196.0,
+      "p95_us": 11945
+    },
+    "stack": {
+      "count": 3412,
+      "sum_ms": 0.002,
+      "median_us": 0.0,
+      "p95_us": 0
+    },
+    "resume": {
+      "count": 3412,
+      "sum_ms": 6.701,
+      "median_us": 2.0,
+      "p95_us": 4
+    },
+    "thaw": {
+      "count": 3412,
+      "sum_ms": 50.523,
+      "median_us": 13.0,
+      "p95_us": 27
+    },
+    "total": {
+      "count": 3412,
+      "sum_ms": 23347.065,
+      "median_us": 4766.0,
+      "p95_us": 14709
+    }
+  },
+  "restore_participants_whole_session": {
+    "4c44535441544531": {
+      "count": 3412,
+      "sum_ms": 15800.415,
+      "median_us": 4263.0,
+      "p95_us": 6917
+    },
+    "5646535f46445332": {
+      "count": 3412,
+      "sum_ms": 6494.162,
+      "median_us": 1824.0,
+      "p95_us": 2677
+    },
+    "4c49424349445333": {
+      "count": 3412,
+      "sum_ms": 3017.268,
+      "median_us": 865.0,
+      "p95_us": 1148
+    },
+    "454e474142493031": {
+      "count": 3412,
+      "sum_ms": 856.549,
+      "median_us": 231.0,
+      "p95_us": 344
+    },
+    "4c4942434d4d4150": {
+      "count": 3412,
+      "sum_ms": 382.27,
+      "median_us": 108.0,
+      "p95_us": 157
+    },
+    "53aba32ae5414432": {
+      "count": 3412,
+      "sum_ms": 57.443,
+      "median_us": 15.0,
+      "p95_us": 23
+    },
+    "344f494454535943": {
+      "count": 3412,
+      "sum_ms": 29.609,
+      "median_us": 9.0,
+      "p95_us": 15
+    },
+    "abb6a57f484f4f4b": {
+      "count": 3412,
+      "sum_ms": 28.043,
+      "median_us": 7.0,
+      "p95_us": 12
+    },
+    "3130464d48535943": {
+      "count": 3412,
+      "sum_ms": 23.761,
+      "median_us": 6.0,
+      "p95_us": 10
+    },
+    "4b464f524b414431": {
+      "count": 3412,
+      "sum_ms": 19.538,
+      "median_us": 5.0,
+      "p95_us": 9
+    },
+    "4c4457504342494c": {
+      "count": 3412,
+      "sum_ms": 14.576,
+      "median_us": 4.0,
+      "p95_us": 7
+    },
+    "fffffffffffffffc": {
+      "count": 3412,
+      "sum_ms": 13.088,
+      "median_us": 3.0,
+      "p95_us": 6
+    },
+    "fffffffffffffffe": {
+      "count": 3412,
+      "sum_ms": 8.995,
+      "median_us": 2.0,
+      "p95_us": 4
+    },
+    "4b44554d50563031": {
+      "count": 3412,
+      "sum_ms": 7.968,
+      "median_us": 2.0,
+      "p95_us": 3
+    },
+    "563250524f564232": {
+      "count": 3412,
+      "sum_ms": 7.783,
+      "median_us": 2.0,
+      "p95_us": 3
+    },
+    "3130544958455943": {
+      "count": 3412,
+      "sum_ms": 7.567,
+      "median_us": 2.0,
+      "p95_us": 3
+    },
+    "323046434f4c5943": {
+      "count": 3412,
+      "sum_ms": 7.285,
+      "median_us": 2.0,
+      "p95_us": 3
+    },
+    "4352594552523031": {
+      "count": 3412,
+      "sum_ms": 6.036,
+      "median_us": 1.0,
+      "p95_us": 4
+    },
+    "31304e474f52504b": {
+      "count": 3412,
+      "sum_ms": 3.341,
+      "median_us": 1.0,
+      "p95_us": 1
+    },
+    "435259545a463031": {
+      "count": 3412,
+      "sum_ms": 2.678,
+      "median_us": 1.0,
+      "p95_us": 1
+    },
+    "3130524457505943": {
+      "count": 1446,
+      "sum_ms": 1.327,
+      "median_us": 1.0,
+      "p95_us": 1
+    },
+    "3130304d45535943": {
+      "count": 3412,
+      "sum_ms": 0.146,
+      "median_us": 0.0,
+      "p95_us": 0
+    },
+    "4352595543484633": {
+      "count": 3412,
+      "sum_ms": 0.107,
+      "median_us": 0.0,
+      "p95_us": 0
+    },
+    "435259454e564631": {
+      "count": 3412,
+      "sum_ms": 0.083,
+      "median_us": 0.0,
+      "p95_us": 0
+    },
+    "4c49424346555431": {
+      "count": 3412,
+      "sum_ms": 0.077,
+      "median_us": 0.0,
+      "p95_us": 0
+    },
+    "fffffffffffffffd": {
+      "count": 56,
+      "sum_ms": 0.063,
+      "median_us": 1.0,
+      "p95_us": 2
+    },
+    "4352595234384631": {
+      "count": 3412,
+      "sum_ms": 0.005,
+      "median_us": 0.0,
+      "p95_us": 0
+    },
+    "3130535341505943": {
+      "count": 3412,
+      "sum_ms": 0.002,
+      "median_us": 0.0,
+      "p95_us": 0
+    },
+    "31303053534e5943": {
+      "count": 3412,
+      "sum_ms": 0.001,
+      "median_us": 0.0,
+      "p95_us": 0
+    },
+    "3130525052475943": {
+      "count": 1446,
+      "sum_ms": 0.001,
+      "median_us": 0.0,
+      "p95_us": 0
+    }
+  },
+  "startup_install": {
+    "worker-discover-modules": {
+      "count": 5391,
+      "sum_ms": 1637.014,
+      "median_us": 255,
+      "p95_us": 568
+    },
+    "worker-open-runtime": {
+      "count": 5391,
+      "sum_ms": 33767.635,
+      "median_us": 5898,
+      "p95_us": 8907
+    },
+    "runtime-session-open": {
+      "count": 1972,
+      "sum_ms": 631.135,
+      "median_us": 303.0,
+      "p95_us": 442
+    },
+    "guest-bootstrap": {
+      "count": 1972,
+      "sum_ms": 13435.519,
+      "median_us": 6328.5,
+      "p95_us": 9402
+    },
+    "providers-discover": {
+      "count": 5371,
+      "sum_ms": 7100.265,
+      "median_us": 1206,
+      "p95_us": 1946
+    },
+    "providers-shared-load": {
+      "count": 5371,
+      "sum_ms": 3676.758,
+      "median_us": 633,
+      "p95_us": 1178
+    },
+    "providers-bind": {
+      "count": 5371,
+      "sum_ms": 4568.797,
+      "median_us": 737,
+      "p95_us": 1563
+    },
+    "providers-total": {
+      "count": 5371,
+      "sum_ms": 18623.154,
+      "median_us": 3118,
+      "p95_us": 5279
+    },
+    "init-pool-wait": {
+      "count": 1,
+      "sum_ms": 290724.698,
+      "median_us": 290724698,
+      "p95_us": 290724698
+    },
+    "image-cache-hit": {
+      "count": 5717,
+      "sum_ms": 21.227,
+      "median_us": 4,
+      "p95_us": 6
+    },
+    "native-catalog-hit": {
+      "count": 5371,
+      "sum_ms": 21.072,
+      "median_us": 4,
+      "p95_us": 6
+    },
+    "image-cache-read": {
+      "count": 10,
+      "sum_ms": 1.779,
+      "median_us": 90.0,
+      "p95_us": 318
+    },
+    "image-cache-hash": {
+      "count": 10,
+      "sum_ms": 1.022,
+      "median_us": 52.0,
+      "p95_us": 177
+    },
+    "image-cache-miss": {
+      "count": 10,
+      "sum_ms": 5.708,
+      "median_us": 417.5,
+      "p95_us": 891
+    }
+  },
+  "exec_whole_session": {
+    "started_records": 1879,
+    "complete_records": 1517,
+    "phases": {
+      "arguments-decoded": {
+        "count": 1517,
+        "sum_ms": 5.327,
+        "median_us": 3,
+        "p95_us": 6
+      },
+      "image-read": {
+        "count": 1517,
+        "sum_ms": 993.248,
+        "median_us": 551,
+        "p95_us": 1141
+      },
+      "handoff-serialized": {
+        "count": 1517,
+        "sum_ms": 641.13,
+        "median_us": 377,
+        "p95_us": 650
+      },
+      "process-created-suspended": {
+        "count": 1517,
+        "sum_ms": 10364.754,
+        "median_us": 5782,
+        "p95_us": 11227
+      },
+      "handoff-staged": {
+        "count": 1517,
+        "sum_ms": 257.77,
+        "median_us": 126,
+        "p95_us": 296
+      },
+      "process-resumed": {
+        "count": 1517,
+        "sum_ms": 3014.144,
+        "median_us": 1937,
+        "p95_us": 2336
+      },
+      "handoff-owned": {
+        "count": 1517,
+        "sum_ms": 28843.971,
+        "median_us": 17983,
+        "p95_us": 25620
+      },
+      "socket-handoff-finished": {
+        "count": 1517,
+        "sum_ms": 41.242,
+        "median_us": 25,
+        "p95_us": 58
+      },
+      "process-identity-released": {
+        "count": 1517,
+        "sum_ms": 23800.086,
+        "median_us": 15870,
+        "p95_us": 26851
+      },
+      "total": {
+        "count": 1517,
+        "sum_ms": 67961.672,
+        "median_us": 44330,
+        "p95_us": 65154
+      }
+    }
+  },
+  "process_groups": [
+    {
+      "phase": "install",
+      "kind": "exec",
+      "program": "dpkg",
+      "count": 86,
+      "user_ms": 13875.0,
+      "kernel_ms": 80203.125,
+      "cpu_ms": 94078.125
+    },
+    {
+      "phase": "install",
+      "kind": "fork",
+      "program": "dpkg-deb",
+      "count": 1785,
+      "user_ms": 30000.0,
+      "kernel_ms": 31531.25,
+      "cpu_ms": 61531.25
+    },
+    {
+      "phase": "install",
+      "kind": "fork",
+      "program": "dpkg",
+      "count": 1443,
+      "user_ms": 28687.5,
+      "kernel_ms": 32328.125,
+      "cpu_ms": 61015.625
+    },
+    {
+      "phase": "install",
+      "kind": "exec",
+      "program": "dpkg-deb",
+      "count": 714,
+      "user_ms": 20468.75,
+      "kernel_ms": 25593.75,
+      "cpu_ms": 46062.5
+    },
+    {
+      "phase": "host",
+      "kind": "host",
+      "program": "init.exe",
+      "count": 1,
+      "user_ms": 12921.875,
+      "kernel_ms": 26125.0,
+      "cpu_ms": 39046.875
+    },
+    {
+      "phase": "install",
+      "kind": "exec",
+      "program": "tar",
+      "count": 357,
+      "user_ms": 8937.5,
+      "kernel_ms": 9718.75,
+      "cpu_ms": 18656.25
+    },
+    {
+      "phase": "verification",
+      "kind": "exec",
+      "program": "dpkg",
+      "count": 2,
+      "user_ms": 2906.25,
+      "kernel_ms": 13281.25,
+      "cpu_ms": 16187.5
+    },
+    {
+      "phase": "install",
+      "kind": "exec",
+      "program": "dpkg-split",
+      "count": 357,
+      "user_ms": 6343.75,
+      "kernel_ms": 6312.5,
+      "cpu_ms": 12656.25
+    },
+    {
+      "phase": "install",
+      "kind": "exec",
+      "program": "rm",
+      "count": 357,
+      "user_ms": 5921.875,
+      "kernel_ms": 6296.875,
+      "cpu_ms": 12218.75
+    },
+    {
+      "phase": "install",
+      "kind": "exec",
+      "program": "python3.11",
+      "count": 17,
+      "user_ms": 1406.25,
+      "kernel_ms": 2218.75,
+      "cpu_ms": 3625.0
+    },
+    {
+      "phase": "install",
+      "kind": "fork",
+      "program": "dash",
+      "count": 58,
+      "user_ms": 1156.25,
+      "kernel_ms": 1500.0,
+      "cpu_ms": 2656.25
+    },
+    {
+      "phase": "install",
+      "kind": "command-pool",
+      "program": "apt-get",
+      "count": 1,
+      "user_ms": 218.75,
+      "kernel_ms": 2406.25,
+      "cpu_ms": 2625.0
+    },
+    {
+      "phase": "install",
+      "kind": "exec",
+      "program": "apt-extracttemplates",
+      "count": 12,
+      "user_ms": 843.75,
+      "kernel_ms": 1218.75,
+      "cpu_ms": 2062.5
+    },
+    {
+      "phase": "install",
+      "kind": "fork",
+      "program": "apt-extracttemplates",
+      "count": 48,
+      "user_ms": 843.75,
+      "kernel_ms": 1140.625,
+      "cpu_ms": 1984.375
+    },
+    {
+      "phase": "verification",
+      "kind": "exec",
+      "program": "node",
+      "count": 1,
+      "user_ms": 921.875,
+      "kernel_ms": 718.75,
+      "cpu_ms": 1640.625
+    },
+    {
+      "phase": "install",
+      "kind": "exec",
+      "program": "dash",
+      "count": 33,
+      "user_ms": 656.25,
+      "kernel_ms": 796.875,
+      "cpu_ms": 1453.125
+    },
+    {
+      "phase": "install",
+      "kind": "exec",
+      "program": "apt-config",
+      "count": 12,
+      "user_ms": 453.125,
+      "kernel_ms": 703.125,
+      "cpu_ms": 1156.25
+    },
+    {
+      "phase": "download",
+      "kind": "exec",
+      "program": "http",
+      "count": 2,
+      "user_ms": 437.5,
+      "kernel_ms": 640.625,
+      "cpu_ms": 1078.125
+    },
+    {
+      "phase": "install",
+      "kind": "fork",
+      "program": "python3.11",
+      "count": 28,
+      "user_ms": 453.125,
+      "kernel_ms": 562.5,
+      "cpu_ms": 1015.625
+    },
+    {
+      "phase": "install",
+      "kind": "fork",
+      "program": "perl",
+      "count": 14,
+      "user_ms": 359.375,
+      "kernel_ms": 593.75,
+      "cpu_ms": 953.125
+    },
+    {
+      "phase": "download",
+      "kind": "command-pool",
+      "program": "apt-get",
+      "count": 1,
+      "user_ms": 187.5,
+      "kernel_ms": 656.25,
+      "cpu_ms": 843.75
+    },
+    {
+      "phase": "verification",
+      "kind": "command-pool",
+      "program": "node",
+      "count": 1,
+      "user_ms": 500.0,
+      "kernel_ms": 187.5,
+      "cpu_ms": 687.5
+    },
+    {
+      "phase": "install",
+      "kind": "exec",
+      "program": "basename",
+      "count": 16,
+      "user_ms": 281.25,
+      "kernel_ms": 203.125,
+      "cpu_ms": 484.375
+    },
+    {
+      "phase": "install",
+      "kind": "fork",
+      "program": "apt-get",
+      "count": 11,
+      "user_ms": 171.875,
+      "kernel_ms": 281.25,
+      "cpu_ms": 453.125
+    },
+    {
+      "phase": "host",
+      "kind": "fork",
+      "program": "init.exe",
+      "count": 24,
+      "user_ms": 203.125,
+      "kernel_ms": 250.0,
+      "cpu_ms": 453.125
+    },
+    {
+      "phase": "install",
+      "kind": "fork",
+      "program": "apt-config",
+      "count": 12,
+      "user_ms": 187.5,
+      "kernel_ms": 187.5,
+      "cpu_ms": 375.0
+    },
+    {
+      "phase": "plan",
+      "kind": "command-pool",
+      "program": "apt-get",
+      "count": 1,
+      "user_ms": 109.375,
+      "kernel_ms": 218.75,
+      "cpu_ms": 328.125
+    },
+    {
+      "phase": "install",
+      "kind": "exec",
+      "program": "perl",
+      "count": 1,
+      "user_ms": 109.375,
+      "kernel_ms": 203.125,
+      "cpu_ms": 312.5
+    },
+    {
+      "phase": "update",
+      "kind": "exec",
+      "program": "http",
+      "count": 2,
+      "user_ms": 78.125,
+      "kernel_ms": 218.75,
+      "cpu_ms": 296.875
+    },
+    {
+      "phase": "install",
+      "kind": "exec",
+      "program": "update-alternatives",
+      "count": 7,
+      "user_ms": 125.0,
+      "kernel_ms": 156.25,
+      "cpu_ms": 281.25
+    },
+    {
+      "phase": "update",
+      "kind": "fork",
+      "program": "apt-get",
+      "count": 5,
+      "user_ms": 125.0,
+      "kernel_ms": 140.625,
+      "cpu_ms": 265.625
+    },
+    {
+      "phase": "update",
+      "kind": "command-pool",
+      "program": "apt-get",
+      "count": 1,
+      "user_ms": 78.125,
+      "kernel_ms": 156.25,
+      "cpu_ms": 234.375
+    },
+    {
+      "phase": "download",
+      "kind": "fork",
+      "program": "apt-get",
+      "count": 4,
+      "user_ms": 62.5,
+      "kernel_ms": 125.0,
+      "cpu_ms": 187.5
+    },
+    {
+      "phase": "verification",
+      "kind": "command-pool",
+      "program": "sh",
+      "count": 2,
+      "user_ms": 93.75,
+      "kernel_ms": 62.5,
+      "cpu_ms": 156.25
+    },
+    {
+      "phase": "update",
+      "kind": "exec",
+      "program": "dpkg",
+      "count": 3,
+      "user_ms": 62.5,
+      "kernel_ms": 62.5,
+      "cpu_ms": 125.0
+    },
+    {
+      "phase": "download",
+      "kind": "exec",
+      "program": "dpkg",
+      "count": 2,
+      "user_ms": 46.875,
+      "kernel_ms": 46.875,
+      "cpu_ms": 93.75
+    },
+    {
+      "phase": "plan",
+      "kind": "exec",
+      "program": "dpkg",
+      "count": 2,
+      "user_ms": 46.875,
+      "kernel_ms": 46.875,
+      "cpu_ms": 93.75
+    },
+    {
+      "phase": "verification",
+      "kind": "fork",
+      "program": "sh",
+      "count": 2,
+      "user_ms": 62.5,
+      "kernel_ms": 31.25,
+      "cpu_ms": 93.75
+    },
+    {
+      "phase": "host",
+      "kind": "host",
+      "program": "worker.exe",
+      "count": 2,
+      "user_ms": 62.5,
+      "kernel_ms": 15.625,
+      "cpu_ms": 78.125
+    },
+    {
+      "phase": "install",
+      "kind": "exec",
+      "program": "locale",
+      "count": 1,
+      "user_ms": 31.25,
+      "kernel_ms": 0.0,
+      "cpu_ms": 31.25
+    },
+    {
+      "phase": "install",
+      "kind": "exec",
+      "program": "dpkg-query",
+      "count": 1,
+      "user_ms": 15.625,
+      "kernel_ms": 15.625,
+      "cpu_ms": 31.25
+    },
+    {
+      "phase": "verification",
+      "kind": "command-pool",
+      "program": "npm",
+      "count": 1,
+      "user_ms": 15.625,
+      "kernel_ms": 15.625,
+      "cpu_ms": 31.25
+    },
+    {
+      "phase": "plan",
+      "kind": "fork",
+      "program": "apt-get",
+      "count": 2,
+      "user_ms": 0.0,
+      "kernel_ms": 15.625,
+      "cpu_ms": 15.625
+    }
+  ],
+  "native_top_frames": [
+    [
+      "ZwWaitForMultipleObjects",
+      41
+    ],
+    [
+      "NtWriteVirtualMemory",
+      7
+    ],
+    [
+      "NtCreateFile",
+      4
+    ],
+    [
+      "ZwFlushBuffersFile",
+      4
+    ],
+    [
+      "NtQueryInformationFile",
+      1
+    ],
+    [
+      "RtlFreeHeap",
+      1
+    ],
+    [
+      "GetProcessHeap",
+      1
+    ],
+    [
+      "RtlCreateUnicodeString",
+      1
+    ],
+    [
+      "ZwFlushBuffersFileEx",
+      1
+    ],
+    [
+      "NtReadVirtualMemory",
+      1
+    ],
+    [
+      "ZwQueryVirtualMemory",
+      1
+    ],
+    [
+      "NtFreeVirtualMemory",
+      1
+    ]
+  ],
+  "limitations": [
+    "Diagnostics enabled; not an acceptance timing or isolated speedup.",
+    "Nested and concurrent spans must not be summed as predicted wall-time savings.",
+    "Whole-process CPU includes preloading and useful guest work.",
+    "Fork phase membership uses handoff wait timestamp; boundary forks may straddle phases.",
+    "Exec summaries contain only complete ordered stderr sequences; interleaved records are excluded.",
+    "Native stack sample selected dpkg in a bounded late-unpack interval, not all processes or CPU-only samples."
+  ],
+  "evidence_sha256": {
+    "artifacts/goal-install-180-20260930/r6-startup-census/analysis.json": "d3b0cb2745ac55e12249349c988a40fb3859b3bc53e99fbea1a68d19641eab61",
+    "artifacts/goal-install-180-20260930/r6-startup-census/fixture/report.json": "b8e08db5eea113db3d2a5ce45e74a58a46a74946a53be186ea995159eba0e96e",
+    "artifacts/goal-install-180-20260930/r6-startup-census/processes.json": "ee84fcf830555dba36d96dd22443c3e8721476ddff7d864000369df9df63854f",
+    "artifacts/goal-install-180-20260930/r6-dist.json": "85e3bcbb1638bed882d5c833807a34932792150bb8590869ade649c53d9eef84",
+    "artifacts/goal-install-180-20260930/r6-source.json": "fc30745b88e912e155597c2f5d8411f37020347202d04f7f2d438713bf93228c",
+    "artifacts/goal-install-180-20260930/run-r6-startup-census.py": "827d18e938e8f2564af170847556676c67cb9f5243c18e465f568179bc7ab5bf",
+    "artifacts/goal-install-180-20260930/sample-r6-install.py": "62bf7095ee66abc61f45df52f187de393866c863cfdd08f27707a3c27e7c0920",
+    "artifacts/goal-install-180-20260930/analyze-r6-startup.py": "620d7b0148306c892c88922d65c74cb3b01b24ebca1d8c01a533630cbfe06161"
+  }
+}
