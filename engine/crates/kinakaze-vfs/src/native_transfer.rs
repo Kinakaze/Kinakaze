@@ -6,7 +6,11 @@
 //! table. Linux descriptor numbers, open descriptions and object IDs do not
 //! change. This is a launch transport, never a pathname or inode-content cache.
 use crate::{EBUSY, EIO, ENOMEM};
-use std::{cell::RefCell, collections::HashMap, os::windows::io::AsRawHandle};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle},
+};
 
 pub(crate) const SECTION: u32 = 31;
 const MAGIC: &[u8; 8] = b"KZHNDL01";
@@ -16,6 +20,15 @@ const TOKEN: u64 = 1 << 63;
 struct Capture {
     sources: Vec<u64>,
     indexes: HashMap<u64, u64>,
+    owned: bool,
+    pins: Vec<OwnedHandle>,
+    error: Option<i32>,
+}
+
+/// Keeps source capabilities alive independently of descriptor-table mutation.
+pub(crate) struct OwnedFrame {
+    pub(crate) bytes: Vec<u8>,
+    _pins: Vec<OwnedHandle>,
 }
 
 thread_local! {
@@ -55,14 +68,70 @@ pub(crate) fn encode(raw: u64) -> u64 {
     }
     CAPTURE.with_borrow_mut(|state| {
         let Some(state) = state else { return raw };
+        if state.error.is_some() {
+            return 0;
+        }
+        // Serializers call encode while their table lock or Arc owns `raw`.
+        // Pin at that point, not after serialization when close/reuse could
+        // already have replaced the numeric handle with an unrelated object.
+        let pin = if state.owned {
+            match pin_handle(raw) {
+                Ok(pin) => Some(pin),
+                Err(error) => {
+                    state.error = Some(error);
+                    return 0;
+                }
+            }
+        } else {
+            None
+        };
         if let Some(index) = state.indexes.get(&raw) {
+            if let Some(pin) = &pin {
+                let previous = state.sources[*index as usize - 1];
+                if unsafe {
+                    windows_sys::Win32::Foundation::CompareObjectHandles(
+                        pin.as_raw_handle(),
+                        previous as _,
+                    )
+                } == 0
+                {
+                    state.error = Some(crate::EAGAIN);
+                    return 0;
+                }
+            }
             return TOKEN | index;
         }
         let index = state.sources.len() as u64 + 1;
-        state.sources.push(raw);
+        state
+            .sources
+            .push(pin.as_ref().map_or(raw, |pin| pin.as_raw_handle() as u64));
+        if let Some(pin) = pin {
+            state.pins.push(pin);
+        }
         state.indexes.insert(raw, index);
         TOKEN | index
     })
+}
+
+fn pin_handle(raw: u64) -> Result<OwnedHandle, i32> {
+    use windows_sys::Win32::Foundation::{DUPLICATE_SAME_ACCESS, DuplicateHandle, GetLastError};
+    use windows_sys::Win32::System::Threading::GetCurrentProcess;
+    let mut target = std::ptr::null_mut();
+    if unsafe {
+        DuplicateHandle(
+            GetCurrentProcess(),
+            raw as _,
+            GetCurrentProcess(),
+            &mut target,
+            0,
+            0,
+            DUPLICATE_SAME_ACCESS,
+        )
+    } == 0
+    {
+        return Err(crate::errno_from_win32(unsafe { GetLastError() }));
+    }
+    Ok(unsafe { OwnedHandle::from_raw_handle(target) })
 }
 
 /// Decode a native handle field under the frame's restoration scope. Reject
@@ -91,17 +160,36 @@ impl Drop for CaptureGuard {
 }
 
 pub(crate) fn capture(build: impl FnOnce() -> Result<Vec<u8>, i32>) -> Result<Vec<u8>, i32> {
+    capture_with_ownership(false, build).map(|frame| frame.bytes)
+}
+
+pub(crate) fn capture_owned(
+    build: impl FnOnce() -> Result<Vec<u8>, i32>,
+) -> Result<OwnedFrame, i32> {
+    capture_with_ownership(true, build)
+}
+
+fn capture_with_ownership(
+    owned: bool,
+    build: impl FnOnce() -> Result<Vec<u8>, i32>,
+) -> Result<OwnedFrame, i32> {
     CAPTURE.with_borrow_mut(|state| {
         if state.is_some() {
             return Err(EBUSY);
         }
-        *state = Some(Capture::default());
+        *state = Some(Capture {
+            owned,
+            ..Capture::default()
+        });
         Ok(())
     })?;
     let guard = CaptureGuard;
     let mut frame = build()?;
     let state = CAPTURE.with_borrow_mut(Option::take).ok_or(EIO)?;
     drop(guard);
+    if let Some(error) = state.error {
+        return Err(error);
+    }
     if frame.len() < 16
         || u64::from_le_bytes(frame[..8].try_into().unwrap()) != crate::FORK_STATE_MAGIC
         || table_range(&frame)?.is_some()
@@ -124,7 +212,10 @@ pub(crate) fn capture(build: impl FnOnce() -> Result<Vec<u8>, i32>) -> Result<Ve
     }
     crate::append_fork_section(&mut frame, SECTION, &table)?;
     frame[8..12].copy_from_slice(&count.to_le_bytes());
-    Ok(frame)
+    Ok(OwnedFrame {
+        bytes: frame,
+        _pins: state.pins,
+    })
 }
 
 /// Parses the complete frame before any remote capability is created.

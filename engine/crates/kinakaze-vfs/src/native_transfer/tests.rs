@@ -191,6 +191,85 @@ fn transferred_events_keep_identity_and_retry_uses_original_sources() {
     }
 }
 
+#[test]
+fn owned_capture_survives_source_close_and_releases_every_pin() {
+    use windows_sys::Win32::Foundation::{GetHandleInformation, HANDLE_FLAG_INHERIT};
+    use windows_sys::Win32::System::Threading::{SetEvent, WaitForSingleObject};
+    let process = unsafe { std::os::windows::io::BorrowedHandle::borrow_raw(GetCurrentProcess()) };
+    let before = handle_count(&process);
+    let source = event();
+    let raw = source.as_raw_handle() as u64;
+    let captured = capture_owned(|| {
+        assert_eq!(encode(raw), TOKEN | 1);
+        assert_eq!(encode(raw), TOKEN | 1);
+        Ok(frame(&[]))
+    })
+    .unwrap();
+    assert_eq!(captured._pins.len(), 1);
+    let mut flags = 0;
+    assert_ne!(
+        unsafe { GetHandleInformation(captured._pins[0].as_raw_handle(), &mut flags) },
+        0
+    );
+    assert_eq!(flags & HANDLE_FLAG_INHERIT, 0);
+    drop(source);
+    assert_ne!(unsafe { SetEvent(captured._pins[0].as_raw_handle()) }, 0);
+    let mut transferred = captured.bytes.clone();
+    transfer(&mut transferred, process).unwrap();
+    let target = {
+        let _scope = restore_scope(&transferred).unwrap();
+        unsafe { OwnedHandle::from_raw_handle(decode(TOKEN | 1).unwrap() as _) }
+    };
+    drop(captured);
+    assert_eq!(unsafe { WaitForSingleObject(target.as_raw_handle(), 0) }, 0);
+    drop(target);
+    assert_eq!(handle_count(&process), before);
+
+    let source = event();
+    let before = handle_count(&process);
+    for panic in [false, true] {
+        let result = std::panic::catch_unwind(|| {
+            capture_owned(|| {
+                encode(source.as_raw_handle() as u64);
+                if panic {
+                    panic!("owned capture unwind")
+                }
+                encode(TOKEN - 4);
+                Ok(frame(&[]))
+            })
+        });
+        assert!(result.is_err() || result.unwrap().is_err());
+        assert!(!capturing());
+        assert_eq!(handle_count(&process), before);
+    }
+}
+
+#[test]
+fn owned_capture_rejects_reused_native_handle_values() {
+    let source = event();
+    let raw = source.as_raw_handle() as u64;
+    let mut unrelated = Vec::new();
+    let captured = capture_owned(|| {
+        encode(raw);
+        drop(source);
+        // The native allocator may choose another free slot first. Keep each
+        // allocation alive until the just-freed source slot is reused.
+        loop {
+            let replacement = event();
+            let reused = replacement.as_raw_handle() as u64 == raw;
+            unrelated.push(replacement);
+            if reused {
+                break;
+            }
+            assert!(unrelated.len() < 4096, "native handle slot was not reused");
+        }
+        encode(raw);
+        Ok(frame(&[]))
+    });
+    assert!(matches!(captured, Err(crate::EAGAIN)));
+    assert!(!capturing());
+}
+
 fn command(role: &str) -> std::process::Command {
     let mut command = std::process::Command::new(std::env::current_exe().unwrap());
     command.args([
@@ -230,15 +309,25 @@ fn cross_process_vfs_handoff_preserves_open_descriptions_and_ipc() {
 }
 
 #[test]
+fn portable_exec_owns_descriptors_after_close_and_reuse() {
+    let mut child = command("exec-source")
+        .stdin(std::process::Stdio::null())
+        .spawn()
+        .unwrap();
+    wait(&mut child);
+}
+
+#[test]
 fn process_fixture() {
     match std::env::var("KINAKAZE_TRANSFER_TEST_ROLE").as_deref() {
-        Ok("source") => source_process(),
+        Ok("source") => source_process(false),
+        Ok("exec-source") => source_process(true),
         Ok("destination") => destination_process(),
         _ => (),
     }
 }
 
-fn source_process() {
+fn source_process(exec: bool) {
     use crate::{FdFlags as F, FdKind};
     use std::os::windows::fs::OpenOptionsExt;
     let path = std::env::temp_dir().join(format!(
@@ -297,9 +386,36 @@ fn source_process() {
     assert_eq!(crate::write(left, b"unix"), Ok(4));
     assert_eq!(crate::write(fifo, b"fifo"), Ok(4));
     let ids = [fd, alias, read, write, left, right, event, fifo, udp];
-    crate::socket::prepare_process_fork().unwrap();
-    let mut captured = crate::serialize_portable_fork_state().unwrap();
+    let (mut captured, mut prepared) = if exec {
+        // Unix side state must exclude CLOEXEC capabilities as well as its fd.
+        let closed = crate::unix::socketpair(crate::socket::SOCK_STREAM).unwrap();
+        crate::set_close_on_exec(closed.0, true).unwrap();
+        crate::set_close_on_exec(closed.1, true).unwrap();
+        let process =
+            unsafe { std::os::windows::io::BorrowedHandle::borrow_raw(GetCurrentProcess()) };
+        drop(crate::prepare_portable_exec_state_from_image(&[], b"cancel", None).unwrap());
+        let before_cancel = handle_count(&process);
+        drop(crate::prepare_portable_exec_state_from_image(&[], b"cancel", None).unwrap());
+        assert_eq!(
+            handle_count(&process),
+            before_cancel,
+            "cancel leaked native or socket references"
+        );
+        let prepared = crate::prepare_portable_exec_state_from_image(
+            &["PORTABLE_EXEC=owned".into()],
+            b"portable-image",
+            Some(&["owned-argv".into()]),
+        )
+        .unwrap();
+        crate::close(closed.0).unwrap();
+        crate::close(closed.1).unwrap();
+        (Vec::new(), Some(prepared))
+    } else {
+        crate::socket::prepare_process_fork().unwrap();
+        (crate::serialize_portable_fork_state().unwrap(), None)
+    };
     let mut child = command("destination")
+        .env("KINAKAZE_TRANSFER_TEST_EXEC", if exec { "1" } else { "0" })
         .env("KINAKAZE_TRANSFER_TEST_PORT", port.to_string())
         .env(
             "KINAKAZE_TRANSFER_TEST_FDS",
@@ -324,7 +440,26 @@ fn source_process() {
             break;
         }
     }
-    transfer(&mut captured, child.as_handle()).unwrap();
+    let mut replacement = None;
+    if let Some(prepared) = &mut prepared {
+        for fd in ids {
+            crate::close(fd).unwrap();
+        }
+        let null = std::fs::File::open("NUL").unwrap();
+        let reused = crate::install(
+            null.into_raw_handle() as usize,
+            FdKind::File,
+            F::READ_ACCESS,
+        )
+        .unwrap();
+        assert_eq!(reused, fd, "recycle a captured Linux fd before transfer");
+        replacement = Some(reused);
+        captured = unsafe { prepared.transfer_to(child.as_handle()) }
+            .unwrap()
+            .to_vec();
+    } else {
+        transfer(&mut captured, child.as_handle()).unwrap();
+    }
     let rows = entries(&captured[table_range(&captured).unwrap().unwrap()]).unwrap();
     assert!(
         rows.iter()
@@ -336,17 +471,25 @@ fn source_process() {
         .unwrap();
     stdin.write_all(&captured).unwrap();
     drop(stdin);
-    crate::socket::finish_process_fork(child.id() as i32);
+    if let Some(prepared) = prepared {
+        prepared.finish(child.id());
+    } else {
+        crate::socket::finish_process_fork(child.id() as i32);
+    }
     wait(&mut child);
-    assert_eq!(crate::read(alias, &mut first), Ok(1));
-    assert_eq!(
-        &first, b"d",
-        "child advanced the shared open-description offset"
-    );
-    let mut counter = [0; 8];
-    assert_eq!(crate::read(event, &mut counter), Err(crate::EAGAIN));
-    for fd in ids {
-        crate::close(fd).unwrap();
+    if let Some(replacement) = replacement {
+        crate::close(replacement).unwrap();
+    } else {
+        assert_eq!(crate::read(alias, &mut first), Ok(1));
+        assert_eq!(
+            &first, b"d",
+            "child advanced the shared open-description offset"
+        );
+        let mut counter = [0; 8];
+        assert_eq!(crate::read(event, &mut counter), Err(crate::EAGAIN));
+        for fd in ids {
+            crate::close(fd).unwrap();
+        }
     }
     drop(marker);
     std::fs::remove_file(fifo_path).unwrap();
@@ -369,6 +512,25 @@ fn destination_process() {
         .map(|fd| fd.parse().unwrap())
         .collect();
     assert!(crate::restore_fork_state(&captured));
+    if std::env::var("KINAKAZE_TRANSFER_TEST_EXEC").as_deref() == Ok("1") {
+        assert_eq!(
+            crate::take_exec_environment(),
+            Some(vec!["PORTABLE_EXEC=owned".into()])
+        );
+        let image = crate::fork_section_range(&captured, crate::EXEC_IMAGE_SECTION).unwrap();
+        assert_eq!(&captured[image], b"portable-image");
+        assert!(
+            !crate::get(0)
+                .unwrap()
+                .flags
+                .contains(crate::FdFlags::BORROWED)
+        );
+        assert_eq!(crate::fork_socket_entries().unwrap().len(), 1);
+        assert!(
+            crate::get(*ids.iter().max().unwrap() + 1).is_err(),
+            "CLOEXEC fd survived"
+        );
+    }
     let mut file = [0; 2];
     assert_eq!(crate::read(ids[0], &mut file), Ok(2));
     assert_eq!(&file, b"bc");

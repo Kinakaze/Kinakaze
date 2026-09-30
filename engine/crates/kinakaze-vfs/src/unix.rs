@@ -657,10 +657,17 @@ fn namespace_code(namespace: &Namespace) -> u32 {
 /// Serializes the named-pipe side state; the pipe HANDLE itself is inherited by
 /// the process creation and is also present in the descriptor-table section.
 pub(crate) fn serialize_fork_state() -> Result<Vec<u8>, i32> {
+    serialize_matching(|_| true)
+}
+
+pub(crate) fn serialize_matching(keep: impl Fn(i32) -> bool) -> Result<Vec<u8>, i32> {
     let descriptors = crate::table().read().map_err(|_| EIO)?;
     let sockets = sockets().lock().map_err(|_| EIO)?;
     let mut active = Vec::with_capacity(sockets.len());
     for (&fd, socket) in sockets.iter() {
+        if !keep(fd) {
+            continue;
+        }
         let entry = descriptors
             .slots
             .get(fd as usize)
@@ -669,7 +676,11 @@ pub(crate) fn serialize_fork_state() -> Result<Vec<u8>, i32> {
         if entry.kind != FdKind::UnixSocket {
             return Err(EBADF);
         }
-        active.push((fd, socket.clone()));
+        // UnixSocket::clone owns the side-state Arcs, but its pipe handle is
+        // only borrowed from the descriptor. Capture it before releasing the
+        // table lock so portable exec cannot race native handle reuse.
+        let handle = crate::native_transfer::encode(socket.handle as u64);
+        active.push((fd, socket.clone(), handle));
     }
     drop(sockets);
     drop(descriptors);
@@ -681,12 +692,12 @@ pub(crate) fn serialize_fork_state() -> Result<Vec<u8>, i32> {
         &listener::handoff_token(
             active
                 .iter()
-                .filter_map(|(_, socket)| socket.listener.clone())
+                .filter_map(|(_, socket, _)| socket.listener.clone())
                 .collect(),
         )?
         .to_le_bytes(),
     );
-    for (fd, socket) in active {
+    for (fd, socket, handle) in active {
         let state = match socket.state {
             State::Idle => 0u32,
             State::Bound => 1,
@@ -702,8 +713,7 @@ pub(crate) fn serialize_fork_state() -> Result<Vec<u8>, i32> {
         payload.extend_from_slice(&socket.socket_type.to_le_bytes());
         payload.extend_from_slice(&state.to_le_bytes());
         payload.extend_from_slice(&flags.to_le_bytes());
-        payload
-            .extend_from_slice(&crate::native_transfer::encode(socket.handle as u64).to_le_bytes());
+        payload.extend_from_slice(&handle.to_le_bytes());
         payload.extend_from_slice(
             &crate::native_transfer::encode(socket.inode.as_ref().map_or(0, |pin| pin.0) as u64)
                 .to_le_bytes(),

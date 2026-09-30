@@ -2084,7 +2084,7 @@ fn serialize_launch_state(
             // dropped merely because the native backend lacks a handoff ABI.
             return Err(EOPNOTSUPP);
         }
-        if entry.flags.contains(FdFlags::BORROWED) {
+        if entry.flags.contains(FdFlags::BORROWED) && !native_transfer::capturing() {
             if fork_trace_enabled() {
                 eprintln!(
                     "kinakaze: serialize_exec_state SKIP borrowed fd={} raw={:#x}",
@@ -2099,10 +2099,11 @@ fn serialize_launch_state(
                 fd, entry.raw, entry.kind, entry.flags.0
             );
         }
+        let (raw, flags) = native_transfer::descriptor(*entry)?;
         payload.extend_from_slice(&(fd as u32).to_le_bytes());
-        payload.extend_from_slice(&(entry.raw as u64).to_le_bytes());
+        payload.extend_from_slice(&raw.to_le_bytes());
         payload.extend_from_slice(&entry.kind.fork_code().to_le_bytes());
-        payload.extend_from_slice(&entry.flags.0.to_le_bytes());
+        payload.extend_from_slice(&flags.0.to_le_bytes());
         payload.extend_from_slice(&entry.offset.to_le_bytes());
         payload.extend_from_slice(&entry.description_id.to_le_bytes());
         retained_fds.insert(fd as i32);
@@ -2126,7 +2127,10 @@ fn serialize_launch_state(
             },
         ),
         (13, lock_closes),
-        (5, unix::serialize_fork_state()?),
+        (
+            5,
+            unix::serialize_matching(|fd| retained_fds.contains(&fd))?,
+        ),
         (
             14,
             fifo::serialize_matching(|fd| retained_fds.contains(&fd))?,
@@ -2236,6 +2240,81 @@ pub fn prepare_exec_state_from_image(
             Err(error)
         }
     }
+}
+
+/// An exec snapshot whose native sources outlive concurrent close/dup calls.
+/// The caller must hold the process image transaction until this handoff ends.
+/// Dropping an unfinished snapshot cancels its Unix/Winsock preparation.
+#[cfg(windows)]
+pub struct PortableExecState {
+    frame: native_transfer::OwnedFrame,
+    pending: bool,
+}
+
+#[cfg(windows)]
+impl PortableExecState {
+    /// Transfer into an unpublished replacement without inherited descriptors.
+    ///
+    /// # Safety
+    /// The destination must remain stopped until transfer completes, and must
+    /// restore the returned frame exactly once or terminate. After success,
+    /// terminate it before retrying this snapshot with another destination.
+    pub unsafe fn transfer_to(
+        &mut self,
+        process: std::os::windows::io::BorrowedHandle<'_>,
+    ) -> Result<&[u8], i32> {
+        // Transfer only patches the small capability table after all duplicates
+        // succeed. Keep the ELF bytes in place instead of copying the complete
+        // executable again for each launch or destination retry.
+        native_transfer::transfer(&mut self.frame.bytes, process)?;
+        Ok(&self.frame.bytes)
+    }
+
+    /// Complete socket reconstruction after the destination owns its frame.
+    pub fn finish(mut self, target_pid: u32) {
+        finish_exec_state(Some(target_pid));
+        self.pending = false;
+    }
+}
+
+#[cfg(windows)]
+impl Drop for PortableExecState {
+    fn drop(&mut self) {
+        if self.pending {
+            finish_exec_state(None);
+        }
+    }
+}
+
+/// Prepare an exec snapshot for a worker with an independent native handle
+/// table. All retained descriptors, including borrowed standard streams, are
+/// owned by the resulting handoff. Concurrent descriptor mutation during
+/// capture returns EAGAIN; unsupported native objects return EOPNOTSUPP.
+#[cfg(windows)]
+pub fn prepare_portable_exec_state_from_image(
+    env: &[String],
+    image: &[u8],
+    arguments: Option<&[String]>,
+) -> Result<PortableExecState, i32> {
+    let before = exec_descriptor_snapshot()?;
+    unix::prepare_process_handoff()?;
+    let prepared = (|| {
+        socket::prepare_process_exec_pinned()?;
+        let frame = native_transfer::capture_owned(|| {
+            serialize_launch_state(env, Some(image), None, arguments)
+        })?;
+        if !before.matches(&*table().read().map_err(|_| EIO)?) {
+            return Err(EAGAIN);
+        }
+        Ok(PortableExecState {
+            frame,
+            pending: true,
+        })
+    })();
+    if prepared.is_err() {
+        finish_exec_state(None);
+    }
+    prepared
 }
 
 /// Begins a fresh-image spawn without copying the parent's address space.
