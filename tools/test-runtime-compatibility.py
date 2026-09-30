@@ -19,6 +19,7 @@ PROBES += ('FutexVectorProbe', 'FutexRequeueProbe')
 PROBES += ('PthreadEventParkingProbe',)
 PROBES += ('ForkNativeTransferProbe', 'ForkPrewarmPoolProbe', 'ForkNativeFallbackProbe')
 PROBES += ('ExecPrewarmPoolProbe',)
+PROBES += ('ForkProviderMetadataProbe',)
 EXECUTABLES = ('AllocatorInterpositionProbe', 'AllocatorIfuncProbe')
 
 

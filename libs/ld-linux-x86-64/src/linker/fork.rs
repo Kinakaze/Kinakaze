@@ -264,7 +264,10 @@ impl Linker {
         if input.word()? != MAGIC || input.word()? != 4 {
             return Err(invalid());
         }
+        let registry_span = profile::begin("fork-restore-registry", "fork");
         let registry = crate::provider::restore_registry(&input.path()?)?;
+        drop(registry_span);
+        let objects_span = profile::begin("fork-restore-objects", "fork");
         let paths = SearchPaths {
             host_directory: input.path()?,
             extra: input.paths()?,
@@ -330,18 +333,18 @@ impl Linker {
                     .collect::<Result<_, _>>()?,
             );
         }
+        drop(objects_span);
+        let facades_span = profile::begin("fork-restore-facades", "fork");
         for _ in 0..input.count()? {
             let name = input.text()?;
             let base = input.word()?;
-            let image = linker.registry.get(&name)?.ok_or_else(invalid)?;
-            if image.base() != base {
-                return Err(invalid());
-            }
-            let mut dll = DllProvider::from_registered(image);
+            let mut dll =
+                DllProvider::from_fork(std::sync::Arc::clone(&linker.registry), &name, base)?;
             dll.references = input.word()?;
             dll.nodelete = input.boolean()?;
             linker.scope.dlls.push(dll);
         }
+        drop(facades_span);
         linker.scope.order = (0..input.count()?)
             .map(|_| input.word().map(ObjectId))
             .collect::<Result<_, _>>()?;

@@ -135,13 +135,24 @@ impl Module {
         if self.exports.is_empty() || self.exports.len() > MAX_EXPORTS {
             return Err(invalid("module must export 1..=16384 symbols"));
         }
+        // PE discovery emits unique declarations in name order. Establish
+        // that property here; arbitrary adapters still use the general checks.
+        let ordered_names = self
+            .exports
+            .windows(2)
+            .all(|pair| pair[0].name < pair[1].name);
+        let direct_exports = ordered_names
+            && self
+                .exports
+                .iter()
+                .all(|export| export.name == export.pe_export);
         let mut names = HashSet::new();
         let mut pe_shapes = HashMap::new();
         let mut versioned_symbols = 0;
         for export in &self.exports {
             validate_symbol(&export.name)?;
             validate_symbol(&export.pe_export)?;
-            if !names.insert(&export.name) {
+            if !ordered_names && !names.insert(&export.name) {
                 return Err(invalid(format!(
                     "duplicate native export in {}",
                     self.soname
@@ -166,7 +177,8 @@ impl Module {
                 _ => {}
             }
             let shape = (export.kind, export.size, export.alignment);
-            if let Some(previous) = pe_shapes.insert(&export.pe_export, shape)
+            if !direct_exports
+                && let Some(previous) = pe_shapes.insert(&export.pe_export, shape)
                 && previous != shape
             {
                 return Err(invalid(
@@ -177,14 +189,15 @@ impl Module {
             if export.versions.len() > 64 {
                 return Err(invalid("too many ABI versions per symbol"));
             }
+            let ordered_versions = export.versions.windows(2).all(|pair| pair[0] < pair[1]);
             for version in &export.versions {
                 validate_version(version)?;
-                if !versions.insert(version) {
+                if !ordered_versions && !versions.insert(version) {
                     return Err(invalid("duplicate ABI version"));
                 }
             }
             if let Some(default) = &export.default_version
-                && !versions.contains(default)
+                && !export.versions.contains(default)
             {
                 return Err(invalid("default_version must appear in versions"));
             }
@@ -327,6 +340,32 @@ mod tests {
             bad.modules[1].exports[2].alignment = alignment;
             assert!(bad.validate().is_err());
         }
+    }
+
+    #[test]
+    fn ordered_declarations_and_unordered_aliases_keep_all_validation() {
+        let mut module = modules().modules.remove(1);
+        module.exports = vec![
+            Export::function("alpha", "alpha"),
+            Export::function("omega", "omega"),
+        ];
+        module.exports[0].versions = vec!["VERSION_1".into(), "VERSION_2".into()];
+        module.exports[0].default_version = Some("VERSION_1".into());
+        module.validate().unwrap();
+        module.exports[0].versions.reverse();
+        module.validate().unwrap();
+        module.exports[0].versions.push("VERSION_2".into());
+        assert!(module.validate().is_err());
+        module.exports[0].versions.pop();
+        module.exports.push(module.exports[0].clone());
+        assert!(module.validate().is_err());
+        module.exports.pop();
+        module.exports[1].pe_export = "alpha".into();
+        module.validate().unwrap();
+        module.exports[1].kind = ExportKind::Object;
+        module.exports[1].size = 8;
+        module.exports[1].alignment = 8;
+        assert!(module.validate().is_err());
     }
 }
 

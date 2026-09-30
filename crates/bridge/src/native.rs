@@ -2,7 +2,7 @@
 use crate::{Export, ExportKind, Module, ModuleLifecycle, ModuleSet, Result, invalid};
 use kinakaze_v2_host_win::{Library, ReadOnlyFile};
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::HashSet,
     fs,
     path::{Path, PathBuf},
     sync::Arc,
@@ -605,6 +605,11 @@ impl ModuleCatalog {
 }
 
 impl DiscoveredModule {
+    /// Canonical identity of the inspected, lifetime-pinned source file.
+    pub fn canonical_path(&self) -> Result<PathBuf> {
+        Ok(self.image.file.canonical_path()?)
+    }
+
     /// Validate complete guest declarations on demand. Transfer the optional
     /// layout-query DLL owner along with its metadata so it cannot unload in
     /// between querying an object's shape and binding the provider.
@@ -616,20 +621,32 @@ impl DiscoveredModule {
         type ObjectLayout = unsafe extern "C" fn(*const u8, usize) -> u64;
         let mut query: Option<ObjectLayout> = None;
         let mut owner = None;
-        let mut symbols: BTreeMap<&str, Export> = BTreeMap::new();
-        for symbol in self.image.exports() {
-            let (name, version) = symbol
-                .name
-                .split_once('@')
-                .map_or((symbol.name, None), |(name, version)| (name, Some(version)));
-            if let Some(export) = symbols.get_mut(name) {
+        let mut declarations: Vec<_> = self
+            .image
+            .exports()
+            .map(|symbol| {
+                let (name, version) = symbol
+                    .name
+                    .split_once('@')
+                    .map_or((symbol.name, None), |(name, version)| (name, Some(version)));
+                (name, version, symbol.object)
+            })
+            .collect();
+        // Group by the guest name, then the exact version. PE name order can
+        // put `atan2` between `atan` and `atan@VERSION`; adjacent PE names alone
+        // are not sufficient. Borrowed records avoid a tree node per export.
+        declarations
+            .sort_unstable_by(|left, right| left.0.cmp(right.0).then_with(|| left.1.cmp(&right.1)));
+        let mut symbols: Vec<Export> = Vec::with_capacity(declarations.len());
+        for (name, version, object) in declarations {
+            if let Some(export) = symbols.last_mut().filter(|export| export.name == name) {
                 if let Some(version) = version {
                     export.versions.push(version.into());
                 }
                 continue;
             }
             let mut export = Export::function(name, name);
-            if symbol.object != Some(false) && has_layout {
+            if object != Some(false) && has_layout {
                 let query = match query {
                     Some(query) => query,
                     None => {
@@ -655,23 +672,23 @@ impl DiscoveredModule {
                     };
                     export.size = layout as u32 as u64;
                     export.alignment = (layout & !(1 << 63)) >> 32;
-                } else if symbol.object == Some(true) {
+                } else if object == Some(true) {
                     return Err(invalid(format!("missing object layout: {filename}:{name}")));
                 }
             }
             if let Some(version) = version {
                 export.versions.push(version.into());
             }
-            symbols.insert(name, export);
+            symbols.push(export);
         }
-        for export in symbols.values_mut() {
+        for export in &mut symbols {
             export.default_version = export.versions.last().cloned();
         }
         let module = Module {
             id: self.id,
             soname: self.soname.clone(),
             lifecycle: self.lifecycle,
-            exports: symbols.into_values().collect(),
+            exports: symbols,
         };
         module.validate()?;
         Ok((module, owner))

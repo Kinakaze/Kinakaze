@@ -317,7 +317,7 @@ impl Linker {
                     )
                 }
                 RuntimeHandle::Dll(index) => {
-                    let image = self.scope.dlls[index].image();
+                    let image = self.scope.dlls[index].image()?;
                     let (phdr, phnum) = image.program_headers().unwrap_or((0, 0));
                     let mut dynamic = 0;
                     // ProviderImage contract pins validated ELF program headers.

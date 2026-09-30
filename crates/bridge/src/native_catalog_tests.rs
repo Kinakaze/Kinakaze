@@ -249,3 +249,37 @@ fn demanded_metadata_validates_names_and_versions_and_eager_api_still_rejects_it
         assert!(ModuleSet::discover(&directory.0).is_err(), "{symbol}");
     }
 }
+
+#[test]
+fn version_grouping_preserves_digit_suffixes_and_default_version() {
+    let directory = Directory::new();
+    directory.write("libruntime.so", &runtime());
+    directory.write(
+        "libgrouped.so",
+        &fixture(&[
+            ("atan", false),
+            ("atan2", false),
+            ("atan2@VERSION_1", false),
+            ("atan@VERSION_1", false),
+            ("atan@VERSION_2", false),
+            ("kinakaze_module_object_v1", false),
+        ]),
+    );
+    let catalog = ModuleCatalog::discover(&directory.0).unwrap();
+    let module = catalog
+        .modules
+        .iter()
+        .find(|module| module.soname == "libgrouped.so")
+        .unwrap();
+    let (metadata, owner) = module.materialize().unwrap();
+    assert!(owner.is_none());
+    assert_eq!(metadata.exports.len(), 2);
+    assert_eq!(metadata.exports[0].name, "atan");
+    assert_eq!(metadata.exports[0].versions, ["VERSION_1", "VERSION_2"]);
+    assert_eq!(
+        metadata.exports[0].default_version.as_deref(),
+        Some("VERSION_2")
+    );
+    assert_eq!(metadata.exports[1].name, "atan2");
+    assert_eq!(metadata.exports[1].versions, ["VERSION_1"]);
+}

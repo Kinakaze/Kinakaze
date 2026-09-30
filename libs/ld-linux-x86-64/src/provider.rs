@@ -161,9 +161,14 @@ fn canonical_path(image: &dyn ProviderImage) -> std::path::PathBuf {
 
 fn validate_symbols(image: &dyn ProviderImage) -> Result<(), LinkError> {
     let name = image.soname();
+    let symbols = image.symbols();
+    let ordered_names = symbols.windows(2).all(|pair| pair[0].name < pair[1].name);
     let mut names = HashSet::new();
-    for symbol in image.symbols() {
-        if symbol.name.is_empty() || symbol.name.contains('\0') || !names.insert(&symbol.name) {
+    for symbol in symbols {
+        if symbol.name.is_empty()
+            || symbol.name.contains('\0')
+            || (!ordered_names && !names.insert(&symbol.name))
+        {
             return Err(LinkError::InvalidProvider(format!(
                 "invalid or duplicate symbol in {name}"
             )));
@@ -177,12 +182,15 @@ fn validate_symbols(image: &dyn ProviderImage) -> Result<(), LinkError> {
             )));
         }
         let mut versions = HashSet::new();
+        let ordered_versions = symbol.versions.windows(2).all(|pair| pair[0] < pair[1]);
         if symbol.versions.iter().any(|version| {
-            version.is_empty() || version.contains('\0') || !versions.insert(version)
+            version.is_empty()
+                || version.contains('\0')
+                || (!ordered_versions && !versions.insert(version))
         }) || symbol
             .default_version
             .as_ref()
-            .is_some_and(|version| !versions.contains(version))
+            .is_some_and(|version| !symbol.versions.contains(version))
         {
             return Err(LinkError::InvalidProvider(format!(
                 "invalid ABI versions for {}",
@@ -256,6 +264,12 @@ impl ProviderRegistry {
         self.images.contains_key(soname)
     }
 
+    /// Registered, lifetime-pinned identity without demanding symbol metadata.
+    #[cfg(windows)]
+    pub(crate) fn image_path(&self, soname: &str) -> Option<&Path> {
+        self.images.get(soname).map(ProviderEntry::path)
+    }
+
     /// Use the active interpreter for a matching native command facade. Old
     /// rootfs copies can retain their compatible identity after a distribution
     /// upgrade; neither their code nor their initializers are loaded.
@@ -298,12 +312,21 @@ impl ProviderRegistry {
         path: std::path::PathBuf,
         factory: impl FnOnce() -> Result<Arc<dyn ProviderImage>, LinkError> + Send + 'static,
     ) -> Result<(), LinkError> {
-        if name.is_empty() || name.contains(['/', '\\', '\0']) || self.images.contains_key(&name) {
-            return Err(LinkError::InvalidProvider(
-                "invalid or duplicate provider SONAME".into(),
-            ));
-        }
+        self.check_deferred_name(&name)?;
         let path = std::fs::canonicalize(&path).unwrap_or(path);
+        self.register_deferred_with_identity(name, path, factory)
+    }
+
+    /// Register the canonical identity obtained from a retained source-file
+    /// handle. The adapter must keep that pin alive in `factory`; the bound
+    /// image is still checked against this identity when it is demanded.
+    pub fn register_deferred_with_identity(
+        &mut self,
+        name: String,
+        path: std::path::PathBuf,
+        factory: impl FnOnce() -> Result<Arc<dyn ProviderImage>, LinkError> + Send + 'static,
+    ) -> Result<(), LinkError> {
+        self.check_deferred_name(&name)?;
         if self.paths.contains_key(&path) {
             return Err(LinkError::InvalidProvider(
                 "one facade cannot own multiple SONAMEs".into(),
@@ -319,6 +342,16 @@ impl ProviderRegistry {
             },
         );
         Ok(())
+    }
+
+    fn check_deferred_name(&self, name: &str) -> Result<(), LinkError> {
+        if name.is_empty() || name.contains(['/', '\\', '\0']) || self.images.contains_key(name) {
+            Err(LinkError::InvalidProvider(
+                "invalid or duplicate provider SONAME".into(),
+            ))
+        } else {
+            Ok(())
+        }
     }
 
     pub fn get(&self, soname: &str) -> Result<Option<Arc<dyn ProviderImage>>, LinkError> {
@@ -458,6 +491,38 @@ mod tests {
                 .unwrap()
                 .is_some()
         );
+    }
+
+    #[test]
+    fn provider_lookup_preserves_original_indices_for_ordered_and_unordered_exports() {
+        for names in [["alpha", "counter", "omega"], ["omega", "alpha", "counter"]] {
+            let mut image = image();
+            let template = image.symbols[0].clone();
+            image.symbols = names
+                .iter()
+                .enumerate()
+                .map(|(index, name)| ProviderSymbol {
+                    name: (*name).into(),
+                    address: 0x1000 + index * 16,
+                    ..template.clone()
+                })
+                .collect();
+            let provider = DllProvider::from_registered(Arc::new(image));
+            for (index, name) in names.iter().enumerate() {
+                assert_eq!(
+                    provider
+                        .resolve(name, Some("TEST_1.0"))
+                        .unwrap()
+                        .unwrap()
+                        .address,
+                    Some(0x1000 + index * 16),
+                );
+                assert!(provider.resolve(name, Some("UNKNOWN")).unwrap().is_none());
+            }
+            for missing in ["", "aardvark", "between", "zzz"] {
+                assert!(provider.resolve(missing, None).unwrap().is_none());
+            }
+        }
     }
 
     #[test]
