@@ -29,7 +29,8 @@ def distribution_hashes(dist):
 
 
 class InitPool:
-    def __init__(self, root, dist, output, size=2, timeout=None, profile=False):
+    def __init__(self, root, dist, output, size=2, timeout=None, profile=False,
+                 memory_limit_bytes=None):
         if timeout is not None and timeout <= 0:
             raise ValueError('session timeout must be positive or None')
         self.root, self.dist, self.output = Path(root).resolve(), Path(dist).resolve(), Path(output).resolve()
@@ -57,7 +58,8 @@ class InitPool:
         self.child = SessionProcess([str(self.dist / 'init.exe'), '--pipe', self.endpoint,
             '--controller-pid', str(os.getpid()), '--prewarm-root', str(self.root),
             '--prewarm-dist', str(self.dist), '--prewarm-pool', str(size)], env=env,
-            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            memory_limit_bytes=memory_limit_bytes)
         self.watchdog = None
         if timeout is not None:
             self.watchdog = threading.Timer(timeout, self._timeout)
@@ -193,18 +195,36 @@ class InitPool:
             raise RuntimeError(f'init exited with {self.child.process.returncode}')
 
     def close(self):
-        if self.watchdog:
-            self.watchdog.cancel()
+        watchdog, self.watchdog = self.watchdog, None
+        if watchdog:
+            watchdog.cancel()
         self.child.close()
         if self.controller:
             self.controller.pipe.close()
-        self.child.process.wait(timeout=10)
-        for thread in self.drainers:
-            thread.join(timeout=5)
-        with self.sample_lock:
-            samples, self.samples = self.samples, []
-        for sample in samples:
-            sample.close()
+        try:
+            if watchdog:
+                watchdog.join(timeout=5)
+                if watchdog.is_alive():
+                    raise RuntimeError('pool timeout watchdog did not retire')
+            self.child.process.wait(timeout=10)
+            self.child.release_process_handle()
+            for thread in self.drainers:
+                thread.join(timeout=5)
+            if any(thread.is_alive() for thread in self.drainers):
+                raise RuntimeError('pool output drainer did not retire after Job close')
+            for stream in (self.child.process.stdout, self.child.process.stderr):
+                stream.close()
+            # Logs remain on disk. Retaining a closed pool must not retain up
+            # to 128 MiB of output or live pipe handles until Python GC runs.
+            with self.lock:
+                for buffer in self.buffers:
+                    buffer.clear()
+                self.watches.clear()
+        finally:
+            with self.sample_lock:
+                samples, self.samples = self.samples, []
+            for sample in samples:
+                sample.close()
 
     def _forget_sample(self, sample):
         with self.sample_lock:

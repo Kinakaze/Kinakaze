@@ -571,10 +571,19 @@ pub fn queue_timer_signal(
     }
     let waiters = if let Some(thread) = target {
         *state.thread_pending.entry(thread).or_default() |= signal_bit;
-        vec![thread]
+        state
+            .waiting
+            .get(&thread)
+            .filter(|accepted| **accepted & signal_bit != 0)
+            .map(|_| vec![thread])
+            .unwrap_or_default()
     } else {
         PENDING.fetch_or(signal_bit, Ordering::AcqRel);
-        state.waiting.keys().copied().collect()
+        state
+            .waiting
+            .iter()
+            .filter_map(|(&thread, &accepted)| (accepted & signal_bit != 0).then_some(thread))
+            .collect()
     };
     drop(state);
     for thread in waiters {
@@ -1090,7 +1099,7 @@ pub fn interrupt_pending() -> bool {
         .get(&interrupt::current_thread_id())
         .copied()
         .unwrap_or(0);
-    let ready = (PENDING.load(Ordering::Acquire) | directed) & !BLOCKED.get() & !IN_HANDLER.get();
+    let ready = (PENDING.load(Ordering::Acquire) | directed) & !BLOCKED.get();
     has_interrupt_action(&state.actions, ready)
 }
 
@@ -1122,7 +1131,7 @@ pub fn fatal_pending() -> Result<bool, i32> {
         .get(&interrupt::current_thread_id())
         .copied()
         .unwrap_or(0);
-    let ready = (PENDING.load(Ordering::Acquire) | directed) & !BLOCKED.get() & !IN_HANDLER.get();
+    let ready = (PENDING.load(Ordering::Acquire) | directed) & !BLOCKED.get();
     Ok(has_fatal_action(&state.actions, ready))
 }
 
@@ -1180,8 +1189,14 @@ pub fn raise_thread_signal(thread_id: u32, signal: i32) -> Result<(), i32> {
         .thread_senders
         .entry((thread_id, signal))
         .or_insert(sender);
+    let wake = state
+        .waiting
+        .get(&thread_id)
+        .is_some_and(|accepted| accepted & signal_bit != 0);
     drop(state);
-    interrupt::interrupt_thread(thread_id);
+    if wake {
+        interrupt::interrupt_thread(thread_id);
+    }
     Ok(())
 }
 
@@ -1221,11 +1236,15 @@ pub fn raise_signal(signal: i32) -> Result<(), i32> {
 
     PENDING.fetch_or(bit, Ordering::AcqRel);
 
-    // Wake every registered waiter. Only threads that do not block the signal
-    // will actually act on it, but the wake itself is cheap and a sleeping
-    // thread cannot be inspected for its mask without waking it.
+    // Each waiter published the set it accepts under this mutex. A blocked
+    // signal remains pending without spuriously interrupting epoll/ppoll.
+    // A signal queued before registration is found by its pending check.
     let waiters: Vec<u32> = match state().lock() {
-        Ok(state) => state.waiting.keys().copied().collect(),
+        Ok(state) => state
+            .waiting
+            .iter()
+            .filter_map(|(&thread, &accepted)| (accepted & bit != 0).then_some(thread))
+            .collect(),
         Err(_) => Vec::new(),
     };
     for thread in waiters {
@@ -1250,7 +1269,7 @@ pub fn register_signal_waiter(wanted: u64) {
     let event = interrupt::current();
     let thread = interrupt::current_thread_id();
     let wake = if let Ok(mut state) = state().lock() {
-        let accepted = !(BLOCKED.get() | IN_HANDLER.get()) | wanted;
+        let accepted = !BLOCKED.get() | wanted;
         state.waiting.insert(thread, accepted);
         let pending = PENDING.load(Ordering::Acquire)
             | state.thread_pending.get(&thread).copied().unwrap_or(0);
@@ -1326,7 +1345,10 @@ pub fn deliver_pending() -> Delivery {
             .ok()
             .and_then(|state| state.thread_pending.get(&thread_id).copied())
             .unwrap_or(0);
-        let ready = (PENDING.load(Ordering::Acquire) | directed) & !blocked & !in_handler;
+        // The current mask is the authority, including inside a handler.
+        // sigsuspend/sigprocmask may explicitly unblock the active signal;
+        // JSC uses a second occurrence to resume its suspended thread.
+        let ready = (PENDING.load(Ordering::Acquire) | directed) & !blocked;
         if ready == 0 {
             return outcome;
         }
@@ -1457,9 +1479,12 @@ pub fn deliver_pending() -> Delivery {
                 // Block this signal and the action's mask while the handler runs
                 // unless SA_NODEFER says otherwise.
                 let previous_blocked = BLOCKED.get();
-                if action.flags & SA_NODEFER == 0 {
-                    BLOCKED.set(previous_blocked | action.mask | claim);
-                }
+                let automatic = if action.flags & SA_NODEFER == 0 {
+                    claim
+                } else {
+                    0
+                };
+                BLOCKED.set(previous_blocked | action.mask | automatic);
                 IN_HANDLER.set(in_handler | claim);
 
                 // SA_RESETHAND restores the default before the handler runs.
@@ -1718,7 +1743,7 @@ mod tests {
     }
 
     #[test]
-    fn native_io_ignores_stale_default_ignored_and_active_handler_signals() {
+    fn native_io_uses_the_current_mask_even_inside_a_handler() {
         let _serialized = test_lock();
         let saved_action = sigaction(SIGCHLD, Some(Action::default())).unwrap();
         let saved_mask = swap_blocked_mask(0);
@@ -1735,7 +1760,7 @@ mod tests {
         .unwrap();
         assert!(interrupt_pending());
         IN_HANDLER.set(bit(SIGCHLD).unwrap());
-        assert!(!interrupt_pending());
+        assert!(interrupt_pending());
         IN_HANDLER.set(0);
         swap_blocked_mask(bit(SIGCHLD).unwrap());
         assert!(!interrupt_pending());
@@ -1915,6 +1940,42 @@ mod tests {
         assert_eq!(deliver_pending(), Delivery::Interrupted);
         sigaction(SIGUSR1, Some(old_action)).unwrap();
         sigprocmask(SIG_SETMASK, old_mask).unwrap();
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn blocked_waiters_are_not_woken_by_process_thread_or_timer_signals() {
+        use windows_sys::Win32::Foundation::WAIT_TIMEOUT;
+        use windows_sys::Win32::System::Threading::{ResetEvent, WaitForSingleObject};
+        let _serialized = test_lock();
+        let selected = bit(SIGUSR1).unwrap();
+        let previous = sigprocmask(SIG_BLOCK, selected).unwrap();
+        let old_action = sigaction(
+            SIGUSR1,
+            Some(Action {
+                disposition: Disposition::Handle(record, 0),
+                ..Action::default()
+            }),
+        )
+        .unwrap();
+        let event = interrupt::current();
+        let thread = interrupt::current_thread_id();
+        unsafe { ResetEvent(event) };
+        register_waiter();
+        raise_signal(SIGUSR1).unwrap();
+        assert_eq!(unsafe { WaitForSingleObject(event, 0) }, WAIT_TIMEOUT);
+        assert!(take_pending(selected).is_some());
+        raise_thread_signal(thread, SIGUSR1).unwrap();
+        assert_eq!(unsafe { WaitForSingleObject(event, 0) }, WAIT_TIMEOUT);
+        assert!(take_pending(selected).is_some());
+        for target in [None, Some(thread)] {
+            queue_timer_signal(target, SIGUSR1, 775, 0, 0, Arc::new(AtomicI32::new(0))).unwrap();
+            assert_eq!(unsafe { WaitForSingleObject(event, 0) }, WAIT_TIMEOUT);
+            assert!(take_pending(selected).is_some());
+        }
+        unregister_waiter();
+        sigaction(SIGUSR1, Some(old_action)).unwrap();
+        sigprocmask(SIG_SETMASK, previous).unwrap();
     }
 
     #[test]

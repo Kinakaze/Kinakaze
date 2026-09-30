@@ -1662,6 +1662,12 @@ pub fn errno_from_win32(error: u32) -> i32 {
         ERROR_SHARING_VIOLATION, ERROR_TOO_MANY_OPEN_FILES, ERROR_WRITE_PROTECT,
     };
     match error {
+        windows_sys::Win32::Foundation::ERROR_NOT_ENOUGH_MEMORY
+        | windows_sys::Win32::Foundation::ERROR_OUTOFMEMORY
+        | windows_sys::Win32::Foundation::ERROR_WORKING_SET_QUOTA
+        | windows_sys::Win32::Foundation::ERROR_PAGEFILE_QUOTA
+        | windows_sys::Win32::Foundation::ERROR_COMMITMENT_LIMIT
+        | windows_sys::Win32::Foundation::ERROR_NOT_ENOUGH_QUOTA => ENOMEM,
         windows_sys::Win32::Foundation::ERROR_NOACCESS
         | windows_sys::Win32::Foundation::ERROR_INVALID_USER_BUFFER => EFAULT,
         ERROR_FILE_NOT_FOUND | ERROR_PATH_NOT_FOUND | ERROR_NO_MORE_FILES => ENOENT,

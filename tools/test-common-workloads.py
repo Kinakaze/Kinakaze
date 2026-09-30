@@ -134,6 +134,7 @@ gcc -O2 -fno-pie -no-pie ExecutableTlsProbe.c -pthread -o tls-exec
 ./tls-exec | grep -q EXECUTABLE_TLS_OK''', ['/usr/bin/gcc'], 120)
     add('node', shlex.quote(args.node) + ' NodeRuntimeProbe.js', [args.node], 120)
     add('bun-filesystem', shlex.quote(args.bun) + ' BunAgentFilesystemProbe.js', [args.bun], 45)
+    add('bun-subprocess', shlex.quote(args.bun) + ' BunAgentSubprocessProbe.js', [args.bun], 90)
     add('cpp-futures', 'clang++ -O2 -std=c++17 CppFutureProbe.cpp -pthread -o cpp-futures; '
         './cpp-futures | grep -q CPP_FUTURES_OK', ['/usr/bin/clang++'], 120)
     add('go', shlex.quote(args.go) + ' run program.go', [args.go], 180)
@@ -246,7 +247,7 @@ if(json_decode(json_encode(["x"=>42]),true)["x"]!=42) exit(2); echo "PHP_OK\\n";
                 stage = root / guest.lstrip('/')
                 stage.mkdir(parents=True)
                 for fixture in ('InterpreterCommandProbe.py', 'CompilerRuntimeProbe.c', 'AbortStatusProbe.c', 'PosixSemaphoreProbe.c', 'DeepBindProbe.c', 'ExecutableTlsProbe.c', 'StatfsBoundaryProbe.py', 'StandardHandleLifetimeProbe.py', 'NativePermissionProbe.py', 'DirectoryTypeProbe.py', 'DirectoryCursorProbe.py', 'MetadataPathProbe.py', 'ProcessLimitsProbe.py', 'ChildSignalProbe.py', 'SharedListenerProbe.py', 'SharedSocketWaitProbe.py', 'PamRuntimeProbe.py', 'NodeRuntimeProbe.js',
-                                'BunAgentFilesystemProbe.js', 'SysvProcProbe.py', 'CondReacquireNotifyProbe.c', 'CppFutureProbe.cpp', 'RawEpollCreateProbe.py', 'MariadbRuntimeProbe.py', 'SqliteProcessBoundaryProbe.py', 'FfmpegRuntimeProbe.py', 'JavaRuntimeProbe.java',
+                                'BunAgentFilesystemProbe.js', 'BunAgentSubprocessProbe.js', 'SysvProcProbe.py', 'CondReacquireNotifyProbe.c', 'CppFutureProbe.cpp', 'RawEpollCreateProbe.py', 'MariadbRuntimeProbe.py', 'SqliteProcessBoundaryProbe.py', 'FfmpegRuntimeProbe.py', 'JavaRuntimeProbe.java',
                                 'NamedSemaphoreProbe.c', 'MultiprocessingProbe.py', 'ForkDlopenProbe.c', 'IgnoredSignalIoProbe.c', 'PpollSignalProbe.c', 'AccountForkProbe.c', 'AccountStreamProbe.c', 'PathAccessProbe.py', 'PathReferenceProbe.py', 'RootResolutionProbe.py', 'GlobCallbackProbe.c', 'TmpfilesProbe.py', 'XattrLifetimeProbe.py',
                                 'NginxRuntimeProbe.py', 'RedisRuntimeProbe.py', 'PostgresqlRuntimeProbe.py', 'DescriptorDuplicationProbe.py', 'DatagramRightsProbe.py', 'UnixListenerCustodyProbe.py', 'UnixSocketOptionsProbe.py', 'TmpfsMappingProbe.py', 'TmpfsEofProbe.c', 'NamespaceServicesProbe.py'):
                     shutil.copyfile(source / fixture, stage / fixture)

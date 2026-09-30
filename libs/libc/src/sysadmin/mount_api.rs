@@ -13,7 +13,7 @@ unsafe extern "system" {
         read: *mut usize,
     ) -> i32;
 }
-pub(super) fn read_user(address: usize, bytes: &mut [u8]) -> Result<(), i32> {
+pub(crate) fn read_user(address: usize, bytes: &mut [u8]) -> Result<(), i32> {
     if bytes.is_empty() {
         return Ok(());
     }
@@ -36,7 +36,7 @@ pub(super) fn read_user(address: usize, bytes: &mut [u8]) -> Result<(), i32> {
     }
     Ok(())
 }
-pub(super) fn write_user(address: usize, bytes: &[u8]) -> Result<(), i32> {
+pub(crate) fn write_user(address: usize, bytes: &[u8]) -> Result<(), i32> {
     if bytes.is_empty() {
         return Ok(());
     }

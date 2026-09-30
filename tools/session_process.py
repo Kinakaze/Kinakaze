@@ -6,7 +6,9 @@ import subprocess
 import threading
 
 class SessionProcess:
-    def __init__(self, command, suspended=False, **kwargs):
+    def __init__(self, command, suspended=False, memory_limit_bytes=None, **kwargs):
+        if memory_limit_bytes is not None and memory_limit_bytes <= 0:
+            raise ValueError('session memory limit must be positive or None')
         self.job = None
         self._job_lock = threading.Lock()
         if os.name != 'nt':
@@ -30,7 +32,11 @@ class SessionProcess:
         self.kernel = kernel
         self.job = kernel.CreateJobObjectW(None, None)
         if not self.job: raise c.WinError(c.get_last_error())
+        self._extended_type = Extended
         limits = Extended(); limits.basic.flags = 0x2000  # KILL_ON_JOB_CLOSE
+        if memory_limit_bytes is not None:
+            limits.basic.flags |= 0x200  # JOB_OBJECT_LIMIT_JOB_MEMORY
+            limits.job_memory = memory_limit_bytes
         self.process = None
         try:
             if not kernel.SetInformationJobObject(self.job, 9, c.byref(limits), c.sizeof(limits)):
@@ -103,8 +109,25 @@ class SessionProcess:
                 raise c.WinError(c.get_last_error())
         return dict(user_ms=value.basic.user / 10000, kernel_ms=value.basic.kernel / 10000,
                     total_cpu_ms=(value.basic.user + value.basic.kernel) / 10000,
-                    processes=value.basic.processes, page_faults=value.basic.page_faults,
+                    processes=value.basic.processes, active_processes=value.basic.active,
+                    page_faults=value.basic.page_faults,
                     read_bytes=value.io.read_bytes, write_bytes=value.io.write_bytes)
+
+    def memory_metrics(self):
+        """Peak committed memory charged to this Job, including exited children."""
+        if not self.job:
+            return None
+        value = self._extended_type()
+        self.kernel.QueryInformationJobObject.argtypes = [w.HANDLE, c.c_int, c.c_void_p, w.DWORD, c.c_void_p]
+        self.kernel.QueryInformationJobObject.restype = w.BOOL
+        with self._job_lock:
+            if not self.job:
+                return None
+            if not self.kernel.QueryInformationJobObject(self.job, 9, c.byref(value), c.sizeof(value), None):
+                raise c.WinError(c.get_last_error())
+        return dict(peak_process_commit_bytes=value.peak_process_memory,
+                    peak_job_commit_bytes=value.peak_job_memory,
+                    job_memory_limit_bytes=value.job_memory)
 
     def close(self):
         # A timeout watchdog and the caller's finally block can arrive together.
@@ -112,6 +135,13 @@ class SessionProcess:
             if self.job:
                 self.kernel.CloseHandle(self.job)
                 self.job = None
+
+    def release_process_handle(self):
+        """Release Popen's native handle after its exit code has been reaped."""
+        if self.process.returncode is None:
+            raise RuntimeError('reap the process before releasing its handle')
+        if os.name == 'nt':
+            self.process._handle.Close()
 
     def owns_process(self, pid):
         """Membership survives native parent exit and excludes other sessions."""

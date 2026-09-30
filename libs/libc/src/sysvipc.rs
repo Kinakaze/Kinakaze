@@ -1783,9 +1783,8 @@ const RETRY_MILLISECONDS: u32 = 20;
 ///
 /// A blocked call wakes on an event the next completed operation signals, and
 /// re-tests every [`RETRY_MILLISECONDS`] regardless so a dead lock-holder cannot
-/// wedge it. The two divergences from Linux: the wait is not interruptible by a
-/// signal, so it never reports `EINTR`, and a wakeup can be up to that timeout
-/// late in the pathological case.
+/// wedge it. The signal waiter makes pending Linux signals interrupt this wait
+/// with `EINTR`. Dead-owner recovery can be up to that timeout late.
 ///
 /// # Safety
 ///
@@ -1796,15 +1795,48 @@ pub unsafe extern "sysv64" fn kinakaze_abi_semop(
     ops: *const Sembuf,
     count: usize,
 ) -> c_int {
-    if count == 0 {
-        // Linux accepts an empty array as a no-op that still validates the id.
-        return match find_set(id) {
-            Ok(_) => 0,
-            Err(error) => fail(error),
+    unsafe { semop_impl(id, ops, count, None) }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_semtimedop(
+    id: c_int,
+    ops: *const Sembuf,
+    count: usize,
+    timeout: *const crate::fdio::TimeSpec,
+) -> c_int {
+    let deadline = if timeout.is_null() {
+        None
+    } else {
+        let time = match crate::ptrace::read_value::<crate::fdio::TimeSpec>(timeout as usize) {
+            Ok(time) => time,
+            Err(error) => return fail(error),
         };
+        if time.tv_sec < 0 || !(0..1_000_000_000).contains(&time.tv_nsec) {
+            return fail(EINVAL);
+        }
+        match std::time::Instant::now().checked_add(std::time::Duration::new(
+            time.tv_sec as u64,
+            time.tv_nsec as u32,
+        )) {
+            Some(deadline) => Some(deadline),
+            None => return fail(EINVAL),
+        }
+    };
+    unsafe { semop_impl(id, ops, count, deadline) }
+}
+
+unsafe fn semop_impl(
+    id: c_int,
+    ops: *const Sembuf,
+    count: usize,
+    deadline: Option<std::time::Instant>,
+) -> c_int {
+    if count == 0 {
+        return fail(EINVAL);
     }
     if count > SEMOPM {
-        return fail(EINVAL);
+        return fail(7); // E2BIG: too many operations
     }
     if ops.is_null() {
         return fail(EFAULT);
@@ -1816,7 +1848,14 @@ pub unsafe extern "sysv64" fn kinakaze_abi_semop(
     // Copied out of guest memory once, so the array cannot change underneath the
     // feasibility test and the commit that follows it.
     // SAFETY: the caller guarantees `count` readable sembuf.
-    let ops: Vec<Sembuf> = unsafe { std::slice::from_raw_parts(ops, count) }.to_vec();
+    let mut copied = vec![0u8; count * core::mem::size_of::<Sembuf>()];
+    if let Err(error) = super::sysadmin::mount_api::read_user(ops as usize, &mut copied) {
+        return fail(error);
+    }
+    let ops: Vec<Sembuf> = copied
+        .chunks_exact(core::mem::size_of::<Sembuf>())
+        .map(|bytes| unsafe { bytes.as_ptr().cast::<Sembuf>().read_unaligned() })
+        .collect();
 
     // Every index is validated before anything is locked, so a bad array is
     // rejected without disturbing the set.
@@ -1867,8 +1906,27 @@ pub unsafe extern "sysv64" fn kinakaze_abi_semop(
                 // progress and the wait would be a deadlock.
                 drop(guard);
                 // SAFETY: the event handle is live while the Arc is held.
-                match unsafe { WaitForSingleObject(set.wake as *mut c_void, RETRY_MILLISECONDS) } {
+                if deadline.is_some_and(|limit| std::time::Instant::now() >= limit) {
+                    return fail(EAGAIN);
+                }
+                let timeout = deadline.map_or(RETRY_MILLISECONDS, |limit| {
+                    limit
+                        .saturating_duration_since(std::time::Instant::now())
+                        .as_nanos()
+                        .div_ceil(1_000_000)
+                        .min(u128::from(RETRY_MILLISECONDS)) as u32
+                });
+                let interrupt = kinakaze_vfs::interrupt::current();
+                kinakaze_vfs::signal::register_waiter();
+                let handles = [set.wake as _, interrupt];
+                let outcome = unsafe { kinakaze_vfs::deadline_wait::any(&handles, timeout) };
+                kinakaze_vfs::signal::unregister_waiter();
+                if kinakaze_vfs::signal::deliver_pending() != kinakaze_vfs::signal::Delivery::None {
+                    return fail(kinakaze_vfs::EINTR);
+                }
+                match outcome {
                     WAIT_OBJECT_0 | WAIT_TIMEOUT => {}
+                    value if value == WAIT_OBJECT_0 + 1 => {}
                     _ => return fail(EIO),
                 }
             }
@@ -2559,6 +2617,66 @@ mod tests {
         assert_eq!(unsafe { kinakaze_abi_semctl(id, 0, GETPID, 0) }, own_pid());
 
         // SAFETY: IPC_RMID reads no buffer.
+        assert_eq!(unsafe { kinakaze_abi_semctl(id, 0, IPC_RMID, 0) }, 0);
+    }
+
+    #[test]
+    fn semtimedop_times_out_without_partial_effects_and_keeps_timeout() {
+        let id = kinakaze_abi_semget(IPC_PRIVATE, 2, IPC_CREAT | 0o600);
+        assert!(id > 0);
+        assert_eq!(unsafe { kinakaze_abi_semctl(id, 0, SETVAL, 1) }, 0);
+        let ops = [
+            Sembuf {
+                sem_num: 0,
+                sem_op: -1,
+                sem_flg: 0,
+            },
+            Sembuf {
+                sem_num: 1,
+                sem_op: -1,
+                sem_flg: 0,
+            },
+        ];
+        let timeout = crate::fdio::TimeSpec {
+            tv_sec: 0,
+            tv_nsec: 5_000_000,
+        };
+        let started = std::time::Instant::now();
+        assert_eq!(
+            unsafe { kinakaze_abi_semtimedop(id, ops.as_ptr(), ops.len(), &timeout) },
+            -1
+        );
+        assert_eq!(kinakaze_tls::errno(), EAGAIN);
+        assert!(started.elapsed() >= std::time::Duration::from_millis(5));
+        assert!(started.elapsed() < std::time::Duration::from_secs(2));
+        assert_eq!(timeout.tv_nsec, 5_000_000);
+        assert_eq!(unsafe { kinakaze_abi_semctl(id, 0, GETVAL, 0) }, 1);
+        assert_eq!(unsafe { kinakaze_abi_semctl(id, 1, GETVAL, 0) }, 0);
+        let zero = crate::fdio::TimeSpec::default();
+        assert_eq!(
+            unsafe { kinakaze_abi_semtimedop(id, ops.as_ptr(), ops.len(), &zero) },
+            -1
+        );
+        assert_eq!(kinakaze_tls::errno(), EAGAIN);
+        assert_eq!(unsafe { kinakaze_abi_semctl(id, 1, SETVAL, 1) }, 0);
+        assert_eq!(
+            unsafe { kinakaze_abi_semtimedop(id, ops.as_ptr(), ops.len(), &zero) },
+            0
+        );
+        let invalid = crate::fdio::TimeSpec {
+            tv_sec: 0,
+            tv_nsec: 1_000_000_000,
+        };
+        assert_eq!(
+            unsafe { kinakaze_abi_semtimedop(id, ops.as_ptr(), ops.len(), &invalid) },
+            -1
+        );
+        assert_eq!(kinakaze_tls::errno(), EINVAL);
+        assert_eq!(
+            unsafe { kinakaze_abi_semtimedop(id, 1usize as _, 1, &zero) },
+            -1
+        );
+        assert_eq!(kinakaze_tls::errno(), EFAULT);
         assert_eq!(unsafe { kinakaze_abi_semctl(id, 0, IPC_RMID, 0) }, 0);
     }
 

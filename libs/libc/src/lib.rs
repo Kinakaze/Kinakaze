@@ -95,6 +95,8 @@ mod process_stack;
 #[cfg(all(windows, target_arch = "x86_64"))]
 pub mod pthread;
 #[cfg(all(windows, target_arch = "x86_64"))]
+pub mod ptrace;
+#[cfg(all(windows, target_arch = "x86_64"))]
 pub mod rand48;
 pub mod random_state;
 #[cfg(all(windows, target_arch = "x86_64"))]
@@ -463,6 +465,10 @@ pub unsafe extern "sysv64" fn kinakaze_abi_read(
     buffer: *mut c_void,
     count: usize,
 ) -> isize {
+    if let Some(result) = ptrace::fast_syscall(0, [fd as u64, buffer as u64, count as u64, 0, 0, 0])
+    {
+        return result as isize;
+    }
     unsafe { kinakaze_read(fd, buffer, count) }
 }
 
@@ -473,12 +479,19 @@ pub unsafe extern "sysv64" fn kinakaze_abi_write(
     buffer: *const c_void,
     count: usize,
 ) -> isize {
+    if let Some(result) = ptrace::fast_syscall(1, [fd as u64, buffer as u64, count as u64, 0, 0, 0])
+    {
+        return result as isize;
+    }
     unsafe { kinakaze_write(fd, buffer, count) }
 }
 
 #[cfg(all(windows, target_arch = "x86_64"))]
 #[unsafe(no_mangle)]
 pub extern "sysv64" fn kinakaze_abi_close(fd: i32) -> i32 {
+    if let Some(result) = ptrace::fast_syscall(3, [fd as u64, 0, 0, 0, 0, 0]) {
+        return result as i32;
+    }
     kinakaze_close(fd)
 }
 

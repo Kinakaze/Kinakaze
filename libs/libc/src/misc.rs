@@ -1499,20 +1499,29 @@ pub unsafe extern "sysv64" fn kinakaze_abi_wcsnrtombs(
     0
 }
 
-/// `mremap` — stub, always fails with ENOSYS.
+/// `mremap` with the Linux optional fixed destination argument.
 ///
 /// # Safety
 /// `_old_address` must be a valid mmap region.
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn kinakaze_abi_mremap(
-    _old_address: *mut c_void,
-    _old_size: usize,
-    _new_size: usize,
-    _flags: c_int,
+    old_address: *mut c_void,
+    old_size: usize,
+    new_size: usize,
+    flags: c_int,
+    new_address: *mut c_void,
 ) -> *mut c_void {
-    crate::set_errno(kinakaze_vfs::ENOSYS);
-    // MAP_FAILED = (void *)-1
-    usize::MAX as *mut c_void
+    crate::fdio::remap(
+        old_address as usize,
+        old_size,
+        new_size,
+        flags,
+        new_address as usize,
+    )
+    .unwrap_or_else(|error| {
+        crate::set_errno(error);
+        usize::MAX
+    }) as *mut c_void
 }
 
 #[unsafe(no_mangle)]

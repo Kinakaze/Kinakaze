@@ -134,6 +134,31 @@ pub(super) fn rip_relative_branch_entry(recent: &VecDeque<Instruction>) -> Optio
     .then(|| source.ip_rel_memory_address() as usize)
 }
 
+/// Follow a formed function pointer across local branches only when its value
+/// reaches a register-indirect call. Rust hoists musl readdir into R15 before
+/// entering its directory loop; a basic-block-only lookback misses that root.
+pub(super) fn rip_relative_invoked_entry(
+    instruction: &Instruction,
+    segments: &[(usize, usize)],
+) -> Option<usize> {
+    if instruction.mnemonic() != Mnemonic::Lea
+        || !instruction.is_ip_rel_memory_operand()
+        || register_bit(instruction.op0_register()) == 0
+    {
+        return None;
+    }
+    let target = instruction.ip_rel_memory_address() as usize;
+    (segments
+        .iter()
+        .any(|(start, len)| target >= *start && target - start < *len)
+        && callee_invokes_register(
+            instruction.next_ip() as usize,
+            instruction.op0_register(),
+            segments,
+        ))
+    .then_some(target)
+}
+
 /// Follow local callback arguments when a known callee invokes them or
 /// registers a recognized TLS cleanup record. PF_X alone is not proof:
 /// OpenSSL keeps strings and lookup tables alongside its assembly routines.
@@ -166,30 +191,39 @@ pub(super) fn rip_relative_callback_entries(
         let register = source.op0_register();
         if source.mnemonic() != Mnemonic::Lea
             || !source.is_ip_rel_memory_operand()
-            || !matches!(
-                register,
-                Register::RDI
-                    | Register::RSI
-                    | Register::RDX
-                    | Register::RCX
-                    | Register::R8
-                    | Register::R9
-            )
+            || register_bit(register) == 0
         {
             continue;
         }
         let target = source.ip_rel_memory_address() as usize;
-        if segments
+        if !segments
             .iter()
             .any(|(start, len)| target >= *start && target - start < *len)
-            && !recent
-                .iter()
-                .skip(index + 1)
-                .take(recent.len() - index - 2)
-                .any(|instruction| writes(instruction, register))
-            && (callee_invokes_register(callee, register, segments)
-                || (register == Register::RSI && registers_tls_cleanup(callee, segments)))
         {
+            continue;
+        }
+        // musl selects its C or C++ thread entry with LEA/CMOV before clone.
+        // Follow both possible full-width pointers through register copies;
+        // partial writes and unknown transformations invalidate an alias.
+        let mut aliases = register_bit(register);
+        let mut info = InstructionInfoFactory::new();
+        for instruction in recent.iter().skip(index + 1).take(recent.len() - index - 2) {
+            aliases = copied_aliases(instruction, aliases, &mut info);
+        }
+        if [
+            Register::RDI,
+            Register::RSI,
+            Register::RDX,
+            Register::RCX,
+            Register::R8,
+            Register::R9,
+        ]
+        .into_iter()
+        .any(|argument| {
+            aliases & register_bit(argument) != 0
+                && (callee_invokes_register(callee, argument, segments)
+                    || (argument == Register::RSI && registers_tls_cleanup(callee, segments)))
+        }) {
             entries.push(target);
         }
     }
@@ -276,6 +310,52 @@ fn register_bit(register: Register) -> u16 {
     } else {
         0
     }
+}
+
+fn copied_aliases(
+    instruction: &Instruction,
+    aliases: u16,
+    info: &mut InstructionInfoFactory,
+) -> u16 {
+    let conditional = matches!(
+        instruction.mnemonic(),
+        Mnemonic::Cmova
+            | Mnemonic::Cmovae
+            | Mnemonic::Cmovb
+            | Mnemonic::Cmovbe
+            | Mnemonic::Cmove
+            | Mnemonic::Cmovg
+            | Mnemonic::Cmovge
+            | Mnemonic::Cmovl
+            | Mnemonic::Cmovle
+            | Mnemonic::Cmovne
+            | Mnemonic::Cmovno
+            | Mnemonic::Cmovnp
+            | Mnemonic::Cmovns
+            | Mnemonic::Cmovo
+            | Mnemonic::Cmovp
+            | Mnemonic::Cmovs
+    );
+    let destination = register_bit(instruction.op0_register());
+    let copy = (instruction.mnemonic() == Mnemonic::Mov || conditional)
+        && instruction.op0_kind() == OpKind::Register
+        && instruction.op1_kind() == OpKind::Register
+        && aliases & register_bit(instruction.op1_register()) != 0;
+    let retained = if conditional {
+        aliases & destination
+    } else {
+        0
+    };
+    let mut result = aliases;
+    for used in info.info(instruction).used_registers() {
+        if matches!(
+            used.access(),
+            OpAccess::Write | OpAccess::CondWrite | OpAccess::ReadWrite | OpAccess::ReadCondWrite
+        ) {
+            result &= !register_bit(used.register().full_register());
+        }
+    }
+    result | retained | if copy { destination } else { 0 }
 }
 
 /// A bounded, register-only provenance walk. Copies preserve the callback;

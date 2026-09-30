@@ -3,6 +3,7 @@ import ctypes as C
 import errno
 import mmap
 import os
+from pathlib import Path
 import threading
 import time
 
@@ -51,13 +52,18 @@ def exercise(word):
 
 
 exercise(C.c_int())
+image = C.CDLL(str(Path(__file__).with_suffix('.so')))
+image_word = C.c_int.in_dll(image, 'image_futex_word')
+exercise(image_word)
 # JVM hardware discovery forks before OpenAL starts: that can turn heap pages
 # into native section views without changing their Linux private ownership.
 child = os.fork()
 if child == 0:
+    exercise(image_word)
     os._exit(0)
 assert os.waitpid(child, 0) == (child, 0)
 exercise(C.c_int())
+exercise(image_word)
 with mmap.mmap(-1, 4096, flags=mmap.MAP_PRIVATE | mmap.MAP_ANONYMOUS) as memory:
     word = C.c_int.from_buffer(memory)
     exercise(word)

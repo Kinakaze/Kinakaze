@@ -214,9 +214,10 @@ pub extern "sysv64" fn kinakaze_abi_tcflow(fd: c_int, action: c_int) -> c_int {
 }
 
 // ---------------------------------------------------------------------------
-// The raw x86_64 ioctl ABI uses the kernel's 44-byte termios shape.  libc's
+// The raw x86_64 TCGETS/TCSETS ABI uses the kernel's 36-byte termios shape. libc's
 // public `struct termios` is 60 bytes because glibc exposes NCCS=32; conflating
-// the two overwrites sixteen bytes after buffers used by raw-syscall callers.
+// the two overwrites twenty-four bytes after raw-syscall buffers. The 44-byte
+// termios2 has separate speed fields and belongs to different ioctl requests.
 // ---------------------------------------------------------------------------
 
 const KERNEL_NCCS: usize = 19;
@@ -230,8 +231,6 @@ struct KernelTermios {
     c_lflag: u32,
     c_line: u8,
     c_cc: [u8; KERNEL_NCCS],
-    c_ispeed: u32,
-    c_ospeed: u32,
 }
 
 impl KernelTermios {
@@ -245,8 +244,6 @@ impl KernelTermios {
             c_lflag: termios.c_lflag,
             c_line: termios.c_line,
             c_cc,
-            c_ispeed: termios.c_ispeed,
-            c_ospeed: termios.c_ospeed,
         }
     }
 
@@ -257,8 +254,11 @@ impl KernelTermios {
         termios.c_lflag = self.c_lflag;
         termios.c_line = self.c_line;
         termios.c_cc[..KERNEL_NCCS].copy_from_slice(&self.c_cc);
-        termios.c_ispeed = self.c_ispeed;
-        termios.c_ospeed = self.c_ospeed;
+        // Ordinary termios encodes speeds in c_cflag. A zero input field
+        // follows the output speed; B0 must clear any cached output speed.
+        termios.c_ospeed = self.c_cflag & CBAUD;
+        let input = (self.c_cflag & CIBAUD) >> IBSHIFT;
+        termios.c_ispeed = if input == B0 { termios.c_ospeed } else { input };
     }
 }
 
@@ -534,6 +534,10 @@ pub unsafe extern "sysv64" fn kinakaze_abi_ioctl(
     request: u64,
     argument: *mut c_void,
 ) -> c_int {
+    // Linux sys_ioctl takes unsigned int cmd, including on x86-64. In
+    // particular, musl can sign extend requests such as TIOCGPTN from int.
+    // Discard the upper register bits before every descriptor dispatch.
+    let request = u64::from(request as u32);
     if matches!(request, 0xb701..=0xb704) {
         let entry = match kinakaze_vfs::get(fd) {
             Ok(entry) => entry,
@@ -621,7 +625,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_ioctl(
             }
         },
         TCGETS => {
-            // SAFETY: TCGETS takes the kernel's 44-byte termios, not libc's
+            // SAFETY: TCGETS takes the kernel's 36-byte termios, not libc's
             // public 60-byte structure.
             unsafe { ioctl_tcgets(fd, argument) }
         }
@@ -1999,23 +2003,21 @@ mod tests {
     fn tcgets_uses_the_x86_64_kernel_termios_layout() {
         use core::mem::{offset_of, size_of};
 
-        assert_eq!(size_of::<KernelTermios>(), 44);
+        assert_eq!(size_of::<KernelTermios>(), 36);
         assert_eq!(offset_of!(KernelTermios, c_iflag), 0);
         assert_eq!(offset_of!(KernelTermios, c_line), 16);
         assert_eq!(offset_of!(KernelTermios, c_cc), 17);
-        assert_eq!(offset_of!(KernelTermios, c_ispeed), 36);
-        assert_eq!(offset_of!(KernelTermios, c_ospeed), 40);
 
         let master =
             kinakaze_abi_posix_openpt(kinakaze_vfs::fs::O_RDWR | kinakaze_vfs::fs::O_NOCTTY);
         assert!(master >= 0);
         #[repr(C)]
         struct Guarded {
-            kernel: [u8; 44],
+            kernel: [u8; 36],
             guard: [u8; 32],
         }
         let mut buffer = Guarded {
-            kernel: [0; 44],
+            kernel: [0; 36],
             guard: [0xa5; 32],
         };
         // SAFETY: the first field is exactly one writable kernel termios.
@@ -2025,7 +2027,7 @@ mod tests {
         );
         assert!(
             buffer.guard.iter().all(|byte| *byte == 0xa5),
-            "TCGETS wrote libc's 60-byte termios into a 44-byte kernel buffer"
+            "TCGETS wrote beyond the 36-byte kernel termios"
         );
 
         let mut full = Termios::default();
@@ -2035,8 +2037,6 @@ mod tests {
         assert_eq!(kernel.c_iflag, full.c_iflag);
         assert_eq!(kernel.c_lflag, full.c_lflag);
         assert_eq!(&kernel.c_cc, &full.c_cc[..KERNEL_NCCS]);
-        assert_eq!(kernel.c_ispeed, full.c_ispeed);
-        assert_eq!(kernel.c_ospeed, full.c_ospeed);
 
         let _ = kinakaze_vfs::close(master);
     }

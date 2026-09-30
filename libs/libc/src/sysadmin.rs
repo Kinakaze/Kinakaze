@@ -15,7 +15,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::set_errno;
 mod keys;
-mod mount_api;
+pub(crate) mod mount_api;
 pub mod mqueue;
 mod sched_api;
 use kinakaze_vfs::{EAGAIN, EFAULT, EINVAL, ENOSYS, ENOTDIR, EPERM, ETIMEDOUT};
@@ -1459,7 +1459,7 @@ pub extern "sysv64" fn kinakaze_abi_unshare(flags: c_int) -> c_int {
     const PRIVATE_FLAGS: u32 = 0x100 | 0x200 | 0x400 | 0x800 | 0x10000 | CLONE_SYSVSEM | 0x10000000;
     let flags = flags as u32;
     if flags & !(OBJECT_FLAGS | CLONE_NEWNS | CLONE_NEWTIME | PRIVATE_FLAGS) != 0 {
-        if let Some(directory) = std::env::var_os("KINAKAZE_NAMESPACE_TRACE_DIR") {
+        if let Some(directory) = namespace_trace_directory() {
             use std::io::Write;
             let path = std::path::PathBuf::from(directory)
                 .join(format!("namespace-{}.log", std::process::id()));
@@ -1646,32 +1646,50 @@ pub unsafe extern "sysv64" fn kinakaze_abi_memfd_create(name: *const c_char, fla
         crate::set_errno(EINVAL);
         return -1;
     }
-    let tag = if let Ok(s) = name.to_str() {
-        s.replace(['/', '\\', '\0'], "_")
+    let descriptor_flags = kinakaze_vfs::fs::O_RDWR
+        | if flags & 1 != 0 {
+            kinakaze_vfs::fs::O_CLOEXEC
+        } else {
+            0
+        };
+    let result = if kinakaze_vfs::tmpfs::owns("/tmp") {
+        // An open tmpfs inode retains its pagefile-backed contents after unlink.
+        // Withdraw the name before publishing the FD; close on every failure.
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+        let tag = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let path = format!("/tmp/.memfd-{}-{tag}", std::process::id());
+        kinakaze_vfs::fs::open(
+            &path,
+            descriptor_flags | kinakaze_vfs::fs::O_CREAT | kinakaze_vfs::fs::O_EXCL,
+            0o777,
+        )
+        .and_then(|fd| match kinakaze_vfs::fs::unlink(&path) {
+            Ok(()) => Ok(fd),
+            Err(error) => {
+                let _ = kinakaze_vfs::close(fd);
+                Err(error)
+            }
+        })
     } else {
-        "memfd".to_string()
+        // Native backing uses the existing unnamed/delete-on-close VFS path.
+        // Standalone native callers need no /tmp directory in their guest root.
+        // Hosted callers retain the authoritative filesystem namespace.
+        let directory = if kinakaze_vfs::fs::stat("/tmp").is_ok()
+            || kinakaze_runtime::authority::get().is_some()
+        {
+            "/tmp".to_owned()
+        } else {
+            kinakaze_vfs::to_guest_path(&std::env::temp_dir())
+        };
+        kinakaze_vfs::fs::open(&directory, descriptor_flags | 0o20000000, 0o777)
     };
-    let random_suffix = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_nanos())
-        .unwrap_or(0);
-    let tmp_path = format!("/tmp/memfd_{}_{}", tag, random_suffix);
-    let fd_flags = if flags & 1 != 0 {
-        kinakaze_vfs::fs::O_RDWR
-            | kinakaze_vfs::fs::O_CREAT
-            | kinakaze_vfs::fs::O_EXCL
-            | kinakaze_vfs::fs::O_CLOEXEC
-    } else {
-        kinakaze_vfs::fs::O_RDWR | kinakaze_vfs::fs::O_CREAT | kinakaze_vfs::fs::O_EXCL
-    };
-    let fd = match kinakaze_vfs::fs::open(&tmp_path, fd_flags, 0o700) {
+    match result {
         Ok(fd) => fd,
-        Err(err) => {
-            crate::set_errno(err);
-            return -1;
+        Err(error) => {
+            crate::set_errno(error);
+            -1
         }
-    };
-    fd
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2149,6 +2167,15 @@ pub const SYS_COPY_FILE_RANGE: i64 = 326;
 pub const SYS_CLOSE_RANGE: i64 = 436;
 pub const SYS_OPENAT2: i64 = 437;
 
+fn namespace_trace_directory() -> Option<&'static std::path::Path> {
+    static DIRECTORY: std::sync::OnceLock<Option<std::path::PathBuf>> = std::sync::OnceLock::new();
+    DIRECTORY
+        .get_or_init(|| {
+            std::env::var_os("KINAKAZE_NAMESPACE_TRACE_DIR").map(std::path::PathBuf::from)
+        })
+        .as_deref()
+}
+
 static POST_WAIT_TRACE_ACTIVE: std::sync::atomic::AtomicBool =
     std::sync::atomic::AtomicBool::new(false);
 pub const SYS_EPOLL_PWAIT2: i64 = 441;
@@ -2491,77 +2518,6 @@ fn membarrier(command: i64, flags: u32) -> i64 {
     }
 }
 
-/// `syscall`, the raw kernel gate.
-///
-/// Variadic in C, and fixed-arity here for the reason [`kinakaze_abi_prctl`]
-/// explains — but with one limit worth stating exactly, because the arithmetic is
-/// tighter than it looks.
-///
-/// A Linux syscall takes up to six arguments, and `syscall` prepends the number,
-/// so a fully loaded call passes *seven* values. System V has six integer argument
-/// registers. The seventh — a syscall's sixth argument — therefore lands on the
-/// stack, and this signature does not name it: five arguments are declared, which
-/// covers the number plus five. No syscall dispatched below takes more than four,
-/// so nothing served here is affected, and a caller invoking a six-argument
-/// syscall reaches the `-ENOSYS` default rather than being served with a truncated
-/// argument list. Adding one would mean declaring the sixth parameter so the
-/// compiler loads it from the caller's frame.
-///
-/// A caller passing fewer arguments leaves the tail registers holding stale
-/// values, so each dispatch reads only the arguments its number is defined to
-/// take.
-///
-/// # The return convention, which is not errno
-///
-/// This returns what the kernel returns: a non-negative result on success, or the
-/// **negated errno as the return value** on failure, with errno itself untouched.
-/// `syscall(SYS_mount, ...)` yields `-38`, not `-1`. glibc's `syscall` wrapper is
-/// what converts that into `-1` plus errno for its caller, and getting the
-/// direction wrong here makes every error indistinguishable from a success: a
-/// caller checking `< 0` would see `-38` as an error but a caller checking `== -1`
-/// would see it as a valid result, and vice versa.
-///
-/// # Numbers served
-///
-/// Real work:
-///
-/// - `SYS_gettid` (186) — the Windows thread id. See [`current_tid`].
-/// - `SYS_getpid` (39) — the process id, dispatched because a `gettid` caller on a
-///   single-threaded guest often probes both.
-/// - `SYS_getrandom` (318) — the system CSPRNG, via `RtlGenRandom`.
-/// - `SYS_membarrier` (324) — `FlushProcessWriteBuffers`, including the `QUERY`
-///   form.
-/// - `SYS_sched_getaffinity` (204) and `SYS_sched_setaffinity` (203) — the Windows
-///   affinity mask. Note the return value: the raw `sched_getaffinity` reports the
-///   number of bytes written, where the glibc wrapper reports 0.
-/// - `SYS_sched_yield` (24) — `SwitchToThread`.
-/// - `SYS_clock_gettime` (228) — the Windows clocks; see [`clock_gettime`].
-/// - `SYS_ioctl` (16) — forwarded to this crate's `ioctl`, which serves the
-///   terminal and descriptor requests and reports `ENOTTY` for the rest.
-/// - `SYS_readlinkat` (267) — forwarded to this crate's `readlinkat`.
-/// - `SYS_set_tid_address` (218) — see [`set_tid_address`] for what it does and
-///   does not promise.
-/// - `SYS_prctl` (157) and `SYS_personality` (135) — the implementations above.
-///
-/// Truthful refusals, dispatched explicitly rather than left to fall through, so
-/// the raw path and the wrapper report the same errno for the same request:
-/// `SYS_mount`, `SYS_umount2`, `SYS_swapon`, `SYS_swapoff`, `SYS_pivot_root`,
-/// `SYS_unshare`, `SYS_setns`, `SYS_chroot`, `SYS_syslog` and `SYS_reboot`. The
-/// reboot path is the one place the magic numbers are checked, because it is the
-/// only path they are passed on.
-///
-/// `SYS_futex` (202) implements process-private wait, wake, bitsets and compare
-/// requeue, including unflagged operations on private memory. Futexes on shared
-/// mappings require a cross-process queue and return `-ENOSYS` until it exists.
-///
-/// **Every other number returns `-ENOSYS`** — negative, per the convention above.
-/// That is what Linux returns for a syscall the kernel does not implement, so a
-/// caller with a fallback path takes it.
-///
-/// # Safety
-///
-/// Any pointer among the arguments must satisfy whatever the dispatched syscall
-/// requires of it. An unrecognised number dereferences nothing.
 const FUTEX_WAIT: u32 = 0;
 const FUTEX_WAKE: u32 = 1;
 const FUTEX_REQUEUE: u32 = 3;
@@ -3162,6 +3118,20 @@ unsafe fn runtime_posix_timer_syscall(number: u64, a1: u64, a2: u64, a3: u64, a4
     unsafe { entry(number, a1, a2, a3, a4) }
 }
 
+/// Kernel entry shared by generated JIT/AOT syscall bridges and libc's wrapper.
+/// All six Linux syscall arguments are explicit; unused arguments are ignored.
+/// Errors are returned as negative errno values. libc's public `syscall` entry
+/// performs the separate conversion to -1 and thread-local errno.
+///
+/// Untraced calls bypass the cold tracing frame. Traced calls expose an entry
+/// stop before dispatch and an exit stop after every returning operation,
+/// including validation failures. The tracer may replace arguments or results.
+/// `tools/audit-syscalls.py` reports dispatch coverage against Linux 6.12; a
+/// routed entry does not by itself guarantee every Linux semantic is supported.
+///
+/// # Safety
+/// Pointer arguments must satisfy the dispatched operation's requirements.
+/// An unknown syscall number dereferences none of its arguments.
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
     number: i64,
@@ -3177,8 +3147,40 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
     if kinakaze_vfs::job::exec_retired() {
         unsafe { windows_sys::Win32::System::Threading::ExitThread(0) };
     }
-    let post_wait_trace = std::env::var_os("KINAKAZE_POST_WAIT_TRACE").is_some()
-        && POST_WAIT_TRACE_ACTIVE.load(std::sync::atomic::Ordering::Acquire);
+    let arguments = [
+        argument1, argument2, argument3, argument4, argument5, argument6,
+    ];
+    // Generated JIT/AOT bridges share this gate. Keep tracing's register frame
+    // and TLS bookkeeping off the ordinary execution path.
+    if !crate::ptrace::debugger_present() {
+        return unsafe { dispatch_syscall(number, arguments) };
+    }
+    unsafe { traced_syscall(number, arguments) }
+}
+
+#[cold]
+#[inline(never)]
+unsafe fn traced_syscall(mut number: i64, mut arguments: [u64; 6]) -> i64 {
+    let _raw_dispatch = crate::ptrace::RawDispatch::enter();
+    let trace_stop = crate::ptrace::SyscallStop::enter(&mut number, &mut arguments);
+    let res = unsafe { dispatch_syscall(number, arguments) };
+    trace_stop.map_or(res, |stop| stop.exit(res))
+}
+
+// Keep early errors inside this function so the outer entry always emits a
+// syscall-exit stop, including validation failures and unknown numbers.
+#[inline]
+unsafe fn dispatch_syscall(number: i64, arguments: [u64; 6]) -> i64 {
+    let [
+        argument1,
+        argument2,
+        argument3,
+        argument4,
+        argument5,
+        argument6,
+    ] = arguments;
+    let post_wait_trace = POST_WAIT_TRACE_ACTIVE.load(std::sync::atomic::Ordering::Acquire)
+        && std::env::var_os("KINAKAZE_POST_WAIT_TRACE").is_some();
     if post_wait_trace {
         eprintln!(
             "kinakaze: [POST-WAIT ENTER] nr={number} a1={argument1:#x} a2={argument2:#x} a3={argument3:#x}"
@@ -3212,7 +3214,226 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
             argument3
         );
     }
+    // Keep per-arm early failures inside the operation. They must still pass
+    // through the syscall-exit stop and restore the raw-dispatch depth.
     let res = match number {
+        12 => crate::fdio::raw_brk(argument1 as usize) as i64,
+        220 => to_kernel(unsafe {
+            crate::sysvipc::kinakaze_abi_semtimedop(
+                argument1 as i32,
+                argument2 as _,
+                argument3 as usize,
+                argument4 as _,
+            )
+        } as i64),
+        261 => to_kernel(unsafe {
+            crate::fdio::kinakaze_abi_futimesat(argument1 as i32, argument2 as _, argument3 as _)
+        } as i64),
+        333 => {
+            #[repr(C)]
+            #[derive(Clone, Copy)]
+            struct Mask {
+                address: usize,
+                size: usize,
+            }
+            let requested = if argument6 == 0 {
+                Ok(None)
+            } else {
+                crate::ptrace::read_value::<Mask>(argument6 as usize).and_then(|mask| {
+                    if mask.address == 0 {
+                        Ok(None)
+                    } else if mask.size != 8 {
+                        Err(EINVAL)
+                    } else {
+                        crate::ptrace::read_value::<u64>(mask.address).map(Some)
+                    }
+                })
+            };
+            match requested {
+                Err(error) => -i64::from(error),
+                Ok(mask) => {
+                    let previous = mask.map(kinakaze_vfs::signal::swap_blocked_mask);
+                    let result = kinakaze_vfs::iouring::aio::getevents(
+                        argument1 as usize,
+                        argument2 as i64,
+                        argument3 as i64,
+                        argument4 as usize,
+                        argument5 as usize,
+                    );
+                    if let Some(previous) = previous {
+                        kinakaze_vfs::signal::swap_blocked_mask(previous);
+                    }
+                    result.unwrap_or_else(|error| -i64::from(error))
+                }
+            }
+        }
+        25 => crate::fdio::remap(
+            argument1 as usize,
+            argument2 as usize,
+            argument3 as usize,
+            argument4 as i32,
+            argument5 as usize,
+        )
+        .map_or_else(|error| -i64::from(error), |address| address as i64),
+        34 => to_kernel(crate::strextra::windows::kinakaze_abi_pause() as i64),
+        36 => to_kernel(unsafe {
+            crate::time::kinakaze_abi_getitimer(argument1 as i32, argument2 as _)
+        } as i64),
+        37 => crate::time::kinakaze_abi_alarm(argument1 as u32) as i64,
+        38 => to_kernel(unsafe {
+            crate::time::kinakaze_abi_setitimer(argument1 as i32, argument2 as _, argument3 as _)
+        } as i64),
+        58 => to_kernel(unsafe { crate::exec::kinakaze_abi_vfork() } as i64),
+        130 => {
+            if argument2 != 8 {
+                -i64::from(EINVAL)
+            } else {
+                match crate::ptrace::read_value::<u64>(argument1 as usize) {
+                    Ok(mask) => {
+                        let mut set = crate::signal::SigSet { bits: [0; 16] };
+                        set.bits[0] = mask;
+                        to_kernel(unsafe { crate::sigextra::kinakaze_abi_sigsuspend(&set) } as i64)
+                    }
+                    Err(error) => -i64::from(error),
+                }
+            }
+        }
+        132 => {
+            to_kernel(
+                unsafe { crate::fsextra::kinakaze_abi_utime(argument1 as _, argument2 as _) }
+                    as i64,
+            )
+        }
+        140 => {
+            let priority =
+                crate::userdb::kinakaze_abi_getpriority(argument1 as i32, argument2 as u32);
+            let error = kinakaze_tls::errno();
+            if error != 0 {
+                -i64::from(error)
+            } else {
+                i64::from(20 - priority)
+            }
+        }
+        141 => to_kernel(crate::userdb::kinakaze_abi_setpriority(
+            argument1 as i32,
+            argument2 as u32,
+            argument3 as i32,
+        ) as i64),
+        153 => to_kernel(crate::term::kinakaze_abi_vhangup() as i64),
+        159 => to_kernel(unsafe { crate::time::kinakaze_abi_adjtimex(argument1 as _) } as i64),
+        164 => to_kernel(unsafe {
+            crate::time::kinakaze_abi_settimeofday(argument1 as _, argument2 as _)
+        } as i64),
+        167 => to_kernel(unsafe { kinakaze_abi_swapon(argument1 as _, argument2 as i32) } as i64),
+        168 => to_kernel(unsafe { kinakaze_abi_swapoff(argument1 as _) } as i64),
+        172 => to_kernel(kinakaze_abi_iopl(argument1 as i32) as i64),
+        173 => to_kernel(kinakaze_abi_ioperm(argument1, argument2, argument3 as i32) as i64),
+        175 => to_kernel(unsafe {
+            kinakaze_abi_init_module(argument1 as _, argument2 as usize, argument3 as _)
+        } as i64),
+        176 => to_kernel(
+            unsafe { kinakaze_abi_delete_module(argument1 as _, argument2 as i32) } as i64,
+        ),
+        179 => to_kernel(unsafe {
+            kinakaze_abi_quotactl(
+                argument1 as i32,
+                argument2 as _,
+                argument3 as i32,
+                argument4 as _,
+            )
+        } as i64),
+        200 => {
+            let tid = crate::fsextra::native_signal_tid(argument1 as i32);
+            match kinakaze_vfs::signal::raise_thread_signal(tid, argument2 as i32) {
+                Ok(()) => {
+                    if tid == kinakaze_vfs::interrupt::current_thread_id() {
+                        kinakaze_vfs::signal::deliver_pending();
+                    }
+                    0
+                }
+                Err(error) => -i64::from(error),
+            }
+        }
+        201 => to_kernel(unsafe { crate::time::kinakaze_abi_time(argument1 as _) }),
+        235 => to_kernel(
+            unsafe { crate::fdio::kinakaze_abi_utimes(argument1 as _, argument2 as _) } as i64,
+        ),
+        270 => {
+            #[repr(C)]
+            #[derive(Clone, Copy)]
+            struct Mask {
+                address: usize,
+                size: usize,
+            }
+            let mask = if argument6 == 0 {
+                Ok(0)
+            } else {
+                crate::ptrace::read_value::<Mask>(argument6 as usize).and_then(|mask| {
+                    if mask.address != 0 && mask.size != 8 {
+                        Err(EINVAL)
+                    } else {
+                        Ok(mask.address)
+                    }
+                })
+            };
+            match mask {
+                Ok(mask) => to_kernel(unsafe {
+                    crate::fdio::kinakaze_abi_pselect(
+                        argument1 as i32,
+                        argument2 as _,
+                        argument3 as _,
+                        argument4 as _,
+                        argument5 as _,
+                        mask as _,
+                    )
+                } as i64),
+                Err(error) => -i64::from(error),
+            }
+        }
+        305 => {
+            if argument1 as i32 != 0 {
+                -i64::from(EINVAL)
+            } else {
+                to_kernel(unsafe { crate::time::kinakaze_abi_adjtimex(argument2 as _) } as i64)
+            }
+        }
+        309 => {
+            let mut processor = unsafe { core::mem::zeroed() };
+            unsafe {
+                windows_sys::Win32::System::Threading::GetCurrentProcessorNumberEx(&mut processor);
+            }
+            let result = (|| {
+                if argument1 != 0 {
+                    crate::ptrace::write_value(
+                        argument1 as usize,
+                        u32::from(processor.Group) * 64 + u32::from(processor.Number),
+                    )?;
+                }
+                if argument2 != 0 {
+                    let mut node = 0u16;
+                    if unsafe {
+                        windows_sys::Win32::System::Threading::GetNumaProcessorNodeEx(
+                            &processor, &mut node,
+                        )
+                    } == 0
+                    {
+                        return Err(EINVAL);
+                    }
+                    crate::ptrace::write_value(argument2 as usize, u32::from(node))?;
+                }
+                Ok::<i64, i32>(0)
+            })();
+            result.unwrap_or_else(|error| -i64::from(error))
+        }
+        313 => to_kernel(unsafe {
+            kinakaze_abi_finit_module(argument1 as i32, argument2 as _, argument3 as i32)
+        } as i64),
+        101 => crate::ptrace::raw_request(
+            argument1 as i32,
+            argument2 as i32,
+            argument3 as usize,
+            argument4 as usize,
+        ),
         295 | 296 | 327 | 328 => {
             // Linux's raw ABI splits pos_l/pos_h; v2 puts flags in arg 6.
             // pos_l is an unsigned long, so retain its high bits on LP64.
@@ -3304,8 +3525,10 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
             if argument2 == 0 && argument3 > 0 {
                 return -i64::from(EFAULT);
             }
-            let slice = unsafe {
-                core::slice::from_raw_parts_mut(argument2 as *mut u8, argument3 as usize)
+            let slice = if argument3 == 0 {
+                &mut []
+            } else {
+                unsafe { core::slice::from_raw_parts_mut(argument2 as *mut u8, argument3 as usize) }
             };
             match kinakaze_vfs::read(argument1 as c_int, slice) {
                 Ok(n) => n as i64,
@@ -3316,8 +3539,11 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
             if argument2 == 0 && argument3 > 0 {
                 return -i64::from(EFAULT);
             }
-            let slice =
-                unsafe { core::slice::from_raw_parts(argument2 as *const u8, argument3 as usize) };
+            let slice = if argument3 == 0 {
+                &[]
+            } else {
+                unsafe { core::slice::from_raw_parts(argument2 as *const u8, argument3 as usize) }
+            };
             match kinakaze_vfs::write(argument1 as c_int, slice) {
                 Ok(n) => n as i64,
                 Err(e) => -i64::from(e),
@@ -5148,7 +5374,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_syscall_raw(
         _ => -i64::from(ENOSYS),
     };
     if !matches!(number, 202 | 228 | 35 | 24 | 281 | 232) {
-        if let Some(directory) = std::env::var_os("KINAKAZE_NAMESPACE_TRACE_DIR") {
+        if let Some(directory) = namespace_trace_directory() {
             use std::io::Write;
             if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(
                 std::path::PathBuf::from(directory)
@@ -5349,6 +5575,7 @@ pub(crate) unsafe extern "sysv64" fn initialize_process_namespaces(flags: u64) -
         if let Err(e) = kinakaze_runtime::job::namespaces::enter_new_pid_namespace() {
             return e;
         }
+        crate::process::invalidate_pid_cache();
     }
     0
 }
@@ -5359,7 +5586,7 @@ fn clone_dispatch(
     child_tid: *mut c_int,
     tls: usize,
 ) -> i64 {
-    if let Some(directory) = std::env::var_os("KINAKAZE_NAMESPACE_TRACE_DIR") {
+    if let Some(directory) = namespace_trace_directory() {
         use std::io::Write;
         if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(
             std::path::PathBuf::from(directory).join(format!("clone-{}.log", std::process::id())),
@@ -7483,7 +7710,83 @@ mod tests {
     }
 
     #[test]
+    fn memfd_backing_is_unlinked_and_descriptor_churn_releases_native_handles() {
+        let cycle = || {
+            let fd = unsafe { kinakaze_abi_memfd_create(c"lifetime".as_ptr(), 1) };
+            assert!(fd >= 0, "memfd_create: errno {}", kinakaze_tls::errno());
+            assert_eq!(kinakaze_vfs::fs::fstat(fd).unwrap().st_nlink, 0);
+            assert!(
+                kinakaze_vfs::get(fd)
+                    .unwrap()
+                    .flags
+                    .contains(kinakaze_vfs::FdFlags::CLOSE_ON_EXEC)
+            );
+            kinakaze_vfs::write(fd, b"retained").unwrap();
+            let duplicate = crate::fdio::kinakaze_abi_dup(fd);
+            assert!(duplicate >= 0);
+            kinakaze_vfs::close(fd).unwrap();
+            kinakaze_vfs::fs::lseek(duplicate, 0, 0).unwrap();
+            let mut bytes = [0; 8];
+            assert_eq!(kinakaze_vfs::read(duplicate, &mut bytes), Ok(8));
+            assert_eq!(&bytes, b"retained");
+            kinakaze_vfs::close(duplicate).unwrap();
+        };
+        cycle();
+        let count = || {
+            let mut count = 0;
+            assert_ne!(
+                unsafe {
+                    windows_sys::Win32::System::Threading::GetProcessHandleCount(
+                        windows_sys::Win32::System::Threading::GetCurrentProcess(),
+                        &mut count,
+                    )
+                },
+                0
+            );
+            count
+        };
+        let before = count();
+        for _ in 0..64 {
+            cycle();
+        }
+        let after = count();
+        assert!(
+            after <= before + 2,
+            "native handles grew from {before} to {after}"
+        );
+    }
+
+    #[test]
+    fn added_raw_syscalls_keep_their_kernel_return_and_pointer_contracts() {
+        let raw =
+            |number, a1, a2, a3| unsafe { kinakaze_abi_syscall_raw(number, a1, a2, a3, 0, 0, 0) };
+        for number in [SYS_READ, SYS_WRITE] {
+            assert_eq!(raw(number, u64::MAX, 0, 0), -i64::from(kinakaze_vfs::EBADF));
+        }
+        let nice = crate::userdb::kinakaze_abi_getpriority(0, 0);
+        assert_eq!(raw(140, 0, 0, 0), 20 - i64::from(nice));
+        let current = raw(SYS_BRK, 0, 0, 0);
+        assert!(current > 0);
+        assert_eq!(raw(SYS_BRK, u64::MAX, 0, 0), current);
+        let mut cpu = u32::MAX;
+        let mut node = u32::MAX;
+        assert_eq!(
+            raw(
+                309,
+                &mut cpu as *mut _ as u64,
+                &mut node as *mut _ as u64,
+                0
+            ),
+            0
+        );
+        assert!(cpu < 65_536 && node < 65_536);
+        assert_eq!(raw(309, 1, 0, 0), -i64::from(EFAULT));
+        assert_eq!(raw(130, 0, 0, 0), -i64::from(EINVAL));
+    }
+
+    #[test]
     fn container_startup_sequence_and_virtualization_invariants() {
+        let original_pid = crate::process::kinakaze_abi_getpid();
         // Container namespace combinations create distinct objects and can be
         // restored using the original descriptors in the current PID namespace.
         let original: Vec<_> = ["mnt", "pid", "net", "ipc", "uts"]
@@ -7501,10 +7804,12 @@ mod tests {
             ),
             0
         );
+        assert_eq!(crate::process::kinakaze_abi_getpid(), original_pid);
         for fd in original {
             assert_eq!(kinakaze_abi_setns(fd, 0), 0);
             kinakaze_vfs::close(fd).unwrap();
         }
+        assert_eq!(crate::process::kinakaze_abi_getpid(), original_pid);
 
         // The mount now publishes a backed cgroup superblock.
         assert_eq!(

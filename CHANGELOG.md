@@ -1,5 +1,13 @@
 # 更新记录
 
+## 0.9.0 — 2026-09-30
+
+- 修复 Bun/Node agent 的信号嵌套、条件变量等待、ELF 私有映射 futex、终端 ioctl 和 proc 描述符路径问题，扩展 dsh、OpenCode、zcode、Codex、Claude 和 pi 的功能回归。
+- 修复 msync 对堆、栈和 ELF 映射的校验；匿名页丢弃不再触碰整个稀疏区间。大块匿名分配纳入进程 Job 提交量限制，内存不足返回 ENOMEM；补充内存、句柄、线程及子进程回收检查。
+- 增加私有匿名 mremap、semtimedop 和原生调试事件驱动的 ptrace 路径，修正 memfd 的匿名文件生命周期及部分原始 syscall 分派。
+- 改进 AOT 间接跳转目标识别并升级缓存格式；增加容量固定的 trap 查询缓存，避免缓存随运行时间无界增长。
+- ptrace 的 fork/exec 事件选项以及共享/文件映射 mremap 仍不支持。Agent 验证使用本地确定性模型接口，不能代表在线模型服务或完整 Linux ABI 兼容性。
+
 ## 0.8.0 — 2026-09-30
 
 - 修复 Claude 文件工具使用 proc 目录描述符路径时的创建、打开、元数据和原子替换问题。已关闭的描述符、`O_NOFOLLOW`、目录重命名和 tmpfs 保留 inode 均按客体路径处理。

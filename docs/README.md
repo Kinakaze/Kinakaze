@@ -19,6 +19,8 @@
 ## 兼容性与性能
 
 - [Agent 与开发工具链](agent-toolchains-2026-09-30.md)：Codex/Claude/pi 工具闭环、长 argv、默认编译链接接口与性能对照。
+- [Agent 工具兼容性与资源回收](agent-tool-compatibility-2026-09-30.md)：PTY、原始 termios、proc-fd 删除与工作目录、epoll 信号掩码、真实工具矩阵和资源回收回归。
+- [Agent 运行时修复与验证](agent-runtime-fixes-2026-09-30.md)：dsh 内存探测、Bun 信号等待、稀疏内存丢弃、OpenCode/zcode 真实工具回归。
 
 - [集成验证记录](validation.md) 与 [开发进度](progress.md)。
 - [默认启动、数据库与 io_uring](server-performance-2026-09-29.md)：udev 默认策略、常驻 Python、内存策略、MariaDB/AstrBot 运行结果和剩余边界。

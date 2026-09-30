@@ -8,18 +8,27 @@ mod extended;
 mod floating;
 mod integer;
 
-/// Linux tracing is not implemented by the process manager. Keep optional
-/// libdw backtrace support loadable and let callers detect the unavailable
-/// tracing operation through errno, without claiming an attached tracer.
+/// Linux ptrace over the native debug-event backend. libc PEEK requests return
+/// the word itself; the raw kernel entry instead copies it through `data`.
 #[unsafe(no_mangle)]
 pub extern "sysv64" fn kinakaze_abi_ptrace(
-    _request: i32,
-    _pid: i32,
-    _address: usize,
-    _data: usize,
+    request: i32,
+    pid: i32,
+    address: usize,
+    data: usize,
 ) -> i64 {
-    crate::set_errno(kinakaze_vfs::ENOSYS);
-    -1
+    match crate::ptrace::request(request, pid, address, data) {
+        Ok(value) => {
+            if matches!(request, 1..=3) {
+                crate::set_errno(0);
+            }
+            value
+        }
+        Err(error) => {
+            crate::set_errno(error);
+            -1
+        }
+    }
 }
 
 use core::ffi::{c_char, c_int, c_void};
@@ -548,16 +557,44 @@ pub unsafe extern "sysv64" fn kinakaze_abi_bsearch(
     ptr::null_mut()
 }
 
-/// `getpid`.
+// One packed logical/visible identity; no heap allocation or per-thread cache.
+static PID_CACHE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+pub(crate) fn invalidate_pid_cache() {
+    PID_CACHE.store(0, std::sync::atomic::Ordering::Release);
+}
+
 #[unsafe(no_mangle)]
+/// `getpid`.
 pub extern "sysv64" fn kinakaze_abi_getpid() -> c_int {
-    kinakaze_runtime::job::namespaces::visible(kinakaze_vfs::job::process_id()).unwrap_or(0)
-        as c_int
+    if let Some(result) = crate::ptrace::fast_syscall(39, [0; 6]) {
+        return result as c_int;
+    }
+    // A running process keeps its PID-namespace number; setns/unshare affect
+    // future children. Key the one-word cache by authoritative logical PID so
+    // a fork child or a bootstrap identity change cannot reuse its parent's
+    // value. Clone's new-PID-namespace initializer explicitly invalidates it.
+    let logical = kinakaze_vfs::job::process_id();
+    let cached = PID_CACHE.load(std::sync::atomic::Ordering::Acquire);
+    if cached >> 32 == u64::from(logical) && cached as u32 != 0 {
+        return cached as u32 as c_int;
+    }
+    let visible = kinakaze_runtime::job::namespaces::visible(logical).unwrap_or(0);
+    if visible != 0 {
+        PID_CACHE.store(
+            (u64::from(logical) << 32) | u64::from(visible),
+            std::sync::atomic::Ordering::Release,
+        );
+    }
+    visible as c_int
 }
 
 /// `getppid`, read from the shared Linux PID namespace.
 #[unsafe(no_mangle)]
 pub extern "sysv64" fn kinakaze_abi_getppid() -> c_int {
+    if let Some(result) = crate::ptrace::fast_syscall(110, [0; 6]) {
+        return result as c_int;
+    }
     kinakaze_runtime::job::namespaces::visible(kinakaze_vfs::job::parent_process_id()).unwrap_or(0)
         as c_int
 }

@@ -5,6 +5,12 @@ from pathlib import Path
 from init_pool import InitPool, distribution_hashes
 
 CASES = {
+    'ioctl-request-width': ('IoctlRequestWidthProbe', 'IOCTL_REQUEST_WIDTH_PTY_OK'),
+    'raw-termios-layout': ('RawTermiosLayoutProbe', 'RAW_TERMIOS_LAYOUT_GUARD_SPEEDS_OK'),
+    'proc-fd-cwd-exec': ('ProcFdCwdExecProbe', 'PROC_FD_CWD_CLOSE_RENAME_EXEC_OK'),
+    'proc-fd-unlink': ('ProcFdUnlinkProbe', 'PROC_FD_UNLINK_RENAME_OPEN_SYMLINK_OK'),
+    'agent-spawn-fd-churn': ('AgentSpawnFdChurnProbe', 'AGENT_SPAWN_CONCURRENT_FD_CHURN_OK'),
+    'epoll-signal-mask': ('EpollSignalMaskProbe', 'EPOLL_PWAIT_TEMPORARY_MASK_RESTORE_FAULT_OK'),
     'large-exec-arguments': ('LargeExecArgumentProbe', 'LARGE_EXEC_ARGUMENTS_OK'),
     'long-proc-cmdline': ('LongCmdlineProbe', 'LONG_PROC_CMDLINE_OK'),
     'wide-memory-fortify': ('WideMemoryFortifyProbe', 'WIDE_MEMORY_FORTIFY_OK'),

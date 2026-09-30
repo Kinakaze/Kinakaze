@@ -2818,6 +2818,11 @@ pub fn unlink(path: &str) -> Result<(), i32> {
     if crate::mount::overlay::remove(path, false)?.is_some() {
         return Ok(());
     }
+    // Detached overlay trees also use proc-fd paths. Let their removal keep
+    // copy-up, whiteout and open-inode metadata before resolving native paths.
+    if proc_descendant(path).is_some() {
+        return confined::remove_proc(path, false);
+    }
     let _mount_writer = crate::mount::native::write_path(path, false)?;
     let resolved = resolve_no_follow(path)?;
     if resolved.is_dir() {
@@ -2966,6 +2971,9 @@ pub fn rmdir(path: &str) -> Result<(), i32> {
     }
     if crate::mount::overlay::remove(path, true)?.is_some() {
         return Ok(());
+    }
+    if proc_descendant(path).is_some() {
+        return confined::remove_proc(path, true);
     }
     let absolute = absolute_linux(path);
     if crate::cgroup::owns(&absolute) {
@@ -3588,9 +3596,16 @@ pub fn chdir(path: &str) -> Result<(), i32> {
     if info.st_mode & S_IFMT != S_IFDIR {
         return Err(ENOTDIR);
     }
-    if !crate::tmpfs::owns(&target)
-        && !crate::procfs::owns(&target)
-        && !crate::cgroup::owns(&target)
+    // A proc magic link names the directory object, not a lasting cwd path.
+    // Retain that object before CLOEXEC or close removes the source fd. This
+    // also covers descendants and /proc/<pid>/cwd or root directory aliases.
+    let proc_directory = crate::procfs::fd_magic_link(&target).is_some()
+        || crate::procfs::directory_magic_link(&target)
+        || proc_descendant(&target).is_some();
+    if proc_directory
+        || (!crate::tmpfs::owns(&target)
+            && !crate::procfs::owns(&target)
+            && !crate::cgroup::owns(&target))
     {
         let fd = open(&target, O_PATH | O_DIRECTORY, 0)?;
         let result = fchdir(fd);

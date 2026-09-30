@@ -373,23 +373,68 @@ pub unsafe extern "sysv64" fn kinakaze_abi_epoll_wait(
 
 /// `epoll_pwait`.
 ///
-/// The signal mask is ignored: this layer delivers signals at wait boundaries
-/// rather than atomically swapping the mask, so honouring it would imply a
-/// guarantee that is not provided.
+/// Applies the temporary mask before epoll registers its signal waiter and
+/// checks pending signals. No signal is delivered between those two steps.
 ///
 /// # Safety
 ///
-/// `events` must be writable for `max_events` entries.
+/// `events` must be writable for `max_events` entries. A non-null `mask` points
+/// to the eight-byte Linux kernel signal set; inaccessible memory is EFAULT.
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn kinakaze_abi_epoll_pwait(
     epoll_fd: c_int,
     events: *mut EpollEvent,
     max_events: c_int,
     timeout: c_int,
-    _mask: *const c_void,
+    mask: *const c_void,
 ) -> c_int {
+    let restore = if mask.is_null() {
+        None
+    } else {
+        #[link(name = "kernel32")]
+        unsafe extern "system" {
+            fn GetCurrentProcess() -> *mut c_void;
+            fn ReadProcessMemory(
+                process: *mut c_void,
+                source: *const c_void,
+                destination: *mut c_void,
+                length: usize,
+                read: *mut usize,
+            ) -> i32;
+        }
+        let mut requested = 0u64;
+        let mut copied = 0;
+        // Probe through the kernel so an invalid or concurrently unmapped
+        // guest pointer never becomes a Rust dereference or host exception.
+        if unsafe {
+            ReadProcessMemory(
+                GetCurrentProcess(),
+                mask,
+                (&raw mut requested).cast(),
+                size_of::<u64>(),
+                &mut copied,
+            )
+        } == 0
+            || copied != size_of::<u64>()
+        {
+            set_errno(kinakaze_vfs::EFAULT);
+            return -1;
+        }
+        Some(kinakaze_vfs::signal::swap_blocked_mask(requested))
+    };
     // SAFETY: forwarded from this function's contract.
-    unsafe { kinakaze_abi_epoll_wait(epoll_fd, events, max_events, timeout) }
+    let result = unsafe { kinakaze_abi_epoll_wait(epoll_fd, events, max_events, timeout) };
+    if let Some(previous) = restore {
+        let saved = kinakaze_tls::errno();
+        kinakaze_vfs::signal::swap_blocked_mask(previous);
+        set_errno(saved);
+    }
+    if result >= 0 {
+        // Readiness/timeout won: deliver under the restored mask, as ppoll
+        // and pselect do, rather than under the temporary mask.
+        kinakaze_vfs::signal::deliver_pending();
+    }
+    result
 }
 
 #[unsafe(no_mangle)]

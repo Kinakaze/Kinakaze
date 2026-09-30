@@ -691,6 +691,14 @@ fn trace_control_flow(
                 recent.pop_front();
             }
             recent.push_back(instruction);
+            if let Some(target) =
+                super::code_roots::rip_relative_invoked_entry(&instruction, segments)
+            {
+                protected.insert(target);
+                if !visited.contains(target) {
+                    queue.push_back(target);
+                }
+            }
             // Executable segments can contain literals (OpenSSL does this).
             // A formed address is a callback only if the callee invokes it.
             for target in super::code_roots::rip_relative_callback_entries(&recent, segments) {
@@ -983,6 +991,72 @@ mod tests {
             trace_control_flow(&[(start, code.len())], VecDeque::from([start]), None).unwrap();
         assert_eq!(control.patch_boundaries, [start + 19, start + 32]);
         assert!(control.independent_entries.contains(&(start + 27)));
+    }
+
+    #[test]
+    fn cfg_follows_register_call_targets_across_local_branches() {
+        for overwritten in [false, true] {
+            let mut code = vec![
+                0x4c, 0x8d, 0x3d, 0, 0, 0, 0, // lea r15,target
+                0xeb, 1, 0xcc, // jump over an unreachable byte
+            ];
+            if overwritten {
+                code.extend_from_slice(&[0x45, 0x31, 0xff]); // xor r15d,r15d
+            }
+            code.extend_from_slice(&[0x31, 0xff, 0x41, 0xff, 0xd7, 0xc3]); // xor edi,edi; call r15; ret
+            let target = code.len();
+            code[3..7].copy_from_slice(&((target - 7) as i32).to_le_bytes());
+            code.extend_from_slice(&[0xb8, 217, 0, 0, 0, 0x0f, 0x05, 0xc3]);
+            let start = code.as_ptr() as usize;
+            let control =
+                trace_control_flow(&[(start, code.len())], VecDeque::from([start]), None).unwrap();
+            assert_eq!(
+                control.independent_entries.contains(&(start + target)),
+                !overwritten
+            );
+            assert_eq!(
+                control.patch_boundaries.contains(&(start + target + 5)),
+                !overwritten
+            );
+        }
+    }
+
+    #[test]
+    fn cfg_follows_conditionally_selected_callbacks_and_rejects_overwrites() {
+        for overwrite in [false, true] {
+            let mut code = vec![
+                0x48, 0x8d, 0x05, 0, 0, 0, 0, // lea rax,first
+                0x48, 0x8d, 0x3d, 0, 0, 0, 0, // lea rdi,second
+                0x48, 0x0f, 0x45, 0xf8, // cmovne rdi,rax
+            ];
+            if overwrite {
+                code.extend_from_slice(&[0x31, 0xff]); // xor edi,edi
+            }
+            code.extend_from_slice(&[0xe8, 1, 0, 0, 0, 0xc3]); // call wrapper; ret
+            code.extend_from_slice(&[
+                0x49, 0x89, 0xfb, 0x4d, 0x89, 0xd9, // rdi -> r11 -> r9
+                0x0f, 0x05, 0x75, 3, 0x41, 0xff, 0xd1, 0xc3, // clone; call r9; ret
+            ]);
+            let first = code.len();
+            code.extend_from_slice(&[0xb8, 3, 0, 0, 0, 0x0f, 0x05, 0xc3]);
+            let second = code.len();
+            code.extend_from_slice(&[0xb8, 4, 0, 0, 0, 0x0f, 0x05, 0xc3]);
+            code[3..7].copy_from_slice(&((first - 7) as i32).to_le_bytes());
+            code[10..14].copy_from_slice(&((second - 14) as i32).to_le_bytes());
+            let start = code.as_ptr() as usize;
+            let control =
+                trace_control_flow(&[(start, code.len())], VecDeque::from([start]), None).unwrap();
+            for offset in [first, second] {
+                assert_eq!(
+                    control.independent_entries.contains(&(start + offset)),
+                    !overwrite
+                );
+                assert_eq!(
+                    control.patch_boundaries.contains(&(start + offset + 5)),
+                    !overwrite
+                );
+            }
+        }
     }
 
     #[test]

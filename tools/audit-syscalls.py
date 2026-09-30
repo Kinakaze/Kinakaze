@@ -15,17 +15,23 @@ def audit(root):
     source = path.read_text(encoding='utf-8')
     constants = {name: int(value) for name, value in re.findall(
         r'const (SYS_\w+): i64 = (\d+);', source)}
-    start = source.index('    let res = match number {', source.index('fn kinakaze_abi_syscall_raw('))
-    end = source.index('\n    };', start)
+    entry = source.find('fn dispatch_syscall(')
+    if entry < 0:
+        entry = source.index('fn kinakaze_abi_syscall_raw(')
+    match_start = source.index('let res = match number {', entry)
+    start = source.rfind('\n', 0, match_start) + 1
+    indent = source[start:match_start]
+    end = source.index('\n' + indent + '};', match_start)
     block = source[start:end]
     token = r'(?:SYS_\w+|\d+)'
     span = token + r'(?:\.\.=' + token + r')?'
-    arms = list(re.finditer(r'^        (' + span + r'(?:\s*\|\s*' + span + r')*)\s*=>', block, re.M))
+    arm_indent = indent + '    '
+    arms = list(re.finditer(r'^' + re.escape(arm_indent) + '(' + span + r'(?:\s*\|\s*' + span + r')*)\s*=>', block, re.M))
     def value(token):
         return constants[token] if token.startswith('SYS_') else int(token)
     dispatch = {}
     for index, arm in enumerate(arms):
-        body = block[arm.end():arms[index + 1].start() if index + 1 < len(arms) else block.index('\n        _ =>')]
+        body = block[arm.end():arms[index + 1].start() if index + 1 < len(arms) else block.index('\n' + arm_indent + '_ =>')]
         line = source.count('\n', 0, start + arm.start()) + 1
         for token in arm[1].split('|'):
             token = token.strip()

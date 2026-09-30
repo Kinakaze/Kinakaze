@@ -425,6 +425,23 @@ const WAIT_EVENT_STOPPED: c_int = 2;
 const WAIT_EVENT_CONTINUED: c_int = 4;
 
 unsafe fn wait_host(pid: c_int, options: c_int, events: c_int, status: *mut c_int) -> c_int {
+    if let Some(result) = crate::ptrace::wait(pid, options) {
+        return match result {
+            Ok((pid, value)) => {
+                if pid != 0 && !status.is_null() {
+                    if let Err(error) = crate::ptrace::write_value(status as usize, value) {
+                        set_errno(error);
+                        return -1;
+                    }
+                }
+                pid
+            }
+            Err(error) => {
+                set_errno(error);
+                -1
+            }
+        };
+    }
     let Some(wait) = host_wait() else {
         set_errno(ENOSYS);
         return -1;
@@ -452,7 +469,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_waitpid(
     status: *mut c_int,
     options: c_int,
 ) -> c_int {
-    if options & !(WNOHANG | WUNTRACED | WCONTINUED) != 0 {
+    if options & !(WNOHANG | WUNTRACED | WCONTINUED | 0xe000_0000u32 as i32) != 0 {
         set_errno(EINVAL);
         return -1;
     }

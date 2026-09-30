@@ -145,6 +145,23 @@ pub(super) fn brk(address: usize) -> Result<(), i32> {
     }
     Ok(())
 }
+/// Raw brk returns the current break on allocation failure.
+pub(super) fn raw_brk(address: usize) -> usize {
+    let Some(_transaction) = kinakaze_runtime::begin_fork_mapping_transaction() else {
+        return 0;
+    };
+    let Ok(mut state) = STATE.lock() else {
+        return 0;
+    };
+    if initialize(&mut state).is_err() {
+        return 0;
+    }
+    if address != 0 {
+        let _ = resize(&mut state, address);
+    }
+    state.current
+}
+
 pub(super) fn sbrk(increment: isize) -> Result<usize, i32> {
     let _transaction = kinakaze_runtime::begin_fork_mapping_transaction().ok_or(12)?;
     let mut state = STATE.lock().map_err(|_| 5)?;

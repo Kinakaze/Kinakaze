@@ -903,6 +903,11 @@ pub unsafe extern "sysv64" fn kinakaze_abi_open64(
     flags: c_int,
     mode: u32,
 ) -> c_int {
+    if let Some(result) =
+        crate::ptrace::fast_syscall(2, [path as u64, flags as u64, mode as u64, 0, 0, 0])
+    {
+        return result as c_int;
+    }
     // SAFETY: forwarded from this function's own contract.
     unsafe { crate::fs::open(path, flags, mode) }
 }
@@ -919,6 +924,12 @@ pub unsafe extern "sysv64" fn kinakaze_abi_openat64(
     flags: c_int,
     mode: u32,
 ) -> c_int {
+    if let Some(result) = crate::ptrace::fast_syscall(
+        257,
+        [dirfd as u64, path as u64, flags as u64, mode as u64, 0, 0],
+    ) {
+        return result as c_int;
+    }
     // SAFETY: forwarded from this function's own contract.
     unsafe { crate::fs::openat(dirfd, path, flags, mode) }
 }

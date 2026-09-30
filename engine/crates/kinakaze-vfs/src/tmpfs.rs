@@ -1731,6 +1731,15 @@ pub fn unlink(path: &str, directory: bool) -> Result<bool, i32> {
     let Some(l) = location(path)? else {
         return Ok(false);
     };
+    unlink_location(l, directory)?;
+    Ok(true)
+}
+pub(crate) fn unlinkat(fd: i32, name: &str, directory: bool) -> Result<(), i32> {
+    let (_, mut l, _, _) = descriptor(fd)?;
+    l.tail = name.to_owned();
+    unlink_location(l, directory)
+}
+fn unlink_location(l: Location, directory: bool) -> Result<(), i32> {
     l.writable()?;
     volume(l.volume)?.change(|s| {
         if s.sys.as_ref().is_some_and(|i| i.cgroup) {
@@ -1764,8 +1773,7 @@ pub fn unlink(path: &str, directory: bool) -> Result<bool, i32> {
         n.links = if directory { 0 } else { n.links - 1 };
         n.ctime = now();
         Ok(())
-    })?;
-    Ok(true)
+    })
 }
 pub fn hard_link(from: &str, to: &str) -> Result<bool, i32> {
     let (a, b) = (resolve_location(from, false, 0)?, location(to)?);

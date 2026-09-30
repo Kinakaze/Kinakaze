@@ -2444,9 +2444,9 @@ pub(crate) fn futex_key(address: usize) -> Result<crate::futex::Key, i32> {
     if kinakaze_alloc::guest::contains(address) {
         return crate::futex::Key::private(address);
     }
-    // Native thread stacks do not go through guest mmap.
+    // Native thread stacks and loader-owned ELF images do not go through mmap.
     use windows_sys::Win32::System::Memory::{
-        MEM_COMMIT, MEM_IMAGE, MEM_PRIVATE, MEMORY_BASIC_INFORMATION, VirtualQuery,
+        MEM_COMMIT, MEM_IMAGE, MEM_MAPPED, MEM_PRIVATE, MEMORY_BASIC_INFORMATION, VirtualQuery,
     };
     let mut info: MEMORY_BASIC_INFORMATION = unsafe { core::mem::zeroed() };
     if (unsafe {
@@ -2456,7 +2456,18 @@ pub(crate) fn futex_key(address: usize) -> Result<crate::futex::Key, i32> {
             size_of::<MEMORY_BASIC_INFORMATION>(),
         ) != 0
     }) && info.State == MEM_COMMIT
-        && matches!(info.Type, MEM_PRIVATE | MEM_IMAGE)
+        && (matches!(info.Type, MEM_PRIVATE | MEM_IMAGE)
+            || (info.Type == MEM_MAPPED
+                && kinakaze_alloc::shared_mapping(info.AllocationBase as usize).is_some_and(
+                    |mapping| {
+                        // A loader COW section is process-private even after
+                        // writes; VirtualQuery still reports MEM_MAPPED. Do not
+                        // apply this fallback to genuinely retained shared views.
+                        mapping.storage
+                            == kinakaze_runtime::ForkMappingStorage::CopyOnWriteSection as u32
+                            && address - mapping.base < mapping.len
+                    },
+                )))
     {
         crate::futex::Key::private(address)
     } else {
@@ -2902,6 +2913,19 @@ pub unsafe extern "sysv64" fn kinakaze_abi_mmap64(
     fd: c_int,
     offset: i64,
 ) -> *mut c_void {
+    if let Some(result) = crate::ptrace::fast_syscall(
+        9,
+        [
+            address as u64,
+            length as u64,
+            protection as u64,
+            flags as u64,
+            fd as u64,
+            offset as u64,
+        ],
+    ) {
+        return result as *mut c_void;
+    }
     match map(address, length, protection, flags, fd, offset) {
         Ok(mapped) => {
             if mmap_trace_enabled() {
@@ -2941,6 +2965,12 @@ pub unsafe extern "sysv64" fn kinakaze_abi_mprotect(
     length: usize,
     protection: c_int,
 ) -> c_int {
+    if let Some(result) = crate::ptrace::fast_syscall(
+        10,
+        [address as u64, length as u64, protection as u64, 0, 0, 0],
+    ) {
+        return result as c_int;
+    }
     let _tmpfs_transaction = match kinakaze_vfs::tmpfs::mapping::transaction() {
         Ok(guard) => guard,
         Err(error) => return posix(Err(error)),
@@ -3319,6 +3349,9 @@ fn discard_private_pages(start: usize, end: usize) -> Result<(), i32> {
                 return Err(last_errno());
             }
         } else {
+            if discard_view::replace_whole(run.address, run.length, run.protection)? {
+                continue;
+            }
             let mut old_protection = 0;
             if unsafe {
                 kinakaze_runtime::memory_protection::protect_preserving_copy_on_write(
@@ -3432,6 +3465,10 @@ pub unsafe extern "sysv64" fn kinakaze_abi_brk(addr: *mut c_void) -> c_int {
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn brk(addr: *mut c_void) -> c_int {
     unsafe { kinakaze_abi_brk(addr) }
+}
+
+pub(crate) fn raw_brk(address: usize) -> usize {
+    program_break::raw_brk(address)
 }
 
 #[unsafe(no_mangle)]
@@ -4165,7 +4202,10 @@ struct PreparedReplacement {
 }
 
 mod cow_materialize;
+mod discard_view;
 mod parallel_anonymous;
+mod remap;
+pub(crate) use remap::remap;
 
 fn protection_runs(start: usize, length: usize, fallback: u32) -> Result<Vec<ProtectionRun>, i32> {
     let end = start.checked_add(length).ok_or(EINVAL)?;
@@ -5214,7 +5254,7 @@ fn map_anonymous(
             return Ok(allocated);
         }
     }
-    if !fixed {
+    if !fixed && length < 4 * 1024 * 1024 * 1024 {
         // Keep PROT_NONE reservations lazy. Only the requested committed view
         // acquires pagefile backing, whose initialized bytes can be frozen at
         // the first fork without a bulk copy.
@@ -5227,6 +5267,12 @@ fn map_anonymous(
             }
         }
     }
+    // Multi-GiB allocator arenas must charge their commitment to the owning
+    // process/Job. Pagefile sections charge global commit without the same Job
+    // accounting: a speculative 128-GiB MAP_NORESERVE could otherwise exhaust
+    // the host despite a much smaller Job limit. Private VirtualAlloc gives
+    // these requests normal Windows admission (ENOMEM permits caller fallback)
+    // and lets MADV_DONTNEED decommit without materializing untouched pages.
     let alloc_type = MEM_COMMIT | MEM_RESERVE;
     // SAFETY: a null address lets the system choose; a non-null one is the
     // caller's MAP_FIXED request, which VirtualAlloc rounds down internally.
@@ -6002,6 +6048,11 @@ fn record_mapping(
 /// `address` must be a mapping from `mmap64` and must not be accessed afterwards.
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn kinakaze_abi_munmap(address: *mut c_void, length: usize) -> c_int {
+    if let Some(result) =
+        crate::ptrace::fast_syscall(11, [address as u64, length as u64, 0, 0, 0, 0])
+    {
+        return result as c_int;
+    }
     let result = unmap(address, length);
     if mmap_trace_enabled() {
         match &result {
@@ -6226,6 +6277,10 @@ pub(crate) fn sync_mappings(address: usize, length: usize, flags: c_int) -> Resu
     let end = address
         .checked_add(page_rounded_length(length)?)
         .ok_or(ENOMEM)?;
+    let _transaction = kinakaze_runtime::begin_fork_mapping_transaction().ok_or(ENOMEM)?;
+    // Heap, stack and ELF loader mappings are valid Linux VMAs too. They have
+    // no shared file to flush and need not appear in the mmap backing registry.
+    residency::validate(address, end)?;
     let registry = mappings().lock().map_err(|_| EIO)?;
     let mut selected = registry
         .iter()
@@ -6236,16 +6291,6 @@ pub(crate) fn sync_mappings(address: usize, length: usize, flags: c_int) -> Resu
         })
         .collect::<Vec<_>>();
     selected.sort_by_key(|m| m.0);
-    let mut covered = address;
-    for (from, to, _) in &selected {
-        if *from > covered {
-            return Err(ENOMEM);
-        }
-        covered = covered.max(*to);
-    }
-    if covered != end {
-        return Err(ENOMEM);
-    }
     for (from, to, mapping) in selected {
         if !mapping.shared {
             continue;

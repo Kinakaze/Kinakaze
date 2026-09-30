@@ -323,6 +323,27 @@ pub(super) fn mutation_path(pathname: &str) -> Result<String, i32> {
     Ok(format!("{}/{name}", parent.trim_end_matches('/')))
 }
 
+pub(super) fn remove_proc(pathname: &str, directory: bool) -> Result<(), i32> {
+    let (parent, name) = pathname.rsplit_once('/').ok_or(EINVAL)?;
+    let parent = Descriptor(super::open(
+        if parent.is_empty() { "/" } else { parent },
+        O_PATH | O_DIRECTORY | O_CLOEXEC,
+        0,
+    )?);
+    // A tmpfs descriptor retains its inode even after the directory moves or
+    // loses its name. Rebuilding its stored pathname can select a replacement.
+    if get(parent.0)?.kind == FdKind::TmpfsDirectory {
+        return crate::tmpfs::unlinkat(parent.0, name, directory);
+    }
+    let parent = path(parent.0)?;
+    let target = format!("{}/{name}", parent.trim_end_matches('/'));
+    if directory {
+        super::rmdir(&target)
+    } else {
+        super::unlink(&target)
+    }
+}
+
 pub(super) fn open(
     dirfd: i32,
     path: &str,

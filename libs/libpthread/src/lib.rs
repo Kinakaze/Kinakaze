@@ -2203,6 +2203,10 @@ pub unsafe extern "sysv64" fn pthread_cond_wait(cond: *mut usize, mutex: *mut us
     record_owner(mutex);
     // The caller's mutex is held before running its GNU cleanup handlers.
     cancel_condition_wait(cond);
+    let signal_error = unsafe { deliver_condition_signals(mutex) };
+    if signal_error != 0 {
+        return signal_error;
+    }
     if woke != 0 || error == ERROR_TIMEOUT {
         return 0;
     }
@@ -2217,6 +2221,23 @@ fn cancel_condition_wait(cond: *mut usize) {
         unsafe { WakeConditionVariable(cond.cast()) };
         pthread_testcancel();
     }
+}
+
+/// Dispatch signals with the condition's mutex released, as while sleeping.
+/// The bounded native wait also bounds cooperative signal delivery latency.
+/// In particular JSC's suspend handler must acknowledge a directed signal even
+/// when the target spends its entire lifetime in pthread condition waits.
+#[cfg(all(windows, target_arch = "x86_64"))]
+unsafe fn deliver_condition_signals(mutex: *mut usize) -> i32 {
+    if !kinakaze_vfs::signal::interrupt_pending() {
+        return 0;
+    }
+    let error = unsafe { pthread_mutex_unlock(mutex) };
+    if error != 0 {
+        return error;
+    }
+    kinakaze_vfs::signal::deliver_pending();
+    unsafe { pthread_mutex_lock(mutex) }
 }
 
 #[cfg(all(windows, target_arch = "x86_64"))]
@@ -2300,6 +2321,10 @@ unsafe fn cond_wait_deadline(
     };
     record_owner(mutex);
     cancel_condition_wait(cond);
+    let signal_error = unsafe { deliver_condition_signals(mutex) };
+    if signal_error != 0 {
+        return signal_error;
+    }
     if woke != 0 {
         return 0;
     }
