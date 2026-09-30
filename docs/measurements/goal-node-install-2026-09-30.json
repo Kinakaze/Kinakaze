@@ -383,6 +383,121 @@
         "r7-additional-tests.json": "4dab679fcb56e4e48f4f6604b0577a4859b4f7381da76f943e89887adf7a92a7",
         "r7-guest-probes/report.json": "3cd9550946f3cd04ad08cab32035fdb228da085fc47c9ce917e3e4b34c4e41f9"
       }
+    },
+    {
+      "name": "r8",
+      "passed": true,
+      "installed_packages": 357,
+      "phases": [
+        {
+          "phase": "update",
+          "status": "passed",
+          "milliseconds": 942.7794
+        },
+        {
+          "phase": "download",
+          "status": "passed",
+          "milliseconds": 2755.4553
+        },
+        {
+          "phase": "plan",
+          "status": "passed",
+          "milliseconds": 350.456
+        },
+        {
+          "phase": "install",
+          "status": "passed",
+          "milliseconds": 269811.2051
+        },
+        {
+          "phase": "node-smoke",
+          "status": "passed",
+          "milliseconds": 802.5449
+        },
+        {
+          "phase": "npm-smoke",
+          "status": "passed",
+          "milliseconds": 1524.2796
+        },
+        {
+          "phase": "audit",
+          "status": "passed",
+          "milliseconds": 203.9847
+        },
+        {
+          "phase": "verify",
+          "status": "passed",
+          "milliseconds": 226670.9234
+        }
+      ],
+      "installation_job": {
+        "user_ms": 133953.125,
+        "kernel_ms": 254593.75,
+        "total_cpu_ms": 388546.875,
+        "processes": 5391,
+        "active_processes": 0,
+        "page_faults": 43261007,
+        "read_bytes": 898016725,
+        "write_bytes": 412898912,
+        "read_ops": 577253,
+        "write_ops": 371025,
+        "other_ops": 12580854,
+        "other_bytes": 406845870
+      },
+      "quiet_start": false,
+      "runtime_flags": {
+        "KINAKAZE_FORK_TRANSFER": "1",
+        "KINAKAZE_FORK_POOL": "1",
+        "KINAKAZE_EXEC_POOL": "1"
+      },
+      "installation_load_samples": 134,
+      "samples_with_foreign_cpu_activity": 134,
+      "observer_cpu_seconds": 0.796875,
+      "installation_diagnostic": false,
+      "verification_diagnostic": true,
+      "verification_diagnostic_note": "Three native stack snapshots during verification only, after the installation measurement ended. No stack sampling during installation.",
+      "verification_sampler_cpu_seconds": 0.109375,
+      "native_checks_passed": 318,
+      "existing_checks_ignored": 5,
+      "guest_checks_passed": 39,
+      "activation_checks_passed": 2,
+      "observed_fork_pool_hits": 27,
+      "observed_exec_pool_hits": 29,
+      "initial_diagnostic_failure": "Tracing all argv blocked the long-argument subprocess path until the session watchdog fired; untraced semantics passed in all three fork variants.",
+      "evidence_sha256": {
+        "install-r8/report.json": "14b34eed1601b7c93f48bf739b44a13aa505621675397fbcb1aff94876798663",
+        "r8-source.json": "2f704dac518597d9812bb201948eb358519490ccf7643e075469f37f3341c97f",
+        "r8-dist.json": "b80b3f7d7683ac1d6d1c7edefb84ce337d8711678ca5ba63af450a856c8a604c",
+        "r8-environment.json": "abd6624e6f799abe0d7901e384cd188176ae703aaa5f8d9be611194e8c22eff0",
+        "r8-tests.json": "b4a3ecb402eee2944a02a71ea124b1d849c028046a32b7fd7701f8735825bd60",
+        "r8-control-tests.json": "328104b16d7eb6c79637a2b98b9a7ee99e3eabfdfeb6f945f37f6fee0b732142",
+        "r8-guest-untraced/report.json": "feb3af2188763a131941090e5ac407f525ba810cdbc9509614eae4e2d03bde8b",
+        "r8-pool-trace/report.json": "1aa476d6ccc643c7429584166d1639defe39438fbf436b3eeccafac674d0d7c2",
+        "r8-guest.log": "9a5d9624dfda71fd2dc604ba47e1328d7d58fc739db1eb188b7e8305af82a554",
+        "r8-verify-diagnostic/0-22072.json": "78fd70e0cf80cf41fd34855df363c29cf85f18daaaaa4715c5fa97f09840ab59",
+        "r8-verify-diagnostic/1-22072.json": "a6c2da545eb36047d355d15592df1ccb99064125cba6e884927ee76e0a93aeca",
+        "r8-verify-diagnostic/2-22072.json": "a3a19b8708fd466cf2d2927ffbf2aff541278dba05db89a75ffd6ad6aa980fb0",
+        "r8-reverify/report.json": "47ab4e8bc96d03cfde3adede0b51fe7e2870d8aa4f530fe0e4050ef5647bf688"
+      },
+      "repeat_verification": {
+        "passed": true,
+        "milliseconds": 12965.0696,
+        "job": {
+          "user_ms": 2890.625,
+          "kernel_ms": 10093.75,
+          "total_cpu_ms": 12984.375,
+          "processes": 5,
+          "active_processes": 2,
+          "page_faults": 34358,
+          "read_bytes": 604898475,
+          "write_bytes": 21163,
+          "read_ops": 135164,
+          "write_ops": 232,
+          "other_ops": 2131854,
+          "other_bytes": 53082204
+        },
+        "note": "Same installed root and binary; a repeat verification, not an installation measurement."
+      }
     }
   ]
 }

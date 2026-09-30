@@ -302,3 +302,48 @@ any one change's benefit, and the 180-second target remains unmet.
 The measured r7 distribution predates native exec preparation. Its evidence is
 `install-r7/report.json`, `r7-source.json`, `r7-dist.json`, `r7-environment.json`,
 `r7-tests.json`, `r7-additional-tests.json` and `r7-guest-probes/report.json`.
+
+## Native exec preparation integration
+
+The r8 frozen Release source integrates the available native exec preparation
+with the fork pool. All 205 selected VFS/libc/kernel/bridge/link checks and 113
+protocol/manager/init checks passed; five existing diagnostics or fixture entry
+points remained ignored. All 39 untraced guest checks passed across ordinary,
+transferred and pooled fork modes. Two separate activation probes passed and
+observed 29 prepared exec activations and 27 native fork pool hits.
+
+An initial diagnostic run enabled full argument tracing during the long-argv
+subprocess probe. It stopped making progress after stderr redirection and hit
+the session watchdog. That record is retained in `r8-guest.log`; the same long
+arguments passed without tracing in every fork variant. Activation tracing was
+therefore checked separately with bounded arguments.
+
+The fresh complete installation took **269.811 seconds**. All 357 packages,
+Node/npm, empty audit and full file verification passed. Installation Job CPU
+was 388.547 seconds (133.953 user and 254.594 kernel), with 5,391 processes and
+43,261,007 page faults. The observer used 0.797 CPU seconds over the complete
+run. All 134 installation load samples observed competing activity. No build
+or other guest test from this chat ran during installation. Its timing had no
+stack sampling or detailed traces; the difference from r7 is an integrated
+observation, not a causal estimate for exec preparation. The 180-second target
+remains unmet by 89.811 seconds.
+
+Verification took an unusually long **226.671 seconds**, while consuming 24.906
+Job CPU seconds. Three diagnostic stack snapshots taken only after installation
+had ended found the verifier opening different Perl data files through
+NtCreateFile. They show continued progress, but do not identify the cause of
+the native-open latency. The sampler used 0.109 CPU seconds. The report marks
+verification as instrumented and installation as uninstrumented; this verifier
+timing should not be treated as a stable comparison against the earlier runs.
+
+A separate untraced verification of the same installed root and unchanged r8
+binaries then passed in **12.965 seconds**, with 12.984 Job CPU seconds. No
+compilation or other guest test from this chat ran alongside it. This repeat
+does not recreate the initial file-cache or host conditions, but confirms that
+the earlier 226.671-second observation is not a stable verifier runtime. Its
+evidence is `r8-reverify/report.json`.
+
+Evidence is `install-r8/report.json`, `r8-source.json`, `r8-dist.json`,
+`r8-environment.json`, `r8-tests.json`, `r8-control-tests.json`,
+`r8-guest-untraced/report.json`, `r8-pool-trace/report.json` and
+`r8-verify-diagnostic/`.
