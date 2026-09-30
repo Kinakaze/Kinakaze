@@ -841,6 +841,30 @@ pub(crate) fn wait_started(
     bitset: u32,
     load: impl Fn() -> Result<(Key, i32), i32>,
 ) -> Result<(), i32> {
+    let restart = if duration.is_some() {
+        RestartPolicy::Interrupt
+    } else {
+        RestartPolicy::Keep
+    };
+    wait_attempt(expected, duration, started, bitset, restart, load).map(|_| ())
+}
+
+#[derive(Clone, Copy)]
+pub(crate) enum RestartPolicy {
+    Keep,
+    Interrupt,
+    Reparse,
+}
+
+/// true: committed wake; false: restart a modern syscall after its handler.
+pub(crate) fn wait_attempt(
+    expected: i32,
+    duration: Option<Duration>,
+    started: Instant,
+    bitset: u32,
+    restart: RestartPolicy,
+    load: impl Fn() -> Result<(Key, i32), i32>,
+) -> Result<bool, i32> {
     let interrupt = interrupt::current();
     if interrupt.is_null() {
         return Err(EIO);
@@ -893,7 +917,14 @@ pub(crate) fn wait_started(
         drop(waiter);
         let delivery = signal::deliver_pending();
         if outcome? {
-            return Ok(());
+            return Ok(true);
+        }
+        if delivery == signal::Delivery::Restart {
+            match restart {
+                RestartPolicy::Interrupt => return Err(EINTR),
+                RestartPolicy::Reparse => return Ok(false),
+                RestartPolicy::Keep => continue,
+            }
         }
         if duration.is_some_and(|limit| started.elapsed() >= limit) {
             return Err(ETIMEDOUT);

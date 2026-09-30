@@ -333,6 +333,102 @@ fn vector_signal_cleanup_precedes_handler_and_restart_preserves_deadline() {
 }
 
 #[test]
+fn vector_restart_recopies_descriptor_values_flags_and_addresses() {
+    use core::sync::atomic::{AtomicU32, AtomicU64};
+    unsafe extern "sysv64" fn handler(_: i32) {}
+    #[repr(C)]
+    struct Descriptor {
+        value: AtomicU64,
+        address: AtomicU64,
+        flags: AtomicU32,
+        reserved: AtomicU32,
+    }
+    assert_eq!(size_of::<Descriptor>(), 24);
+    let previous = signal::sigaction(
+        signal::SIGUSR2,
+        Some(signal::Action {
+            disposition: signal::Disposition::Handle(handler, 0),
+            flags: signal::SA_RESTART,
+            mask: 0,
+            restorer: 0,
+        }),
+    )
+    .unwrap();
+    for private in [false, true] {
+        let observe = |word: &AtomicI32, count| {
+            if private {
+                queued(word, count);
+            } else {
+                let key = crate::fdio::futex_key(word.as_ptr() as usize).unwrap();
+                let started = Instant::now();
+                while crate::futex::count_for_test(key) != count {
+                    assert!(started.elapsed() < Duration::from_secs(5));
+                    std::thread::yield_now();
+                }
+            }
+        };
+        for field in 0..4 {
+            let source = Arc::new(AtomicI32::new(0));
+            let target = Arc::new(AtomicI32::new(0));
+            let flags = if private { 0x82 } else { 2 };
+            let descriptor = Arc::new(Descriptor {
+                value: AtomicU64::new(0),
+                address: AtomicU64::new(source.as_ptr() as u64),
+                flags: AtomicU32::new(flags),
+                reserved: AtomicU32::new(0),
+            });
+            let child_source = Arc::clone(&source);
+            let child_target = Arc::clone(&target);
+            let child_descriptor = Arc::clone(&descriptor);
+            let (tx, rx) = std::sync::mpsc::channel();
+            let waiter = std::thread::spawn(move || {
+                let _words = (child_source, child_target);
+                let timeout = deadline(5000);
+                tx.send(interrupt::current_thread_id()).unwrap();
+                unsafe {
+                    kinakaze_abi_syscall_raw(
+                        449,
+                        Arc::as_ptr(&child_descriptor) as u64,
+                        1,
+                        0,
+                        &timeout as *const _ as u64,
+                        1,
+                        0,
+                    )
+                }
+            });
+            let tid = rx.recv().unwrap();
+            observe(&source, 1);
+            match field {
+                0 => descriptor.value.store(1, Ordering::Release),
+                1 => descriptor.reserved.store(1, Ordering::Release),
+                2 => descriptor.flags.store(1, Ordering::Release),
+                _ => descriptor
+                    .address
+                    .store(target.as_ptr() as u64, Ordering::Release),
+            }
+            signal::raise_thread_signal(tid, signal::SIGUSR2).unwrap();
+            let expected = if field == 0 {
+                -i64::from(EAGAIN)
+            } else if field != 3 {
+                -i64::from(EINVAL)
+            } else {
+                observe(&target, 1);
+                assert_eq!(wake(&source, private), 0);
+                assert_eq!(wake(&target, private), 1);
+                0
+            };
+            assert_eq!(waiter.join().unwrap(), expected);
+            assert_eq!(wake(&source, private), 0);
+            assert_eq!(wake(&target, private), 0);
+            observe(&source, 0);
+            observe(&target, 0);
+        }
+    }
+    signal::sigaction(signal::SIGUSR2, Some(previous)).unwrap();
+}
+
+#[test]
 fn spurious_interrupt_rechecks_values_without_reporting_a_wake() {
     let word = Arc::new(AtomicI32::new(0));
     let (tx, rx) = mpsc::channel();

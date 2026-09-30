@@ -319,7 +319,7 @@ fn wait2_absolute_clocks_timeout_and_retire_the_waiter() {
 }
 
 #[test]
-fn wait2_signal_retires_before_handler_and_restart_keeps_copied_deadline() {
+fn wait2_signal_retires_before_handler_and_restart_reparses_absolute_deadline() {
     static ADDRESS: AtomicUsize = AtomicUsize::new(0);
     static PRIVATE: AtomicBool = AtomicBool::new(false);
     static CHANGE_WORD: AtomicBool = AtomicBool::new(false);
@@ -348,7 +348,13 @@ fn wait2_signal_retires_before_handler_and_restart_keeps_copied_deadline() {
     };
     let previous = signal::sigaction(signal::SIGUSR2, Some(action(false))).unwrap();
     for private in [false, true] {
-        for (restart, changed) in [(false, false), (true, false), (true, true)] {
+        for (restart, changed, change_timeout) in [
+            (false, false, true),
+            (true, false, false),
+            (true, false, true),
+            (true, true, false),
+            (true, true, true),
+        ] {
             signal::sigaction(signal::SIGUSR2, Some(action(restart))).unwrap();
             let word = Arc::new(AtomicI32::new(0));
             ADDRESS.store(word.as_ptr() as usize, Ordering::Release);
@@ -379,9 +385,12 @@ fn wait2_signal_retires_before_handler_and_restart_keeps_copied_deadline() {
             let tid = rx.recv().unwrap();
             queued(&word, private, 1);
             // Synchronization above proves the original copy is finished.
-            // Restart must not reread this guest memory or renew the budget.
-            timeout.sec.store(0, Ordering::Release);
-            timeout.nsec.store(0, Ordering::Release);
+            // A modern SA_RESTART reenters the syscall and copies arguments
+            // again. An unchanged absolute deadline must not become relative.
+            if change_timeout {
+                timeout.sec.store(0, Ordering::Release);
+                timeout.nsec.store(0, Ordering::Release);
+            }
             signal::raise_thread_signal(tid, signal::SIGUSR2).unwrap();
             let (result, elapsed) = waiter.join().unwrap();
             let error = if changed {
@@ -393,8 +402,11 @@ fn wait2_signal_retires_before_handler_and_restart_keeps_copied_deadline() {
             };
             assert_eq!(result, -i64::from(error));
             assert_eq!(WAKE_RESULT.load(Ordering::Acquire), 0);
-            if restart && !changed {
+            if restart && !changed && !change_timeout {
                 assert!(elapsed >= Duration::from_millis(100));
+            }
+            if restart && !changed && change_timeout {
+                assert!(elapsed < Duration::from_millis(200));
             }
             queued(&word, private, 0);
         }
@@ -455,4 +467,125 @@ fn benchmark_wait2_registration() {
         shared_ns,
         shared_background_ns
     );
+}
+
+#[test]
+fn wait2_restart_rechecks_timeout_mapping_after_handler() {
+    use windows_sys::Win32::System::Memory::{
+        MEM_COMMIT, MEM_RELEASE, MEM_RESERVE, PAGE_READWRITE, VirtualAlloc, VirtualFree,
+    };
+    unsafe extern "sysv64" fn handler(_: i32) {}
+    let previous = signal::sigaction(
+        signal::SIGUSR2,
+        Some(signal::Action {
+            disposition: signal::Disposition::Handle(handler, 0),
+            flags: signal::SA_RESTART,
+            mask: 0,
+            restorer: 0,
+        }),
+    )
+    .unwrap();
+    for private in [false, true] {
+        let word = Arc::new(AtomicI32::new(0));
+        let page = unsafe {
+            VirtualAlloc(
+                core::ptr::null(),
+                4096,
+                MEM_RESERVE | MEM_COMMIT,
+                PAGE_READWRITE,
+            )
+        };
+        assert!(!page.is_null());
+        unsafe {
+            page.cast::<KernelTimespec>()
+                .write(deadline(CLOCK_MONOTONIC, 5000))
+        };
+        let timeout = page as usize;
+        let child_word = Arc::clone(&word);
+        let (tx, rx) = mpsc::channel();
+        let waiter = std::thread::spawn(move || {
+            tx.send(interrupt::current_thread_id()).unwrap();
+            raw(
+                child_word.as_ptr() as usize,
+                0,
+                1,
+                if private { 0x82 } else { 2 },
+                timeout,
+                1,
+            )
+        });
+        let tid = rx.recv().unwrap();
+        queued(&word, private, 1);
+        assert_ne!(unsafe { VirtualFree(page, 0, MEM_RELEASE) }, 0);
+        signal::raise_thread_signal(tid, signal::SIGUSR2).unwrap();
+        assert_eq!(waiter.join().unwrap(), -i64::from(EFAULT));
+        assert_eq!(modern_wake(&word, private, u32::MAX), 0);
+        queued(&word, private, 0);
+    }
+    signal::sigaction(signal::SIGUSR2, Some(previous)).unwrap();
+}
+
+#[test]
+fn legacy_waits_restart_only_without_a_timeout_and_with_sa_restart() {
+    static HANDLED: AtomicBool = AtomicBool::new(false);
+    unsafe extern "sysv64" fn handler(_: i32) {
+        HANDLED.store(true, Ordering::Release);
+    }
+    let action = |restart| signal::Action {
+        disposition: signal::Disposition::Handle(handler, 0),
+        flags: if restart { signal::SA_RESTART } else { 0 },
+        mask: 0,
+        restorer: 0,
+    };
+    let previous = signal::sigaction(signal::SIGUSR2, Some(action(false))).unwrap();
+    for private in [false, true] {
+        for timed in [false, true] {
+            for restart in [false, true] {
+                HANDLED.store(false, Ordering::Release);
+                signal::sigaction(signal::SIGUSR2, Some(action(restart))).unwrap();
+                let word = Arc::new(AtomicI32::new(0));
+                let child_word = Arc::clone(&word);
+                let (tx, rx) = mpsc::channel();
+                let waiter = std::thread::spawn(move || {
+                    let timeout = KernelTimespec {
+                        tv_sec: 5,
+                        tv_nsec: 0,
+                    };
+                    tx.send(interrupt::current_thread_id()).unwrap();
+                    unsafe {
+                        kinakaze_abi_syscall_raw(
+                            SYS_FUTEX,
+                            child_word.as_ptr() as u64,
+                            (FUTEX_WAIT | if private { FUTEX_PRIVATE_FLAG } else { 0 }) as u64,
+                            0,
+                            if timed {
+                                &timeout as *const _ as u64
+                            } else {
+                                0
+                            },
+                            0,
+                            0,
+                        )
+                    }
+                });
+                let tid = rx.recv().unwrap();
+                queued(&word, private, 1);
+                signal::raise_thread_signal(tid, signal::SIGUSR2).unwrap();
+                let started = Instant::now();
+                while !HANDLED.load(Ordering::Acquire) {
+                    assert!(started.elapsed() < Duration::from_secs(5));
+                    std::thread::yield_now();
+                }
+                if restart && !timed {
+                    queued(&word, private, 1);
+                    assert_eq!(modern_wake(&word, private, u32::MAX), 1);
+                    assert_eq!(waiter.join().unwrap(), 0);
+                } else {
+                    assert_eq!(waiter.join().unwrap(), -i64::from(EINTR));
+                }
+                queued(&word, private, 0);
+            }
+        }
+    }
+    signal::sigaction(signal::SIGUSR2, Some(previous)).unwrap();
 }

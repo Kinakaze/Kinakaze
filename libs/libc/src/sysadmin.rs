@@ -3003,33 +3003,49 @@ fn futex_wait_prepared(
     started: std::time::Instant,
     bitset: u32,
 ) -> i64 {
+    let restart = if duration.is_some() {
+        crate::futex::RestartPolicy::Interrupt
+    } else {
+        crate::futex::RestartPolicy::Keep
+    };
+    futex_wait_attempt(address, expected, duration, started, bitset, restart)
+        .map_or_else(|error| -i64::from(error), |_| 0)
+}
+
+fn futex_wait_attempt(
+    address: FutexAddress,
+    expected: i32,
+    duration: Option<std::time::Duration>,
+    started: std::time::Instant,
+    bitset: u32,
+    restart: crate::futex::RestartPolicy,
+) -> Result<bool, i32> {
     use kinakaze_vfs::{EINTR, EIO, interrupt, signal};
     use windows_sys::Win32::Foundation::{WAIT_OBJECT_0, WAIT_TIMEOUT};
     use windows_sys::Win32::System::Threading::INFINITE;
 
     if address.shared.is_some() {
-        return crate::futex::wait_started(expected, duration, started, bitset, || {
+        return crate::futex::wait_attempt(expected, duration, started, bitset, restart, || {
             let key = crate::fdio::futex_key(address.word as usize)?;
             let word = futex_word(address.word).map_err(|error| -error as i32)?;
             Ok((key, word.load(Ordering::SeqCst)))
-        })
-        .map_or_else(|error| -i64::from(error), |()| 0);
+        });
     }
     // Reuse the thread's event for both futex wake and signals. The queue is
     // authoritative about which happened; no kernel event is allocated per
     // futex wait. Create it before publication so a wake cannot be lost.
     let event = interrupt::current();
     if event.is_null() {
-        return -i64::from(EIO);
+        return Err(EIO);
     }
     loop {
         let waiter = match FutexWaiter::new(address.key, bitset) {
             Ok(waiter) => waiter,
-            Err(error) => return -i64::from(error),
+            Err(error) => return Err(error),
         };
         let park = match crate::futex::park() {
             Ok(park) => park,
-            Err(error) => return -i64::from(error),
+            Err(error) => return Err(error),
         };
         let mut queues = futex_queues()
             .lock()
@@ -3039,10 +3055,10 @@ fn futex_wait_prepared(
         // no interval in which both operations can miss each other.
         let word = match futex_word(address.word) {
             Ok(word) => word,
-            Err(error) => return error,
+            Err(error) => return Err(-error as i32),
         };
         if word.load(Ordering::SeqCst) != expected {
-            return -i64::from(EAGAIN);
+            return Err(EAGAIN);
         }
         queues
             .entry(address.key)
@@ -3088,19 +3104,26 @@ fn futex_wait_prepared(
         // As in Linux __futex_wait, a selected wake wins over timeout/signal.
         let removed = match removed {
             Ok(removed) => removed,
-            Err(error) => return error,
+            Err(error) => return Err(-error as i32),
         };
         if !removed {
-            return 0;
+            return Ok(true);
         }
         if status != WAIT_OBJECT_0 && status != WAIT_OBJECT_0 + 1 && status != WAIT_TIMEOUT {
-            return -i64::from(EIO);
+            return Err(EIO);
         }
         if expired {
-            return -i64::from(ETIMEDOUT);
+            return Err(ETIMEDOUT);
         }
         if delivery == signal::Delivery::Interrupted {
-            return -i64::from(EINTR);
+            return Err(EINTR);
+        }
+        if delivery == signal::Delivery::Restart {
+            match restart {
+                crate::futex::RestartPolicy::Interrupt => return Err(EINTR),
+                crate::futex::RestartPolicy::Reparse => return Ok(false),
+                crate::futex::RestartPolicy::Keep => {}
+            }
         }
         // Spurious interrupts and SA_RESTART repeat the value comparison on
         // the original address, retaining the original timeout budget.
@@ -7442,7 +7465,9 @@ mod tests {
         });
         signal::raise_thread_signal(rx.recv().unwrap(), signal::SIGUSR2).unwrap();
         ready.store(true, Ordering::Release);
-        assert_eq!(second.join().unwrap(), -i64::from(ETIMEDOUT));
+        // A timed legacy wait uses ERESTART_RESTARTBLOCK: a caught handler
+        // returns EINTR even when that handler specifies SA_RESTART.
+        assert_eq!(second.join().unwrap(), -i64::from(kinakaze_vfs::EINTR));
         assert_eq!(CALLS.load(Ordering::Acquire), 2);
         assert_eq!(HANDLER_WAKE.load(Ordering::Acquire), 0);
         signal::sigaction(signal::SIGUSR2, Some(previous)).unwrap();

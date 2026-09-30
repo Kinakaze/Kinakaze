@@ -200,84 +200,90 @@ pub(super) fn waitv(
         if !timeout.is_null() && !matches!(i64::from(clock), CLOCK_REALTIME | CLOCK_MONOTONIC) {
             return Err(EINVAL);
         }
-        let duration = futex_timeout(timeout, true, i64::from(clock) == CLOCK_REALTIME)
-            .map_err(|error| -error as i32)?;
-        let started = Instant::now();
-        let entries = parse(address, count)?;
-        loop {
-            let event = interrupt::current();
-            if event.is_null() {
-                return Err(EIO);
-            }
-            let park = crate::futex::park()?;
-            let mut registration = Registration::new();
-            let setup = registration.enqueue_all(&entries);
-            if let Err(error) = setup {
-                let selected = registration.finish()?;
-                return selected.ok_or(error);
-            }
-            signal::register_waiter();
-            let status = loop {
-                let pending = signal::interrupt_pending();
+        'restart: loop {
+            let duration = futex_timeout(timeout, true, i64::from(clock) == CLOCK_REALTIME)
+                .map_err(|error| -error as i32)?;
+            let started = Instant::now();
+            let entries = parse(address, count)?;
+            loop {
+                let event = interrupt::current();
+                if event.is_null() {
+                    return Err(EIO);
+                }
+                let park = crate::futex::park()?;
+                let mut registration = Registration::new();
+                let setup = registration.enqueue_all(&entries);
+                if let Err(error) = setup {
+                    let selected = registration.finish()?;
+                    return selected.ok_or(error);
+                }
+                signal::register_waiter();
+                let status = loop {
+                    let pending = signal::interrupt_pending();
+                    let expired = duration.is_some_and(|limit| started.elapsed() >= limit);
+                    if pending || expired {
+                        break WAIT_OBJECT_0;
+                    }
+                    let handles = [
+                        event,
+                        park,
+                        registration
+                            .shared
+                            .as_ref()
+                            .map_or(event, |group| group.event()),
+                    ];
+                    let sources = if registration.shared.is_some() {
+                        &handles[..]
+                    } else {
+                        &handles[..2]
+                    };
+                    let status = unsafe {
+                        kinakaze_vfs::deadline_wait::any(sources, remaining_ms(duration, started))
+                    };
+                    if status == WAIT_OBJECT_0 + 1
+                        && matches!(
+                            super::futex_requeue::selected(
+                                registration.private.iter().map(|(_, waiter)| waiter)
+                            ),
+                            Ok(false)
+                        )
+                    {
+                        continue; // native notification without committed removal
+                    }
+                    if status == WAIT_OBJECT_0 + 2
+                        && let Some(group) = &registration.shared
+                        && matches!(group.finish(false), Ok(None))
+                    {
+                        continue; // pre-commit notification from an abandoned waker
+                    }
+                    break status;
+                };
+                let selected = registration.finish();
+                signal::unregister_waiter();
                 let expired = duration.is_some_and(|limit| started.elapsed() >= limit);
-                if pending || expired {
-                    break WAIT_OBJECT_0;
+                // Drop all named handles before running guest handlers, which may
+                // fork or enter a nested wait. Capture no parent-only resources.
+                drop(registration);
+                let delivery = signal::deliver_pending();
+                if let Some(index) = selected? {
+                    return Ok(index);
                 }
-                let handles = [
-                    event,
-                    park,
-                    registration
-                        .shared
-                        .as_ref()
-                        .map_or(event, |group| group.event()),
-                ];
-                let sources = if registration.shared.is_some() {
-                    &handles[..]
-                } else {
-                    &handles[..2]
-                };
-                let status = unsafe {
-                    kinakaze_vfs::deadline_wait::any(sources, remaining_ms(duration, started))
-                };
-                if status == WAIT_OBJECT_0 + 1
-                    && matches!(
-                        super::futex_requeue::selected(
-                            registration.private.iter().map(|(_, waiter)| waiter)
-                        ),
-                        Ok(false)
-                    )
+                if status != WAIT_OBJECT_0
+                    && status != WAIT_OBJECT_0 + 1
+                    && status != WAIT_OBJECT_0 + 2
+                    && status != WAIT_TIMEOUT
                 {
-                    continue; // native notification without committed removal
+                    return Err(EIO);
                 }
-                if status == WAIT_OBJECT_0 + 2
-                    && let Some(group) = &registration.shared
-                    && matches!(group.finish(false), Ok(None))
-                {
-                    continue; // pre-commit notification from an abandoned waker
+                if expired {
+                    return Err(ETIMEDOUT);
                 }
-                break status;
-            };
-            let selected = registration.finish();
-            signal::unregister_waiter();
-            // Drop all named handles before running guest handlers, which may
-            // fork or enter a nested wait. Capture no parent-only resources.
-            drop(registration);
-            let delivery = signal::deliver_pending();
-            if let Some(index) = selected? {
-                return Ok(index);
-            }
-            if status != WAIT_OBJECT_0
-                && status != WAIT_OBJECT_0 + 1
-                && status != WAIT_OBJECT_0 + 2
-                && status != WAIT_TIMEOUT
-            {
-                return Err(EIO);
-            }
-            if duration.is_some_and(|limit| started.elapsed() >= limit) {
-                return Err(ETIMEDOUT);
-            }
-            if delivery == signal::Delivery::Interrupted {
-                return Err(EINTR);
+                if delivery == signal::Delivery::Interrupted {
+                    return Err(EINTR);
+                }
+                if delivery == signal::Delivery::Restart {
+                    continue 'restart;
+                }
             }
         }
     })();

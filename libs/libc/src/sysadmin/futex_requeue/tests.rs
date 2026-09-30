@@ -403,7 +403,7 @@ fn migrated_wait_ignores_abandoned_notifications_and_retains_target_queue() {
 }
 
 #[test]
-fn migrated_signal_retires_target_before_handler_and_restart_uses_original_address() {
+fn migrated_timed_legacy_wait_retires_target_and_interrupts_with_either_handler_flag() {
     use kinakaze_vfs::{EINTR, interrupt, signal};
     static SOURCE: AtomicUsize = AtomicUsize::new(0);
     static TARGET: AtomicUsize = AtomicUsize::new(0);
@@ -456,14 +456,7 @@ fn migrated_signal_retires_target_before_handler_and_restart_uses_original_addre
         queued(&source, true, 1);
         assert_eq!(raw(&[entry(&source, true), entry(&target, false)], 0, 1), 1);
         signal::raise_thread_signal(tid, signal::SIGUSR2).unwrap();
-        if restart {
-            queued(&source, true, 1);
-            queued(&target, false, 0);
-        }
-        assert_eq!(
-            child.join().unwrap(),
-            -i64::from(if restart { ETIMEDOUT } else { EINTR })
-        );
+        assert_eq!(child.join().unwrap(), -i64::from(EINTR));
         assert_eq!(HANDLER_WAKE.load(Ordering::Acquire), 0);
         queued(&source, true, 0);
         queued(&target, false, 0);
