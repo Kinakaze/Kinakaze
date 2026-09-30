@@ -1,0 +1,1004 @@
+{
+  "full_install": {
+    "source_commit": "22df00b54e1d58d0481697230035a28be1e851da",
+    "passed": true,
+    "target_met": false,
+    "install_ms": 204887.0722,
+    "download_ms": 2418.6226,
+    "verify_ms": 10634.365,
+    "dpkg_timings": {
+      "installed_packages": 357,
+      "unpack_seconds": 196.0,
+      "configure_seconds": 5.0,
+      "resolution_seconds": 1
+    },
+    "installed_versions_equal_control": true,
+    "job": {
+      "user_ms": 99515.625,
+      "kernel_ms": 188562.5,
+      "total_cpu_ms": 288078.125,
+      "processes": 5275,
+      "active_processes": 0,
+      "page_faults": 41929290,
+      "read_bytes": 767442051,
+      "write_bytes": 392027730,
+      "read_ops": 564420,
+      "write_ops": 363085,
+      "other_ops": 12294013,
+      "other_bytes": 402261121
+    },
+    "hashes": {
+      "worker.exe": "ef70ffdaa565eb5d3ef7be2476362fde9b1913c97b91c28608f8f843d0c54400",
+      "init.exe": "49a8913b9e5a286c0ef2056df661428617ca7f3085a2fa61b820e4714ef0bdfa",
+      "rootfs.manifest.json": "14905978ccf97543bdc6cda4155879fd87c57243a972137beecd83adf7d2e60f",
+      "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+      "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "rootfs\\lib\\kinakaze_alloc.so": "d13374d4172546a8f0a744122af171ee45c74c60497a5fb8a8001cc587955658",
+      "rootfs\\lib\\kinakaze_elf.so": "6640b177f98d59c75d4e627c915f19dd6b8d8affa55eefaa41516e9a51211bcc",
+      "rootfs\\lib\\kinakaze_guest_engine.so": "845a92e45f09b1f0b2a23defb3d92327181049c8914b58cddedf7a223ed2e5d8",
+      "rootfs\\lib\\kinakaze_kernel.so": "346cab6d9b2a92af5a51fa79f8ade98d5b8eb7e99a9adcbdabef2cc4d1a94946",
+      "rootfs\\lib\\kinakaze_tls.so": "f7020bf465c218990d49bb12183c906fddac849a7ca3ffa6e4e0e3f874b311e6",
+      "rootfs\\lib\\kinakaze_vfs.so": "8addff789f25773dcf5109b5358a5af47893f94d2773cf20cac7eaa35e42d06b",
+      "rootfs\\lib\\ld-linux-x86-64.so.2": "d05d0845c42c5aa0f69d89e81079677c64c3d29943acb0775eaee8ffb6713c57",
+      "rootfs\\lib\\libasound.so.2": "17487d188975ff6dda53eeef5761ecd08355d528b43578984dd54ed21afb6bdd",
+      "rootfs\\lib\\libc.so.6": "f04b68549f2e4669d00f77fd7e619431530a8f417f94e2f33c89bdba939a936f",
+      "rootfs\\lib\\libcuda.so.1": "ca4ad7cc6a7f6cd02c697abd5e2b9e6f27611b6e270b04f1335f809ff8728001",
+      "rootfs\\lib\\libdisplay.so.1": "20362f25774e5d8dbfe78721583a990b690a906d93395fee742514863e272d25",
+      "rootfs\\lib\\libdl.so.2": "aad3290b3aa69a8b27e7e0404cfe60c48bf28e1e39145cd575b7f12f2fd7383e",
+      "rootfs\\lib\\libEGL.so.1": "a31ad7c8f6d18315366781d3bad8dbc0a74968e10f1208c1e8405c0e9840cd83",
+      "rootfs\\lib\\libGL.so.1": "60283845f8f035fbeed6154473c03213af84a0608c19c792a888956416e18b63",
+      "rootfs\\lib\\libGLESv2.so.2": "6198b219f6d1d4ec9d12f9699b1894460a160523cc4083b7ca699bedaf817f27",
+      "rootfs\\lib\\libGLX.so.0": "36bc2b1127d247da56b9c77ab3d74f8be43230c742c27718f101e044b5ec36c3",
+      "rootfs\\lib\\libkinakaze-runtime.so.1": "6987f1c66a9406d43aff1be53e0380c24d2704cb3e4cbd420bfe0817c7b329d4",
+      "rootfs\\lib\\libm.so.6": "63bae31ae315d6385b15c68d03195d6953f6eb00a68f7b66f55fd8d4bcb53da6",
+      "rootfs\\lib\\libOpenGL.so.0": "47c46e4e2a242e4cfe984b6ae098f2050f3addf83430a17abc4375b76352497f",
+      "rootfs\\lib\\libpipewire-0.3.so.0": "9e1a09545a55a1966172bc51d3a6ae7d2a91c5e1ba4de3b363f6cfa2999c3075",
+      "rootfs\\lib\\libpthread.so.0": "8d8f45271cabcdd94faf2630fcc5a732bfa71ee8fca67bf5576565ca6af9883f",
+      "rootfs\\lib\\libpulse.so.0": "0dca4d3edafc4f2adfbf864e207ec9045584cbb64f2ac623d9c5fd95b0118209",
+      "rootfs\\lib\\libresolv.so.2": "dde1d557938e2cc0ddb1abc6f8275da291fd9f3ab1b225f0719700cad487046b",
+      "rootfs\\lib\\librt.so.1": "97325c91d99763568d3e028a42b3e5b2219d7c5dbb33ab20b1b26487b3429710",
+      "rootfs\\lib\\libvulkan.so.1": "a5b3f2d01eddcf8b2c7012ea4dc6ef496e73187f07569866e4bea8d8bdc343f2",
+      "rootfs\\lib\\libX11-xcb.so.1": "64731dd7eb4c2e1fa2b5a88a8c3d55f709e087cf106e90cd42cf546174855215",
+      "rootfs\\lib\\libX11.so.6": "c5f470361a2e121d78a7c700cde33b8ceb5126a55c0af81b4bdb2b58c626b04e",
+      "rootfs\\lib\\libxcb.so.1": "4663dccaaac68d5e027441907437e57923d58752d71f40dc2aca0a8e592c11d2",
+      "rootfs\\lib\\libXcursor.so.1": "2b49b89329834373c28c291bc569e30e811a8d67bb85daede4821b80968bf27d",
+      "rootfs\\lib\\libXext.so.6": "2daf2b8a3c5b06c118409833cb9818ff5977523cf36b6262ddb61d17e6530b2b",
+      "rootfs\\lib\\libXi.so.6": "eeba7ab3f6fc0f274f954227efa74b55da3f7b03376f0a8fe10916ad7b073a66",
+      "rootfs\\lib\\libXinerama.so.1": "02b7635bdff6bad628b00616a646a53684528c77fa8ce0dffeddd6d3679a0bb2",
+      "rootfs\\lib\\libXrandr.so.2": "c640ecddc9c304a02788f3bdaabe71f37e793882ec3796b30fa4d7ae39f234e2",
+      "rootfs\\lib\\libXrender.so.1": "7cfb115b2191be8ba4b0f0b28352bf2970894663f9d21ce2fc10a66dc208ead3",
+      "rootfs\\lib\\libXxf86vm.so.1": "cf8989dcd683cf8cc82f9375f0f5ca7ca1c52cb8f1f8638d5ef3b395c03507db",
+      "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+      "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+    },
+    "hashes_rechecked": 59,
+    "driver": {
+      "exit_code": 0,
+      "report": "F:\\crysoacu2\\artifacts\\node-install-20260930\\root-read-open-install\\report.json",
+      "quiet_prerequisite": true,
+      "observer_errors": [],
+      "controller_cpu_seconds": 1.515625,
+      "observer_cpu_seconds": 0.5,
+      "controller_cpu_includes_benchmark": true,
+      "foreign_runtime_workers_tracked": true,
+      "transfer": true,
+      "fork_pool": true,
+      "exec_pool": true,
+      "native_catalog": true,
+      "descriptor_metadata": true,
+      "native_read_open": true,
+      "native_read_relative": true,
+      "diagnostics": false,
+      "harness_hashes": {
+        "benchmark-node-install.py": "858040187be730dbe2dfa77a4f785d3bff8651a0597b451fc74456df25437f88",
+        "init_pool.py": "5d0789ffe19fd1044127e2dba740f507ee3510ae484f713bbbd9ca83715d8187",
+        "init_controller.py": "8e28cba17d242b5fc62262aa72818bd28e41ae29c3374ab713de5c640e50838a",
+        "session_process.py": "cb68810e9f0f62299345991226f32d93eabececf145d49dfd5787942b94d4d10",
+        "process_sample.py": "69fc63a9f5fc5a0fbbedb212b01bad560af702680d9f6ec30321b7470fb83ded"
+      },
+      "harness_unchanged": true
+    },
+    "host": {
+      "samples": 203,
+      "median_cpu_percent": 30.8,
+      "samples_with_compiler": 58,
+      "samples_with_runtime_outside_job_snapshot": 1,
+      "runtime_observations": [
+        {
+          "time_ns": 1790794350858021500,
+          "process": {
+            "pid": 37544,
+            "name": "worker.exe",
+            "birth": 1790794350.8582816,
+            "cpu": 0.0
+          }
+        }
+      ],
+      "samples_with_competitor_cpu_growth": 56,
+      "observed_competitor_cpu_seconds": 130.796875
+    },
+    "baseline_install_ms": 220019.5283,
+    "limitations": "Historical source and host conditions differ, so the comparison does not isolate one optimization. The quiet-start prerequisite is observed only before launch. The sampler excludes members in a current Job snapshot, but a newborn own child can appear between that snapshot and process enumeration. The single runtime observation had zero CPU and was born just after its sample timestamp; it cannot establish foreign runtime activity. Short-lived foreign processes may escape sampling, and observed competitor CPU sums cover only identities present in consecutive samples."
+  },
+  "native": {
+    "passed": 93,
+    "ignored": 1,
+    "names": [
+      "exec_inheritance::tests::fifo_tokens_and_auxiliary_markers_follow_the_same_exec_policy",
+      "exec_inheritance::tests::invalid_handle_replacement_keeps_the_published_descriptor",
+      "exec_inheritance::tests::invalid_owned_handle_fails_before_descriptor_publication",
+      "exec_inheritance::tests::optional_native_handles_are_inherited_by_every_install_entrypoint",
+      "exec_inheritance::tests::precreation_error_rolls_back_without_calling_the_operation",
+      "exec_inheritance::tests::publication_failure_restores_original_native_inheritance",
+      "exec_inheritance::tests::restores_actual_native_flags_instead_of_assuming_the_baseline",
+      "exec_inheritance::tests::spawn_fence_refuses_a_republished_descriptor_even_with_the_same_handle",
+      "exec_inheritance::tests::spawn_fence_refuses_changed_cloexec_before_creating_a_process",
+      "fs::ea::tests::compound_query_handles_missing_deleted_and_large_records",
+      "fs::install_tests::descriptor_chmod_keeps_the_pinned_inode_and_rejects_link_and_stale_slots",
+      "fs::install_tests::exclusive_install_create_rejects_existing_special_inodes",
+      "fs::install_tests::install_ownership_retains_inode_identity_and_clears_privilege_bits",
+      "fs::install_tests::repeated_install_metadata_still_clears_capabilities_and_checks_permissions",
+      "fs::install_tests::writable_stat_reads_live_inode_metadata_and_survives_unlink",
+      "fs::native_read::tests::complete_fast_path_installs_the_native_description_and_flags",
+      "fs::native_read::tests::cwd_relative_lookup_retains_the_selected_visible_inode",
+      "fs::native_read::tests::namespace_prefix_and_escaped_names_select_the_visible_file",
+      "fs::native_read::tests::native_junctions_in_ancestors_cannot_bypass_the_guest_walker",
+      "fs::native_read::tests::normalized_names_cannot_replace_dirfd_dot_or_trailing_slash_semantics",
+      "fs::native_read::tests::retained_read_inode_survives_name_replacement_and_unlink",
+      "fs::native_read::tests::special_inodes_links_and_component_rules_keep_the_walker",
+      "fs::native_read::tests::write_create_directory_and_path_flags_are_ineligible",
+      "fs::proc_fd_tests::anon_inode_open_is_not_a_handle_duplicate",
+      "fs::proc_fd_tests::failed_native_write_reopen_does_not_duplicate_read_handle",
+      "fs::proc_fd_tests::fifo_marker_reopen_preserves_inode_across_rename_unlink_and_path_replacement",
+      "fs::proc_fd_tests::pinned_fifo_rdwr_must_share_the_named_fifo_queue",
+      "fs::proc_fd_tests::pipe_reopen_creates_independent_description_on_same_endpoint",
+      "fs::proc_fd_tests::proc_control_reopen_validates_access_and_uses_existing_write_handler",
+      "fs::proc_fd_tests::proc_magic_link_rejects_missing_fd_and_wrong_directory_flags",
+      "fs::proc_fd_tests::proc_reopen_does_not_bypass_verity_write_protection",
+      "fs::proc_fd_tests::proc_setgroups_opath_reopens_for_data_with_independent_flags_and_offset",
+      "fs::proc_fd_tests::proc_stat_opath_reopens_with_stable_process_identity_and_new_offset",
+      "fs::proc_fd_tests::procfs_root_and_process_identity_agree_for_paths_and_duplicate_descriptors",
+      "fs::proc_fd_tests::regular_reopen_has_new_access_flags_and_independent_position",
+      "fs::proc_fd_tests::reopen_retains_unlinked_inode_and_opath_directory",
+      "fs::shared_io::tests::an_earlier_completion_event_does_not_complete_the_pending_request",
+      "fs::shared_io::tests::cancellation_preserves_another_pending_request_on_the_same_open",
+      "fs::shared_io::tests::named_metadata_queries_preserve_offset_and_work_with_limited_rights",
+      "fs::verity::tests::abandoned_preparing_tail_is_masked_and_recovered_before_write",
+      "fs::verity::tests::abandoned_transaction_process_helper",
+      "fs::verity::tests::cached_reader_owns_each_concurrent_positioned_request",
+      "fs::verity::tests::checked_writer_alias_retains_exclusion_after_rename_unlink_and_fd_replacement",
+      "fs::verity::tests::corruption_fails_before_unverified_bytes_are_returned",
+      "fs::verity::tests::directory_ioctl_errors_distinguish_enable_from_measure",
+      "fs::verity::tests::externally_installed_writer_still_checks_enabled_verity",
+      "fs::verity::tests::granted_access_does_not_escalate_a_write_only_descriptor",
+      "fs::verity::tests::hidden_merkle_writes_do_not_change_guest_mtime",
+      "fs::verity::tests::malformed_persistent_state_fails_closed",
+      "fs::verity::tests::native_existing_writer_blocks_enable_without_changing_file",
+      "fs::verity::tests::opened_metadata_stays_on_one_inode_across_close_and_slot_reuse",
+      "fs::verity::tests::opened_validates_path_only_before_descriptor_kind",
+      "fs::verity::tests::persisted_tree_masks_tail_and_survives_hardlink_unlink",
+      "fs::verity::tests::process_death_releases_inode_guard_and_next_process_recovers_tail",
+      "fs::verity::tests::read_cache_does_not_escalate_imported_write_only_access",
+      "fs::verity::tests::readonly_host_inode_is_not_temporarily_made_writable",
+      "fs::verity::tests::reused_read_capability_observes_enable_corruption_and_original_inode",
+      "fs::verity::tests::shared_reader_observes_enable_and_rejects_later_corruption",
+      "fs::verity::tests::shared_writable_mapping_blocks_enable_after_fd_close",
+      "fs::writeback::tests::writeback_preserves_open_inode_contents_offset_and_releases_handles",
+      "fs::writeback::tests::writeback_rejects_invalid_and_nonfile_descriptors_even_for_noop",
+      "iouring::tests::ring_kind_survives_registry_removal_for_fork_exec_and_restore_checks",
+      "job::tests::exec_restore_keeps_an_already_registered_pump_alive",
+      "mount::api::tests::noexec_nodev_are_enforced_on_detached_and_moved_mounts",
+      "mount::overlay::tests::device_whiteouts_and_middle_layer_whiteouts_stop_lookup",
+      "mount::overlay::tests::intermediate_type_conflicts_cut_off_deeper_directories",
+      "mount::overlay::tests::lookup_validates_one_component_and_round_trips_escaped_names",
+      "mount::overlay::tests::opaque_y_stops_merging_but_x_is_not_an_opaque_directory",
+      "mount::overlay::tests::ordered_layers_merge_names_but_not_directory_metadata",
+      "mount::overlay::tests::root_always_merges_and_xattr_namespace_is_explicit",
+      "mount::overlay::tests::snapshots_are_owned_and_rebuilding_observes_directory_changes",
+      "mount::overlay::tests::symlinks_are_returned_without_host_or_lower_target_traversal",
+      "mount::overlay::tests::unsupported_redirects_and_metacopy_never_masquerade_as_data",
+      "mount::overlay::tests::xattr_whiteouts_hide_lower_names_but_oci_archive_names_are_ordinary",
+      "native_transfer::tests::capture_and_restore_scopes_unwind_after_errors_or_panics",
+      "native_transfer::tests::cross_process_vfs_handoff_preserves_open_descriptions_and_ipc",
+      "native_transfer::tests::failed_transfer_closes_partial_duplicates_and_preserves_frame",
+      "native_transfer::tests::indexes_are_scoped_deduplicated_and_strictly_validated",
+      "native_transfer::tests::owned_capture_rejects_reused_native_handle_values",
+      "native_transfer::tests::owned_capture_survives_source_close_and_releases_every_pin",
+      "native_transfer::tests::portable_descriptors_preserve_flags_and_keep_socket_recipe_keys",
+      "native_transfer::tests::portable_exec_owns_descriptors_after_close_and_reuse",
+      "native_transfer::tests::process_fixture",
+      "native_transfer::tests::transferred_events_keep_identity_and_retry_uses_original_sources",
+      "ofd::tests::metadata_opens_are_private_reused_by_aliases_and_retired_after_close",
+      "ofd::tests::native_data_hole_seek_preserves_offset_on_failure",
+      "ofd::tests::native_pins_share_one_capability_and_survive_final_close_and_slot_reuse",
+      "ofd::tests::promoted_alias_publishes_its_completed_write_read_and_seek_position",
+      "tests::exec_filter_temporarily_removes_guest_handles_from_inheritance",
+      "tests::exec_frame_carries_an_exact_stable_image_section",
+      "tests::exec_handoff_returns_when_child_dies_before_owning_mapping",
+      "tests::mapped_exec_frame_keeps_image_after_all_handoff_handles_close",
+      "usernet::handoff_tests::state_and_namespace_pins_follow_alias_exec_policy_and_last_local_close"
+    ],
+    "results": [
+      {
+        "filter": "fs::native_read::tests",
+        "exit_code": 0,
+        "passed": 8,
+        "log": "F:\\crysoacu2\\artifacts\\apt-180-20260930\\root-read-open-native-0.log"
+      },
+      {
+        "filter": "ofd::tests",
+        "exit_code": 0,
+        "passed": 4,
+        "log": "F:\\crysoacu2\\artifacts\\apt-180-20260930\\root-read-open-native-1.log"
+      },
+      {
+        "filter": "fs::install_tests",
+        "exit_code": 0,
+        "passed": 5,
+        "log": "F:\\crysoacu2\\artifacts\\apt-180-20260930\\root-read-open-native-2.log"
+      },
+      {
+        "filter": "fs::shared_io::tests",
+        "exit_code": 0,
+        "passed": 3,
+        "log": "F:\\crysoacu2\\artifacts\\apt-180-20260930\\root-read-open-native-3.log"
+      },
+      {
+        "filter": "fs::verity::tests",
+        "exit_code": 0,
+        "passed": 20,
+        "log": "F:\\crysoacu2\\artifacts\\apt-180-20260930\\root-read-open-native-4.log"
+      },
+      {
+        "filter": "fs::ea::tests",
+        "exit_code": 0,
+        "passed": 1,
+        "log": "F:\\crysoacu2\\artifacts\\apt-180-20260930\\root-read-open-native-5.log"
+      },
+      {
+        "filter": "mount::overlay::tests",
+        "exit_code": 0,
+        "passed": 10,
+        "log": "F:\\crysoacu2\\artifacts\\apt-180-20260930\\root-read-open-native-6.log"
+      },
+      {
+        "filter": "fs::writeback::tests",
+        "exit_code": 0,
+        "passed": 2,
+        "log": "F:\\crysoacu2\\artifacts\\apt-180-20260930\\root-read-open-native-7.log"
+      },
+      {
+        "filter": "fs::proc_fd_tests",
+        "exit_code": 0,
+        "passed": 13,
+        "log": "F:\\crysoacu2\\artifacts\\apt-180-20260930\\root-read-open-native-8.log"
+      },
+      {
+        "filter": "native_transfer::tests",
+        "exit_code": 0,
+        "passed": 10,
+        "log": "F:\\crysoacu2\\artifacts\\apt-180-20260930\\root-read-open-native-9.log"
+      },
+      {
+        "filter": "exec_",
+        "exit_code": 0,
+        "passed": 18,
+        "log": "F:\\crysoacu2\\artifacts\\apt-180-20260930\\root-read-open-native-10.log"
+      }
+    ],
+    "source_commit": "0265034690077a26bbf6d4734cecc98b2ab435eb"
+  },
+  "native_scope_note": "Native tests used 0265034; subsequent production differences are regenerated DEF files with the same set of export lines. The final packaged guest cohort and full installation use 22df00b.",
+  "packaged_guests": [
+    {
+      "pid": 1,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-d1ca9547fdc44366822913768623a573/NativeReadOpenProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.4189,
+      "request_to_exit_ms": 146.0585,
+      "activation_to_exit_ms": 145.6396,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 46.875,
+        "kernel_ms": 78.125,
+        "total_cpu_ms": 125.0,
+        "cycles": 371756991,
+        "page_faults": 9408
+      },
+      "prepared_working_set_bytes": 13111296,
+      "cpu_metrics": {
+        "user_ms": 62.5,
+        "kernel_ms": 78.125,
+        "total_cpu_ms": 140.625,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 15448,
+        "read_bytes": 8518471,
+        "write_bytes": 9379,
+        "read_ops": 247,
+        "write_ops": 113,
+        "other_ops": 10688,
+        "other_bytes": 409791
+      },
+      "probe": "NativeReadOpenProbe"
+    },
+    {
+      "pid": 2,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-d1ca9547fdc44366822913768623a573/RelativeNativeReadProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.4043,
+      "request_to_exit_ms": 115.5199,
+      "activation_to_exit_ms": 115.1156,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 62.5,
+        "kernel_ms": 46.875,
+        "total_cpu_ms": 109.375,
+        "cycles": 312478986,
+        "page_faults": 10201
+      },
+      "prepared_working_set_bytes": 13115392,
+      "cpu_metrics": {
+        "user_ms": 93.75,
+        "kernel_ms": 78.125,
+        "total_cpu_ms": 171.875,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 13636,
+        "read_bytes": 1069707,
+        "write_bytes": 5079,
+        "read_ops": 198,
+        "write_ops": 68,
+        "other_ops": 10885,
+        "other_bytes": 443376
+      },
+      "probe": "RelativeNativeReadProbe"
+    },
+    {
+      "pid": 3,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-d1ca9547fdc44366822913768623a573/NativeReadCacheProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.4,
+      "request_to_exit_ms": 349.6249,
+      "activation_to_exit_ms": 349.2249,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 78.125,
+        "kernel_ms": 78.125,
+        "total_cpu_ms": 156.25,
+        "cycles": 473794771,
+        "page_faults": 20576
+      },
+      "prepared_working_set_bytes": 13119488,
+      "cpu_metrics": {
+        "user_ms": 281.25,
+        "kernel_ms": 296.875,
+        "total_cpu_ms": 578.125,
+        "processes": 9,
+        "active_processes": 2,
+        "page_faults": 89451,
+        "read_bytes": 13667344,
+        "write_bytes": 110470,
+        "read_ops": 682,
+        "write_ops": 446,
+        "other_ops": 23059,
+        "other_bytes": 977057
+      },
+      "probe": "NativeReadCacheProbe"
+    },
+    {
+      "pid": 4,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-d1ca9547fdc44366822913768623a573/ProcCredentialsProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3241,
+      "request_to_exit_ms": 421.8697,
+      "activation_to_exit_ms": 421.5456,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 62.5,
+        "kernel_ms": 78.125,
+        "total_cpu_ms": 140.625,
+        "cycles": 364032457,
+        "page_faults": 15378
+      },
+      "prepared_working_set_bytes": 13111296,
+      "cpu_metrics": {
+        "user_ms": 265.625,
+        "kernel_ms": 218.75,
+        "total_cpu_ms": 484.375,
+        "processes": 4,
+        "active_processes": 0,
+        "page_faults": 69688,
+        "read_bytes": 17876149,
+        "write_bytes": 25499,
+        "read_ops": 710,
+        "write_ops": 293,
+        "other_ops": 29752,
+        "other_bytes": 1242223
+      },
+      "probe": "ProcCredentialsProbe"
+    },
+    {
+      "pid": 10,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-d1ca9547fdc44366822913768623a573/NamespaceServicesProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.4053,
+      "request_to_exit_ms": 273.7475,
+      "activation_to_exit_ms": 273.3422,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 31.25,
+        "kernel_ms": 109.375,
+        "total_cpu_ms": 140.625,
+        "cycles": 458584711,
+        "page_faults": 17289
+      },
+      "prepared_working_set_bytes": 13135872,
+      "cpu_metrics": {
+        "user_ms": 109.375,
+        "kernel_ms": 250.0,
+        "total_cpu_ms": 359.375,
+        "processes": 4,
+        "active_processes": 0,
+        "page_faults": 50784,
+        "read_bytes": 2153850,
+        "write_bytes": 45769,
+        "read_ops": 632,
+        "write_ops": 407,
+        "other_ops": 16239,
+        "other_bytes": 673902
+      },
+      "probe": "NamespaceServicesProbe"
+    },
+    {
+      "pid": 12,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-d1ca9547fdc44366822913768623a573/ForkProviderMetadataProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.2827,
+      "request_to_exit_ms": 160.6726,
+      "activation_to_exit_ms": 160.3899,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 0.0,
+        "kernel_ms": 93.75,
+        "total_cpu_ms": 93.75,
+        "cycles": 259391809,
+        "page_faults": 13966
+      },
+      "prepared_working_set_bytes": 13127680,
+      "cpu_metrics": {
+        "user_ms": 62.5,
+        "kernel_ms": 156.25,
+        "total_cpu_ms": 218.75,
+        "processes": 2,
+        "active_processes": -1,
+        "page_faults": 36327,
+        "read_bytes": 454233,
+        "write_bytes": 23241,
+        "read_ops": 324,
+        "write_ops": 244,
+        "other_ops": 8876,
+        "other_bytes": 389967
+      },
+      "probe": "ForkProviderMetadataProbe"
+    },
+    {
+      "pid": 15,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-d1ca9547fdc44366822913768623a573/ForkPrewarmPoolProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 3.9601,
+      "request_to_exit_ms": 933.3964,
+      "activation_to_exit_ms": 929.4363,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 31.25,
+        "kernel_ms": 312.5,
+        "total_cpu_ms": 343.75,
+        "cycles": 886658532,
+        "page_faults": 30444
+      },
+      "prepared_working_set_bytes": 13139968,
+      "cpu_metrics": {
+        "user_ms": 453.125,
+        "kernel_ms": 1156.25,
+        "total_cpu_ms": 1609.375,
+        "processes": 33,
+        "active_processes": 0,
+        "page_faults": 247426,
+        "read_bytes": 2174343,
+        "write_bytes": 206806,
+        "read_ops": 2224,
+        "write_ops": 1985,
+        "other_ops": 46726,
+        "other_bytes": 2081695
+      },
+      "probe": "ForkPrewarmPoolProbe"
+    },
+    {
+      "pid": 18,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-d1ca9547fdc44366822913768623a573/ForkNativeTransferProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3441,
+      "request_to_exit_ms": 258.185,
+      "activation_to_exit_ms": 257.8409,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 15.625,
+        "kernel_ms": 109.375,
+        "total_cpu_ms": 125.0,
+        "cycles": 363518015,
+        "page_faults": 14734
+      },
+      "prepared_working_set_bytes": 13139968,
+      "cpu_metrics": {
+        "user_ms": 78.125,
+        "kernel_ms": 250.0,
+        "total_cpu_ms": 328.125,
+        "processes": 4,
+        "active_processes": 0,
+        "page_faults": 56199,
+        "read_bytes": 8775285,
+        "write_bytes": 29567,
+        "read_ops": 493,
+        "write_ops": 264,
+        "other_ops": 17803,
+        "other_bytes": 749352
+      },
+      "probe": "ForkNativeTransferProbe"
+    },
+    {
+      "pid": 22,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-d1ca9547fdc44366822913768623a573/ConcurrentVforkProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.5306,
+      "request_to_exit_ms": 914.7075,
+      "activation_to_exit_ms": 914.1769,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 156.25,
+        "kernel_ms": 328.125,
+        "total_cpu_ms": 484.375,
+        "cycles": 1719790136,
+        "page_faults": 73572
+      },
+      "prepared_working_set_bytes": 13139968,
+      "cpu_metrics": {
+        "user_ms": 1656.25,
+        "kernel_ms": 2875.0,
+        "total_cpu_ms": 4531.25,
+        "processes": 97,
+        "active_processes": 0,
+        "page_faults": 686201,
+        "read_bytes": 3291847,
+        "write_bytes": 528811,
+        "read_ops": 6057,
+        "write_ops": 5554,
+        "other_ops": 116236,
+        "other_bytes": 4969204
+      },
+      "probe": "ConcurrentVforkProbe"
+    },
+    {
+      "pid": 50,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-d1ca9547fdc44366822913768623a573/ExecPrewarmPoolProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.2068,
+      "request_to_exit_ms": 2912.3109,
+      "activation_to_exit_ms": 2912.1041,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 62.5,
+        "kernel_ms": 31.25,
+        "total_cpu_ms": 93.75,
+        "cycles": 308164432,
+        "page_faults": 17545
+      },
+      "prepared_working_set_bytes": 13131776,
+      "cpu_metrics": {
+        "user_ms": 1234.375,
+        "kernel_ms": 2250.0,
+        "total_cpu_ms": 3484.375,
+        "processes": 26,
+        "active_processes": 0,
+        "page_faults": 578376,
+        "read_bytes": 202242844,
+        "write_bytes": 193882,
+        "read_ops": 6278,
+        "write_ops": 2336,
+        "other_ops": 257547,
+        "other_bytes": 10883437
+      },
+      "probe": "ExecPrewarmPoolProbe"
+    },
+    {
+      "pid": 61,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-d1ca9547fdc44366822913768623a573/ProcessExitBoundaryProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3785,
+      "request_to_exit_ms": 5430.5673,
+      "activation_to_exit_ms": 5430.1888,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 265.625,
+        "kernel_ms": 1765.625,
+        "total_cpu_ms": 2031.25,
+        "cycles": 6357272686,
+        "page_faults": 363956
+      },
+      "prepared_working_set_bytes": 13139968,
+      "cpu_metrics": {
+        "user_ms": 5359.375,
+        "kernel_ms": 8265.625,
+        "total_cpu_ms": 13625.0,
+        "processes": 307,
+        "active_processes": 0,
+        "page_faults": 2264800,
+        "read_bytes": 123716021,
+        "write_bytes": 1920908,
+        "read_ops": 19544,
+        "write_ops": 17591,
+        "other_ops": 378868,
+        "other_bytes": 16893298
+      },
+      "probe": "ProcessExitBoundaryProbe"
+    },
+    {
+      "pid": 100,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-d1ca9547fdc44366822913768623a573/PthreadSharedMutexProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3549,
+      "request_to_exit_ms": 1777.8173,
+      "activation_to_exit_ms": 1777.4624,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 109.375,
+        "kernel_ms": 468.75,
+        "total_cpu_ms": 578.125,
+        "cycles": 1844862299,
+        "page_faults": 82472
+      },
+      "prepared_working_set_bytes": 13156352,
+      "cpu_metrics": {
+        "user_ms": 1625.0,
+        "kernel_ms": 2531.25,
+        "total_cpu_ms": 4156.25,
+        "processes": 104,
+        "active_processes": 0,
+        "page_faults": 598730,
+        "read_bytes": 1708623,
+        "write_bytes": 658099,
+        "read_ops": 6066,
+        "write_ops": 5848,
+        "other_ops": 104569,
+        "other_bytes": 4699130
+      },
+      "probe": "PthreadSharedMutexProbe"
+    },
+    {
+      "pid": 105,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-d1ca9547fdc44366822913768623a573/PthreadRobustProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3729,
+      "request_to_exit_ms": 193.0057,
+      "activation_to_exit_ms": 192.6328,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 78.125,
+        "kernel_ms": 93.75,
+        "total_cpu_ms": 171.875,
+        "cycles": 341226556,
+        "page_faults": 18208
+      },
+      "prepared_working_set_bytes": 13139968,
+      "cpu_metrics": {
+        "user_ms": 125.0,
+        "kernel_ms": 171.875,
+        "total_cpu_ms": 296.875,
+        "processes": 5,
+        "active_processes": 0,
+        "page_faults": 39964,
+        "read_bytes": 1076250,
+        "write_bytes": 30224,
+        "read_ops": 409,
+        "write_ops": 288,
+        "other_ops": 11806,
+        "other_bytes": 510224
+      },
+      "probe": "PthreadRobustProbe"
+    },
+    {
+      "pid": 404,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-d1ca9547fdc44366822913768623a573/PthreadRobustAliasesProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3818,
+      "request_to_exit_ms": 68.6607,
+      "activation_to_exit_ms": 68.2789,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 15.625,
+        "kernel_ms": 46.875,
+        "total_cpu_ms": 62.5,
+        "cycles": 189227637,
+        "page_faults": 9527
+      },
+      "prepared_working_set_bytes": 13131776,
+      "cpu_metrics": {
+        "user_ms": 31.25,
+        "kernel_ms": 93.75,
+        "total_cpu_ms": 125.0,
+        "processes": 0,
+        "active_processes": -1,
+        "page_faults": 12139,
+        "read_bytes": 432433,
+        "write_bytes": 4651,
+        "read_ops": 136,
+        "write_ops": 57,
+        "other_ops": 7122,
+        "other_bytes": 312341
+      },
+      "probe": "PthreadRobustAliasesProbe"
+    },
+    {
+      "pid": 500,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-d1ca9547fdc44366822913768623a573/FutexSignalRestartProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 4.0824,
+      "request_to_exit_ms": 181.3578,
+      "activation_to_exit_ms": 177.2754,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 46.875,
+        "kernel_ms": 62.5,
+        "total_cpu_ms": 109.375,
+        "cycles": 305793556,
+        "page_faults": 12364
+      },
+      "prepared_working_set_bytes": 13144064,
+      "cpu_metrics": {
+        "user_ms": 62.5,
+        "kernel_ms": 78.125,
+        "total_cpu_ms": 140.625,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 15889,
+        "read_bytes": 935574,
+        "write_bytes": 7343,
+        "read_ops": 206,
+        "write_ops": 89,
+        "other_ops": 8759,
+        "other_bytes": 373160
+      },
+      "probe": "FutexSignalRestartProbe"
+    },
+    {
+      "pid": 501,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-d1ca9547fdc44366822913768623a573/AllocationGrowthProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3575,
+      "request_to_exit_ms": 178.9488,
+      "activation_to_exit_ms": 178.5913,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 62.5,
+        "kernel_ms": 140.625,
+        "total_cpu_ms": 203.125,
+        "cycles": 577124376,
+        "page_faults": 19655
+      },
+      "prepared_working_set_bytes": 13127680,
+      "cpu_metrics": {
+        "user_ms": 78.125,
+        "kernel_ms": 171.875,
+        "total_cpu_ms": 250.0,
+        "processes": 2,
+        "active_processes": 0,
+        "page_faults": 29627,
+        "read_bytes": 1642908,
+        "write_bytes": 13261,
+        "read_ops": 291,
+        "write_ops": 142,
+        "other_ops": 11171,
+        "other_bytes": 475826
+      },
+      "probe": "AllocationGrowthProbe"
+    }
+  ],
+  "idle": {
+    "cpu_ms": 0.0,
+    "active_processes": 7,
+    "stats": {
+      "Stats": {
+        "processes": 2,
+        "clients": 3,
+        "objects": 0,
+        "transactions": 0
+      }
+    },
+    "members": [
+      {
+        "pid": 37988,
+        "parent": 25720,
+        "name": "init.exe",
+        "role": "other",
+        "first_argument": "--pipe"
+      },
+      {
+        "pid": 16356,
+        "parent": 37988,
+        "name": "worker.exe",
+        "role": "native-exec",
+        "first_argument": "--kinakaze-exec-pool"
+      },
+      {
+        "pid": 7892,
+        "parent": 37988,
+        "name": "worker.exe",
+        "role": "native-exec",
+        "first_argument": "--kinakaze-exec-pool"
+      },
+      {
+        "pid": 22872,
+        "parent": 37988,
+        "name": "worker.exe",
+        "role": "native-fork",
+        "first_argument": "--kinakaze-fork"
+      },
+      {
+        "pid": 17900,
+        "parent": 37988,
+        "name": "worker.exe",
+        "role": "command-pool",
+        "first_argument": "guest-pool"
+      },
+      {
+        "pid": 10204,
+        "parent": 37988,
+        "name": "worker.exe",
+        "role": "native-fork",
+        "first_argument": "--kinakaze-fork"
+      },
+      {
+        "pid": 31980,
+        "parent": 37988,
+        "name": "worker.exe",
+        "role": "command-pool",
+        "first_argument": "guest-pool"
+      }
+    ]
+  },
+  "export_generator_tests_passed": 25,
+  "native_modules_checked": 29,
+  "guest_exports_checked": 5971,
+  "evidence": {
+    "artifacts/apt-180-20260930/root-read-open-native-build.jsonl": "df4872c462c8cda6ee51832eb834b6a9e43d481b6a9f742399e4159b5bf48208",
+    "artifacts/apt-180-20260930/root-read-open-native-verified.json": "3e6ed3eae74b14b70b3ee706388f6371a2bf94fc2f6e520943e0cca01b144c41",
+    "artifacts/apt-180-20260930/root-read-open-guests/results.json": "b47ea83703297b96241a0c4d82ba8be899bf2ae1c1186b4605ab20b9375a0e41",
+    "artifacts/apt-180-20260930/root-read-open-export-tests.log": "8a5c51c64e744308ec376abdf3deb4cba28056b8b92288cf8131c66817c02d0a",
+    "artifacts/apt-180-20260930/root-read-open-final-build.jsonl": "e41a1f57c47d90c510274167d12916d24766c3fe234a907930a6236342a9861a",
+    "artifacts/apt-180-20260930/root-read-open-final-build.log": "ca5f4feaec306f11302396342fed1f8acf26ac9b5a02f493b168b45384932693",
+    "artifacts/apt-180-20260930/root-read-open-final-exports.log": "b8ba860d9cffb1f07e8155bba2b9161dfdf723eddb2c30b2527db75b6672a904",
+    "artifacts/apt-180-20260930/root-read-open-package.log": "ac036808b8ffeeecbfdb3ef897470d2f6efddbba614e1090e73897006a881eea",
+    "artifacts/apt-180-20260930/root-read-open-install.py": "9f0b8293769f7f721fcba5d4f57843762ad6af804634a4248f91640289c65248",
+    "artifacts/apt-180-20260930/root-read-open-install.json": "57cc7c4b844fdfa504d9909a2daeb77039d11c2a03305a67878a0ae965bb43c8",
+    "artifacts/apt-180-20260930/root-read-open-host.jsonl": "a54edc3b69dfdc29f39ebd5efa609c906384456fc475e7795e73c1f4b0fa82b0",
+    "artifacts/apt-180-20260930/root-read-open-quiet.json": "814b3675806967c7b7edd448a1acf8bcfe4a4e4d50ee531c543ee05093ac268e",
+    "artifacts/apt-180-20260930/root-read-open-full-summary.json": "2624a7822ab74384d62cd3c3ce46b4a129fe554aa3bd4c32265a2e934e7c103f",
+    "artifacts/apt-180-20260930/root-read-open-setup.log": "a119988c88eeb891de52240cc36a20a615a596d894e8558d4690049c5f7db8c9",
+    "artifacts/apt-180-20260930/root-read-open-quiet.json.attempt1": "3e49728d870bc2223dd98682e1e417fb5b58ec638830a5dbadd180a9ce69a8a1",
+    "artifacts/apt-180-20260930/root-read-open-quiet.json.attempt2": "765cf8a6bcb18ed9248808e96fc623881e7be4b5ac941c89c7911383da709c97",
+    "artifacts/node-install-20260930/root-read-open-install/report.json": "af3a98202316024d27761e382f445a4d9308ded4f9c10104e8449b4dbba933e8"
+  }
+}
