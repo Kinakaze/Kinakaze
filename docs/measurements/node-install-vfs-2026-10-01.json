@@ -1,0 +1,5198 @@
+{
+  "schema": 1,
+  "diagnostic": true,
+  "target_met": false,
+  "source": "Measured R8 source with aggregate diagnostics only; source-integrated-r8 is preserved.",
+  "passed": true,
+  "installed_packages": 357,
+  "command_milliseconds": 227009.4473,
+  "installation_job": {
+    "user_ms": 111484.375,
+    "kernel_ms": 209062.5,
+    "total_cpu_ms": 320546.875,
+    "processes": 5391,
+    "active_processes": 0,
+    "page_faults": 43312782,
+    "read_bytes": 897979923,
+    "write_bytes": 413060281,
+    "read_ops": 577142,
+    "write_ops": 371025,
+    "other_ops": 12644800,
+    "other_bytes": 415733474
+  },
+  "observer_and_repository_cpu_seconds": 6.53125,
+  "counter_snapshot_and_serialization_outside_command_ms": 100678.65130000003,
+  "interpretation": "Inclusive wall durations overlap across nested operations and concurrent processes. They are not additive CPU costs or predicted savings. Maxima are lifetime bounds, not phase-isolated maxima.",
+  "operations": [
+    {
+      "index": 16,
+      "operation": "write",
+      "entered": 46913,
+      "completed": 46913,
+      "seconds": 49.6466634,
+      "mean_microseconds": 1058.2709142455185,
+      "maximum_lifetime_milliseconds": 96.8122
+    },
+    {
+      "index": 42,
+      "operation": "sync_descriptor",
+      "entered": 30483,
+      "completed": 30483,
+      "seconds": 32.2941425,
+      "mean_microseconds": 1059.4148377784338,
+      "maximum_lifetime_milliseconds": 8.7553
+    },
+    {
+      "index": 15,
+      "operation": "read",
+      "entered": 99871,
+      "completed": 99871,
+      "seconds": 29.8961776,
+      "mean_microseconds": 299.34793483593836,
+      "maximum_lifetime_milliseconds": 7226.9753
+    },
+    {
+      "index": 0,
+      "operation": "openat",
+      "entered": 91487,
+      "completed": 91487,
+      "seconds": 25.8451398,
+      "mean_microseconds": 282.5006809710669,
+      "maximum_lifetime_milliseconds": 13.3454
+    },
+    {
+      "index": 43,
+      "operation": "sync_file_range",
+      "entered": 47960,
+      "completed": 47960,
+      "seconds": 15.1116771,
+      "mean_microseconds": 315.0891805671393,
+      "maximum_lifetime_milliseconds": 10.7737
+    },
+    {
+      "index": 9,
+      "operation": "rename",
+      "entered": 59487,
+      "completed": 59487,
+      "seconds": 12.606557,
+      "mean_microseconds": 211.92120967606368,
+      "maximum_lifetime_milliseconds": 22.141
+    },
+    {
+      "index": 24,
+      "operation": "object_open",
+      "entered": 247443,
+      "completed": 247443,
+      "seconds": 10.2268111,
+      "mean_microseconds": 41.32996730560169,
+      "maximum_lifetime_milliseconds": 2.4465
+    },
+    {
+      "index": 21,
+      "operation": "restore_fork_state",
+      "entered": 5370,
+      "completed": 5370,
+      "seconds": 7.8455112,
+      "mean_microseconds": 1460.9890502793296,
+      "maximum_lifetime_milliseconds": 4.5461
+    },
+    {
+      "index": 25,
+      "operation": "object_reopen",
+      "entered": 171539,
+      "completed": 171539,
+      "seconds": 7.3791388,
+      "mean_microseconds": 43.01726604445636,
+      "maximum_lifetime_milliseconds": 6.0731
+    },
+    {
+      "index": 17,
+      "operation": "close",
+      "entered": 113927,
+      "completed": 113927,
+      "seconds": 4.4905411,
+      "mean_microseconds": 39.415951442590426,
+      "maximum_lifetime_milliseconds": 5.0533
+    },
+    {
+      "index": 26,
+      "operation": "create_inode",
+      "entered": 24892,
+      "completed": 24892,
+      "seconds": 4.0129012,
+      "mean_microseconds": 161.2124859392576,
+      "maximum_lifetime_milliseconds": 13.2336
+    },
+    {
+      "index": 1,
+      "operation": "stat",
+      "entered": 20699,
+      "completed": 20699,
+      "seconds": 3.5318539,
+      "mean_microseconds": 170.62920430938692,
+      "maximum_lifetime_milliseconds": 8.3502
+    },
+    {
+      "index": 6,
+      "operation": "fchown",
+      "entered": 24729,
+      "completed": 24729,
+      "seconds": 3.2907984,
+      "mean_microseconds": 133.07446318088077,
+      "maximum_lifetime_milliseconds": 2.5311
+    },
+    {
+      "index": 45,
+      "operation": "metadata_path_prepare",
+      "entered": 36968,
+      "completed": 36968,
+      "seconds": 3.2487295,
+      "mean_microseconds": 87.87950389526077,
+      "maximum_lifetime_milliseconds": 0.643
+    },
+    {
+      "index": 11,
+      "operation": "rmdir",
+      "entered": 88466,
+      "completed": 88466,
+      "seconds": 2.4203148,
+      "mean_microseconds": 27.358700517713018,
+      "maximum_lifetime_milliseconds": 0.6277
+    },
+    {
+      "index": 32,
+      "operation": "verity_writable",
+      "entered": 55942,
+      "completed": 55942,
+      "seconds": 2.3230739,
+      "mean_microseconds": 41.52647206034822,
+      "maximum_lifetime_milliseconds": 0.3625
+    },
+    {
+      "index": 10,
+      "operation": "mkdir",
+      "entered": 4577,
+      "completed": 4577,
+      "seconds": 2.2909081,
+      "mean_microseconds": 500.5261306532663,
+      "maximum_lifetime_milliseconds": 6.618
+    },
+    {
+      "index": 40,
+      "operation": "ofd_metadata",
+      "entered": 55339,
+      "completed": 55339,
+      "seconds": 2.2460723,
+      "mean_microseconds": 40.58751151990459,
+      "maximum_lifetime_milliseconds": 2.4755
+    },
+    {
+      "index": 2,
+      "operation": "lstat",
+      "entered": 32115,
+      "completed": 32115,
+      "seconds": 1.7164755,
+      "mean_microseconds": 53.44778141055581,
+      "maximum_lifetime_milliseconds": 0.7579
+    },
+    {
+      "index": 22,
+      "operation": "ea_read_values",
+      "entered": 489950,
+      "completed": 489950,
+      "seconds": 1.7012056,
+      "mean_microseconds": 3.4722024696397593,
+      "maximum_lifetime_milliseconds": 0.3232
+    },
+    {
+      "index": 7,
+      "operation": "fchmod",
+      "entered": 25130,
+      "completed": 25130,
+      "seconds": 1.5274805,
+      "mean_microseconds": 60.78314763231198,
+      "maximum_lifetime_milliseconds": 6.0761
+    },
+    {
+      "index": 51,
+      "operation": "nt_query_ea_submission",
+      "entered": 489950,
+      "completed": 489950,
+      "seconds": 1.4975305,
+      "mean_microseconds": 3.0564965812838043,
+      "maximum_lifetime_milliseconds": 0.1297
+    },
+    {
+      "index": 35,
+      "operation": "inode_lock_name",
+      "entered": 114172,
+      "completed": 114172,
+      "seconds": 1.2168832,
+      "mean_microseconds": 10.658333041376169,
+      "maximum_lifetime_milliseconds": 0.1319
+    },
+    {
+      "index": 20,
+      "operation": "portable_fork_state",
+      "entered": 3399,
+      "completed": 3399,
+      "seconds": 1.1059796,
+      "mean_microseconds": 325.3838187702266,
+      "maximum_lifetime_milliseconds": 1.1034
+    },
+    {
+      "index": 23,
+      "operation": "ea_write",
+      "entered": 36150,
+      "completed": 36150,
+      "seconds": 0.7495385,
+      "mean_microseconds": 20.73412171507607,
+      "maximum_lifetime_milliseconds": 3.657
+    },
+    {
+      "index": 48,
+      "operation": "stat_open_query",
+      "entered": 16539,
+      "completed": 16539,
+      "seconds": 0.645431,
+      "mean_microseconds": 39.024789890561706,
+      "maximum_lifetime_milliseconds": 0.3132
+    },
+    {
+      "index": 19,
+      "operation": "portable_exec_state",
+      "entered": 1971,
+      "completed": 1971,
+      "seconds": 0.6421261,
+      "mean_microseconds": 325.7869609335363,
+      "maximum_lifetime_milliseconds": 2.6308
+    },
+    {
+      "index": 5,
+      "operation": "chown_path",
+      "entered": 4588,
+      "completed": 4588,
+      "seconds": 0.6395867,
+      "mean_microseconds": 139.40425021795988,
+      "maximum_lifetime_milliseconds": 1.1664
+    },
+    {
+      "index": 36,
+      "operation": "inode_key",
+      "entered": 104827,
+      "completed": 104827,
+      "seconds": 0.6226034,
+      "mean_microseconds": 5.939341963425453,
+      "maximum_lifetime_milliseconds": 0.6865
+    },
+    {
+      "index": 46,
+      "operation": "stat_metadata_record",
+      "entered": 61522,
+      "completed": 61522,
+      "seconds": 0.5663164,
+      "mean_microseconds": 9.205103865283963,
+      "maximum_lifetime_milliseconds": 0.1418
+    },
+    {
+      "index": 31,
+      "operation": "verity_size",
+      "entered": 7194,
+      "completed": 7194,
+      "seconds": 0.5415302,
+      "mean_microseconds": 75.27525715874339,
+      "maximum_lifetime_milliseconds": 0.8566
+    },
+    {
+      "index": 8,
+      "operation": "unlink",
+      "entered": 2907,
+      "completed": 2907,
+      "seconds": 0.5381325,
+      "mean_microseconds": 185.11609907120743,
+      "maximum_lifetime_milliseconds": 2.5714
+    },
+    {
+      "index": 4,
+      "operation": "chmod_path",
+      "entered": 3803,
+      "completed": 3803,
+      "seconds": 0.5199559,
+      "mean_microseconds": 136.7225611359453,
+      "maximum_lifetime_milliseconds": 1.3021
+    },
+    {
+      "index": 47,
+      "operation": "stat_with_query",
+      "entered": 33875,
+      "completed": 33875,
+      "seconds": 0.4871987,
+      "mean_microseconds": 14.382249446494464,
+      "maximum_lifetime_milliseconds": 0.3408
+    },
+    {
+      "index": 3,
+      "operation": "fstat",
+      "entered": 18103,
+      "completed": 18103,
+      "seconds": 0.2952068,
+      "mean_microseconds": 16.307065127326965,
+      "maximum_lifetime_milliseconds": 0.2467
+    },
+    {
+      "index": 18,
+      "operation": "pipe_create",
+      "entered": 1591,
+      "completed": 1591,
+      "seconds": 0.2664087,
+      "mean_microseconds": 167.4473287240729,
+      "maximum_lifetime_milliseconds": 0.4882
+    },
+    {
+      "index": 27,
+      "operation": "object_read_at",
+      "entered": 23254,
+      "completed": 23254,
+      "seconds": 0.2567773,
+      "mean_microseconds": 11.042285198245462,
+      "maximum_lifetime_milliseconds": 0.7599
+    },
+    {
+      "index": 14,
+      "operation": "ftruncate",
+      "entered": 2142,
+      "completed": 2142,
+      "seconds": 0.2385024,
+      "mean_microseconds": 111.34565826330532,
+      "maximum_lifetime_milliseconds": 0.9831
+    },
+    {
+      "index": 38,
+      "operation": "native_pin",
+      "entered": 133782,
+      "completed": 133782,
+      "seconds": 0.136978,
+      "mean_microseconds": 1.0238896114574456,
+      "maximum_lifetime_milliseconds": 0.1122
+    },
+    {
+      "index": 13,
+      "operation": "lseek",
+      "entered": 37597,
+      "completed": 37597,
+      "seconds": 0.0885571,
+      "mean_microseconds": 2.3554299545176476,
+      "maximum_lifetime_milliseconds": 0.0943
+    },
+    {
+      "index": 39,
+      "operation": "read_pin",
+      "entered": 146784,
+      "completed": 146784,
+      "seconds": 0.061181,
+      "mean_microseconds": 0.41680973403095706,
+      "maximum_lifetime_milliseconds": 0.0954
+    },
+    {
+      "index": 30,
+      "operation": "verity_lock",
+      "entered": 2168,
+      "completed": 2168,
+      "seconds": 0.0373349,
+      "mean_microseconds": 17.22089483394834,
+      "maximum_lifetime_milliseconds": 0.1464
+    },
+    {
+      "index": 44,
+      "operation": "permissions_check",
+      "entered": 57945,
+      "completed": 57945,
+      "seconds": 0.0326621,
+      "mean_microseconds": 0.5636741737854862,
+      "maximum_lifetime_milliseconds": 0.1559
+    },
+    {
+      "index": 29,
+      "operation": "object_granted_access",
+      "entered": 20354,
+      "completed": 20354,
+      "seconds": 0.0065844,
+      "mean_microseconds": 0.3234941534833448,
+      "maximum_lifetime_milliseconds": 0.0061
+    },
+    {
+      "index": 37,
+      "operation": "inode_mutex_wait",
+      "entered": 11094,
+      "completed": 11094,
+      "seconds": 0.0032555,
+      "mean_microseconds": 0.2934469082386876,
+      "maximum_lifetime_milliseconds": 0.0272
+    },
+    {
+      "index": 41,
+      "operation": "ofd_read_cache",
+      "entered": 15063,
+      "completed": 15063,
+      "seconds": 0.0025777,
+      "mean_microseconds": 0.17112792936334062,
+      "maximum_lifetime_milliseconds": 0.013
+    },
+    {
+      "index": 34,
+      "operation": "verity_read_image",
+      "entered": 22,
+      "completed": 22,
+      "seconds": 0.0009417,
+      "mean_microseconds": 42.804545454545455,
+      "maximum_lifetime_milliseconds": 0.0602
+    }
+  ],
+  "program_operations": {
+    "<argv unpublished>": [
+      {
+        "index": 16,
+        "operation": "write",
+        "entered": 6861,
+        "completed": 6861,
+        "seconds": 47.2602781,
+        "mean_microseconds": 6888.249249380557,
+        "maximum_lifetime_milliseconds": 96.8122
+      },
+      {
+        "index": 21,
+        "operation": "restore_fork_state",
+        "entered": 3399,
+        "completed": 3399,
+        "seconds": 5.7629543,
+        "mean_microseconds": 1695.4852309502794,
+        "maximum_lifetime_milliseconds": 4.5461
+      },
+      {
+        "index": 19,
+        "operation": "portable_exec_state",
+        "entered": 1970,
+        "completed": 1970,
+        "seconds": 0.6418936,
+        "mean_microseconds": 325.8343147208122,
+        "maximum_lifetime_milliseconds": 2.6308
+      },
+      {
+        "index": 24,
+        "operation": "object_open",
+        "entered": 16211,
+        "completed": 16211,
+        "seconds": 0.5868824,
+        "mean_microseconds": 36.20272654370489,
+        "maximum_lifetime_milliseconds": 2.4465
+      },
+      {
+        "index": 17,
+        "operation": "close",
+        "entered": 20005,
+        "completed": 20005,
+        "seconds": 0.5491957,
+        "mean_microseconds": 27.452921769557612,
+        "maximum_lifetime_milliseconds": 0.3512
+      },
+      {
+        "index": 0,
+        "operation": "openat",
+        "entered": 1226,
+        "completed": 1226,
+        "seconds": 0.4197678,
+        "mean_microseconds": 342.38809135399674,
+        "maximum_lifetime_milliseconds": 1.025
+      },
+      {
+        "index": 25,
+        "operation": "object_reopen",
+        "entered": 6826,
+        "completed": 6826,
+        "seconds": 0.3218733,
+        "mean_microseconds": 47.154014063873426,
+        "maximum_lifetime_milliseconds": 0.2158
+      },
+      {
+        "index": 10,
+        "operation": "mkdir",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.2502758,
+        "mean_microseconds": 701.0526610644257,
+        "maximum_lifetime_milliseconds": 6.618
+      },
+      {
+        "index": 15,
+        "operation": "read",
+        "entered": 4896,
+        "completed": 4896,
+        "seconds": 0.1833813,
+        "mean_microseconds": 37.455330882352946,
+        "maximum_lifetime_milliseconds": 0.4121
+      },
+      {
+        "index": 27,
+        "operation": "object_read_at",
+        "entered": 13732,
+        "completed": 13732,
+        "seconds": 0.1631028,
+        "mean_microseconds": 11.877570637926011,
+        "maximum_lifetime_milliseconds": 0.6581
+      },
+      {
+        "index": 22,
+        "operation": "ea_read_values",
+        "entered": 34347,
+        "completed": 34347,
+        "seconds": 0.120009,
+        "mean_microseconds": 3.4940169447113285,
+        "maximum_lifetime_milliseconds": 0.0563
+      },
+      {
+        "index": 51,
+        "operation": "nt_query_ea_submission",
+        "entered": 34347,
+        "completed": 34347,
+        "seconds": 0.1010168,
+        "mean_microseconds": 2.941066177540979,
+        "maximum_lifetime_milliseconds": 0.0556
+      },
+      {
+        "index": 35,
+        "operation": "inode_lock_name",
+        "entered": 15480,
+        "completed": 15480,
+        "seconds": 0.0949538,
+        "mean_microseconds": 6.133966408268734,
+        "maximum_lifetime_milliseconds": 0.0996
+      },
+      {
+        "index": 47,
+        "operation": "stat_with_query",
+        "entered": 6161,
+        "completed": 6161,
+        "seconds": 0.0825618,
+        "mean_microseconds": 13.400714169777633,
+        "maximum_lifetime_milliseconds": 0.0833
+      },
+      {
+        "index": 36,
+        "operation": "inode_key",
+        "entered": 15448,
+        "completed": 15448,
+        "seconds": 0.0706375,
+        "mean_microseconds": 4.5725983946141895,
+        "maximum_lifetime_milliseconds": 0.0797
+      },
+      {
+        "index": 1,
+        "operation": "stat",
+        "entered": 438,
+        "completed": 438,
+        "seconds": 0.041675,
+        "mean_microseconds": 95.14840182648402,
+        "maximum_lifetime_milliseconds": 0.2681
+      },
+      {
+        "index": 48,
+        "operation": "stat_open_query",
+        "entered": 406,
+        "completed": 406,
+        "seconds": 0.0181466,
+        "mean_microseconds": 44.69605911330049,
+        "maximum_lifetime_milliseconds": 0.1287
+      },
+      {
+        "index": 23,
+        "operation": "ea_write",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.0067449,
+        "mean_microseconds": 18.89327731092437,
+        "maximum_lifetime_milliseconds": 0.7388
+      },
+      {
+        "index": 39,
+        "operation": "read_pin",
+        "entered": 11757,
+        "completed": 11757,
+        "seconds": 0.0053396,
+        "mean_microseconds": 0.4541634770774858,
+        "maximum_lifetime_milliseconds": 0.0135
+      },
+      {
+        "index": 46,
+        "operation": "stat_metadata_record",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.0038903,
+        "mean_microseconds": 10.897198879551821,
+        "maximum_lifetime_milliseconds": 0.0342
+      },
+      {
+        "index": 20,
+        "operation": "portable_fork_state",
+        "entered": 12,
+        "completed": 12,
+        "seconds": 0.0035705,
+        "mean_microseconds": 297.5416666666667,
+        "maximum_lifetime_milliseconds": 0.4639
+      },
+      {
+        "index": 18,
+        "operation": "pipe_create",
+        "entered": 12,
+        "completed": 12,
+        "seconds": 0.0014665,
+        "mean_microseconds": 122.20833333333333,
+        "maximum_lifetime_milliseconds": 0.2832
+      },
+      {
+        "index": 3,
+        "operation": "fstat",
+        "entered": 388,
+        "completed": 388,
+        "seconds": 0.0006078,
+        "mean_microseconds": 1.5664948453608247,
+        "maximum_lifetime_milliseconds": 0.01
+      },
+      {
+        "index": 37,
+        "operation": "inode_mutex_wait",
+        "entered": 1371,
+        "completed": 1371,
+        "seconds": 0.0004929,
+        "mean_microseconds": 0.35951859956236326,
+        "maximum_lifetime_milliseconds": 0.0031
+      },
+      {
+        "index": 13,
+        "operation": "lseek",
+        "entered": 71,
+        "completed": 71,
+        "seconds": 0.0004899,
+        "mean_microseconds": 6.9,
+        "maximum_lifetime_milliseconds": 0.0104
+      },
+      {
+        "index": 29,
+        "operation": "object_granted_access",
+        "entered": 714,
+        "completed": 714,
+        "seconds": 0.0003752,
+        "mean_microseconds": 0.5254901960784314,
+        "maximum_lifetime_milliseconds": 0.0013
+      },
+      {
+        "index": 41,
+        "operation": "ofd_read_cache",
+        "entered": 1371,
+        "completed": 1371,
+        "seconds": 0.0003221,
+        "mean_microseconds": 0.2349380014587892,
+        "maximum_lifetime_milliseconds": 0.0045
+      }
+    ],
+    "dpkg-deb": [
+      {
+        "index": 21,
+        "operation": "restore_fork_state",
+        "entered": 714,
+        "completed": 714,
+        "seconds": 0.7477846,
+        "mean_microseconds": 1047.3173669467787,
+        "maximum_lifetime_milliseconds": 2.7539
+      },
+      {
+        "index": 20,
+        "operation": "portable_fork_state",
+        "entered": 1785,
+        "completed": 1785,
+        "seconds": 0.6090301,
+        "mean_microseconds": 341.1933333333333,
+        "maximum_lifetime_milliseconds": 0.8956
+      },
+      {
+        "index": 24,
+        "operation": "object_open",
+        "entered": 13566,
+        "completed": 13566,
+        "seconds": 0.517233,
+        "mean_microseconds": 38.12715612560814,
+        "maximum_lifetime_milliseconds": 0.2373
+      },
+      {
+        "index": 0,
+        "operation": "openat",
+        "entered": 1428,
+        "completed": 1428,
+        "seconds": 0.499544,
+        "mean_microseconds": 349.8207282913165,
+        "maximum_lifetime_milliseconds": 0.8997
+      },
+      {
+        "index": 25,
+        "operation": "object_reopen",
+        "entered": 4641,
+        "completed": 4641,
+        "seconds": 0.25036,
+        "mean_microseconds": 53.94527041585865,
+        "maximum_lifetime_milliseconds": 0.4746
+      },
+      {
+        "index": 18,
+        "operation": "pipe_create",
+        "entered": 1071,
+        "completed": 1071,
+        "seconds": 0.2123637,
+        "mean_microseconds": 198.28543417366947,
+        "maximum_lifetime_milliseconds": 0.4882
+      },
+      {
+        "index": 17,
+        "operation": "close",
+        "entered": 3570,
+        "completed": 3570,
+        "seconds": 0.1618164,
+        "mean_microseconds": 45.32672268907563,
+        "maximum_lifetime_milliseconds": 0.3863
+      },
+      {
+        "index": 22,
+        "operation": "ea_read_values",
+        "entered": 27132,
+        "completed": 27132,
+        "seconds": 0.1018553,
+        "mean_microseconds": 3.7540653103346604,
+        "maximum_lifetime_milliseconds": 0.0678
+      },
+      {
+        "index": 1,
+        "operation": "stat",
+        "entered": 714,
+        "completed": 714,
+        "seconds": 0.0899669,
+        "mean_microseconds": 126.00406162464985,
+        "maximum_lifetime_milliseconds": 0.298
+      },
+      {
+        "index": 51,
+        "operation": "nt_query_ea_submission",
+        "entered": 27132,
+        "completed": 27132,
+        "seconds": 0.086799,
+        "mean_microseconds": 3.1991375497567445,
+        "maximum_lifetime_milliseconds": 0.0636
+      },
+      {
+        "index": 35,
+        "operation": "inode_lock_name",
+        "entered": 8568,
+        "completed": 8568,
+        "seconds": 0.0858341,
+        "mean_microseconds": 10.01798552754435,
+        "maximum_lifetime_milliseconds": 0.1054
+      },
+      {
+        "index": 47,
+        "operation": "stat_with_query",
+        "entered": 4641,
+        "completed": 4641,
+        "seconds": 0.077069,
+        "mean_microseconds": 16.606119370825255,
+        "maximum_lifetime_milliseconds": 0.1825
+      },
+      {
+        "index": 15,
+        "operation": "read",
+        "entered": 3213,
+        "completed": 3213,
+        "seconds": 0.0745771,
+        "mean_microseconds": 23.21104886399004,
+        "maximum_lifetime_milliseconds": 0.2989
+      },
+      {
+        "index": 3,
+        "operation": "fstat",
+        "entered": 7497,
+        "completed": 7497,
+        "seconds": 0.0695863,
+        "mean_microseconds": 9.28188608776844,
+        "maximum_lifetime_milliseconds": 0.2467
+      },
+      {
+        "index": 36,
+        "operation": "inode_key",
+        "entered": 7854,
+        "completed": 7854,
+        "seconds": 0.0396893,
+        "mean_microseconds": 5.053386809269162,
+        "maximum_lifetime_milliseconds": 0.0594
+      },
+      {
+        "index": 48,
+        "operation": "stat_open_query",
+        "entered": 714,
+        "completed": 714,
+        "seconds": 0.0348625,
+        "mean_microseconds": 48.82703081232493,
+        "maximum_lifetime_milliseconds": 0.149
+      },
+      {
+        "index": 40,
+        "operation": "ofd_metadata",
+        "entered": 714,
+        "completed": 714,
+        "seconds": 0.0283701,
+        "mean_microseconds": 39.734033613445376,
+        "maximum_lifetime_milliseconds": 0.1716
+      },
+      {
+        "index": 27,
+        "operation": "object_read_at",
+        "entered": 3213,
+        "completed": 3213,
+        "seconds": 0.0168773,
+        "mean_microseconds": 5.252816682228446,
+        "maximum_lifetime_milliseconds": 0.0412
+      },
+      {
+        "index": 38,
+        "operation": "native_pin",
+        "entered": 714,
+        "completed": 714,
+        "seconds": 0.0047526,
+        "mean_microseconds": 6.656302521008404,
+        "maximum_lifetime_milliseconds": 0.0109
+      },
+      {
+        "index": 13,
+        "operation": "lseek",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.0015228,
+        "mean_microseconds": 4.265546218487395,
+        "maximum_lifetime_milliseconds": 0.0079
+      },
+      {
+        "index": 39,
+        "operation": "read_pin",
+        "entered": 3213,
+        "completed": 3213,
+        "seconds": 0.0012905,
+        "mean_microseconds": 0.4016495487083723,
+        "maximum_lifetime_milliseconds": 0.0067
+      },
+      {
+        "index": 44,
+        "operation": "permissions_check",
+        "entered": 714,
+        "completed": 714,
+        "seconds": 0.0010349,
+        "mean_microseconds": 1.4494397759103643,
+        "maximum_lifetime_milliseconds": 0.0065
+      },
+      {
+        "index": 37,
+        "operation": "inode_mutex_wait",
+        "entered": 2499,
+        "completed": 2499,
+        "seconds": 0.0006364,
+        "mean_microseconds": 0.25466186474589836,
+        "maximum_lifetime_milliseconds": 0.001
+      },
+      {
+        "index": 41,
+        "operation": "ofd_read_cache",
+        "entered": 3927,
+        "completed": 3927,
+        "seconds": 0.0005412,
+        "mean_microseconds": 0.13781512605042015,
+        "maximum_lifetime_milliseconds": 0.001
+      },
+      {
+        "index": 29,
+        "operation": "object_granted_access",
+        "entered": 714,
+        "completed": 714,
+        "seconds": 0.0003343,
+        "mean_microseconds": 0.46820728291316527,
+        "maximum_lifetime_milliseconds": 0.005
+      }
+    ],
+    "dpkg-split": [
+      {
+        "index": 21,
+        "operation": "restore_fork_state",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.3740776,
+        "mean_microseconds": 1047.8364145658263,
+        "maximum_lifetime_milliseconds": 2.1784
+      },
+      {
+        "index": 0,
+        "operation": "openat",
+        "entered": 714,
+        "completed": 714,
+        "seconds": 0.2491404,
+        "mean_microseconds": 348.9361344537815,
+        "maximum_lifetime_milliseconds": 0.7503
+      },
+      {
+        "index": 24,
+        "operation": "object_open",
+        "entered": 2499,
+        "completed": 2499,
+        "seconds": 0.1108412,
+        "mean_microseconds": 44.354221688675466,
+        "maximum_lifetime_milliseconds": 0.2188
+      },
+      {
+        "index": 25,
+        "operation": "object_reopen",
+        "entered": 1428,
+        "completed": 1428,
+        "seconds": 0.0584476,
+        "mean_microseconds": 40.9296918767507,
+        "maximum_lifetime_milliseconds": 0.1804
+      },
+      {
+        "index": 1,
+        "operation": "stat",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.0444975,
+        "mean_microseconds": 124.64285714285714,
+        "maximum_lifetime_milliseconds": 0.2531
+      },
+      {
+        "index": 15,
+        "operation": "read",
+        "entered": 714,
+        "completed": 714,
+        "seconds": 0.0347811,
+        "mean_microseconds": 48.713025210084034,
+        "maximum_lifetime_milliseconds": 0.2543
+      },
+      {
+        "index": 3,
+        "operation": "fstat",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.0303662,
+        "mean_microseconds": 85.05938375350141,
+        "maximum_lifetime_milliseconds": 0.2006
+      },
+      {
+        "index": 17,
+        "operation": "close",
+        "entered": 714,
+        "completed": 714,
+        "seconds": 0.0253296,
+        "mean_microseconds": 35.47563025210084,
+        "maximum_lifetime_milliseconds": 0.2059
+      },
+      {
+        "index": 47,
+        "operation": "stat_with_query",
+        "entered": 1428,
+        "completed": 1428,
+        "seconds": 0.0243753,
+        "mean_microseconds": 17.06953781512605,
+        "maximum_lifetime_milliseconds": 0.0862
+      },
+      {
+        "index": 22,
+        "operation": "ea_read_values",
+        "entered": 4641,
+        "completed": 4641,
+        "seconds": 0.019594,
+        "mean_microseconds": 4.22193492781728,
+        "maximum_lifetime_milliseconds": 0.0299
+      },
+      {
+        "index": 48,
+        "operation": "stat_open_query",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.0171966,
+        "mean_microseconds": 48.16974789915967,
+        "maximum_lifetime_milliseconds": 0.1383
+      },
+      {
+        "index": 51,
+        "operation": "nt_query_ea_submission",
+        "entered": 4641,
+        "completed": 4641,
+        "seconds": 0.0157578,
+        "mean_microseconds": 3.395345830639948,
+        "maximum_lifetime_milliseconds": 0.0288
+      },
+      {
+        "index": 35,
+        "operation": "inode_lock_name",
+        "entered": 1428,
+        "completed": 1428,
+        "seconds": 0.0151388,
+        "mean_microseconds": 10.601400560224091,
+        "maximum_lifetime_milliseconds": 0.0648
+      },
+      {
+        "index": 40,
+        "operation": "ofd_metadata",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.014016,
+        "mean_microseconds": 39.26050420168067,
+        "maximum_lifetime_milliseconds": 0.1132
+      },
+      {
+        "index": 27,
+        "operation": "object_read_at",
+        "entered": 714,
+        "completed": 714,
+        "seconds": 0.0087176,
+        "mean_microseconds": 12.209523809523809,
+        "maximum_lifetime_milliseconds": 0.0564
+      },
+      {
+        "index": 36,
+        "operation": "inode_key",
+        "entered": 1071,
+        "completed": 1071,
+        "seconds": 0.0060574,
+        "mean_microseconds": 5.655835667600373,
+        "maximum_lifetime_milliseconds": 0.0402
+      },
+      {
+        "index": 38,
+        "operation": "native_pin",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.0023959,
+        "mean_microseconds": 6.711204481792717,
+        "maximum_lifetime_milliseconds": 0.012
+      },
+      {
+        "index": 44,
+        "operation": "permissions_check",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.0005137,
+        "mean_microseconds": 1.4389355742296919,
+        "maximum_lifetime_milliseconds": 0.0056
+      },
+      {
+        "index": 39,
+        "operation": "read_pin",
+        "entered": 714,
+        "completed": 714,
+        "seconds": 0.0003947,
+        "mean_microseconds": 0.5528011204481793,
+        "maximum_lifetime_milliseconds": 0.0016
+      },
+      {
+        "index": 41,
+        "operation": "ofd_read_cache",
+        "entered": 1071,
+        "completed": 1071,
+        "seconds": 0.0002368,
+        "mean_microseconds": 0.22110177404295053,
+        "maximum_lifetime_milliseconds": 0.0047
+      },
+      {
+        "index": 29,
+        "operation": "object_granted_access",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.000177,
+        "mean_microseconds": 0.49579831932773105,
+        "maximum_lifetime_milliseconds": 0.0061
+      },
+      {
+        "index": 37,
+        "operation": "inode_mutex_wait",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.0001508,
+        "mean_microseconds": 0.42240896358543417,
+        "maximum_lifetime_milliseconds": 0.0043
+      }
+    ],
+    "rm": [
+      {
+        "index": 21,
+        "operation": "restore_fork_state",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.3809263,
+        "mean_microseconds": 1067.0204481792719,
+        "maximum_lifetime_milliseconds": 1.977
+      },
+      {
+        "index": 0,
+        "operation": "openat",
+        "entered": 1071,
+        "completed": 1071,
+        "seconds": 0.2594624,
+        "mean_microseconds": 242.26181139122318,
+        "maximum_lifetime_milliseconds": 0.7758
+      },
+      {
+        "index": 8,
+        "operation": "unlink",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.1207573,
+        "mean_microseconds": 338.25574229691875,
+        "maximum_lifetime_milliseconds": 1.1864
+      },
+      {
+        "index": 11,
+        "operation": "rmdir",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.0962605,
+        "mean_microseconds": 269.6372549019608,
+        "maximum_lifetime_milliseconds": 0.6277
+      },
+      {
+        "index": 2,
+        "operation": "lstat",
+        "entered": 714,
+        "completed": 714,
+        "seconds": 0.083399,
+        "mean_microseconds": 116.80532212885153,
+        "maximum_lifetime_milliseconds": 0.2596
+      },
+      {
+        "index": 17,
+        "operation": "close",
+        "entered": 2499,
+        "completed": 2499,
+        "seconds": 0.0779707,
+        "mean_microseconds": 31.20076030412165,
+        "maximum_lifetime_milliseconds": 2.1485
+      },
+      {
+        "index": 25,
+        "operation": "object_reopen",
+        "entered": 1785,
+        "completed": 1785,
+        "seconds": 0.0748293,
+        "mean_microseconds": 41.921176470588236,
+        "maximum_lifetime_milliseconds": 0.1342
+      },
+      {
+        "index": 48,
+        "operation": "stat_open_query",
+        "entered": 1071,
+        "completed": 1071,
+        "seconds": 0.0633156,
+        "mean_microseconds": 59.11820728291316,
+        "maximum_lifetime_milliseconds": 0.1704
+      },
+      {
+        "index": 1,
+        "operation": "stat",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.0458811,
+        "mean_microseconds": 128.518487394958,
+        "maximum_lifetime_milliseconds": 0.2891
+      },
+      {
+        "index": 24,
+        "operation": "object_open",
+        "entered": 714,
+        "completed": 714,
+        "seconds": 0.0308354,
+        "mean_microseconds": 43.186834733893555,
+        "maximum_lifetime_milliseconds": 0.1348
+      },
+      {
+        "index": 47,
+        "operation": "stat_with_query",
+        "entered": 2142,
+        "completed": 2142,
+        "seconds": 0.023621,
+        "mean_microseconds": 11.027544351073763,
+        "maximum_lifetime_milliseconds": 0.0377
+      },
+      {
+        "index": 3,
+        "operation": "fstat",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.0231195,
+        "mean_microseconds": 64.76050420168067,
+        "maximum_lifetime_milliseconds": 0.1588
+      },
+      {
+        "index": 40,
+        "operation": "ofd_metadata",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.0172441,
+        "mean_microseconds": 48.30280112044818,
+        "maximum_lifetime_milliseconds": 0.1239
+      },
+      {
+        "index": 22,
+        "operation": "ea_read_values",
+        "entered": 2499,
+        "completed": 2499,
+        "seconds": 0.0121417,
+        "mean_microseconds": 4.858623449379752,
+        "maximum_lifetime_milliseconds": 0.0257
+      },
+      {
+        "index": 51,
+        "operation": "nt_query_ea_submission",
+        "entered": 2499,
+        "completed": 2499,
+        "seconds": 0.0095799,
+        "mean_microseconds": 3.833493397358944,
+        "maximum_lifetime_milliseconds": 0.025
+      },
+      {
+        "index": 13,
+        "operation": "lseek",
+        "entered": 1785,
+        "completed": 1785,
+        "seconds": 0.0056487,
+        "mean_microseconds": 3.164537815126051,
+        "maximum_lifetime_milliseconds": 0.019
+      },
+      {
+        "index": 38,
+        "operation": "native_pin",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.0011113,
+        "mean_microseconds": 3.1128851540616247,
+        "maximum_lifetime_milliseconds": 0.0256
+      },
+      {
+        "index": 44,
+        "operation": "permissions_check",
+        "entered": 714,
+        "completed": 714,
+        "seconds": 0.0007738,
+        "mean_microseconds": 1.0837535014005601,
+        "maximum_lifetime_milliseconds": 0.008
+      }
+    ],
+    "tar": [
+      {
+        "index": 1,
+        "operation": "stat",
+        "entered": 1785,
+        "completed": 1785,
+        "seconds": 1.8789212,
+        "mean_microseconds": 1052.616918767507,
+        "maximum_lifetime_milliseconds": 8.3502
+      },
+      {
+        "index": 0,
+        "operation": "openat",
+        "entered": 1463,
+        "completed": 1463,
+        "seconds": 0.5499347,
+        "mean_microseconds": 375.8952153110048,
+        "maximum_lifetime_milliseconds": 6.4641
+      },
+      {
+        "index": 21,
+        "operation": "restore_fork_state",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.3916635,
+        "mean_microseconds": 1097.0966386554621,
+        "maximum_lifetime_milliseconds": 2.0568
+      },
+      {
+        "index": 24,
+        "operation": "object_open",
+        "entered": 5033,
+        "completed": 5033,
+        "seconds": 0.2046315,
+        "mean_microseconds": 40.65795748062786,
+        "maximum_lifetime_milliseconds": 0.1807
+      },
+      {
+        "index": 2,
+        "operation": "lstat",
+        "entered": 714,
+        "completed": 714,
+        "seconds": 0.1924719,
+        "mean_microseconds": 269.56848739495797,
+        "maximum_lifetime_milliseconds": 0.7579
+      },
+      {
+        "index": 5,
+        "operation": "chown_path",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.1908486,
+        "mean_microseconds": 534.5899159663866,
+        "maximum_lifetime_milliseconds": 1.1664
+      },
+      {
+        "index": 10,
+        "operation": "mkdir",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.139293,
+        "mean_microseconds": 390.1764705882353,
+        "maximum_lifetime_milliseconds": 0.8291
+      },
+      {
+        "index": 17,
+        "operation": "close",
+        "entered": 2534,
+        "completed": 2534,
+        "seconds": 0.1294373,
+        "mean_microseconds": 51.080228887134965,
+        "maximum_lifetime_milliseconds": 0.2824
+      },
+      {
+        "index": 25,
+        "operation": "object_reopen",
+        "entered": 2569,
+        "completed": 2569,
+        "seconds": 0.1255717,
+        "mean_microseconds": 48.87960295834956,
+        "maximum_lifetime_milliseconds": 0.2496
+      },
+      {
+        "index": 26,
+        "operation": "create_inode",
+        "entered": 749,
+        "completed": 749,
+        "seconds": 0.1178755,
+        "mean_microseconds": 157.37716955941255,
+        "maximum_lifetime_milliseconds": 6.2159
+      },
+      {
+        "index": 6,
+        "operation": "fchown",
+        "entered": 749,
+        "completed": 749,
+        "seconds": 0.0799794,
+        "mean_microseconds": 106.78157543391188,
+        "maximum_lifetime_milliseconds": 0.2796
+      },
+      {
+        "index": 45,
+        "operation": "metadata_path_prepare",
+        "entered": 714,
+        "completed": 714,
+        "seconds": 0.0774733,
+        "mean_microseconds": 108.50602240896359,
+        "maximum_lifetime_milliseconds": 0.6254
+      },
+      {
+        "index": 40,
+        "operation": "ofd_metadata",
+        "entered": 2247,
+        "completed": 2247,
+        "seconds": 0.0756314,
+        "mean_microseconds": 33.658834000890074,
+        "maximum_lifetime_milliseconds": 0.1748
+      },
+      {
+        "index": 16,
+        "operation": "write",
+        "entered": 921,
+        "completed": 921,
+        "seconds": 0.0486294,
+        "mean_microseconds": 52.80065146579805,
+        "maximum_lifetime_milliseconds": 1.0023
+      },
+      {
+        "index": 48,
+        "operation": "stat_open_query",
+        "entered": 1071,
+        "completed": 1071,
+        "seconds": 0.0433842,
+        "mean_microseconds": 40.50812324929972,
+        "maximum_lifetime_milliseconds": 0.13
+      },
+      {
+        "index": 35,
+        "operation": "inode_lock_name",
+        "entered": 3997,
+        "completed": 3997,
+        "seconds": 0.0430872,
+        "mean_microseconds": 10.779884913685263,
+        "maximum_lifetime_milliseconds": 0.0805
+      },
+      {
+        "index": 22,
+        "operation": "ea_read_values",
+        "entered": 10850,
+        "completed": 10850,
+        "seconds": 0.0411525,
+        "mean_microseconds": 3.7928571428571427,
+        "maximum_lifetime_milliseconds": 0.0522
+      },
+      {
+        "index": 51,
+        "operation": "nt_query_ea_submission",
+        "entered": 10850,
+        "completed": 10850,
+        "seconds": 0.0352384,
+        "mean_microseconds": 3.247778801843318,
+        "maximum_lifetime_milliseconds": 0.0517
+      },
+      {
+        "index": 47,
+        "operation": "stat_with_query",
+        "entered": 2142,
+        "completed": 2142,
+        "seconds": 0.023829,
+        "mean_microseconds": 11.124649859943979,
+        "maximum_lifetime_milliseconds": 0.1035
+      },
+      {
+        "index": 36,
+        "operation": "inode_key",
+        "entered": 3997,
+        "completed": 3997,
+        "seconds": 0.0230435,
+        "mean_microseconds": 5.765198899174381,
+        "maximum_lifetime_milliseconds": 0.0798
+      },
+      {
+        "index": 7,
+        "operation": "fchmod",
+        "entered": 749,
+        "completed": 749,
+        "seconds": 0.0190873,
+        "mean_microseconds": 25.483711615487316,
+        "maximum_lifetime_milliseconds": 0.1362
+      },
+      {
+        "index": 46,
+        "operation": "stat_metadata_record",
+        "entered": 1855,
+        "completed": 1855,
+        "seconds": 0.014347,
+        "mean_microseconds": 7.7342318059299195,
+        "maximum_lifetime_milliseconds": 0.0704
+      },
+      {
+        "index": 15,
+        "operation": "read",
+        "entered": 1249,
+        "completed": 1249,
+        "seconds": 0.0122387,
+        "mean_microseconds": 9.798799039231385,
+        "maximum_lifetime_milliseconds": 0.0948
+      },
+      {
+        "index": 23,
+        "operation": "ea_write",
+        "entered": 749,
+        "completed": 749,
+        "seconds": 0.0051033,
+        "mean_microseconds": 6.813484646194927,
+        "maximum_lifetime_milliseconds": 0.1129
+      },
+      {
+        "index": 38,
+        "operation": "native_pin",
+        "entered": 2247,
+        "completed": 2247,
+        "seconds": 0.0015933,
+        "mean_microseconds": 0.7090787716955941,
+        "maximum_lifetime_milliseconds": 0.0057
+      },
+      {
+        "index": 39,
+        "operation": "read_pin",
+        "entered": 2170,
+        "completed": 2170,
+        "seconds": 0.0014065,
+        "mean_microseconds": 0.6481566820276499,
+        "maximum_lifetime_milliseconds": 0.006
+      },
+      {
+        "index": 3,
+        "operation": "fstat",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.0013203,
+        "mean_microseconds": 3.6983193277310926,
+        "maximum_lifetime_milliseconds": 0.0126
+      }
+    ],
+    "/usr/bin/dpkg": [
+      {
+        "index": 42,
+        "operation": "sync_descriptor",
+        "entered": 30478,
+        "completed": 30478,
+        "seconds": 32.2783474,
+        "mean_microseconds": 1059.0703917579892,
+        "maximum_lifetime_milliseconds": 8.7553
+      },
+      {
+        "index": 0,
+        "operation": "openat",
+        "entered": 83118,
+        "completed": 83118,
+        "seconds": 23.344072,
+        "mean_microseconds": 280.85459226641643,
+        "maximum_lifetime_milliseconds": 13.3454
+      },
+      {
+        "index": 15,
+        "operation": "read",
+        "entered": 83934,
+        "completed": 83934,
+        "seconds": 18.7334169,
+        "mean_microseconds": 223.19223318321536,
+        "maximum_lifetime_milliseconds": 101.674
+      },
+      {
+        "index": 43,
+        "operation": "sync_file_range",
+        "entered": 47960,
+        "completed": 47960,
+        "seconds": 15.1116771,
+        "mean_microseconds": 315.0891805671393,
+        "maximum_lifetime_milliseconds": 10.7737
+      },
+      {
+        "index": 9,
+        "operation": "rename",
+        "entered": 59320,
+        "completed": 59320,
+        "seconds": 12.544465,
+        "mean_microseconds": 211.47108900876603,
+        "maximum_lifetime_milliseconds": 22.141
+      },
+      {
+        "index": 24,
+        "operation": "object_open",
+        "entered": 201244,
+        "completed": 201244,
+        "seconds": 8.5378028,
+        "mean_microseconds": 42.42512969330763,
+        "maximum_lifetime_milliseconds": 1.0264
+      },
+      {
+        "index": 25,
+        "operation": "object_reopen",
+        "entered": 150449,
+        "completed": 150449,
+        "seconds": 6.4055424,
+        "mean_microseconds": 42.5761713271607,
+        "maximum_lifetime_milliseconds": 6.0731
+      },
+      {
+        "index": 26,
+        "operation": "create_inode",
+        "entered": 23980,
+        "completed": 23980,
+        "seconds": 3.8568578,
+        "mean_microseconds": 160.83643869891577,
+        "maximum_lifetime_milliseconds": 13.2336
+      },
+      {
+        "index": 17,
+        "operation": "close",
+        "entered": 81664,
+        "completed": 81664,
+        "seconds": 3.447354,
+        "mean_microseconds": 42.213876371473354,
+        "maximum_lifetime_milliseconds": 5.0533
+      },
+      {
+        "index": 6,
+        "operation": "fchown",
+        "entered": 23980,
+        "completed": 23980,
+        "seconds": 3.210819,
+        "mean_microseconds": 133.89570475396164,
+        "maximum_lifetime_milliseconds": 2.5311
+      },
+      {
+        "index": 45,
+        "operation": "metadata_path_prepare",
+        "entered": 36234,
+        "completed": 36234,
+        "seconds": 3.1703195,
+        "mean_microseconds": 87.49570845062648,
+        "maximum_lifetime_milliseconds": 0.643
+      },
+      {
+        "index": 32,
+        "operation": "verity_writable",
+        "entered": 55889,
+        "completed": 55889,
+        "seconds": 2.3210394,
+        "mean_microseconds": 41.529449444434505,
+        "maximum_lifetime_milliseconds": 0.3625
+      },
+      {
+        "index": 11,
+        "operation": "rmdir",
+        "entered": 88097,
+        "completed": 88097,
+        "seconds": 2.3208926,
+        "mean_microseconds": 26.344740456542223,
+        "maximum_lifetime_milliseconds": 0.3638
+      },
+      {
+        "index": 16,
+        "operation": "write",
+        "entered": 38281,
+        "completed": 38281,
+        "seconds": 2.3140478,
+        "mean_microseconds": 60.44899036075338,
+        "maximum_lifetime_milliseconds": 4.3669
+      },
+      {
+        "index": 40,
+        "operation": "ofd_metadata",
+        "entered": 49409,
+        "completed": 49409,
+        "seconds": 2.0629043,
+        "mean_microseconds": 41.751589791333565,
+        "maximum_lifetime_milliseconds": 2.4755
+      },
+      {
+        "index": 10,
+        "operation": "mkdir",
+        "entered": 3798,
+        "completed": 3798,
+        "seconds": 1.871444,
+        "mean_microseconds": 492.74460242232755,
+        "maximum_lifetime_milliseconds": 6.5123
+      },
+      {
+        "index": 7,
+        "operation": "fchmod",
+        "entered": 24349,
+        "completed": 24349,
+        "seconds": 1.5066966,
+        "mean_microseconds": 61.8791983243665,
+        "maximum_lifetime_milliseconds": 6.0761
+      },
+      {
+        "index": 2,
+        "operation": "lstat",
+        "entered": 30589,
+        "completed": 30589,
+        "seconds": 1.434932,
+        "mean_microseconds": 46.91006570989572,
+        "maximum_lifetime_milliseconds": 0.3167
+      },
+      {
+        "index": 22,
+        "operation": "ea_read_values",
+        "entered": 377507,
+        "completed": 377507,
+        "seconds": 1.3184389,
+        "mean_microseconds": 3.4924886161051316,
+        "maximum_lifetime_milliseconds": 0.1307
+      },
+      {
+        "index": 51,
+        "operation": "nt_query_ea_submission",
+        "entered": 377507,
+        "completed": 377507,
+        "seconds": 1.1706775,
+        "mean_microseconds": 3.101074946954626,
+        "maximum_lifetime_milliseconds": 0.1297
+      },
+      {
+        "index": 35,
+        "operation": "inode_lock_name",
+        "entered": 75855,
+        "completed": 75855,
+        "seconds": 0.9118911,
+        "mean_microseconds": 12.021502867312636,
+        "maximum_lifetime_milliseconds": 0.1319
+      },
+      {
+        "index": 23,
+        "operation": "ea_write",
+        "entered": 34952,
+        "completed": 34952,
+        "seconds": 0.7366077,
+        "mean_microseconds": 21.07483691920348,
+        "maximum_lifetime_milliseconds": 3.657
+      },
+      {
+        "index": 1,
+        "operation": "stat",
+        "entered": 7921,
+        "completed": 7921,
+        "seconds": 0.7035169,
+        "mean_microseconds": 88.81667718722383,
+        "maximum_lifetime_milliseconds": 5.5782
+      },
+      {
+        "index": 46,
+        "operation": "stat_metadata_record",
+        "entered": 58932,
+        "completed": 58932,
+        "seconds": 0.5451553,
+        "mean_microseconds": 9.250582026742686,
+        "maximum_lifetime_milliseconds": 0.1418
+      },
+      {
+        "index": 31,
+        "operation": "verity_size",
+        "entered": 7144,
+        "completed": 7144,
+        "seconds": 0.5394869,
+        "mean_microseconds": 75.51608342665173,
+        "maximum_lifetime_milliseconds": 0.8566
+      },
+      {
+        "index": 4,
+        "operation": "chmod_path",
+        "entered": 3798,
+        "completed": 3798,
+        "seconds": 0.5196072,
+        "mean_microseconds": 136.81074249605055,
+        "maximum_lifetime_milliseconds": 1.3021
+      },
+      {
+        "index": 36,
+        "operation": "inode_key",
+        "entered": 73672,
+        "completed": 73672,
+        "seconds": 0.47146,
+        "mean_microseconds": 6.39944619394071,
+        "maximum_lifetime_milliseconds": 0.6865
+      },
+      {
+        "index": 5,
+        "operation": "chown_path",
+        "entered": 4228,
+        "completed": 4228,
+        "seconds": 0.4484769,
+        "mean_microseconds": 106.07306054872281,
+        "maximum_lifetime_milliseconds": 0.6158
+      },
+      {
+        "index": 20,
+        "operation": "portable_fork_state",
+        "entered": 1443,
+        "completed": 1443,
+        "seconds": 0.4364019,
+        "mean_microseconds": 302.42681912681917,
+        "maximum_lifetime_milliseconds": 0.9858
+      },
+      {
+        "index": 8,
+        "operation": "unlink",
+        "entered": 2512,
+        "completed": 2512,
+        "seconds": 0.4089844,
+        "mean_microseconds": 162.8122611464968,
+        "maximum_lifetime_milliseconds": 2.5714
+      },
+      {
+        "index": 14,
+        "operation": "ftruncate",
+        "entered": 2142,
+        "completed": 2142,
+        "seconds": 0.2385024,
+        "mean_microseconds": 111.34565826330532,
+        "maximum_lifetime_milliseconds": 0.9831
+      },
+      {
+        "index": 48,
+        "operation": "stat_open_query",
+        "entered": 5552,
+        "completed": 5552,
+        "seconds": 0.2259555,
+        "mean_microseconds": 40.69803674351585,
+        "maximum_lifetime_milliseconds": 0.3132
+      },
+      {
+        "index": 38,
+        "operation": "native_pin",
+        "entered": 127847,
+        "completed": 127847,
+        "seconds": 0.124242,
+        "mean_microseconds": 0.9718022323558629,
+        "maximum_lifetime_milliseconds": 0.1122
+      },
+      {
+        "index": 47,
+        "operation": "stat_with_query",
+        "entered": 8216,
+        "completed": 8216,
+        "seconds": 0.120169,
+        "mean_microseconds": 14.626217137293086,
+        "maximum_lifetime_milliseconds": 0.1262
+      },
+      {
+        "index": 13,
+        "operation": "lseek",
+        "entered": 30399,
+        "completed": 30399,
+        "seconds": 0.0771911,
+        "mean_microseconds": 2.5392644494884697,
+        "maximum_lifetime_milliseconds": 0.0943
+      },
+      {
+        "index": 3,
+        "operation": "fstat",
+        "entered": 6123,
+        "completed": 6123,
+        "seconds": 0.0765655,
+        "mean_microseconds": 12.504572921770373,
+        "maximum_lifetime_milliseconds": 0.1631
+      },
+      {
+        "index": 21,
+        "operation": "restore_fork_state",
+        "entered": 70,
+        "completed": 70,
+        "seconds": 0.0688557,
+        "mean_microseconds": 983.6528571428572,
+        "maximum_lifetime_milliseconds": 1.586
+      },
+      {
+        "index": 39,
+        "operation": "read_pin",
+        "entered": 122215,
+        "completed": 122215,
+        "seconds": 0.0502006,
+        "mean_microseconds": 0.4107564537904512,
+        "maximum_lifetime_milliseconds": 0.0954
+      },
+      {
+        "index": 30,
+        "operation": "verity_lock",
+        "entered": 2142,
+        "completed": 2142,
+        "seconds": 0.0371395,
+        "mean_microseconds": 17.338702147525677,
+        "maximum_lifetime_milliseconds": 0.1464
+      },
+      {
+        "index": 18,
+        "operation": "pipe_create",
+        "entered": 357,
+        "completed": 357,
+        "seconds": 0.0311638,
+        "mean_microseconds": 87.29355742296919,
+        "maximum_lifetime_milliseconds": 0.2559
+      },
+      {
+        "index": 44,
+        "operation": "permissions_check",
+        "entered": 54319,
+        "completed": 54319,
+        "seconds": 0.0290315,
+        "mean_microseconds": 0.5344630792172168,
+        "maximum_lifetime_milliseconds": 0.026
+      },
+      {
+        "index": 27,
+        "operation": "object_read_at",
+        "entered": 1009,
+        "completed": 1009,
+        "seconds": 0.0194897,
+        "mean_microseconds": 19.31585728444004,
+        "maximum_lifetime_milliseconds": 0.3343
+      },
+      {
+        "index": 29,
+        "operation": "object_granted_access",
+        "entered": 16948,
+        "completed": 16948,
+        "seconds": 0.0051308,
+        "mean_microseconds": 0.3027377861694595,
+        "maximum_lifetime_milliseconds": 0.0055
+      },
+      {
+        "index": 37,
+        "operation": "inode_mutex_wait",
+        "entered": 2287,
+        "completed": 2287,
+        "seconds": 0.0008622,
+        "mean_microseconds": 0.3770004372540446,
+        "maximum_lifetime_milliseconds": 0.004
+      },
+      {
+        "index": 41,
+        "operation": "ofd_read_cache",
+        "entered": 2083,
+        "completed": 2083,
+        "seconds": 0.0006306,
+        "mean_microseconds": 0.30273643783005283,
+        "maximum_lifetime_milliseconds": 0.0017
+      },
+      {
+        "index": 19,
+        "operation": "portable_exec_state",
+        "entered": 1,
+        "completed": 1,
+        "seconds": 0.0002325,
+        "mean_microseconds": 232.5,
+        "maximum_lifetime_milliseconds": 0.2325
+      }
+    ],
+    "basename": [
+      {
+        "index": 21,
+        "operation": "restore_fork_state",
+        "entered": 16,
+        "completed": 16,
+        "seconds": 0.016039,
+        "mean_microseconds": 1002.4375,
+        "maximum_lifetime_milliseconds": 1.3484
+      },
+      {
+        "index": 0,
+        "operation": "openat",
+        "entered": 16,
+        "completed": 16,
+        "seconds": 0.0056943,
+        "mean_microseconds": 355.89375,
+        "maximum_lifetime_milliseconds": 0.5164
+      },
+      {
+        "index": 17,
+        "operation": "close",
+        "entered": 48,
+        "completed": 48,
+        "seconds": 0.0021268,
+        "mean_microseconds": 44.30833333333334,
+        "maximum_lifetime_milliseconds": 0.0992
+      },
+      {
+        "index": 1,
+        "operation": "stat",
+        "entered": 16,
+        "completed": 16,
+        "seconds": 0.001881,
+        "mean_microseconds": 117.5625,
+        "maximum_lifetime_milliseconds": 0.1899
+      },
+      {
+        "index": 24,
+        "operation": "object_open",
+        "entered": 32,
+        "completed": 32,
+        "seconds": 0.0012005,
+        "mean_microseconds": 37.515625,
+        "maximum_lifetime_milliseconds": 0.0888
+      },
+      {
+        "index": 25,
+        "operation": "object_reopen",
+        "entered": 32,
+        "completed": 32,
+        "seconds": 0.0011452,
+        "mean_microseconds": 35.7875,
+        "maximum_lifetime_milliseconds": 0.0607
+      },
+      {
+        "index": 48,
+        "operation": "stat_open_query",
+        "entered": 16,
+        "completed": 16,
+        "seconds": 0.0006856,
+        "mean_microseconds": 42.85,
+        "maximum_lifetime_milliseconds": 0.0727
+      },
+      {
+        "index": 47,
+        "operation": "stat_with_query",
+        "entered": 48,
+        "completed": 48,
+        "seconds": 0.0005215,
+        "mean_microseconds": 10.864583333333334,
+        "maximum_lifetime_milliseconds": 0.0351
+      },
+      {
+        "index": 22,
+        "operation": "ea_read_values",
+        "entered": 48,
+        "completed": 48,
+        "seconds": 0.0002414,
+        "mean_microseconds": 5.029166666666667,
+        "maximum_lifetime_milliseconds": 0.0124
+      },
+      {
+        "index": 16,
+        "operation": "write",
+        "entered": 16,
+        "completed": 16,
+        "seconds": 0.0002402,
+        "mean_microseconds": 15.0125,
+        "maximum_lifetime_milliseconds": 0.0233
+      },
+      {
+        "index": 51,
+        "operation": "nt_query_ea_submission",
+        "entered": 48,
+        "completed": 48,
+        "seconds": 0.0001708,
+        "mean_microseconds": 3.5583333333333336,
+        "maximum_lifetime_milliseconds": 0.0068
+      },
+      {
+        "index": 13,
+        "operation": "lseek",
+        "entered": 32,
+        "completed": 32,
+        "seconds": 0.0001629,
+        "mean_microseconds": 5.090625,
+        "maximum_lifetime_milliseconds": 0.009
+      },
+      {
+        "index": 39,
+        "operation": "read_pin",
+        "entered": 16,
+        "completed": 16,
+        "seconds": 7e-07,
+        "mean_microseconds": 0.04375,
+        "maximum_lifetime_milliseconds": 0.0001
+      }
+    ],
+    "python3.11": [
+      {
+        "index": 1,
+        "operation": "stat",
+        "entered": 290,
+        "completed": 290,
+        "seconds": 0.0197423,
+        "mean_microseconds": 68.07689655172415,
+        "maximum_lifetime_milliseconds": 0.2528
+      },
+      {
+        "index": 0,
+        "operation": "openat",
+        "entered": 80,
+        "completed": 80,
+        "seconds": 0.0114008,
+        "mean_microseconds": 142.51,
+        "maximum_lifetime_milliseconds": 0.36
+      },
+      {
+        "index": 48,
+        "operation": "stat_open_query",
+        "entered": 256,
+        "completed": 256,
+        "seconds": 0.008224,
+        "mean_microseconds": 32.125,
+        "maximum_lifetime_milliseconds": 0.1211
+      },
+      {
+        "index": 24,
+        "operation": "object_open",
+        "entered": 180,
+        "completed": 180,
+        "seconds": 0.0047447,
+        "mean_microseconds": 26.359444444444446,
+        "maximum_lifetime_milliseconds": 0.0732
+      },
+      {
+        "index": 47,
+        "operation": "stat_with_query",
+        "entered": 346,
+        "completed": 346,
+        "seconds": 0.0043924,
+        "mean_microseconds": 12.694797687861271,
+        "maximum_lifetime_milliseconds": 0.0432
+      },
+      {
+        "index": 15,
+        "operation": "read",
+        "entered": 100,
+        "completed": 100,
+        "seconds": 0.0037807,
+        "mean_microseconds": 37.807,
+        "maximum_lifetime_milliseconds": 0.195
+      },
+      {
+        "index": 25,
+        "operation": "object_reopen",
+        "entered": 123,
+        "completed": 123,
+        "seconds": 0.0037457,
+        "mean_microseconds": 30.452845528455285,
+        "maximum_lifetime_milliseconds": 0.1133
+      },
+      {
+        "index": 3,
+        "operation": "fstat",
+        "entered": 109,
+        "completed": 109,
+        "seconds": 0.0030485,
+        "mean_microseconds": 27.967889908256883,
+        "maximum_lifetime_milliseconds": 0.0767
+      },
+      {
+        "index": 22,
+        "operation": "ea_read_values",
+        "entered": 1304,
+        "completed": 1304,
+        "seconds": 0.0028908,
+        "mean_microseconds": 2.216871165644172,
+        "maximum_lifetime_milliseconds": 0.0226
+      },
+      {
+        "index": 51,
+        "operation": "nt_query_ea_submission",
+        "entered": 1304,
+        "completed": 1304,
+        "seconds": 0.0026297,
+        "mean_microseconds": 2.0166411042944783,
+        "maximum_lifetime_milliseconds": 0.0225
+      },
+      {
+        "index": 21,
+        "operation": "restore_fork_state",
+        "entered": 2,
+        "completed": 2,
+        "seconds": 0.0022188,
+        "mean_microseconds": 1109.4,
+        "maximum_lifetime_milliseconds": 1.3542
+      },
+      {
+        "index": 17,
+        "operation": "close",
+        "entered": 69,
+        "completed": 69,
+        "seconds": 0.0018524,
+        "mean_microseconds": 26.846376811594205,
+        "maximum_lifetime_milliseconds": 0.0789
+      },
+      {
+        "index": 35,
+        "operation": "inode_lock_name",
+        "entered": 267,
+        "completed": 267,
+        "seconds": 0.0018229,
+        "mean_microseconds": 6.8273408239700375,
+        "maximum_lifetime_milliseconds": 0.0587
+      },
+      {
+        "index": 40,
+        "operation": "ofd_metadata",
+        "entered": 101,
+        "completed": 101,
+        "seconds": 0.0014173,
+        "mean_microseconds": 14.032673267326732,
+        "maximum_lifetime_milliseconds": 0.0559
+      },
+      {
+        "index": 27,
+        "operation": "object_read_at",
+        "entered": 100,
+        "completed": 100,
+        "seconds": 0.0012149,
+        "mean_microseconds": 12.149,
+        "maximum_lifetime_milliseconds": 0.0387
+      },
+      {
+        "index": 9,
+        "operation": "rename",
+        "entered": 1,
+        "completed": 1,
+        "seconds": 0.0003732,
+        "mean_microseconds": 373.2,
+        "maximum_lifetime_milliseconds": 0.3732
+      },
+      {
+        "index": 36,
+        "operation": "inode_key",
+        "entered": 58,
+        "completed": 58,
+        "seconds": 0.0002095,
+        "mean_microseconds": 3.6120689655172415,
+        "maximum_lifetime_milliseconds": 0.0117
+      },
+      {
+        "index": 26,
+        "operation": "create_inode",
+        "entered": 1,
+        "completed": 1,
+        "seconds": 0.0001201,
+        "mean_microseconds": 120.1,
+        "maximum_lifetime_milliseconds": 0.1201
+      },
+      {
+        "index": 38,
+        "operation": "native_pin",
+        "entered": 101,
+        "completed": 101,
+        "seconds": 0.0001041,
+        "mean_microseconds": 1.0306930693069307,
+        "maximum_lifetime_milliseconds": 0.0056
+      },
+      {
+        "index": 16,
+        "operation": "write",
+        "entered": 5,
+        "completed": 5,
+        "seconds": 9.85e-05,
+        "mean_microseconds": 19.7,
+        "maximum_lifetime_milliseconds": 0.0699
+      },
+      {
+        "index": 13,
+        "operation": "lseek",
+        "entered": 122,
+        "completed": 122,
+        "seconds": 9.43e-05,
+        "mean_microseconds": 0.7729508196721312,
+        "maximum_lifetime_milliseconds": 0.007
+      },
+      {
+        "index": 39,
+        "operation": "read_pin",
+        "entered": 105,
+        "completed": 105,
+        "seconds": 3.28e-05,
+        "mean_microseconds": 0.3123809523809524,
+        "maximum_lifetime_milliseconds": 0.0008
+      },
+      {
+        "index": 44,
+        "operation": "permissions_check",
+        "entered": 66,
+        "completed": 66,
+        "seconds": 2.91e-05,
+        "mean_microseconds": 0.4409090909090909,
+        "maximum_lifetime_milliseconds": 0.0012
+      },
+      {
+        "index": 41,
+        "operation": "ofd_read_cache",
+        "entered": 200,
+        "completed": 200,
+        "seconds": 2.31e-05,
+        "mean_microseconds": 0.1155,
+        "maximum_lifetime_milliseconds": 0.0005
+      },
+      {
+        "index": 29,
+        "operation": "object_granted_access",
+        "entered": 50,
+        "completed": 50,
+        "seconds": 1.63e-05,
+        "mean_microseconds": 0.326,
+        "maximum_lifetime_milliseconds": 0.0005
+      },
+      {
+        "index": 37,
+        "operation": "inode_mutex_wait",
+        "entered": 50,
+        "completed": 50,
+        "seconds": 1.43e-05,
+        "mean_microseconds": 0.286,
+        "maximum_lifetime_milliseconds": 0.0004
+      },
+      {
+        "index": 46,
+        "operation": "stat_metadata_record",
+        "entered": 2,
+        "completed": 2,
+        "seconds": 1.21e-05,
+        "mean_microseconds": 6.05,
+        "maximum_lifetime_milliseconds": 0.0064
+      }
+    ],
+    "/bin/sh": [
+      {
+        "index": 15,
+        "operation": "read",
+        "entered": 166,
+        "completed": 166,
+        "seconds": 0.7074289,
+        "mean_microseconds": 4261.619879518072,
+        "maximum_lifetime_milliseconds": 34.6541
+      },
+      {
+        "index": 21,
+        "operation": "restore_fork_state",
+        "entered": 33,
+        "completed": 33,
+        "seconds": 0.0318666,
+        "mean_microseconds": 965.6545454545454,
+        "maximum_lifetime_milliseconds": 1.3532
+      },
+      {
+        "index": 0,
+        "operation": "openat",
+        "entered": 82,
+        "completed": 82,
+        "seconds": 0.0245504,
+        "mean_microseconds": 299.3951219512195,
+        "maximum_lifetime_milliseconds": 0.6116
+      },
+      {
+        "index": 20,
+        "operation": "portable_fork_state",
+        "entered": 58,
+        "completed": 58,
+        "seconds": 0.0193046,
+        "mean_microseconds": 332.8379310344828,
+        "maximum_lifetime_milliseconds": 0.477
+      },
+      {
+        "index": 1,
+        "operation": "stat",
+        "entered": 104,
+        "completed": 104,
+        "seconds": 0.0102516,
+        "mean_microseconds": 98.57307692307693,
+        "maximum_lifetime_milliseconds": 0.2093
+      },
+      {
+        "index": 25,
+        "operation": "object_reopen",
+        "entered": 187,
+        "completed": 187,
+        "seconds": 0.0090662,
+        "mean_microseconds": 48.482352941176465,
+        "maximum_lifetime_milliseconds": 0.1317
+      },
+      {
+        "index": 24,
+        "operation": "object_open",
+        "entered": 160,
+        "completed": 160,
+        "seconds": 0.0066975,
+        "mean_microseconds": 41.859375,
+        "maximum_lifetime_milliseconds": 0.0899
+      },
+      {
+        "index": 17,
+        "operation": "close",
+        "entered": 170,
+        "completed": 170,
+        "seconds": 0.0056497,
+        "mean_microseconds": 33.23352941176471,
+        "maximum_lifetime_milliseconds": 0.1293
+      },
+      {
+        "index": 18,
+        "operation": "pipe_create",
+        "entered": 32,
+        "completed": 32,
+        "seconds": 0.0050119,
+        "mean_microseconds": 156.621875,
+        "maximum_lifetime_milliseconds": 0.2786
+      },
+      {
+        "index": 48,
+        "operation": "stat_open_query",
+        "entered": 64,
+        "completed": 64,
+        "seconds": 0.0030714,
+        "mean_microseconds": 47.990625,
+        "maximum_lifetime_milliseconds": 0.0923
+      },
+      {
+        "index": 47,
+        "operation": "stat_with_query",
+        "entered": 204,
+        "completed": 204,
+        "seconds": 0.0026439,
+        "mean_microseconds": 12.96029411764706,
+        "maximum_lifetime_milliseconds": 0.0465
+      },
+      {
+        "index": 22,
+        "operation": "ea_read_values",
+        "entered": 407,
+        "completed": 407,
+        "seconds": 0.0018221,
+        "mean_microseconds": 4.476904176904177,
+        "maximum_lifetime_milliseconds": 0.0239
+      },
+      {
+        "index": 27,
+        "operation": "object_read_at",
+        "entered": 109,
+        "completed": 109,
+        "seconds": 0.0016371,
+        "mean_microseconds": 15.019266055045872,
+        "maximum_lifetime_milliseconds": 0.0405
+      },
+      {
+        "index": 51,
+        "operation": "nt_query_ea_submission",
+        "entered": 407,
+        "completed": 407,
+        "seconds": 0.0015075,
+        "mean_microseconds": 3.703931203931204,
+        "maximum_lifetime_milliseconds": 0.023
+      },
+      {
+        "index": 35,
+        "operation": "inode_lock_name",
+        "entered": 62,
+        "completed": 62,
+        "seconds": 0.0008548,
+        "mean_microseconds": 13.787096774193548,
+        "maximum_lifetime_milliseconds": 0.0491
+      },
+      {
+        "index": 36,
+        "operation": "inode_key",
+        "entered": 47,
+        "completed": 47,
+        "seconds": 0.0003326,
+        "mean_microseconds": 7.0765957446808505,
+        "maximum_lifetime_milliseconds": 0.0141
+      },
+      {
+        "index": 3,
+        "operation": "fstat",
+        "entered": 182,
+        "completed": 182,
+        "seconds": 0.000269,
+        "mean_microseconds": 1.4780219780219779,
+        "maximum_lifetime_milliseconds": 0.0055
+      },
+      {
+        "index": 2,
+        "operation": "lstat",
+        "entered": 3,
+        "completed": 3,
+        "seconds": 0.0001988,
+        "mean_microseconds": 66.26666666666667,
+        "maximum_lifetime_milliseconds": 0.0677
+      },
+      {
+        "index": 39,
+        "operation": "read_pin",
+        "entered": 167,
+        "completed": 167,
+        "seconds": 0.0001919,
+        "mean_microseconds": 1.1491017964071857,
+        "maximum_lifetime_milliseconds": 0.0044
+      },
+      {
+        "index": 44,
+        "operation": "permissions_check",
+        "entered": 47,
+        "completed": 47,
+        "seconds": 6.04e-05,
+        "mean_microseconds": 1.2851063829787233,
+        "maximum_lifetime_milliseconds": 0.0058
+      },
+      {
+        "index": 41,
+        "operation": "ofd_read_cache",
+        "entered": 109,
+        "completed": 109,
+        "seconds": 3.23e-05,
+        "mean_microseconds": 0.29633027522935784,
+        "maximum_lifetime_milliseconds": 0.0009
+      },
+      {
+        "index": 37,
+        "operation": "inode_mutex_wait",
+        "entered": 62,
+        "completed": 62,
+        "seconds": 2.02e-05,
+        "mean_microseconds": 0.3258064516129032,
+        "maximum_lifetime_milliseconds": 0.0007
+      },
+      {
+        "index": 29,
+        "operation": "object_granted_access",
+        "entered": 47,
+        "completed": 47,
+        "seconds": 1.83e-05,
+        "mean_microseconds": 0.3893617021276596,
+        "maximum_lifetime_milliseconds": 0.0007
+      },
+      {
+        "index": 16,
+        "operation": "write",
+        "entered": 1,
+        "completed": 1,
+        "seconds": 3e-06,
+        "mean_microseconds": 3.0,
+        "maximum_lifetime_milliseconds": 0.003
+      }
+    ],
+    "update-alternatives": [
+      {
+        "index": 42,
+        "operation": "sync_descriptor",
+        "entered": 5,
+        "completed": 5,
+        "seconds": 0.0157951,
+        "mean_microseconds": 3159.02,
+        "maximum_lifetime_milliseconds": 7.7884
+      },
+      {
+        "index": 0,
+        "operation": "openat",
+        "entered": 74,
+        "completed": 74,
+        "seconds": 0.0147896,
+        "mean_microseconds": 199.85945945945946,
+        "maximum_lifetime_milliseconds": 0.5871
+      },
+      {
+        "index": 1,
+        "operation": "stat",
+        "entered": 86,
+        "completed": 86,
+        "seconds": 0.0086662,
+        "mean_microseconds": 100.76976744186045,
+        "maximum_lifetime_milliseconds": 0.3446
+      },
+      {
+        "index": 21,
+        "operation": "restore_fork_state",
+        "entered": 7,
+        "completed": 7,
+        "seconds": 0.0068264,
+        "mean_microseconds": 975.2,
+        "maximum_lifetime_milliseconds": 1.1035
+      },
+      {
+        "index": 24,
+        "operation": "object_open",
+        "entered": 193,
+        "completed": 193,
+        "seconds": 0.0054423,
+        "mean_microseconds": 28.198445595854924,
+        "maximum_lifetime_milliseconds": 0.0924
+      },
+      {
+        "index": 25,
+        "operation": "object_reopen",
+        "entered": 174,
+        "completed": 174,
+        "seconds": 0.0052326,
+        "mean_microseconds": 30.07241379310345,
+        "maximum_lifetime_milliseconds": 0.104
+      },
+      {
+        "index": 9,
+        "operation": "rename",
+        "entered": 17,
+        "completed": 17,
+        "seconds": 0.0040688,
+        "mean_microseconds": 239.3411764705882,
+        "maximum_lifetime_milliseconds": 0.3082
+      },
+      {
+        "index": 48,
+        "operation": "stat_open_query",
+        "entered": 102,
+        "completed": 102,
+        "seconds": 0.0030918,
+        "mean_microseconds": 30.311764705882354,
+        "maximum_lifetime_milliseconds": 0.0655
+      },
+      {
+        "index": 47,
+        "operation": "stat_with_query",
+        "entered": 161,
+        "completed": 161,
+        "seconds": 0.0027507,
+        "mean_microseconds": 17.085093167701864,
+        "maximum_lifetime_milliseconds": 0.0611
+      },
+      {
+        "index": 15,
+        "operation": "read",
+        "entered": 45,
+        "completed": 45,
+        "seconds": 0.0024841,
+        "mean_microseconds": 55.20222222222222,
+        "maximum_lifetime_milliseconds": 0.1309
+      },
+      {
+        "index": 3,
+        "operation": "fstat",
+        "entered": 45,
+        "completed": 45,
+        "seconds": 0.002191,
+        "mean_microseconds": 48.68888888888889,
+        "maximum_lifetime_milliseconds": 0.1049
+      },
+      {
+        "index": 35,
+        "operation": "inode_lock_name",
+        "entered": 207,
+        "completed": 207,
+        "seconds": 0.0016862,
+        "mean_microseconds": 8.145893719806763,
+        "maximum_lifetime_milliseconds": 0.0526
+      },
+      {
+        "index": 17,
+        "operation": "close",
+        "entered": 62,
+        "completed": 62,
+        "seconds": 0.0016409,
+        "mean_microseconds": 26.466129032258063,
+        "maximum_lifetime_milliseconds": 0.0733
+      },
+      {
+        "index": 2,
+        "operation": "lstat",
+        "entered": 28,
+        "completed": 28,
+        "seconds": 0.0014254,
+        "mean_microseconds": 50.90714285714286,
+        "maximum_lifetime_milliseconds": 0.1112
+      },
+      {
+        "index": 16,
+        "operation": "write",
+        "entered": 25,
+        "completed": 25,
+        "seconds": 0.0012471,
+        "mean_microseconds": 49.884,
+        "maximum_lifetime_milliseconds": 0.2386
+      },
+      {
+        "index": 22,
+        "operation": "ea_read_values",
+        "entered": 460,
+        "completed": 460,
+        "seconds": 0.0012318,
+        "mean_microseconds": 2.6778260869565216,
+        "maximum_lifetime_milliseconds": 0.0123
+      },
+      {
+        "index": 40,
+        "operation": "ofd_metadata",
+        "entered": 45,
+        "completed": 45,
+        "seconds": 0.0011715,
+        "mean_microseconds": 26.03333333333333,
+        "maximum_lifetime_milliseconds": 0.0623
+      },
+      {
+        "index": 51,
+        "operation": "nt_query_ea_submission",
+        "entered": 460,
+        "completed": 460,
+        "seconds": 0.0010661,
+        "mean_microseconds": 2.317608695652174,
+        "maximum_lifetime_milliseconds": 0.0118
+      },
+      {
+        "index": 31,
+        "operation": "verity_size",
+        "entered": 10,
+        "completed": 10,
+        "seconds": 0.000734,
+        "mean_microseconds": 73.4,
+        "maximum_lifetime_milliseconds": 0.0917
+      },
+      {
+        "index": 27,
+        "operation": "object_read_at",
+        "entered": 45,
+        "completed": 45,
+        "seconds": 0.0006607,
+        "mean_microseconds": 14.682222222222222,
+        "maximum_lifetime_milliseconds": 0.0724
+      },
+      {
+        "index": 45,
+        "operation": "metadata_path_prepare",
+        "entered": 12,
+        "completed": 12,
+        "seconds": 0.0005737,
+        "mean_microseconds": 47.80833333333334,
+        "maximum_lifetime_milliseconds": 0.054
+      },
+      {
+        "index": 32,
+        "operation": "verity_writable",
+        "entered": 15,
+        "completed": 15,
+        "seconds": 0.000513,
+        "mean_microseconds": 34.2,
+        "maximum_lifetime_milliseconds": 0.058
+      },
+      {
+        "index": 23,
+        "operation": "ea_write",
+        "entered": 30,
+        "completed": 30,
+        "seconds": 0.0002896,
+        "mean_microseconds": 9.653333333333334,
+        "maximum_lifetime_milliseconds": 0.0184
+      },
+      {
+        "index": 36,
+        "operation": "inode_key",
+        "entered": 73,
+        "completed": 73,
+        "seconds": 0.0002648,
+        "mean_microseconds": 3.627397260273973,
+        "maximum_lifetime_milliseconds": 0.0088
+      },
+      {
+        "index": 8,
+        "operation": "unlink",
+        "entered": 12,
+        "completed": 12,
+        "seconds": 0.000238,
+        "mean_microseconds": 19.833333333333332,
+        "maximum_lifetime_milliseconds": 0.0238
+      },
+      {
+        "index": 46,
+        "operation": "stat_metadata_record",
+        "entered": 18,
+        "completed": 18,
+        "seconds": 0.0001255,
+        "mean_microseconds": 6.972222222222222,
+        "maximum_lifetime_milliseconds": 0.0127
+      },
+      {
+        "index": 38,
+        "operation": "native_pin",
+        "entered": 50,
+        "completed": 50,
+        "seconds": 7.81e-05,
+        "mean_microseconds": 1.562,
+        "maximum_lifetime_milliseconds": 0.0061
+      },
+      {
+        "index": 39,
+        "operation": "read_pin",
+        "entered": 70,
+        "completed": 70,
+        "seconds": 2.96e-05,
+        "mean_microseconds": 0.4228571428571428,
+        "maximum_lifetime_milliseconds": 0.0016
+      },
+      {
+        "index": 44,
+        "operation": "permissions_check",
+        "entered": 54,
+        "completed": 54,
+        "seconds": 2.54e-05,
+        "mean_microseconds": 0.4703703703703704,
+        "maximum_lifetime_milliseconds": 0.0017
+      },
+      {
+        "index": 29,
+        "operation": "object_granted_access",
+        "entered": 60,
+        "completed": 60,
+        "seconds": 1.73e-05,
+        "mean_microseconds": 0.28833333333333333,
+        "maximum_lifetime_milliseconds": 0.0005
+      },
+      {
+        "index": 41,
+        "operation": "ofd_read_cache",
+        "entered": 90,
+        "completed": 90,
+        "seconds": 1.41e-05,
+        "mean_microseconds": 0.15666666666666665,
+        "maximum_lifetime_milliseconds": 0.0006
+      }
+    ],
+    "/usr/bin/apt-config": [
+      {
+        "index": 15,
+        "operation": "read",
+        "entered": 204,
+        "completed": 204,
+        "seconds": 0.3582828,
+        "mean_microseconds": 1756.2882352941176,
+        "maximum_lifetime_milliseconds": 34.6932
+      },
+      {
+        "index": 0,
+        "operation": "openat",
+        "entered": 120,
+        "completed": 120,
+        "seconds": 0.0256968,
+        "mean_microseconds": 214.14,
+        "maximum_lifetime_milliseconds": 0.7103
+      },
+      {
+        "index": 24,
+        "operation": "object_open",
+        "entered": 684,
+        "completed": 684,
+        "seconds": 0.0221844,
+        "mean_microseconds": 32.43333333333333,
+        "maximum_lifetime_milliseconds": 0.1221
+      },
+      {
+        "index": 1,
+        "operation": "stat",
+        "entered": 180,
+        "completed": 180,
+        "seconds": 0.0159811,
+        "mean_microseconds": 88.7838888888889,
+        "maximum_lifetime_milliseconds": 0.2628
+      },
+      {
+        "index": 21,
+        "operation": "restore_fork_state",
+        "entered": 12,
+        "completed": 12,
+        "seconds": 0.0121802,
+        "mean_microseconds": 1015.0166666666667,
+        "maximum_lifetime_milliseconds": 1.4432
+      },
+      {
+        "index": 48,
+        "operation": "stat_open_query",
+        "entered": 156,
+        "completed": 156,
+        "seconds": 0.0065945,
+        "mean_microseconds": 42.2724358974359,
+        "maximum_lifetime_milliseconds": 0.112
+      },
+      {
+        "index": 35,
+        "operation": "inode_lock_name",
+        "entered": 552,
+        "completed": 552,
+        "seconds": 0.0051832,
+        "mean_microseconds": 9.389855072463767,
+        "maximum_lifetime_milliseconds": 0.0587
+      },
+      {
+        "index": 25,
+        "operation": "object_reopen",
+        "entered": 132,
+        "completed": 132,
+        "seconds": 0.0051508,
+        "mean_microseconds": 39.02121212121212,
+        "maximum_lifetime_milliseconds": 0.1092
+      },
+      {
+        "index": 22,
+        "operation": "ea_read_values",
+        "entered": 1476,
+        "completed": 1476,
+        "seconds": 0.0046705,
+        "mean_microseconds": 3.1642953929539295,
+        "maximum_lifetime_milliseconds": 0.0205
+      },
+      {
+        "index": 51,
+        "operation": "nt_query_ea_submission",
+        "entered": 1476,
+        "completed": 1476,
+        "seconds": 0.004083,
+        "mean_microseconds": 2.7662601626016263,
+        "maximum_lifetime_milliseconds": 0.0201
+      },
+      {
+        "index": 17,
+        "operation": "close",
+        "entered": 144,
+        "completed": 144,
+        "seconds": 0.0039616,
+        "mean_microseconds": 27.51111111111111,
+        "maximum_lifetime_milliseconds": 0.114
+      },
+      {
+        "index": 20,
+        "operation": "portable_fork_state",
+        "entered": 12,
+        "completed": 12,
+        "seconds": 0.0037258,
+        "mean_microseconds": 310.4833333333333,
+        "maximum_lifetime_milliseconds": 0.3604
+      },
+      {
+        "index": 47,
+        "operation": "stat_with_query",
+        "entered": 192,
+        "completed": 192,
+        "seconds": 0.0034895,
+        "mean_microseconds": 18.174479166666668,
+        "maximum_lifetime_milliseconds": 0.0758
+      },
+      {
+        "index": 18,
+        "operation": "pipe_create",
+        "entered": 12,
+        "completed": 12,
+        "seconds": 0.00281,
+        "mean_microseconds": 234.16666666666666,
+        "maximum_lifetime_milliseconds": 0.3008
+      },
+      {
+        "index": 36,
+        "operation": "inode_key",
+        "entered": 432,
+        "completed": 432,
+        "seconds": 0.001922,
+        "mean_microseconds": 4.4490740740740735,
+        "maximum_lifetime_milliseconds": 0.0402
+      },
+      {
+        "index": 27,
+        "operation": "object_read_at",
+        "entered": 192,
+        "completed": 192,
+        "seconds": 0.00161,
+        "mean_microseconds": 8.385416666666666,
+        "maximum_lifetime_milliseconds": 0.0499
+      },
+      {
+        "index": 39,
+        "operation": "read_pin",
+        "entered": 216,
+        "completed": 216,
+        "seconds": 0.0001698,
+        "mean_microseconds": 0.7861111111111111,
+        "maximum_lifetime_milliseconds": 0.0059
+      },
+      {
+        "index": 16,
+        "operation": "write",
+        "entered": 12,
+        "completed": 12,
+        "seconds": 0.0001476,
+        "mean_microseconds": 12.3,
+        "maximum_lifetime_milliseconds": 0.0169
+      },
+      {
+        "index": 13,
+        "operation": "lseek",
+        "entered": 24,
+        "completed": 24,
+        "seconds": 9.99e-05,
+        "mean_microseconds": 4.1625,
+        "maximum_lifetime_milliseconds": 0.0106
+      },
+      {
+        "index": 3,
+        "operation": "fstat",
+        "entered": 48,
+        "completed": 48,
+        "seconds": 5.12e-05,
+        "mean_microseconds": 1.0666666666666667,
+        "maximum_lifetime_milliseconds": 0.0064
+      },
+      {
+        "index": 44,
+        "operation": "permissions_check",
+        "entered": 96,
+        "completed": 96,
+        "seconds": 4.68e-05,
+        "mean_microseconds": 0.4875,
+        "maximum_lifetime_milliseconds": 0.0018
+      },
+      {
+        "index": 37,
+        "operation": "inode_mutex_wait",
+        "entered": 132,
+        "completed": 132,
+        "seconds": 3.38e-05,
+        "mean_microseconds": 0.25606060606060604,
+        "maximum_lifetime_milliseconds": 0.001
+      },
+      {
+        "index": 41,
+        "operation": "ofd_read_cache",
+        "entered": 192,
+        "completed": 192,
+        "seconds": 2.69e-05,
+        "mean_microseconds": 0.14010416666666667,
+        "maximum_lifetime_milliseconds": 0.0013
+      },
+      {
+        "index": 29,
+        "operation": "object_granted_access",
+        "entered": 72,
+        "completed": 72,
+        "seconds": 2.22e-05,
+        "mean_microseconds": 0.3083333333333333,
+        "maximum_lifetime_milliseconds": 0.0007
+      }
+    ],
+    "/usr/bin/python3": [
+      {
+        "index": 15,
+        "operation": "read",
+        "entered": 1408,
+        "completed": 1408,
+        "seconds": 0.7460391,
+        "mean_microseconds": 529.857315340909,
+        "maximum_lifetime_milliseconds": 63.8802
+      },
+      {
+        "index": 1,
+        "operation": "stat",
+        "entered": 3927,
+        "completed": 3927,
+        "seconds": 0.307921,
+        "mean_microseconds": 78.41125541125541,
+        "maximum_lifetime_milliseconds": 0.6679
+      },
+      {
+        "index": 0,
+        "operation": "openat",
+        "entered": 1136,
+        "completed": 1136,
+        "seconds": 0.2332506,
+        "mean_microseconds": 205.3262323943662,
+        "maximum_lifetime_milliseconds": 6.3512
+      },
+      {
+        "index": 48,
+        "operation": "stat_open_query",
+        "entered": 3604,
+        "completed": 3604,
+        "seconds": 0.1341444,
+        "mean_microseconds": 37.220976692563816,
+        "maximum_lifetime_milliseconds": 0.2441
+      },
+      {
+        "index": 24,
+        "operation": "object_open",
+        "entered": 2475,
+        "completed": 2475,
+        "seconds": 0.0794546,
+        "mean_microseconds": 32.10286868686869,
+        "maximum_lifetime_milliseconds": 0.151
+      },
+      {
+        "index": 47,
+        "operation": "stat_with_query",
+        "entered": 4862,
+        "completed": 4862,
+        "seconds": 0.0715272,
+        "mean_microseconds": 14.711476758535582,
+        "maximum_lifetime_milliseconds": 0.1826
+      },
+      {
+        "index": 25,
+        "operation": "object_reopen",
+        "entered": 1713,
+        "completed": 1713,
+        "seconds": 0.06262,
+        "mean_microseconds": 36.55575014594279,
+        "maximum_lifetime_milliseconds": 0.1555
+      },
+      {
+        "index": 3,
+        "operation": "fstat",
+        "entered": 1667,
+        "completed": 1667,
+        "seconds": 0.0531401,
+        "mean_microseconds": 31.87768446310738,
+        "maximum_lifetime_milliseconds": 0.2193
+      },
+      {
+        "index": 22,
+        "operation": "ea_read_values",
+        "entered": 19813,
+        "completed": 19813,
+        "seconds": 0.050079,
+        "mean_microseconds": 2.5275829001160854,
+        "maximum_lifetime_milliseconds": 0.0594
+      },
+      {
+        "index": 51,
+        "operation": "nt_query_ea_submission",
+        "entered": 19813,
+        "completed": 19813,
+        "seconds": 0.0451367,
+        "mean_microseconds": 2.278135567556655,
+        "maximum_lifetime_milliseconds": 0.0589
+      },
+      {
+        "index": 17,
+        "operation": "close",
+        "entered": 1058,
+        "completed": 1058,
+        "seconds": 0.0390588,
+        "mean_microseconds": 36.91758034026465,
+        "maximum_lifetime_milliseconds": 0.2323
+      },
+      {
+        "index": 9,
+        "operation": "rename",
+        "entered": 89,
+        "completed": 89,
+        "seconds": 0.033295,
+        "mean_microseconds": 374.1011235955056,
+        "maximum_lifetime_milliseconds": 0.7538
+      },
+      {
+        "index": 35,
+        "operation": "inode_lock_name",
+        "entered": 3641,
+        "completed": 3641,
+        "seconds": 0.0298268,
+        "mean_microseconds": 8.19192529524856,
+        "maximum_lifetime_milliseconds": 0.0735
+      },
+      {
+        "index": 40,
+        "operation": "ofd_metadata",
+        "entered": 1402,
+        "completed": 1402,
+        "seconds": 0.0260143,
+        "mean_microseconds": 18.555135520684736,
+        "maximum_lifetime_milliseconds": 0.1559
+      },
+      {
+        "index": 26,
+        "operation": "create_inode",
+        "entered": 101,
+        "completed": 101,
+        "seconds": 0.0248628,
+        "mean_microseconds": 246.16633663366335,
+        "maximum_lifetime_milliseconds": 6.1277
+      },
+      {
+        "index": 10,
+        "operation": "mkdir",
+        "entered": 24,
+        "completed": 24,
+        "seconds": 0.0224558,
+        "mean_microseconds": 935.6583333333334,
+        "maximum_lifetime_milliseconds": 6.4753
+      },
+      {
+        "index": 27,
+        "operation": "object_read_at",
+        "entered": 1351,
+        "completed": 1351,
+        "seconds": 0.0191093,
+        "mean_microseconds": 14.144559585492228,
+        "maximum_lifetime_milliseconds": 0.1064
+      },
+      {
+        "index": 21,
+        "operation": "restore_fork_state",
+        "entered": 14,
+        "completed": 14,
+        "seconds": 0.0159412,
+        "mean_microseconds": 1138.6571428571428,
+        "maximum_lifetime_milliseconds": 1.4762
+      },
+      {
+        "index": 20,
+        "operation": "portable_fork_state",
+        "entered": 28,
+        "completed": 28,
+        "seconds": 0.0102606,
+        "mean_microseconds": 366.45,
+        "maximum_lifetime_milliseconds": 0.4935
+      },
+      {
+        "index": 16,
+        "operation": "write",
+        "entered": 152,
+        "completed": 152,
+        "seconds": 0.0085562,
+        "mean_microseconds": 56.290789473684214,
+        "maximum_lifetime_milliseconds": 0.9472
+      },
+      {
+        "index": 8,
+        "operation": "unlink",
+        "entered": 24,
+        "completed": 24,
+        "seconds": 0.0076032,
+        "mean_microseconds": 316.8,
+        "maximum_lifetime_milliseconds": 1.0094
+      },
+      {
+        "index": 18,
+        "operation": "pipe_create",
+        "entered": 47,
+        "completed": 47,
+        "seconds": 0.005884,
+        "mean_microseconds": 125.19148936170212,
+        "maximum_lifetime_milliseconds": 0.2929
+      },
+      {
+        "index": 36,
+        "operation": "inode_key",
+        "entered": 904,
+        "completed": 904,
+        "seconds": 0.0036428,
+        "mean_microseconds": 4.029646017699115,
+        "maximum_lifetime_milliseconds": 0.0268
+      },
+      {
+        "index": 11,
+        "operation": "rmdir",
+        "entered": 12,
+        "completed": 12,
+        "seconds": 0.0031617,
+        "mean_microseconds": 263.475,
+        "maximum_lifetime_milliseconds": 0.5129
+      },
+      {
+        "index": 46,
+        "operation": "stat_metadata_record",
+        "entered": 238,
+        "completed": 238,
+        "seconds": 0.0019682,
+        "mean_microseconds": 8.269747899159663,
+        "maximum_lifetime_milliseconds": 0.1031
+      },
+      {
+        "index": 13,
+        "operation": "lseek",
+        "entered": 1632,
+        "completed": 1632,
+        "seconds": 0.001807,
+        "mean_microseconds": 1.1072303921568627,
+        "maximum_lifetime_milliseconds": 0.0344
+      },
+      {
+        "index": 38,
+        "operation": "native_pin",
+        "entered": 1402,
+        "completed": 1402,
+        "seconds": 0.001756,
+        "mean_microseconds": 1.2524964336661912,
+        "maximum_lifetime_milliseconds": 0.0109
+      },
+      {
+        "index": 2,
+        "operation": "lstat",
+        "entered": 12,
+        "completed": 12,
+        "seconds": 0.0015347,
+        "mean_microseconds": 127.89166666666667,
+        "maximum_lifetime_milliseconds": 0.1514
+      },
+      {
+        "index": 32,
+        "operation": "verity_writable",
+        "entered": 24,
+        "completed": 24,
+        "seconds": 0.0009991,
+        "mean_microseconds": 41.62916666666666,
+        "maximum_lifetime_milliseconds": 0.0991
+      },
+      {
+        "index": 34,
+        "operation": "verity_read_image",
+        "entered": 14,
+        "completed": 14,
+        "seconds": 0.0006087,
+        "mean_microseconds": 43.47857142857143,
+        "maximum_lifetime_milliseconds": 0.0602
+      },
+      {
+        "index": 39,
+        "operation": "read_pin",
+        "entered": 1560,
+        "completed": 1560,
+        "seconds": 0.0005916,
+        "mean_microseconds": 0.3792307692307692,
+        "maximum_lifetime_milliseconds": 0.0052
+      },
+      {
+        "index": 23,
+        "operation": "ea_write",
+        "entered": 36,
+        "completed": 36,
+        "seconds": 0.0005703,
+        "mean_microseconds": 15.841666666666667,
+        "maximum_lifetime_milliseconds": 0.034
+      },
+      {
+        "index": 44,
+        "operation": "permissions_check",
+        "entered": 798,
+        "completed": 798,
+        "seconds": 0.0005469,
+        "mean_microseconds": 0.6853383458646616,
+        "maximum_lifetime_milliseconds": 0.004
+      },
+      {
+        "index": 31,
+        "operation": "verity_size",
+        "entered": 28,
+        "completed": 28,
+        "seconds": 0.0004012,
+        "mean_microseconds": 14.32857142857143,
+        "maximum_lifetime_milliseconds": 0.0335
+      },
+      {
+        "index": 41,
+        "operation": "ofd_read_cache",
+        "entered": 2614,
+        "completed": 2614,
+        "seconds": 0.0003618,
+        "mean_microseconds": 0.1384085692425402,
+        "maximum_lifetime_milliseconds": 0.0046
+      },
+      {
+        "index": 29,
+        "operation": "object_granted_access",
+        "entered": 692,
+        "completed": 692,
+        "seconds": 0.0002575,
+        "mean_microseconds": 0.3721098265895954,
+        "maximum_lifetime_milliseconds": 0.0011
+      },
+      {
+        "index": 37,
+        "operation": "inode_mutex_wait",
+        "entered": 750,
+        "completed": 750,
+        "seconds": 0.0002381,
+        "mean_microseconds": 0.3174666666666666,
+        "maximum_lifetime_milliseconds": 0.001
+      }
+    ],
+    "/usr/lib/kinakaze/apt-extracttemplates": [
+      {
+        "index": 15,
+        "operation": "read",
+        "entered": 2161,
+        "completed": 2161,
+        "seconds": 1.4237487,
+        "mean_microseconds": 658.8378991207774,
+        "maximum_lifetime_milliseconds": 33.2942
+      },
+      {
+        "index": 0,
+        "operation": "openat",
+        "entered": 604,
+        "completed": 604,
+        "seconds": 0.1212892,
+        "mean_microseconds": 200.80993377483443,
+        "maximum_lifetime_milliseconds": 0.8966
+      },
+      {
+        "index": 24,
+        "operation": "object_open",
+        "entered": 1585,
+        "completed": 1585,
+        "seconds": 0.0554866,
+        "mean_microseconds": 35.00731861198738,
+        "maximum_lifetime_milliseconds": 0.2877
+      },
+      {
+        "index": 1,
+        "operation": "stat",
+        "entered": 1300,
+        "completed": 1300,
+        "seconds": 0.0496174,
+        "mean_microseconds": 38.16723076923076,
+        "maximum_lifetime_milliseconds": 0.2309
+      },
+      {
+        "index": 25,
+        "operation": "object_reopen",
+        "entered": 1002,
+        "completed": 1002,
+        "seconds": 0.036491,
+        "mean_microseconds": 36.41816367265469,
+        "maximum_lifetime_milliseconds": 0.155
+      },
+      {
+        "index": 17,
+        "operation": "close",
+        "entered": 1027,
+        "completed": 1027,
+        "seconds": 0.0299243,
+        "mean_microseconds": 29.137585199610516,
+        "maximum_lifetime_milliseconds": 0.8606
+      },
+      {
+        "index": 3,
+        "operation": "fstat",
+        "entered": 691,
+        "completed": 691,
+        "seconds": 0.0245934,
+        "mean_microseconds": 35.591027496382054,
+        "maximum_lifetime_milliseconds": 0.1565
+      },
+      {
+        "index": 20,
+        "operation": "portable_fork_state",
+        "entered": 48,
+        "completed": 48,
+        "seconds": 0.0183149,
+        "mean_microseconds": 381.5604166666667,
+        "maximum_lifetime_milliseconds": 1.1034
+      },
+      {
+        "index": 27,
+        "operation": "object_read_at",
+        "entered": 2113,
+        "completed": 2113,
+        "seconds": 0.0159958,
+        "mean_microseconds": 7.570184571699007,
+        "maximum_lifetime_milliseconds": 0.7072
+      },
+      {
+        "index": 47,
+        "operation": "stat_with_query",
+        "entered": 835,
+        "completed": 835,
+        "seconds": 0.015504,
+        "mean_microseconds": 18.567664670658683,
+        "maximum_lifetime_milliseconds": 0.0767
+      },
+      {
+        "index": 40,
+        "operation": "ofd_metadata",
+        "entered": 477,
+        "completed": 477,
+        "seconds": 0.0135828,
+        "mean_microseconds": 28.475471698113207,
+        "maximum_lifetime_milliseconds": 0.0911
+      },
+      {
+        "index": 22,
+        "operation": "ea_read_values",
+        "entered": 4937,
+        "completed": 4937,
+        "seconds": 0.0134763,
+        "mean_microseconds": 2.7296536358112213,
+        "maximum_lifetime_milliseconds": 0.0603
+      },
+      {
+        "index": 21,
+        "operation": "restore_fork_state",
+        "entered": 12,
+        "completed": 12,
+        "seconds": 0.0128858,
+        "mean_microseconds": 1073.8166666666668,
+        "maximum_lifetime_milliseconds": 1.3259
+      },
+      {
+        "index": 35,
+        "operation": "inode_lock_name",
+        "entered": 1481,
+        "completed": 1481,
+        "seconds": 0.0128115,
+        "mean_microseconds": 8.650573936529373,
+        "maximum_lifetime_milliseconds": 0.0555
+      },
+      {
+        "index": 51,
+        "operation": "nt_query_ea_submission",
+        "entered": 4937,
+        "completed": 4937,
+        "seconds": 0.0120309,
+        "mean_microseconds": 2.4368847478225644,
+        "maximum_lifetime_milliseconds": 0.0596
+      },
+      {
+        "index": 48,
+        "operation": "stat_open_query",
+        "entered": 324,
+        "completed": 324,
+        "seconds": 0.0115779,
+        "mean_microseconds": 35.73425925925926,
+        "maximum_lifetime_milliseconds": 0.1157
+      },
+      {
+        "index": 9,
+        "operation": "rename",
+        "entered": 13,
+        "completed": 13,
+        "seconds": 0.0069297,
+        "mean_microseconds": 533.0538461538462,
+        "maximum_lifetime_milliseconds": 1.2322
+      },
+      {
+        "index": 16,
+        "operation": "write",
+        "entered": 26,
+        "completed": 26,
+        "seconds": 0.0064648,
+        "mean_microseconds": 248.64615384615385,
+        "maximum_lifetime_milliseconds": 0.5496
+      },
+      {
+        "index": 18,
+        "operation": "pipe_create",
+        "entered": 48,
+        "completed": 48,
+        "seconds": 0.0064106,
+        "mean_microseconds": 133.55416666666665,
+        "maximum_lifetime_milliseconds": 0.3941
+      },
+      {
+        "index": 36,
+        "operation": "inode_key",
+        "entered": 874,
+        "completed": 874,
+        "seconds": 0.0035416,
+        "mean_microseconds": 4.052173913043479,
+        "maximum_lifetime_milliseconds": 0.0246
+      },
+      {
+        "index": 26,
+        "operation": "create_inode",
+        "entered": 13,
+        "completed": 13,
+        "seconds": 0.0017197,
+        "mean_microseconds": 132.28461538461536,
+        "maximum_lifetime_milliseconds": 0.381
+      },
+      {
+        "index": 7,
+        "operation": "fchmod",
+        "entered": 26,
+        "completed": 26,
+        "seconds": 0.0013592,
+        "mean_microseconds": 52.276923076923076,
+        "maximum_lifetime_milliseconds": 0.1657
+      },
+      {
+        "index": 13,
+        "operation": "lseek",
+        "entered": 2583,
+        "completed": 2583,
+        "seconds": 0.0009932,
+        "mean_microseconds": 0.38451413085559427,
+        "maximum_lifetime_milliseconds": 0.0115
+      },
+      {
+        "index": 39,
+        "operation": "read_pin",
+        "entered": 2187,
+        "completed": 2187,
+        "seconds": 0.000813,
+        "mean_microseconds": 0.3717421124828532,
+        "maximum_lifetime_milliseconds": 0.0043
+      },
+      {
+        "index": 38,
+        "operation": "native_pin",
+        "entered": 477,
+        "completed": 477,
+        "seconds": 0.0006078,
+        "mean_microseconds": 1.2742138364779874,
+        "maximum_lifetime_milliseconds": 0.0047
+      },
+      {
+        "index": 37,
+        "operation": "inode_mutex_wait",
+        "entered": 1673,
+        "completed": 1673,
+        "seconds": 0.000383,
+        "mean_microseconds": 0.22893006575014943,
+        "maximum_lifetime_milliseconds": 0.0272
+      },
+      {
+        "index": 44,
+        "operation": "permissions_check",
+        "entered": 537,
+        "completed": 537,
+        "seconds": 0.0002521,
+        "mean_microseconds": 0.4694599627560522,
+        "maximum_lifetime_milliseconds": 0.0021
+      },
+      {
+        "index": 41,
+        "operation": "ofd_read_cache",
+        "entered": 2564,
+        "completed": 2564,
+        "seconds": 0.0002461,
+        "mean_microseconds": 0.09598283931357254,
+        "maximum_lifetime_milliseconds": 0.001
+      },
+      {
+        "index": 30,
+        "operation": "verity_lock",
+        "entered": 24,
+        "completed": 24,
+        "seconds": 0.0001829,
+        "mean_microseconds": 7.620833333333333,
+        "maximum_lifetime_milliseconds": 0.0235
+      },
+      {
+        "index": 29,
+        "operation": "object_granted_access",
+        "entered": 488,
+        "completed": 488,
+        "seconds": 0.000154,
+        "mean_microseconds": 0.31557377049180324,
+        "maximum_lifetime_milliseconds": 0.0008
+      },
+      {
+        "index": 46,
+        "operation": "stat_metadata_record",
+        "entered": 13,
+        "completed": 13,
+        "seconds": 0.0001272,
+        "mean_microseconds": 9.784615384615385,
+        "maximum_lifetime_milliseconds": 0.0192
+      },
+      {
+        "index": 23,
+        "operation": "ea_write",
+        "entered": 13,
+        "completed": 13,
+        "seconds": 8.22e-05,
+        "mean_microseconds": 6.323076923076923,
+        "maximum_lifetime_milliseconds": 0.0113
+      }
+    ],
+    "dpkg": [
+      {
+        "index": 1,
+        "operation": "stat",
+        "entered": 64,
+        "completed": 64,
+        "seconds": 0.0742703,
+        "mean_microseconds": 1160.4734375,
+        "maximum_lifetime_milliseconds": 5.2061
+      },
+      {
+        "index": 0,
+        "operation": "openat",
+        "entered": 64,
+        "completed": 64,
+        "seconds": 0.0168364,
+        "mean_microseconds": 263.06875,
+        "maximum_lifetime_milliseconds": 0.7189
+      },
+      {
+        "index": 21,
+        "operation": "restore_fork_state",
+        "entered": 16,
+        "completed": 16,
+        "seconds": 0.0153476,
+        "mean_microseconds": 959.225,
+        "maximum_lifetime_milliseconds": 1.3544
+      },
+      {
+        "index": 24,
+        "operation": "object_open",
+        "entered": 176,
+        "completed": 176,
+        "seconds": 0.0064211,
+        "mean_microseconds": 36.48352272727273,
+        "maximum_lifetime_milliseconds": 0.1143
+      },
+      {
+        "index": 15,
+        "operation": "read",
+        "entered": 64,
+        "completed": 64,
+        "seconds": 0.0024175,
+        "mean_microseconds": 37.7734375,
+        "maximum_lifetime_milliseconds": 0.8297
+      },
+      {
+        "index": 25,
+        "operation": "object_reopen",
+        "entered": 64,
+        "completed": 64,
+        "seconds": 0.0022844,
+        "mean_microseconds": 35.69375,
+        "maximum_lifetime_milliseconds": 0.1094
+      },
+      {
+        "index": 17,
+        "operation": "close",
+        "entered": 64,
+        "completed": 64,
+        "seconds": 0.0014067,
+        "mean_microseconds": 21.9796875,
+        "maximum_lifetime_milliseconds": 0.0426
+      },
+      {
+        "index": 22,
+        "operation": "ea_read_values",
+        "entered": 320,
+        "completed": 320,
+        "seconds": 0.0012233,
+        "mean_microseconds": 3.8228125,
+        "maximum_lifetime_milliseconds": 0.0322
+      },
+      {
+        "index": 27,
+        "operation": "object_read_at",
+        "entered": 32,
+        "completed": 32,
+        "seconds": 0.0011612,
+        "mean_microseconds": 36.2875,
+        "maximum_lifetime_milliseconds": 0.7599
+      },
+      {
+        "index": 35,
+        "operation": "inode_lock_name",
+        "entered": 112,
+        "completed": 112,
+        "seconds": 0.001088,
+        "mean_microseconds": 9.714285714285714,
+        "maximum_lifetime_milliseconds": 0.0246
+      },
+      {
+        "index": 51,
+        "operation": "nt_query_ea_submission",
+        "entered": 320,
+        "completed": 320,
+        "seconds": 0.0010408,
+        "mean_microseconds": 3.2525,
+        "maximum_lifetime_milliseconds": 0.0306
+      },
+      {
+        "index": 48,
+        "operation": "stat_open_query",
+        "entered": 16,
+        "completed": 16,
+        "seconds": 0.0007703,
+        "mean_microseconds": 48.14375,
+        "maximum_lifetime_milliseconds": 0.0958
+      },
+      {
+        "index": 36,
+        "operation": "inode_key",
+        "entered": 112,
+        "completed": 112,
+        "seconds": 0.0005616,
+        "mean_microseconds": 5.014285714285714,
+        "maximum_lifetime_milliseconds": 0.0209
+      },
+      {
+        "index": 47,
+        "operation": "stat_with_query",
+        "entered": 48,
+        "completed": 48,
+        "seconds": 0.0005244,
+        "mean_microseconds": 10.925,
+        "maximum_lifetime_milliseconds": 0.0266
+      },
+      {
+        "index": 39,
+        "operation": "read_pin",
+        "entered": 64,
+        "completed": 64,
+        "seconds": 7.57e-05,
+        "mean_microseconds": 1.1828125,
+        "maximum_lifetime_milliseconds": 0.0048
+      },
+      {
+        "index": 44,
+        "operation": "permissions_check",
+        "entered": 32,
+        "completed": 32,
+        "seconds": 2.5e-05,
+        "mean_microseconds": 0.78125,
+        "maximum_lifetime_milliseconds": 0.0012
+      },
+      {
+        "index": 41,
+        "operation": "ofd_read_cache",
+        "entered": 32,
+        "completed": 32,
+        "seconds": 8e-06,
+        "mean_microseconds": 0.25,
+        "maximum_lifetime_milliseconds": 0.0006
+      },
+      {
+        "index": 29,
+        "operation": "object_granted_access",
+        "entered": 16,
+        "completed": 16,
+        "seconds": 6.3e-06,
+        "mean_microseconds": 0.39375,
+        "maximum_lifetime_milliseconds": 0.0006
+      },
+      {
+        "index": 37,
+        "operation": "inode_mutex_wait",
+        "entered": 16,
+        "completed": 16,
+        "seconds": 5.4e-06,
+        "mean_microseconds": 0.3375,
+        "maximum_lifetime_milliseconds": 0.0005
+      }
+    ],
+    "/usr/bin/python3.11": [
+      {
+        "index": 15,
+        "operation": "read",
+        "entered": 189,
+        "completed": 189,
+        "seconds": 0.202473,
+        "mean_microseconds": 1071.2857142857142,
+        "maximum_lifetime_milliseconds": 183.0867
+      },
+      {
+        "index": 0,
+        "operation": "openat",
+        "entered": 137,
+        "completed": 137,
+        "seconds": 0.0394097,
+        "mean_microseconds": 287.66204379562043,
+        "maximum_lifetime_milliseconds": 6.3288
+      },
+      {
+        "index": 1,
+        "operation": "stat",
+        "entered": 360,
+        "completed": 360,
+        "seconds": 0.033112,
+        "mean_microseconds": 91.97777777777777,
+        "maximum_lifetime_milliseconds": 0.5339
+      },
+      {
+        "index": 9,
+        "operation": "rename",
+        "entered": 43,
+        "completed": 43,
+        "seconds": 0.0161849,
+        "mean_microseconds": 376.39302325581394,
+        "maximum_lifetime_milliseconds": 0.5275
+      },
+      {
+        "index": 48,
+        "operation": "stat_open_query",
+        "entered": 304,
+        "completed": 304,
+        "seconds": 0.0142561,
+        "mean_microseconds": 46.89506578947368,
+        "maximum_lifetime_milliseconds": 0.2606
+      },
+      {
+        "index": 26,
+        "operation": "create_inode",
+        "entered": 43,
+        "completed": 43,
+        "seconds": 0.0109482,
+        "mean_microseconds": 254.6093023255814,
+        "maximum_lifetime_milliseconds": 6.122
+      },
+      {
+        "index": 24,
+        "operation": "object_open",
+        "entered": 248,
+        "completed": 248,
+        "seconds": 0.0087564,
+        "mean_microseconds": 35.30806451612903,
+        "maximum_lifetime_milliseconds": 0.1281
+      },
+      {
+        "index": 47,
+        "operation": "stat_with_query",
+        "entered": 449,
+        "completed": 449,
+        "seconds": 0.0087379,
+        "mean_microseconds": 19.460801781737196,
+        "maximum_lifetime_milliseconds": 0.0911
+      },
+      {
+        "index": 3,
+        "operation": "fstat",
+        "entered": 197,
+        "completed": 197,
+        "seconds": 0.008728,
+        "mean_microseconds": 44.30456852791878,
+        "maximum_lifetime_milliseconds": 0.1485
+      },
+      {
+        "index": 25,
+        "operation": "object_reopen",
+        "entered": 206,
+        "completed": 206,
+        "seconds": 0.0086575,
+        "mean_microseconds": 42.02669902912621,
+        "maximum_lifetime_milliseconds": 0.1415
+      },
+      {
+        "index": 17,
+        "operation": "close",
+        "entered": 128,
+        "completed": 128,
+        "seconds": 0.0075669,
+        "mean_microseconds": 59.11640625,
+        "maximum_lifetime_milliseconds": 0.6279
+      },
+      {
+        "index": 10,
+        "operation": "mkdir",
+        "entered": 40,
+        "completed": 40,
+        "seconds": 0.0071308,
+        "mean_microseconds": 178.27,
+        "maximum_lifetime_milliseconds": 0.6229
+      },
+      {
+        "index": 40,
+        "operation": "ofd_metadata",
+        "entered": 193,
+        "completed": 193,
+        "seconds": 0.0046665,
+        "mean_microseconds": 24.17875647668394,
+        "maximum_lifetime_milliseconds": 0.1099
+      },
+      {
+        "index": 22,
+        "operation": "ea_read_values",
+        "entered": 1232,
+        "completed": 1232,
+        "seconds": 0.0040683,
+        "mean_microseconds": 3.3021915584415584,
+        "maximum_lifetime_milliseconds": 0.027
+      },
+      {
+        "index": 35,
+        "operation": "inode_lock_name",
+        "entered": 397,
+        "completed": 397,
+        "seconds": 0.0037635,
+        "mean_microseconds": 9.47984886649874,
+        "maximum_lifetime_milliseconds": 0.0715
+      },
+      {
+        "index": 51,
+        "operation": "nt_query_ea_submission",
+        "entered": 1232,
+        "completed": 1232,
+        "seconds": 0.0036322,
+        "mean_microseconds": 2.9482142857142857,
+        "maximum_lifetime_milliseconds": 0.0268
+      },
+      {
+        "index": 16,
+        "operation": "write",
+        "entered": 43,
+        "completed": 43,
+        "seconds": 0.0027989,
+        "mean_microseconds": 65.0906976744186,
+        "maximum_lifetime_milliseconds": 0.0984
+      },
+      {
+        "index": 27,
+        "operation": "object_read_at",
+        "entered": 150,
+        "completed": 150,
+        "seconds": 0.0025708,
+        "mean_microseconds": 17.13866666666667,
+        "maximum_lifetime_milliseconds": 0.077
+      },
+      {
+        "index": 2,
+        "operation": "lstat",
+        "entered": 39,
+        "completed": 39,
+        "seconds": 0.0016959,
+        "mean_microseconds": 43.48461538461538,
+        "maximum_lifetime_milliseconds": 0.0825
+      },
+      {
+        "index": 21,
+        "operation": "restore_fork_state",
+        "entered": 1,
+        "completed": 1,
+        "seconds": 0.001462,
+        "mean_microseconds": 1462.0,
+        "maximum_lifetime_milliseconds": 1.462
+      },
+      {
+        "index": 46,
+        "operation": "stat_metadata_record",
+        "entered": 87,
+        "completed": 87,
+        "seconds": 0.0005743,
+        "mean_microseconds": 6.601149425287356,
+        "maximum_lifetime_milliseconds": 0.0187
+      },
+      {
+        "index": 36,
+        "operation": "inode_key",
+        "entered": 88,
+        "completed": 88,
+        "seconds": 0.0003628,
+        "mean_microseconds": 4.122727272727273,
+        "maximum_lifetime_milliseconds": 0.0167
+      },
+      {
+        "index": 38,
+        "operation": "native_pin",
+        "entered": 193,
+        "completed": 193,
+        "seconds": 0.0002852,
+        "mean_microseconds": 1.477720207253886,
+        "maximum_lifetime_milliseconds": 0.0143
+      },
+      {
+        "index": 13,
+        "operation": "lseek",
+        "entered": 162,
+        "completed": 162,
+        "seconds": 0.0001583,
+        "mean_microseconds": 0.9771604938271605,
+        "maximum_lifetime_milliseconds": 0.0101
+      },
+      {
+        "index": 39,
+        "operation": "read_pin",
+        "entered": 232,
+        "completed": 232,
+        "seconds": 8.21e-05,
+        "mean_microseconds": 0.35387931034482756,
+        "maximum_lifetime_milliseconds": 0.0014
+      },
+      {
+        "index": 44,
+        "operation": "permissions_check",
+        "entered": 84,
+        "completed": 84,
+        "seconds": 7.66e-05,
+        "mean_microseconds": 0.9119047619047619,
+        "maximum_lifetime_milliseconds": 0.0021
+      },
+      {
+        "index": 41,
+        "operation": "ofd_read_cache",
+        "entered": 299,
+        "completed": 299,
+        "seconds": 6.2e-05,
+        "mean_microseconds": 0.20735785953177255,
+        "maximum_lifetime_milliseconds": 0.013
+      },
+      {
+        "index": 34,
+        "operation": "verity_read_image",
+        "entered": 1,
+        "completed": 1,
+        "seconds": 4.51e-05,
+        "mean_microseconds": 45.1,
+        "maximum_lifetime_milliseconds": 0.0451
+      },
+      {
+        "index": 29,
+        "operation": "object_granted_access",
+        "entered": 75,
+        "completed": 75,
+        "seconds": 3.17e-05,
+        "mean_microseconds": 0.4226666666666667,
+        "maximum_lifetime_milliseconds": 0.0008
+      },
+      {
+        "index": 37,
+        "operation": "inode_mutex_wait",
+        "entered": 74,
+        "completed": 74,
+        "seconds": 2.7e-05,
+        "mean_microseconds": 0.36486486486486486,
+        "maximum_lifetime_milliseconds": 0.0007
+      },
+      {
+        "index": 23,
+        "operation": "ea_write",
+        "entered": 1,
+        "completed": 1,
+        "seconds": 2.18e-05,
+        "mean_microseconds": 21.8,
+        "maximum_lifetime_milliseconds": 0.0218
+      }
+    ],
+    "dpkg-query": [
+      {
+        "index": 0,
+        "operation": "openat",
+        "entered": 19,
+        "completed": 19,
+        "seconds": 0.0040641,
+        "mean_microseconds": 213.9,
+        "maximum_lifetime_milliseconds": 0.4186
+      },
+      {
+        "index": 21,
+        "operation": "restore_fork_state",
+        "entered": 1,
+        "completed": 1,
+        "seconds": 0.0015066,
+        "mean_microseconds": 1506.6,
+        "maximum_lifetime_milliseconds": 1.5066
+      },
+      {
+        "index": 24,
+        "operation": "object_open",
+        "entered": 37,
+        "completed": 37,
+        "seconds": 0.0014008,
+        "mean_microseconds": 37.85945945945946,
+        "maximum_lifetime_milliseconds": 0.0888
+      },
+      {
+        "index": 15,
+        "operation": "read",
+        "entered": 15,
+        "completed": 15,
+        "seconds": 0.0012959,
+        "mean_microseconds": 86.39333333333333,
+        "maximum_lifetime_milliseconds": 0.3291
+      },
+      {
+        "index": 25,
+        "operation": "object_reopen",
+        "entered": 30,
+        "completed": 30,
+        "seconds": 0.0012939,
+        "mean_microseconds": 43.13,
+        "maximum_lifetime_milliseconds": 0.2351
+      },
+      {
+        "index": 3,
+        "operation": "fstat",
+        "entered": 13,
+        "completed": 13,
+        "seconds": 0.0008406,
+        "mean_microseconds": 64.66153846153846,
+        "maximum_lifetime_milliseconds": 0.1547
+      },
+      {
+        "index": 17,
+        "operation": "close",
+        "entered": 16,
+        "completed": 16,
+        "seconds": 0.0004888,
+        "mean_microseconds": 30.55,
+        "maximum_lifetime_milliseconds": 0.054
+      },
+      {
+        "index": 40,
+        "operation": "ofd_metadata",
+        "entered": 13,
+        "completed": 13,
+        "seconds": 0.0004834,
+        "mean_microseconds": 37.184615384615384,
+        "maximum_lifetime_milliseconds": 0.0905
+      },
+      {
+        "index": 27,
+        "operation": "object_read_at",
+        "entered": 15,
+        "completed": 15,
+        "seconds": 0.0003616,
+        "mean_microseconds": 24.10666666666667,
+        "maximum_lifetime_milliseconds": 0.1435
+      },
+      {
+        "index": 47,
+        "operation": "stat_with_query",
+        "entered": 16,
+        "completed": 16,
+        "seconds": 0.0003581,
+        "mean_microseconds": 22.38125,
+        "maximum_lifetime_milliseconds": 0.0569
+      },
+      {
+        "index": 22,
+        "operation": "ea_read_values",
+        "entered": 77,
+        "completed": 77,
+        "seconds": 0.0002602,
+        "mean_microseconds": 3.379220779220779,
+        "maximum_lifetime_milliseconds": 0.0112
+      },
+      {
+        "index": 35,
+        "operation": "inode_lock_name",
+        "entered": 29,
+        "completed": 29,
+        "seconds": 0.0002446,
+        "mean_microseconds": 8.43448275862069,
+        "maximum_lifetime_milliseconds": 0.0243
+      },
+      {
+        "index": 51,
+        "operation": "nt_query_ea_submission",
+        "entered": 77,
+        "completed": 77,
+        "seconds": 0.0002257,
+        "mean_microseconds": 2.931168831168831,
+        "maximum_lifetime_milliseconds": 0.0107
+      },
+      {
+        "index": 1,
+        "operation": "stat",
+        "entered": 2,
+        "completed": 2,
+        "seconds": 0.000138,
+        "mean_microseconds": 69.0,
+        "maximum_lifetime_milliseconds": 0.1027
+      },
+      {
+        "index": 36,
+        "operation": "inode_key",
+        "entered": 16,
+        "completed": 16,
+        "seconds": 9.14e-05,
+        "mean_microseconds": 5.7125,
+        "maximum_lifetime_milliseconds": 0.0325
+      },
+      {
+        "index": 48,
+        "operation": "stat_open_query",
+        "entered": 1,
+        "completed": 1,
+        "seconds": 3.85e-05,
+        "mean_microseconds": 38.5,
+        "maximum_lifetime_milliseconds": 0.0385
+      },
+      {
+        "index": 38,
+        "operation": "native_pin",
+        "entered": 13,
+        "completed": 13,
+        "seconds": 2.12e-05,
+        "mean_microseconds": 1.6307692307692307,
+        "maximum_lifetime_milliseconds": 0.0044
+      },
+      {
+        "index": 16,
+        "operation": "write",
+        "entered": 1,
+        "completed": 1,
+        "seconds": 1.84e-05,
+        "mean_microseconds": 18.4,
+        "maximum_lifetime_milliseconds": 0.0184
+      },
+      {
+        "index": 39,
+        "operation": "read_pin",
+        "entered": 16,
+        "completed": 16,
+        "seconds": 1.17e-05,
+        "mean_microseconds": 0.73125,
+        "maximum_lifetime_milliseconds": 0.0043
+      },
+      {
+        "index": 44,
+        "operation": "permissions_check",
+        "entered": 16,
+        "completed": 16,
+        "seconds": 8.6e-06,
+        "mean_microseconds": 0.5375,
+        "maximum_lifetime_milliseconds": 0.002
+      },
+      {
+        "index": 41,
+        "operation": "ofd_read_cache",
+        "entered": 28,
+        "completed": 28,
+        "seconds": 5.9e-06,
+        "mean_microseconds": 0.21071428571428572,
+        "maximum_lifetime_milliseconds": 0.001
+      },
+      {
+        "index": 29,
+        "operation": "object_granted_access",
+        "entered": 14,
+        "completed": 14,
+        "seconds": 4.9e-06,
+        "mean_microseconds": 0.35,
+        "maximum_lifetime_milliseconds": 0.001
+      },
+      {
+        "index": 37,
+        "operation": "inode_mutex_wait",
+        "entered": 1,
+        "completed": 1,
+        "seconds": 4e-07,
+        "mean_microseconds": 0.4,
+        "maximum_lifetime_milliseconds": 0.0004
+      }
+    ],
+    "locale": [
+      {
+        "index": 21,
+        "operation": "restore_fork_state",
+        "entered": 1,
+        "completed": 1,
+        "seconds": 0.001087,
+        "mean_microseconds": 1087.0,
+        "maximum_lifetime_milliseconds": 1.087
+      },
+      {
+        "index": 0,
+        "operation": "openat",
+        "entered": 1,
+        "completed": 1,
+        "seconds": 0.0005916,
+        "mean_microseconds": 591.6,
+        "maximum_lifetime_milliseconds": 0.5916
+      },
+      {
+        "index": 24,
+        "operation": "object_open",
+        "entered": 2,
+        "completed": 2,
+        "seconds": 0.0001276,
+        "mean_microseconds": 63.8,
+        "maximum_lifetime_milliseconds": 0.0861
+      },
+      {
+        "index": 1,
+        "operation": "stat",
+        "entered": 1,
+        "completed": 1,
+        "seconds": 0.0001169,
+        "mean_microseconds": 116.9,
+        "maximum_lifetime_milliseconds": 0.1169
+      },
+      {
+        "index": 25,
+        "operation": "object_reopen",
+        "entered": 2,
+        "completed": 2,
+        "seconds": 9.08e-05,
+        "mean_microseconds": 45.4,
+        "maximum_lifetime_milliseconds": 0.0595
+      },
+      {
+        "index": 48,
+        "operation": "stat_open_query",
+        "entered": 1,
+        "completed": 1,
+        "seconds": 4.43e-05,
+        "mean_microseconds": 44.3,
+        "maximum_lifetime_milliseconds": 0.0443
+      },
+      {
+        "index": 47,
+        "operation": "stat_with_query",
+        "entered": 3,
+        "completed": 3,
+        "seconds": 3.63e-05,
+        "mean_microseconds": 12.1,
+        "maximum_lifetime_milliseconds": 0.0146
+      },
+      {
+        "index": 17,
+        "operation": "close",
+        "entered": 1,
+        "completed": 1,
+        "seconds": 2.38e-05,
+        "mean_microseconds": 23.8,
+        "maximum_lifetime_milliseconds": 0.0238
+      },
+      {
+        "index": 22,
+        "operation": "ea_read_values",
+        "entered": 3,
+        "completed": 3,
+        "seconds": 1.77e-05,
+        "mean_microseconds": 5.9,
+        "maximum_lifetime_milliseconds": 0.0084
+      },
+      {
+        "index": 16,
+        "operation": "write",
+        "entered": 1,
+        "completed": 1,
+        "seconds": 1.65e-05,
+        "mean_microseconds": 16.5,
+        "maximum_lifetime_milliseconds": 0.0165
+      },
+      {
+        "index": 51,
+        "operation": "nt_query_ea_submission",
+        "entered": 3,
+        "completed": 3,
+        "seconds": 1.3e-05,
+        "mean_microseconds": 4.333333333333333,
+        "maximum_lifetime_milliseconds": 0.0051
+      },
+      {
+        "index": 39,
+        "operation": "read_pin",
+        "entered": 1,
+        "completed": 1,
+        "seconds": 1e-07,
+        "mean_microseconds": 0.1,
+        "maximum_lifetime_milliseconds": 0.0001
+      }
+    ],
+    "/usr/bin/apt-get": [
+      {
+        "index": 15,
+        "operation": "read",
+        "entered": 1352,
+        "completed": 1352,
+        "seconds": 0.1563388,
+        "mean_microseconds": 115.63520710059171,
+        "maximum_lifetime_milliseconds": 31.8963
+      },
+      {
+        "index": 1,
+        "operation": "stat",
+        "entered": 1859,
+        "completed": 1859,
+        "seconds": 0.1054859,
+        "mean_microseconds": 56.74335664335665,
+        "maximum_lifetime_milliseconds": 0.4136
+      },
+      {
+        "index": 48,
+        "operation": "stat_open_query",
+        "entered": 1842,
+        "completed": 1842,
+        "seconds": 0.0483237,
+        "mean_microseconds": 26.234364820846906,
+        "maximum_lifetime_milliseconds": 0.1854
+      },
+      {
+        "index": 47,
+        "operation": "stat_with_query",
+        "entered": 1863,
+        "completed": 1863,
+        "seconds": 0.0221971,
+        "mean_microseconds": 11.914707461084271,
+        "maximum_lifetime_milliseconds": 0.3408
+      },
+      {
+        "index": 0,
+        "operation": "openat",
+        "entered": 45,
+        "completed": 45,
+        "seconds": 0.0083484,
+        "mean_microseconds": 185.52,
+        "maximum_lifetime_milliseconds": 0.4454
+      },
+      {
+        "index": 35,
+        "operation": "inode_lock_name",
+        "entered": 1903,
+        "completed": 1903,
+        "seconds": 0.0066895,
+        "mean_microseconds": 3.5152390961639517,
+        "maximum_lifetime_milliseconds": 0.0523
+      },
+      {
+        "index": 22,
+        "operation": "ea_read_values",
+        "entered": 2367,
+        "completed": 2367,
+        "seconds": 0.0059776,
+        "mean_microseconds": 2.5253907900295736,
+        "maximum_lifetime_milliseconds": 0.3232
+      },
+      {
+        "index": 51,
+        "operation": "nt_query_ea_submission",
+        "entered": 2367,
+        "completed": 2367,
+        "seconds": 0.0050855,
+        "mean_microseconds": 2.1485002112378537,
+        "maximum_lifetime_milliseconds": 0.046
+      },
+      {
+        "index": 16,
+        "operation": "write",
+        "entered": 568,
+        "completed": 568,
+        "seconds": 0.0041169,
+        "mean_microseconds": 7.24806338028169,
+        "maximum_lifetime_milliseconds": 0.4686
+      },
+      {
+        "index": 20,
+        "operation": "portable_fork_state",
+        "entered": 11,
+        "completed": 11,
+        "seconds": 0.0040165,
+        "mean_microseconds": 365.1363636363636,
+        "maximum_lifetime_milliseconds": 0.8478
+      },
+      {
+        "index": 24,
+        "operation": "object_open",
+        "entered": 115,
+        "completed": 115,
+        "seconds": 0.0035361,
+        "mean_microseconds": 30.74869565217391,
+        "maximum_lifetime_milliseconds": 0.0667
+      },
+      {
+        "index": 25,
+        "operation": "object_reopen",
+        "entered": 67,
+        "completed": 67,
+        "seconds": 0.0027271,
+        "mean_microseconds": 40.702985074626866,
+        "maximum_lifetime_milliseconds": 0.0867
+      },
+      {
+        "index": 17,
+        "operation": "close",
+        "entered": 60,
+        "completed": 60,
+        "seconds": 0.0024784,
+        "mean_microseconds": 41.306666666666665,
+        "maximum_lifetime_milliseconds": 0.2437
+      },
+      {
+        "index": 27,
+        "operation": "object_read_at",
+        "entered": 324,
+        "completed": 324,
+        "seconds": 0.0018498,
+        "mean_microseconds": 5.709259259259259,
+        "maximum_lifetime_milliseconds": 0.0297
+      },
+      {
+        "index": 9,
+        "operation": "rename",
+        "entered": 4,
+        "completed": 4,
+        "seconds": 0.0012404,
+        "mean_microseconds": 310.1,
+        "maximum_lifetime_milliseconds": 0.4389
+      },
+      {
+        "index": 18,
+        "operation": "pipe_create",
+        "entered": 9,
+        "completed": 9,
+        "seconds": 0.0009466,
+        "mean_microseconds": 105.17777777777778,
+        "maximum_lifetime_milliseconds": 0.2226
+      },
+      {
+        "index": 31,
+        "operation": "verity_size",
+        "entered": 12,
+        "completed": 12,
+        "seconds": 0.0009081,
+        "mean_microseconds": 75.675,
+        "maximum_lifetime_milliseconds": 0.1271
+      },
+      {
+        "index": 8,
+        "operation": "unlink",
+        "entered": 2,
+        "completed": 2,
+        "seconds": 0.0005496,
+        "mean_microseconds": 274.8,
+        "maximum_lifetime_milliseconds": 0.3205
+      },
+      {
+        "index": 26,
+        "operation": "create_inode",
+        "entered": 5,
+        "completed": 5,
+        "seconds": 0.0005171,
+        "mean_microseconds": 103.42,
+        "maximum_lifetime_milliseconds": 0.1253
+      },
+      {
+        "index": 3,
+        "operation": "fstat",
+        "entered": 50,
+        "completed": 50,
+        "seconds": 0.0004319,
+        "mean_microseconds": 8.638,
+        "maximum_lifetime_milliseconds": 0.0648
+      },
+      {
+        "index": 45,
+        "operation": "metadata_path_prepare",
+        "entered": 8,
+        "completed": 8,
+        "seconds": 0.000363,
+        "mean_microseconds": 45.375,
+        "maximum_lifetime_milliseconds": 0.0687
+      },
+      {
+        "index": 37,
+        "operation": "inode_mutex_wait",
+        "entered": 1750,
+        "completed": 1750,
+        "seconds": 0.0003529,
+        "mean_microseconds": 0.20165714285714284,
+        "maximum_lifetime_milliseconds": 0.0013
+      },
+      {
+        "index": 4,
+        "operation": "chmod_path",
+        "entered": 5,
+        "completed": 5,
+        "seconds": 0.0003487,
+        "mean_microseconds": 69.74,
+        "maximum_lifetime_milliseconds": 0.0997
+      },
+      {
+        "index": 40,
+        "operation": "ofd_metadata",
+        "entered": 16,
+        "completed": 16,
+        "seconds": 0.0003462,
+        "mean_microseconds": 21.6375,
+        "maximum_lifetime_milliseconds": 0.0434
+      },
+      {
+        "index": 7,
+        "operation": "fchmod",
+        "entered": 6,
+        "completed": 6,
+        "seconds": 0.0003374,
+        "mean_microseconds": 56.233333333333334,
+        "maximum_lifetime_milliseconds": 0.0951
+      },
+      {
+        "index": 36,
+        "operation": "inode_key",
+        "entered": 77,
+        "completed": 77,
+        "seconds": 0.0003325,
+        "mean_microseconds": 4.318181818181818,
+        "maximum_lifetime_milliseconds": 0.0093
+      },
+      {
+        "index": 39,
+        "operation": "read_pin",
+        "entered": 1920,
+        "completed": 1920,
+        "seconds": 0.0003211,
+        "mean_microseconds": 0.16723958333333333,
+        "maximum_lifetime_milliseconds": 0.0053
+      },
+      {
+        "index": 5,
+        "operation": "chown_path",
+        "entered": 3,
+        "completed": 3,
+        "seconds": 0.0002612,
+        "mean_microseconds": 87.06666666666668,
+        "maximum_lifetime_milliseconds": 0.095
+      },
+      {
+        "index": 32,
+        "operation": "verity_writable",
+        "entered": 5,
+        "completed": 5,
+        "seconds": 0.000207,
+        "mean_microseconds": 41.4,
+        "maximum_lifetime_milliseconds": 0.0718
+      },
+      {
+        "index": 13,
+        "operation": "lseek",
+        "entered": 265,
+        "completed": 265,
+        "seconds": 0.0002022,
+        "mean_microseconds": 0.7630188679245283,
+        "maximum_lifetime_milliseconds": 0.0145
+      },
+      {
+        "index": 44,
+        "operation": "permissions_check",
+        "entered": 31,
+        "completed": 31,
+        "seconds": 0.0001715,
+        "mean_microseconds": 5.532258064516129,
+        "maximum_lifetime_milliseconds": 0.1559
+      },
+      {
+        "index": 46,
+        "operation": "stat_metadata_record",
+        "entered": 10,
+        "completed": 10,
+        "seconds": 6.22e-05,
+        "mean_microseconds": 6.22,
+        "maximum_lifetime_milliseconds": 0.0089
+      },
+      {
+        "index": 23,
+        "operation": "ea_write",
+        "entered": 8,
+        "completed": 8,
+        "seconds": 5.83e-05,
+        "mean_microseconds": 7.2875,
+        "maximum_lifetime_milliseconds": 0.0134
+      },
+      {
+        "index": 41,
+        "operation": "ofd_read_cache",
+        "entered": 333,
+        "completed": 333,
+        "seconds": 2.27e-05,
+        "mean_microseconds": 0.06816816816816816,
+        "maximum_lifetime_milliseconds": 0.0006
+      },
+      {
+        "index": 38,
+        "operation": "native_pin",
+        "entered": 16,
+        "completed": 16,
+        "seconds": 1.84e-05,
+        "mean_microseconds": 1.15,
+        "maximum_lifetime_milliseconds": 0.0031
+      },
+      {
+        "index": 30,
+        "operation": "verity_lock",
+        "entered": 2,
+        "completed": 2,
+        "seconds": 1.25e-05,
+        "mean_microseconds": 6.25,
+        "maximum_lifetime_milliseconds": 0.0063
+      },
+      {
+        "index": 29,
+        "operation": "object_granted_access",
+        "entered": 28,
+        "completed": 28,
+        "seconds": 9.4e-06,
+        "mean_microseconds": 0.33571428571428574,
+        "maximum_lifetime_milliseconds": 0.0007
+      }
+    ],
+    "/usr/bin/perl": [
+      {
+        "index": 15,
+        "operation": "read",
+        "entered": 161,
+        "completed": 161,
+        "seconds": 7.253493,
+        "mean_microseconds": 45052.75155279503,
+        "maximum_lifetime_milliseconds": 7226.9753
+      },
+      {
+        "index": 1,
+        "operation": "stat",
+        "entered": 938,
+        "completed": 938,
+        "seconds": 0.1002116,
+        "mean_microseconds": 106.83539445628999,
+        "maximum_lifetime_milliseconds": 0.4334
+      },
+      {
+        "index": 24,
+        "operation": "object_open",
+        "entered": 2289,
+        "completed": 2289,
+        "seconds": 0.0431322,
+        "mean_microseconds": 18.843250327653998,
+        "maximum_lifetime_milliseconds": 0.1071
+      },
+      {
+        "index": 0,
+        "operation": "openat",
+        "entered": 89,
+        "completed": 89,
+        "seconds": 0.0172966,
+        "mean_microseconds": 194.34382022471908,
+        "maximum_lifetime_milliseconds": 0.7074
+      },
+      {
+        "index": 48,
+        "operation": "stat_open_query",
+        "entered": 682,
+        "completed": 682,
+        "seconds": 0.0117475,
+        "mean_microseconds": 17.225073313782993,
+        "maximum_lifetime_milliseconds": 0.0811
+      },
+      {
+        "index": 25,
+        "operation": "object_reopen",
+        "entered": 109,
+        "completed": 109,
+        "seconds": 0.0040093,
+        "mean_microseconds": 36.78256880733945,
+        "maximum_lifetime_milliseconds": 0.1405
+      },
+      {
+        "index": 17,
+        "operation": "close",
+        "entered": 94,
+        "completed": 94,
+        "seconds": 0.0032583,
+        "mean_microseconds": 34.66276595744681,
+        "maximum_lifetime_milliseconds": 0.105
+      },
+      {
+        "index": 47,
+        "operation": "stat_with_query",
+        "entered": 118,
+        "completed": 118,
+        "seconds": 0.0028906,
+        "mean_microseconds": 24.496610169491525,
+        "maximum_lifetime_milliseconds": 0.0479
+      },
+      {
+        "index": 27,
+        "operation": "object_read_at",
+        "entered": 155,
+        "completed": 155,
+        "seconds": 0.0024187,
+        "mean_microseconds": 15.604516129032257,
+        "maximum_lifetime_milliseconds": 0.099
+      },
+      {
+        "index": 22,
+        "operation": "ea_read_values",
+        "entered": 530,
+        "completed": 530,
+        "seconds": 0.0020552,
+        "mean_microseconds": 3.877735849056604,
+        "maximum_lifetime_milliseconds": 0.0255
+      },
+      {
+        "index": 35,
+        "operation": "inode_lock_name",
+        "entered": 193,
+        "completed": 193,
+        "seconds": 0.0020072,
+        "mean_microseconds": 10.4,
+        "maximum_lifetime_milliseconds": 0.0224
+      },
+      {
+        "index": 21,
+        "operation": "restore_fork_state",
+        "entered": 1,
+        "completed": 1,
+        "seconds": 0.001888,
+        "mean_microseconds": 1888.0,
+        "maximum_lifetime_milliseconds": 1.888
+      },
+      {
+        "index": 51,
+        "operation": "nt_query_ea_submission",
+        "entered": 530,
+        "completed": 530,
+        "seconds": 0.0018392,
+        "mean_microseconds": 3.470188679245283,
+        "maximum_lifetime_milliseconds": 0.025
+      },
+      {
+        "index": 20,
+        "operation": "portable_fork_state",
+        "entered": 2,
+        "completed": 2,
+        "seconds": 0.0013547,
+        "mean_microseconds": 677.35,
+        "maximum_lifetime_milliseconds": 0.8606
+      },
+      {
+        "index": 2,
+        "operation": "lstat",
+        "entered": 16,
+        "completed": 16,
+        "seconds": 0.0008178,
+        "mean_microseconds": 51.1125,
+        "maximum_lifetime_milliseconds": 0.0921
+      },
+      {
+        "index": 36,
+        "operation": "inode_key",
+        "entered": 104,
+        "completed": 104,
+        "seconds": 0.0004541,
+        "mean_microseconds": 4.3663461538461545,
+        "maximum_lifetime_milliseconds": 0.0408
+      },
+      {
+        "index": 18,
+        "operation": "pipe_create",
+        "entered": 3,
+        "completed": 3,
+        "seconds": 0.0003516,
+        "mean_microseconds": 117.2,
+        "maximum_lifetime_milliseconds": 0.1693
+      },
+      {
+        "index": 3,
+        "operation": "fstat",
+        "entered": 22,
+        "completed": 22,
+        "seconds": 0.0003475,
+        "mean_microseconds": 15.795454545454547,
+        "maximum_lifetime_milliseconds": 0.0634
+      },
+      {
+        "index": 32,
+        "operation": "verity_writable",
+        "entered": 9,
+        "completed": 9,
+        "seconds": 0.0003154,
+        "mean_microseconds": 35.044444444444444,
+        "maximum_lifetime_milliseconds": 0.0366
+      },
+      {
+        "index": 10,
+        "operation": "mkdir",
+        "entered": 1,
+        "completed": 1,
+        "seconds": 0.0003087,
+        "mean_microseconds": 308.7,
+        "maximum_lifetime_milliseconds": 0.3087
+      },
+      {
+        "index": 34,
+        "operation": "verity_read_image",
+        "entered": 7,
+        "completed": 7,
+        "seconds": 0.0002879,
+        "mean_microseconds": 41.128571428571426,
+        "maximum_lifetime_milliseconds": 0.0482
+      },
+      {
+        "index": 39,
+        "operation": "read_pin",
+        "entered": 161,
+        "completed": 161,
+        "seconds": 0.000229,
+        "mean_microseconds": 1.4223602484472049,
+        "maximum_lifetime_milliseconds": 0.0137
+      },
+      {
+        "index": 40,
+        "operation": "ofd_metadata",
+        "entered": 8,
+        "completed": 8,
+        "seconds": 0.0002244,
+        "mean_microseconds": 28.05,
+        "maximum_lifetime_milliseconds": 0.0304
+      },
+      {
+        "index": 13,
+        "operation": "lseek",
+        "entered": 165,
+        "completed": 165,
+        "seconds": 0.0001868,
+        "mean_microseconds": 1.132121212121212,
+        "maximum_lifetime_milliseconds": 0.0069
+      },
+      {
+        "index": 44,
+        "operation": "permissions_check",
+        "entered": 80,
+        "completed": 80,
+        "seconds": 6.58e-05,
+        "mean_microseconds": 0.8225,
+        "maximum_lifetime_milliseconds": 0.0075
+      },
+      {
+        "index": 23,
+        "operation": "ea_write",
+        "entered": 4,
+        "completed": 4,
+        "seconds": 6.04e-05,
+        "mean_microseconds": 15.1,
+        "maximum_lifetime_milliseconds": 0.0189
+      },
+      {
+        "index": 46,
+        "operation": "stat_metadata_record",
+        "entered": 10,
+        "completed": 10,
+        "seconds": 5.43e-05,
+        "mean_microseconds": 5.43,
+        "maximum_lifetime_milliseconds": 0.0066
+      },
+      {
+        "index": 41,
+        "operation": "ofd_read_cache",
+        "entered": 150,
+        "completed": 150,
+        "seconds": 4.41e-05,
+        "mean_microseconds": 0.294,
+        "maximum_lifetime_milliseconds": 0.0045
+      },
+      {
+        "index": 37,
+        "operation": "inode_mutex_wait",
+        "entered": 72,
+        "completed": 72,
+        "seconds": 3.81e-05,
+        "mean_microseconds": 0.5291666666666667,
+        "maximum_lifetime_milliseconds": 0.0011
+      },
+      {
+        "index": 29,
+        "operation": "object_granted_access",
+        "entered": 79,
+        "completed": 79,
+        "seconds": 2.92e-05,
+        "mean_microseconds": 0.369620253164557,
+        "maximum_lifetime_milliseconds": 0.0008
+      },
+      {
+        "index": 38,
+        "operation": "native_pin",
+        "entered": 8,
+        "completed": 8,
+        "seconds": 1.21e-05,
+        "mean_microseconds": 1.5125,
+        "maximum_lifetime_milliseconds": 0.0048
+      }
+    ]
+  },
+  "native_lifetime_groups": [
+    {
+      "program": "<fork without argv publication>",
+      "processes": 3399,
+      "lifetime_user_ms": 48968.75,
+      "lifetime_kernel_ms": 52578.125,
+      "lifetime_cpu_ms": 101546.875
+    },
+    {
+      "program": "/usr/bin/dpkg",
+      "processes": 70,
+      "lifetime_user_ms": 11750.0,
+      "lifetime_kernel_ms": 80421.875,
+      "lifetime_cpu_ms": 92171.875
+    },
+    {
+      "program": "dpkg-deb",
+      "processes": 714,
+      "lifetime_user_ms": 17406.25,
+      "lifetime_kernel_ms": 18437.5,
+      "lifetime_cpu_ms": 35843.75
+    },
+    {
+      "program": "tar",
+      "processes": 357,
+      "lifetime_user_ms": 6515.625,
+      "lifetime_kernel_ms": 8515.625,
+      "lifetime_cpu_ms": 15031.25
+    },
+    {
+      "program": "dpkg-split",
+      "processes": 357,
+      "lifetime_user_ms": 5890.625,
+      "lifetime_kernel_ms": 5546.875,
+      "lifetime_cpu_ms": 11437.5
+    },
+    {
+      "program": "rm",
+      "processes": 357,
+      "lifetime_user_ms": 5343.75,
+      "lifetime_kernel_ms": 5625.0,
+      "lifetime_cpu_ms": 10968.75
+    },
+    {
+      "program": "/usr/bin/python3",
+      "processes": 14,
+      "lifetime_user_ms": 1140.625,
+      "lifetime_kernel_ms": 1640.625,
+      "lifetime_cpu_ms": 2781.25
+    },
+    {
+      "program": "/usr/bin/apt-get",
+      "processes": 1,
+      "lifetime_user_ms": 609.375,
+      "lifetime_kernel_ms": 1328.125,
+      "lifetime_cpu_ms": 1937.5
+    },
+    {
+      "program": "/usr/lib/kinakaze/apt-extracttemplates",
+      "processes": 12,
+      "lifetime_user_ms": 640.625,
+      "lifetime_kernel_ms": 1093.75,
+      "lifetime_cpu_ms": 1734.375
+    },
+    {
+      "program": "/bin/sh",
+      "processes": 33,
+      "lifetime_user_ms": 484.375,
+      "lifetime_kernel_ms": 562.5,
+      "lifetime_cpu_ms": 1046.875
+    },
+    {
+      "program": "/usr/bin/apt-config",
+      "processes": 12,
+      "lifetime_user_ms": 406.25,
+      "lifetime_kernel_ms": 468.75,
+      "lifetime_cpu_ms": 875.0
+    },
+    {
+      "program": "dpkg",
+      "processes": 16,
+      "lifetime_user_ms": 234.375,
+      "lifetime_kernel_ms": 343.75,
+      "lifetime_cpu_ms": 578.125
+    },
+    {
+      "program": "basename",
+      "processes": 16,
+      "lifetime_user_ms": 328.125,
+      "lifetime_kernel_ms": 156.25,
+      "lifetime_cpu_ms": 484.375
+    },
+    {
+      "program": "/usr/bin/perl",
+      "processes": 1,
+      "lifetime_user_ms": 125.0,
+      "lifetime_kernel_ms": 171.875,
+      "lifetime_cpu_ms": 296.875
+    },
+    {
+      "program": "/usr/bin/python3.11",
+      "processes": 1,
+      "lifetime_user_ms": 109.375,
+      "lifetime_kernel_ms": 156.25,
+      "lifetime_cpu_ms": 265.625
+    },
+    {
+      "program": "update-alternatives",
+      "processes": 7,
+      "lifetime_user_ms": 93.75,
+      "lifetime_kernel_ms": 109.375,
+      "lifetime_cpu_ms": 203.125
+    },
+    {
+      "program": "python3.11",
+      "processes": 2,
+      "lifetime_user_ms": 46.875,
+      "lifetime_kernel_ms": 140.625,
+      "lifetime_cpu_ms": 187.5
+    },
+    {
+      "program": "locale",
+      "processes": 1,
+      "lifetime_user_ms": 31.25,
+      "lifetime_kernel_ms": 15.625,
+      "lifetime_cpu_ms": 46.875
+    },
+    {
+      "program": "dpkg-query",
+      "processes": 1,
+      "lifetime_user_ms": 31.25,
+      "lifetime_kernel_ms": 0.0,
+      "lifetime_cpu_ms": 31.25
+    }
+  ],
+  "native_lifetime_interpretation": "Operation durations cover the installation bracket. Process CPU counters cover their entire native lifetimes, including preparation. Nested operations and concurrently running processes overlap.",
+  "matched_install_processes": 5371,
+  "unmatched": [],
+  "evidence_sha256": {
+    "r8-vfs-diagnostic/fixture/report.json": "66d4b2cc6562429bda162fb3db2bfefde2464486045a9ab49b8caeb35edaf01d",
+    "r8-vfs-diagnostic/install-summary.json": "b2af91c00293e24c5a6806289d3843e252f7216c3f695264e8979f7a229b7eb1",
+    "r8-vfs-diagnostic/install-processes.json": "aca3ec190ba822b214a286b89eb89e434fd7190affb07f8e8fb9d04f80db207c",
+    "r8-vfs-diagnostic/census.json": "4924f2706fb62cf11d9a8a6f0c0ac6b873408017a6a26ae0e0cbbf34c3992207",
+    "r8-vfs-diagnostic/analysis.json": "a9d69e3015346ef5718eaa712641baf776f4a92f4421f3fd6df5e965cf750d8e",
+    "r8-vfs-probes/report.json": "9b85b7e21ffb7c418382d9a222d07fcff225dc90bf55f0bd9cb70b57e23903bc",
+    "r8-vfs-dist.json": "c86db929722d805be9af9089438f3c30329ee263c3b077a29d35c7ca883ecf6a",
+    "r8-vfs-diagnostic-source.json": "fc59ec1365a34614cae295c9b53af2627ad1b8c7f299b8577c9e717b844564e1",
+    "r8-vfs-diagnostic-slots.json": "08d09b2a8efb82d85bb2e13de2452a4e55ee60288dfb1ededc0e8176014c7392",
+    "vfs-diagnostic-profile.rs": "ec13955fd424357f3766c74ff5426101afe2eac63e6ff729f4a0cb2c95e821bd",
+    "vfs-profile-read.py": "b79ef7c0a287d9a139d9f12a3e9f6800007fd6f4ce01455be399da57f54afcb6",
+    "run-r8-vfs-diagnostic.py": "e10cb9328ba4fd4023bbaf3ac16a7ddee4d853be6cd1556a196041accffc3a16",
+    "stage-r8-vfs-diagnostic.py": "76822c1cb7b38d54e6e7a6bb7faaac057b2e9c64808048846d945c0f1890e54e"
+  }
+}
