@@ -27,10 +27,32 @@ exclude Python startup from body time; every read checked its expected content.
 
 This measures the relative extension against the absolute native-read path in
 the same binary. It does not establish a whole-install speedup or the 180-second
-installation target. Background host activity is recorded with the results.
+installation target. Background compilers appeared in all ten host samples.
 The frozen source is based on `1153b905ed99` plus the exact native-read cohort;
 later changes to main are outside this release's measured source.
 
 [Evidence, source hashes and distribution hashes](measurements/native-read-open-2026-10-01.json)
 preserve every validation and measurement row. `KINAKAZE_NATIVE_READ_OPEN=0`
 disables the complete path for diagnosis; both switches default to enabled.
+
+The same frozen release then completed a fresh full **357-package** Node.js/npm
+installation in **261.841 seconds**, with download measured separately at
+2.022 seconds. Node, npm and dpkg audit passed; full package-file verification
+passed in another 11.468 seconds. Installed names and versions exactly matched
+the R11 full-install reference. Maintainer scripts, triggers and synchronization
+remained enabled, and all 59 distribution hashes remained unchanged. The first
+setup directory failed initialization and was excluded; a separate successful
+setup supplied the fresh measured root.
+
+The install Job used 356.578 CPU seconds (123.969 user, 232.609 kernel), created
+5,275 processes and recorded 41,861,962 page faults. No build or separate
+benchmark ran in this task during installation. The quiet-start condition was
+not met; foreign compilers appeared in all 261 installation host samples,
+with median total host CPU at 59.1%. The observer used 0.766 CPU seconds across
+the complete driver. This source and host differ from the best 220.020-second
+observation, so this run does not isolate installation savings. The 180-second
+target remains unmet.
+
+[Complete-install evidence](measurements/native-read-open-install-2026-10-01.json)
+records all eight phases, CPU counters, frozen source and distribution hashes,
+fresh-root setup results and host observations.
