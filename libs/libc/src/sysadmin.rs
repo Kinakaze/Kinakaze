@@ -2645,7 +2645,7 @@ mod futex_handoff {
     }
 
     extern "C" fn initializer() {
-        assert!(kinakaze_runtime::register_fork_participant(
+        assert!(unsafe { kinakaze_runtime::register_fork_participant_without_inherited_handles(
             kinakaze_runtime::ForkParticipant {
                 abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
                 priority: 45,
@@ -2655,7 +2655,7 @@ mod futex_handoff {
                 parent: None,
                 child: Some(child),
             }
-        ));
+        ) });
     }
 
     #[used]

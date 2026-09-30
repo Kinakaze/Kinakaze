@@ -5,6 +5,7 @@ mod desktop;
 mod desktop_client;
 mod image_cache;
 mod kernel;
+mod native_fork;
 mod pool;
 mod tray;
 mod web;
@@ -308,7 +309,23 @@ fn serve(mut pipe: PipeConnection, service: Arc<Service>, _slot: ConnectionSlot)
                     }
                 }
             };
+            let mut catalog_transfer = None;
+            let mut native_fork_delivery = None;
             let result = match (&wire.request, result) {
+                (Request::NativeFork { transaction, spec }, Ok(_)) => {
+                    let taken = service.pool.as_ref().map(|p| p.native_forks.take(peer, *transaction, spec)).transpose();
+                    match taken {
+                        Ok(value) => {
+                            let worker = value.flatten().map(|(worker, transfer)| {
+                                native_fork_delivery = Some(*transaction);
+                                catalog_transfer = Some(transfer);
+                                worker
+                            });
+                            Ok(kinakaze_v2_protocol::Reply::NativeFork { worker })
+                        }
+                        Err(_) => Ok(kinakaze_v2_protocol::Reply::NativeFork { worker: None }),
+                    }
+                }
                 (Request::Kernel(command), Ok(_)) => service
                     .kernel
                     .lock()
@@ -336,7 +353,16 @@ fn serve(mut pipe: PipeConnection, service: Arc<Service>, _slot: ConnectionSlot)
             if stop {
                 service.stop();
             }
+            if sent.is_err()
+                && let Some(transaction) = native_fork_delivery
+                && let Some(pool) = &service.pool
+            {
+                pool.native_forks.cancel_delivery(peer, transaction);
+            }
             sent?;
+            if let Some(transfer) = catalog_transfer {
+                transfer.commit();
+            }
             if stop {
                 break;
             }
@@ -546,6 +572,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
     if service.pool.is_some() {
         pool::start(Arc::clone(&service))?;
+        native_fork::start(Arc::clone(&service))?;
     }
     let _session_file = session_file
         .map(|path| {

@@ -36,7 +36,7 @@ thread_local! { static PREPARED: RefCell<Option<MutexGuard<'static, Registry>>> 
 fn register() -> Result<(), i32> {
     static REGISTERED: OnceLock<bool> = OnceLock::new();
     if *REGISTERED.get_or_init(|| {
-        kinakaze_runtime::register_fork_participant(kinakaze_runtime::ForkParticipant {
+        unsafe { kinakaze_runtime::register_fork_participant_without_inherited_handles(kinakaze_runtime::ForkParticipant {
             abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
             priority: 500,
             key: MAGIC,
@@ -44,7 +44,7 @@ fn register() -> Result<(), i32> {
             snapshot: Some(snapshot),
             parent: Some(parent),
             child: Some(child),
-        })
+        }) }
     }) {
         Ok(())
     } else {

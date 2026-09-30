@@ -449,7 +449,11 @@ pub(crate) fn serialize(retain: impl Fn(i32) -> bool) -> Result<Vec<u8>, i32> {
     let mut bytes = Vec::new();
     for id in ids {
         if let Some(inode) = records.get(&id) {
-            for value in [id, inode.section.raw() as u64, inode.mutex.raw() as u64] {
+            for value in [
+                id,
+                crate::native_transfer::encode(inode.section.raw() as u64),
+                crate::native_transfer::encode(inode.mutex.raw() as u64),
+            ] {
                 bytes.extend_from_slice(&value.to_le_bytes());
             }
         }
@@ -475,7 +479,11 @@ fn restore_checked(bytes: &[u8]) -> Result<(), i32> {
     // Own each inherited pair exactly once, even if both pipe ends survived.
     for row in bytes.chunks_exact(24) {
         let word = |n| u64::from_le_bytes(row[n..n + 8].try_into().unwrap());
-        let (id, section, mutex) = (word(0), word(8) as usize, word(16) as usize);
+        let (id, section, mutex) = (
+            word(0),
+            crate::native_transfer::decode(word(8))? as usize,
+            crate::native_transfer::decode(word(16))? as usize,
+        );
         if id == 0 || section == 0 || mutex == 0 || section == mutex || restored.contains_key(&id) {
             return Err(EIO);
         }

@@ -550,9 +550,13 @@ pub fn serialize_matching(filter: impl Fn(i32) -> bool) -> Result<Vec<u8>, i32> 
     for (&fd, record) in retained {
         payload.extend_from_slice(&fd.to_le_bytes());
         payload.extend_from_slice(&record.entry.generation.to_le_bytes());
-        payload.extend_from_slice(&(record.entry.raw as u64).to_le_bytes());
+        payload.extend_from_slice(
+            &crate::native_transfer::encode(record.entry.raw as u64).to_le_bytes(),
+        );
         payload.extend_from_slice(&record.entry.description_id.to_le_bytes());
-        payload.extend_from_slice(&(record.marker.0 as u64).to_le_bytes());
+        payload.extend_from_slice(
+            &crate::native_transfer::encode(record.marker.0 as u64).to_le_bytes(),
+        );
         payload.extend_from_slice(&1u32.to_le_bytes());
         payload.extend_from_slice(&0u32.to_le_bytes());
     }
@@ -582,12 +586,18 @@ pub fn restore_fork_state(payload: &[u8]) -> bool {
         if u32_at(32) != 1 || u32_at(36) != 0 || u64_at(24) == 0 {
             return false;
         }
-        let marker = Owned(u64_at(24) as HANDLE);
+        let (Ok(raw), Ok(marker)) = (
+            crate::native_transfer::decode(u64_at(8)),
+            crate::native_transfer::decode(u64_at(24)),
+        ) else {
+            return false;
+        };
+        let marker = Owned(marker as HANDLE);
         let Ok(entry) = crate::get(fd) else {
             return false;
         };
         if entry.kind != FdKind::Fifo
-            || entry.raw as u64 != u64_at(8)
+            || entry.raw as u64 != raw
             || entry.description_id != u64_at(16)
         {
             return false;

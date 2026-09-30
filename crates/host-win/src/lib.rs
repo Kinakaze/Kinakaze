@@ -16,6 +16,7 @@ mod memory;
 mod pipes;
 mod process;
 mod security;
+mod snapshot;
 mod startup_gate;
 mod startup_profile;
 
@@ -29,6 +30,7 @@ pub use process::{
     Job, ProcessHandle, background_creation_flags, inherited_process_priority,
     set_current_process_priority,
 };
+pub use snapshot::{ReadOnlySection, ReadOnlySectionView, RemoteTransfer};
 pub use startup_gate::StartupGate;
 pub use startup_profile::StartupSpan;
 

@@ -16,6 +16,7 @@ PROBES = ('ConcurrentVforkProbe', 'RawAllocationProbe', 'SignalJumpProbe', 'XVis
           'UnixPeekProbe', 'AlsaSequencerProbe', 'StartupInterfacesProbe', 'Power80Probe', 'PipeWireLoopProbe', 'AllocationRecycleProbe', 'UnixReadinessProbe', 'PipeWireClientProbe', 'AllocationBatchProbe', 'AllocationColdProbe', 'AllocationThreadRecycleProbe')
 PROBES += ('OracleAbiProbe', 'SparseForkStackProbe', 'WriteWatchStackProbe', 'NativeLookupProbe', 'UtmpLocksProbe')
 PROBES += ('FutexVectorProbe', 'FutexRequeueProbe')
+PROBES += ('ForkNativeTransferProbe', 'ForkPrewarmPoolProbe', 'ForkNativeFallbackProbe')
 EXECUTABLES = ('AllocatorInterpositionProbe', 'AllocatorIfuncProbe')
 
 

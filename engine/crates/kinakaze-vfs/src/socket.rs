@@ -353,9 +353,9 @@ pub(crate) fn serialize_process_fork() -> Result<Vec<u8>, i32> {
     };
     let mut payload = Vec::with_capacity(FORK_SOCKET_PAYLOAD_LEN);
     payload.extend_from_slice(&FORK_SOCKET_MAGIC.to_le_bytes());
-    payload.extend_from_slice(&(read_pipe as u64).to_le_bytes());
-    payload.extend_from_slice(&(write_pipe as u64).to_le_bytes());
-    payload.extend_from_slice(&(acknowledged as u64).to_le_bytes());
+    payload.extend_from_slice(&crate::native_transfer::encode(read_pipe as u64).to_le_bytes());
+    payload.extend_from_slice(&crate::native_transfer::encode(write_pipe as u64).to_le_bytes());
+    payload.extend_from_slice(&crate::native_transfer::encode(acknowledged as u64).to_le_bytes());
     payload.extend_from_slice(&count.to_le_bytes());
     payload.extend_from_slice(&0u32.to_le_bytes());
     Ok(payload)
@@ -413,9 +413,20 @@ pub(crate) fn restore_process_fork(payload: &[u8]) -> bool {
     {
         return false;
     }
-    let read_pipe = u64::from_le_bytes(payload[8..16].try_into().unwrap_or_default()) as usize;
-    let write_pipe = u64::from_le_bytes(payload[16..24].try_into().unwrap_or_default()) as usize;
-    let acknowledged = u64::from_le_bytes(payload[24..32].try_into().unwrap_or_default()) as usize;
+    let handle = |start| {
+        crate::native_transfer::decode(u64::from_le_bytes(
+            payload[start..start + 8].try_into().unwrap(),
+        ))
+    };
+    let (Ok(read_pipe), Ok(write_pipe), Ok(acknowledged)) = (handle(8), handle(16), handle(24))
+    else {
+        return false;
+    };
+    let (read_pipe, write_pipe, acknowledged) = (
+        read_pipe as usize,
+        write_pipe as usize,
+        acknowledged as usize,
+    );
     let count = u32::from_le_bytes(payload[32..36].try_into().unwrap_or_default()) as usize;
     if count == 0 {
         return read_pipe == 0 && write_pipe == 0 && acknowledged == 0;

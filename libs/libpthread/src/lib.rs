@@ -3677,7 +3677,7 @@ fn register_fork_participant() {
         return;
     }
     let key = 0x5054_4852_4541_4432u64 ^ (module as usize as u64).rotate_left(11);
-    let _ = kinakaze_runtime::register_fork_participant(kinakaze_runtime::ForkParticipant {
+    let _ = unsafe { kinakaze_runtime::register_fork_participant_without_inherited_handles(kinakaze_runtime::ForkParticipant {
         abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
         priority: 1_000,
         key,
@@ -3685,7 +3685,7 @@ fn register_fork_participant() {
         snapshot: Some(fork_snapshot),
         parent: Some(fork_parent),
         child: Some(fork_child),
-    });
+    }) };
 }
 
 #[cfg(all(windows, target_arch = "x86_64"))]

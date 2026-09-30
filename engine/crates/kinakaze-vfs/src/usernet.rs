@@ -1000,7 +1000,9 @@ pub(crate) fn serialize(mut keep: impl FnMut(i32) -> bool) -> Result<Vec<u8>, i3
                 bytes.extend_from_slice(&item.store.id().to_le_bytes());
                 let pins = item.handoff_pins()?;
                 for pin in &pins {
-                    bytes.extend_from_slice(&(pin.raw() as u64).to_le_bytes());
+                    bytes.extend_from_slice(
+                        &crate::native_transfer::encode(pin.raw() as u64).to_le_bytes(),
+                    );
                 }
                 for _ in pins.len()..5 {
                     bytes.extend_from_slice(&0u64.to_le_bytes());
@@ -1022,22 +1024,25 @@ pub(crate) fn restore(bytes: &[u8]) -> bool {
             // Native inheritance pins the objects before the parent may exit.
             // Open our own references before releasing those handoff handles.
             let mut inherited = vec![
-                crate::fs::object::Object::owned(
-                    u64::from_le_bytes(b[12..20].try_into().unwrap()) as _,
-                )?,
-                crate::fs::object::Object::owned(
-                    u64::from_le_bytes(b[20..28].try_into().unwrap()) as _,
-                )?,
+                crate::fs::object::Object::owned(crate::native_transfer::decode(
+                    u64::from_le_bytes(b[12..20].try_into().unwrap()),
+                )? as _)?,
+                crate::fs::object::Object::owned(crate::native_transfer::decode(
+                    u64::from_le_bytes(b[20..28].try_into().unwrap()),
+                )? as _)?,
             ];
-            let packet_pin = u64::from_le_bytes(b[28..36].try_into().unwrap());
+            let packet_pin =
+                crate::native_transfer::decode(u64::from_le_bytes(b[28..36].try_into().unwrap()))?;
             if packet_pin != 0 {
                 inherited.push(crate::fs::object::Object::owned(packet_pin as _)?);
             }
-            let allocation_pin = u64::from_le_bytes(b[36..44].try_into().unwrap());
+            let allocation_pin =
+                crate::native_transfer::decode(u64::from_le_bytes(b[36..44].try_into().unwrap()))?;
             if allocation_pin != 0 {
                 inherited.push(crate::fs::object::Object::owned(allocation_pin as _)?);
             }
-            let token_pin = u64::from_le_bytes(b[44..52].try_into().unwrap());
+            let token_pin =
+                crate::native_transfer::decode(u64::from_le_bytes(b[44..52].try_into().unwrap()))?;
             if token_pin != 0 {
                 inherited.push(crate::fs::object::Object::owned(token_pin as _)?);
             }

@@ -72,7 +72,7 @@ macro_rules! returned_record {
         fn register_returned() -> Result<(), i32> {
             static REGISTERED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
             if *REGISTERED.get_or_init(|| {
-                kinakaze_runtime::register_fork_participant(kinakaze_runtime::ForkParticipant {
+                unsafe { kinakaze_runtime::register_fork_participant_without_inherited_handles(kinakaze_runtime::ForkParticipant {
                     abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
                     priority: 500,
                     key: u64::from_le_bytes($magic),
@@ -80,7 +80,7 @@ macro_rules! returned_record {
                     snapshot: Some(snapshot_returned),
                     parent: None,
                     child: Some(restore_returned),
-                })
+                }) }
             }) {
                 Ok(())
             } else {

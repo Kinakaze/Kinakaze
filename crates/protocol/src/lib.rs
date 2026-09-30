@@ -5,6 +5,7 @@ use std::io::{self, Read, Write};
 
 pub mod image_cache;
 pub mod kernel;
+pub mod native_fork;
 
 // V4 acknowledges completed transactions in the next request envelope. Older
 // control/launch messages remain accepted for host controllers.
@@ -85,6 +86,10 @@ pub enum Request {
     ImageSnapshot {
         source: u64,
         length: u64,
+    },
+    NativeFork {
+        transaction: u64,
+        spec: native_fork::Spec,
     },
     /// Resolve an authorized logical process for process_vm_readv/writev.
     ProcessMemoryTarget {
@@ -220,6 +225,9 @@ pub enum Reply {
     /// Read/execute-only section capability transferred into the requesting peer.
     ImageSnapshot {
         section: Option<(u64, [u8; 32])>,
+    },
+    NativeFork {
+        worker: Option<native_fork::Worker>,
     },
     ProcessMemoryTarget {
         host_pid: u32,

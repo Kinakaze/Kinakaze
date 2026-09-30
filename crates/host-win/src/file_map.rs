@@ -4,7 +4,7 @@ use std::{
     io,
     ops::Deref,
     os::windows::{fs::OpenOptionsExt, io::AsRawHandle},
-    path::Path,
+    path::{Path, PathBuf},
 };
 use windows_sys::Win32::{
     Storage::FileSystem::FILE_SHARE_READ,
@@ -26,6 +26,13 @@ unsafe impl Send for ReadOnlyFile {}
 unsafe impl Sync for ReadOnlyFile {}
 
 impl ReadOnlyFile {
+    /// Query the pinned file's identity without opening its pathname again.
+    pub fn canonical_path(&self) -> io::Result<PathBuf> {
+        canonical_path(self._file.as_raw_handle())
+    }
+    pub fn transfer_pin(&self, transfer: &mut crate::RemoteTransfer) -> io::Result<()> {
+        transfer.add(self._file.as_raw_handle(), 0, true)
+    }
     pub fn open(path: &Path, limit: usize) -> io::Result<Self> {
         let file = OpenOptions::new()
             .read(true)
@@ -68,6 +75,31 @@ impl ReadOnlyFile {
     }
 }
 
+pub(crate) fn canonical_path(handle: std::os::windows::io::RawHandle) -> io::Result<PathBuf> {
+    use std::os::windows::ffi::OsStringExt;
+    use windows_sys::Win32::Storage::FileSystem::GetFinalPathNameByHandleW;
+    let mut path = vec![0u16; 512];
+    loop {
+        let length =
+            unsafe { GetFinalPathNameByHandleW(handle, path.as_mut_ptr(), path.len() as u32, 0) }
+                as usize;
+        if length == 0 {
+            return Err(io::Error::last_os_error());
+        }
+        if length < path.len() {
+            path.truncate(length);
+            return Ok(std::ffi::OsString::from_wide(&path).into());
+        }
+        let capacity = length
+            .checked_add(1)
+            .filter(|&length| length <= 32768)
+            .ok_or_else(|| {
+                io::Error::new(io::ErrorKind::InvalidData, "native file path too long")
+            })?;
+        path.resize(capacity, 0);
+    }
+}
+
 impl Deref for ReadOnlyFile {
     type Target = [u8];
     fn deref(&self) -> &[u8] {
@@ -93,6 +125,7 @@ mod tests {
         std::fs::write(&path, b"native image").unwrap();
         assert!(ReadOnlyFile::open(&path, 2).is_err());
         let view = ReadOnlyFile::open(&path, 1024).unwrap();
+        assert_eq!(view.canonical_path().unwrap(), path.canonicalize().unwrap());
         assert_eq!(view.as_slice(), b"native image");
         let view = std::sync::Arc::new(view);
         let retained = std::sync::Arc::clone(&view);

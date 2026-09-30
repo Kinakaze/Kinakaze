@@ -32,6 +32,8 @@ pub struct ProcessAuthority {
         std::os::windows::io::BorrowedHandle<'_>,
         usize,
     ) -> Option<(std::os::windows::io::OwnedHandle, [u8; 32])>,
+    #[cfg(windows)]
+    pub native_fork: fn(u64, kinakaze_v2_protocol::native_fork::Spec) -> Option<NativeFork>,
     pub prepare_fork: fn(Option<u32>) -> Result<ForkReservation, i32>,
     pub adopt_fork: fn(&ForkReservation) -> Result<(), i32>,
     pub mark_ready: fn() -> Result<(), i32>,
@@ -53,6 +55,7 @@ pub fn kernel(command: kinakaze_v2_protocol::kernel::KernelCommand) -> Result<()
 
 static AUTHORITY: AtomicPtr<ProcessAuthority> = AtomicPtr::new(core::ptr::null_mut());
 static RESERVED_PID: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+static RESERVED_TRANSACTION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 static PROCESS_PID: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
 static DOMAIN_EPOCH: std::sync::OnceLock<u64> = std::sync::OnceLock::new();
 
@@ -126,6 +129,20 @@ pub(crate) fn reserved_pid() -> Option<u32> {
     (pid != 0).then_some(pid)
 }
 
+#[cfg(windows)]
+pub struct NativeFork {
+    pub handles: [std::os::windows::io::OwnedHandle; 4],
+    pub pid: u32,
+    pub tid: u32,
+}
+
+#[cfg(windows)]
+pub(crate) fn native_fork(spec: kinakaze_v2_protocol::native_fork::Spec) -> Option<NativeFork> {
+    let transaction = RESERVED_TRANSACTION.load(Ordering::Acquire);
+    if transaction == 0 { return None; }
+    (get()?.native_fork)(transaction, spec)
+}
+
 /// Logical identity is never replaced by a host PID after manager failure.
 pub fn required_identity() -> Identity {
     match identity() {
@@ -178,6 +195,7 @@ impl ForkTransaction {
             .map(|authority| (authority.prepare_fork)(parent))
             .transpose()?;
         reserve_pid(reservation.map_or(0, |reservation| reservation.child.pid));
+        RESERVED_TRANSACTION.store(reservation.map_or(0, |r| r.transaction), Ordering::Release);
         Ok(Self {
             owner: std::process::id(),
             reservation,
@@ -222,6 +240,7 @@ impl ForkTransaction {
         }
         self.reservation = None;
         reserve_pid(0);
+        RESERVED_TRANSACTION.store(0, Ordering::Release);
         Ok(())
     }
 }
@@ -237,5 +256,6 @@ impl Drop for ForkTransaction {
             }
         }
         reserve_pid(0);
+        RESERVED_TRANSACTION.store(0, Ordering::Release);
     }
 }

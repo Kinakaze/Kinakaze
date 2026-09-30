@@ -20,6 +20,8 @@ pub mod authority;
 #[cfg(windows)]
 mod cow;
 pub mod execution;
+#[cfg(windows)]
+mod fork_trace_buffer;
 #[cfg(all(windows, target_arch = "x86_64"))]
 mod guest_heap;
 mod handle_slots;
@@ -28,6 +30,10 @@ pub mod immutable;
 pub mod memory_protection;
 #[cfg(windows)]
 mod process_creation;
+#[cfg(windows)]
+macro_rules! fork_copy_trace {
+    ($($argument:tt)*) => { crate::fork_trace_buffer::line(format_args!($($argument)*)) };
+}
 #[cfg(all(windows, target_arch = "x86_64"))]
 mod sparse_copy;
 #[cfg(all(windows, target_arch = "x86_64"))]
@@ -179,6 +185,12 @@ fn fork_errno(error: ForkError) -> i32 {
 
 /// Version of the cross-DLL fork participant ABI.
 pub const FORK_PARTICIPANT_ABI: u32 = 1;
+
+mod fork_transport;
+pub use fork_transport::{
+    ForkTransfer, ForkTransport, register_fork_participant_with_transport,
+    register_fork_participant_without_inherited_handles,
+};
 
 /// A stable identity used by one runtime subsystem across the parent and child.
 pub type ForkParticipantKey = u64;
@@ -467,6 +479,7 @@ pub fn fork_tls_slots_registered(slots: &[u32]) -> bool {
 #[derive(Clone, Copy)]
 struct RegisteredParticipant {
     hooks: ForkParticipant,
+    transport: Option<ForkTransport>,
     order: u64,
     // Process-local, deliberately omitted from the fork wire records.
     owner_changed: usize,
@@ -498,6 +511,14 @@ impl ParticipantRegistry {
     }
 
     fn insert(&mut self, hooks: ForkParticipant) -> bool {
+        self.insert_with_transport(hooks, None)
+    }
+
+    fn insert_with_transport(
+        &mut self,
+        hooks: ForkParticipant,
+        transport: Option<ForkTransport>,
+    ) -> bool {
         if let Some(existing) = self
             .entries
             .iter_mut()
@@ -517,6 +538,7 @@ impl ParticipantRegistry {
                     existing.owner_changed = 0;
                 }
                 existing.hooks = hooks;
+                existing.transport = transport;
             }
             return true;
         }
@@ -527,6 +549,7 @@ impl ParticipantRegistry {
         self.next_order = self.next_order.wrapping_add(1);
         self.entries.push(RegisteredParticipant {
             hooks,
+            transport,
             order,
             owner_changed: 0,
         });
@@ -1357,7 +1380,7 @@ fn finish_parent(entries: &[RegisteredParticipant], result: i32) {
 }
 
 /// Serializes every registered participant into one length-delimited frame.
-fn stage_handoff_state(entries: &[RegisteredParticipant]) -> Result<(), ForkError> {
+fn stage_handoff_state(entries: &[RegisteredParticipant], portable: bool) -> Result<(), ForkError> {
     let mut records = Vec::<(Option<ForkParticipant>, u64, Vec<u8>)>::new();
     // A vfork rendezvous belongs to the executable coordinator rather than a
     // provider DLL. Put it first so even an unrelated child callback failure can
@@ -1367,7 +1390,12 @@ fn stage_handoff_state(entries: &[RegisteredParticipant]) -> Result<(), ForkErro
         records.push((None, VFORK_HANDOFF_KEY, payload.to_vec()));
     }
     for entry in entries {
-        let Some(snapshot) = entry.hooks.snapshot else {
+        let Some(snapshot) = portable
+            .then_some(entry.transport)
+            .flatten()
+            .and_then(|transport| transport.snapshot)
+            .or(entry.hooks.snapshot)
+        else {
             records.push((Some(entry.hooks), entry.hooks.key, Vec::new()));
             continue;
         };
@@ -1428,6 +1456,11 @@ fn stage_handoff_state(entries: &[RegisteredParticipant]) -> Result<(), ForkErro
         trace_registered_tls_slots("legacy-snapshot", LEGACY_HANDOFF_KEY);
     }
 
+    let contracts = fork_transport::encode_contracts(entries);
+    if !contracts.is_empty() {
+        records.push((None, fork_transport::HANDOFF_KEY, contracts));
+    }
+
     let mut frame = Vec::new();
     frame.extend_from_slice(&HANDOFF_MAGIC.to_le_bytes());
     frame.extend_from_slice(&(records.len() as u32).to_le_bytes());
@@ -1470,12 +1503,21 @@ fn stage_handoff_state(entries: &[RegisteredParticipant]) -> Result<(), ForkErro
 
 #[cfg(all(windows, target_arch = "x86_64"))]
 fn trace_registered_tls_slots(stage: &str, key: u64) {
-    static CHECKPOINTS: OnceLock<bool> = OnceLock::new();
-    if !fork_trace_enabled()
-        && !*CHECKPOINTS.get_or_init(|| std::env::var_os("KINAKAZE_FORK_CHECKPOINT").is_some())
-    {
+    if !fork_tls_trace_enabled() {
         return;
     }
+    trace_registered_tls_slots_inner(stage, key);
+}
+
+#[cfg(all(windows, target_arch = "x86_64"))]
+fn fork_tls_trace_enabled() -> bool {
+    static CHECKPOINTS: OnceLock<bool> = OnceLock::new();
+    fork_trace_enabled()
+        || *CHECKPOINTS.get_or_init(|| std::env::var_os("KINAKAZE_FORK_CHECKPOINT").is_some())
+}
+
+#[cfg(all(windows, target_arch = "x86_64"))]
+fn trace_registered_tls_slots_inner(stage: &str, key: u64) {
     let teb: usize;
     let stack_pointer: usize;
     unsafe {
@@ -1504,7 +1546,7 @@ fn trace_registered_tls_slots(stage: &str, key: u64) {
         } else {
             0
         };
-        eprintln!(
+        fork_copy_trace!(
             "kinakaze fork TLS checkpoint stage={stage} key={key:#x} rsp={stack_pointer:#x} slot={slot} value={value:#x} preceding={preceding:#x}"
         );
     }
@@ -1615,6 +1657,8 @@ fn restore_handoff_frame_inner(frame: &[u8], timings: &mut [(u64, u128)]) -> Res
         } else if key == MAPPING_HANDOFF_KEY {
             restore_mapping_registry(payload)?;
             copied_mappings = true;
+        } else if key == fork_transport::HANDOFF_KEY {
+            fork_transport::restore_contracts(payload)?;
         } else {
             let hooks = ForkParticipant {
                 abi: FORK_PARTICIPANT_ABI,
@@ -2052,6 +2096,8 @@ unsafe fn fork_initialized(
     initializer: usize,
     argument: u64,
 ) -> Result<Pid, ForkError> {
+    let profiling = fork_timings_enabled();
+    let began = profiling.then(std::time::Instant::now);
     let limit_error = services::task_creation_errno();
     if limit_error != 0 {
         return Err(ForkError {
@@ -2102,8 +2148,13 @@ unsafe fn fork_initialized(
     };
     // Must precede the arena copy: the payload travels inside the arena, so
     // staging it afterwards would leave the child with nothing.
+    let mut portable = fork_transport::selected(&entries);
     let descriptor_fence = loop {
-        if let Err(error) = stage_handoff_state(&entries) {
+        if let Err(error) = stage_handoff_state(&entries, portable) {
+            if portable && error.os_code == 95 {
+                portable = false;
+                continue;
+            }
             #[cfg(windows)]
             drop(mapping_transaction);
             finish_parent(&entries, -1);
@@ -2124,8 +2175,24 @@ unsafe fn fork_initialized(
         }
     };
 
+    #[cfg(windows)]
+    let _transport = if portable {
+        match fork_transport::begin(&entries) {
+            Ok(guard) => Some(guard),
+            Err(error) => {
+                drop(descriptor_fence);
+                drop(mapping_transaction);
+                finish_parent(&entries, -1);
+                return Err(error);
+            }
+        }
+    } else {
+        None
+    };
+
     #[cfg(all(windows, target_arch = "x86_64"))]
     {
+        let staged_us = began.map(|start| start.elapsed().as_micros());
         // SAFETY: the caller accepts the process-cloning contract above.
         let result = unsafe { windows::raw_fork(parent.unwrap_or(0)) };
         // Parent callbacks may close descriptors. The native child already owns
@@ -2207,10 +2274,12 @@ unsafe fn fork_initialized(
             }
         } else {
             drop(mapping_transaction);
+            let parent_started = profiling.then(std::time::Instant::now);
             // Parent hooks operate at the Windows boundary. In particular,
             // WSADuplicateSocketW requires the destination's host pid, so guest
             // pid translation must happen only after every hook has finished.
             finish_parent(&entries, result);
+            let parent_us = parent_started.map(|start| start.elapsed().as_micros());
             trace_registered_tls_slots("parent-callbacks-finished", result as u64);
             if result > 0 {
                 let Some(namespace_pid) = windows::take_last_fork_namespace_pid() else {
@@ -2220,6 +2289,7 @@ unsafe fn fork_initialized(
                     });
                 };
                 windows::wait_fork_handoff(namespace_pid)?;
+                let commit_started = profiling.then(std::time::Instant::now);
                 if let Err(errno) = managed_fork.commit() {
                     if errno == 5 {
                         // A lost commit reply is not evidence that the child
@@ -2232,6 +2302,15 @@ unsafe fn fork_initialized(
                         stage: ForkStage::HandoffRestore,
                         os_code: errno as u32,
                     });
+                }
+                if let Some(began) = began {
+                    fork_timing_line(format_args!(
+                        "kinakaze: fork transaction staging={}us parent={}us commit={}us total={}us",
+                        staged_us.unwrap_or(0),
+                        parent_us.unwrap_or(0),
+                        commit_started.map_or(0, |start| start.elapsed().as_micros()),
+                        began.elapsed().as_micros(),
+                    ));
                 }
                 return Ok(job::namespaces::visible(namespace_pid).unwrap_or(namespace_pid) as i32);
             }
@@ -6424,17 +6503,28 @@ mod windows {
     }
 
     fn module_path(base: usize) -> Option<Vec<u16>> {
-        let mut path = vec![0u16; 32768];
-        // SAFETY: base came from the loader and the buffer is writable.
-        let len = unsafe {
-            GetModuleFileNameW(base as *mut c_void, path.as_mut_ptr(), path.len() as u32)
-        } as usize;
-        if len == 0 || len >= path.len() {
-            return None;
+        // Most distribution paths fit in one small buffer. Allocating and
+        // zeroing 64 KiB per DLL makes each short-lived fork touch megabytes
+        // merely to build its bootstrap manifest. Keep long paths supported.
+        let mut path = vec![0u16; 256];
+        loop {
+            // SAFETY: base came from the loader and the buffer is writable.
+            let len = unsafe {
+                GetModuleFileNameW(base as *mut c_void, path.as_mut_ptr(), path.len() as u32)
+            } as usize;
+            if len == 0 {
+                return None;
+            }
+            if len < path.len() {
+                path.truncate(len + 1);
+                path[len] = 0;
+                return Some(path);
+            }
+            if path.len() == 32768 {
+                return None;
+            }
+            path.resize((path.len() * 2).min(32768), 0);
         }
-        path.truncate(len + 1);
-        path[len] = 0;
-        Some(path)
     }
 
     fn collect_bootstrap_modules() -> Result<Vec<ModuleSpec>, ForkError> {
@@ -6459,6 +6549,14 @@ mod windows {
                 entry.hooks.snapshot.map_or(0, |item| item as usize),
                 entry.hooks.parent.map_or(0, |item| item as usize),
                 entry.hooks.child.map_or(0, |item| item as usize),
+                entry
+                    .transport
+                    .and_then(|transport| transport.snapshot)
+                    .map_or(0, |item| item as usize),
+                entry
+                    .transport
+                    .and_then(|transport| transport.transfer)
+                    .map_or(0, |item| item as usize),
             ] {
                 if let Some(base) = module_for_address(address) {
                     bases.push(base);
@@ -6945,7 +7043,13 @@ mod windows {
         // its context is installed below. Preparing it early changes no Linux
         // memory semantics; it prevents CreateProcess/GetModuleHandle from
         // waiting for a host lock held by a subsequently suspended sibling.
-        let prepared_child = unsafe { prepare_child(ready.handle, bootstrap.handle)? };
+        let prepared_child =
+            unsafe { prepare_child(ready.handle, bootstrap.handle, &module_specs)? };
+        // Descriptor owners and mapping slots remain pinned by the outer fork
+        // fences. Restage destination handles before preparing the arena copy.
+        super::fork_transport::materialize(unsafe {
+            std::os::windows::io::BorrowedHandle::borrow_raw(prepared_child.process.hProcess)
+        })?;
         // All owners are pinned by the outer topology transaction. Duplicate
         // before freezing host threads; the child owns these references even
         // if the parent dies before its ready/context handshake completes.
@@ -7066,6 +7170,10 @@ mod windows {
             )?
         };
         let profile_fork = fork_timings_enabled();
+        // Stderr's lock can belong to a sibling waiting for the arena. Buffer
+        // diagnostics before acquiring either freeze and flush after both.
+        let critical_trace = (fork_mapping_trace_enabled() || super::fork_tls_trace_enabled())
+            .then(super::fork_trace_buffer::Guard::new);
         // Growth takes topology -> guest -> host. Freeze in that same order,
         // before suspending threads which might otherwise own a guest lock.
         let guest_arena_guard = kinakaze_alloc::guest::freeze_if_initialized();
@@ -7114,6 +7222,7 @@ mod windows {
         let thaw_us = thaw_started.elapsed().as_micros();
         drop(arena_guard);
         drop(guest_arena_guard);
+        drop(critical_trace);
         super::trace_registered_tls_slots("arena-thawed", 0);
         let result = result.map(|timings| prepared_child.commit(timings));
         // HashMap growth may allocate from the managed arena.  It must happen
@@ -7255,7 +7364,57 @@ mod windows {
         (pid != 0).then_some(pid)
     }
 
-    unsafe fn prepare_child(ready: HANDLE, bootstrap: HANDLE) -> Result<PreparedChild, ForkError> {
+    unsafe fn prepare_child(
+        ready: HANDLE,
+        bootstrap: HANDLE,
+        modules: &[ModuleSpec],
+    ) -> Result<PreparedChild, ForkError> {
+        if super::fork_transport::active()
+            && std::env::var_os("KINAKAZE_FORK_POOL").as_deref() == Some(std::ffi::OsStr::new("1"))
+        {
+            use kinakaze_v2_protocol::native_fork::{Module, Spec};
+            use std::os::windows::io::{AsRawHandle, IntoRawHandle};
+            let modules = modules
+                .iter()
+                .map(|m| {
+                    Some(Module {
+                        base: m.base as u64,
+                        path: String::from_utf16(m.path.strip_suffix(&[0])?).ok()?,
+                    })
+                })
+                .collect::<Option<Vec<_>>>();
+            if let Some(modules) = modules {
+                let started = std::time::Instant::now();
+                if let Some(worker) = super::authority::native_fork(Spec {
+                    modules,
+                    tls_slots: super::FORK_TLS_SLOT_MASK.load(Ordering::Acquire),
+                }) {
+                    let [process, thread, pool_ready, activate] = worker.handles;
+                    let child = PreparedChild {
+                        process: PROCESS_INFORMATION {
+                            hProcess: process.into_raw_handle(),
+                            hThread: thread.into_raw_handle(),
+                            dwProcessId: worker.pid,
+                            dwThreadId: worker.tid,
+                        },
+                        timings: ForkCopyTimings {
+                            create_process_us: started.elapsed().as_micros(),
+                            ..ForkCopyTimings::default()
+                        },
+                    };
+                    if unsafe { SetEvent(activate.as_raw_handle()) } == 0 {
+                        return Err(os_error(ForkStage::ChildBootstrap));
+                    }
+                    if fork_trace_enabled() {
+                        eprintln!("kinakaze fork: native pool hit pid={}", worker.pid);
+                    }
+                    return unsafe { finish_preparing_child(child, pool_ready.as_raw_handle()) };
+                }
+                if fork_trace_enabled() {
+                    eprintln!("kinakaze fork: native pool miss");
+                }
+            }
+        }
         let mut executable = [0u16; 32768];
         let executable_len = unsafe {
             GetModuleFileNameW(
@@ -7277,7 +7436,9 @@ mod windows {
         append_decimal(&mut command, &mut cursor, bootstrap as usize)?;
         command[cursor] = 0;
 
-        let mut startup: STARTUPINFOW = unsafe { zeroed() };
+        let mut extended: windows_sys::Win32::System::Threading::STARTUPINFOEXW =
+            unsafe { zeroed() };
+        let startup = &mut extended.StartupInfo;
         startup.cb = size_of::<STARTUPINFOW>() as u32;
         // Both console policies retain redirected diagnostics and standard I/O.
         // Without USESTDHANDLES Windows can replace them with null handles.
@@ -7285,11 +7446,28 @@ mod windows {
         startup.hStdInput = unsafe { GetStdHandle(STD_INPUT_HANDLE) };
         startup.hStdOutput = unsafe { GetStdHandle(STD_OUTPUT_HANDLE) };
         startup.hStdError = unsafe { GetStdHandle(STD_ERROR_HANDLE) };
-        let creation_flags = super::child_creation_flags([
+        let mut creation_flags = super::child_creation_flags([
             startup.hStdInput as usize,
             startup.hStdOutput as usize,
             startup.hStdError as usize,
         ]);
+        let mut restricted = if super::fork_transport::active() {
+            Some(super::fork_transport::BootstrapHandles::new(
+                ready as usize,
+                bootstrap as usize,
+                [
+                    startup.hStdInput as usize,
+                    startup.hStdOutput as usize,
+                    startup.hStdError as usize,
+                ],
+            )?)
+        } else {
+            None
+        };
+        if let Some(handles) = restricted.as_mut() {
+            handles.configure(&mut extended);
+            creation_flags |= windows_sys::Win32::System::Threading::EXTENDED_STARTUPINFO_PRESENT;
+        }
         let mut process: PROCESS_INFORMATION = unsafe { zeroed() };
         let create_started = std::time::Instant::now();
         let created = unsafe {
@@ -7302,20 +7480,28 @@ mod windows {
                 creation_flags,
                 ptr::null(),
                 ptr::null(),
-                &startup,
+                &extended.StartupInfo,
                 &mut process,
             )
         };
         if created == 0 {
             return Err(os_error(ForkStage::CreateProcess));
         }
-        let mut child = PreparedChild {
+        let child = PreparedChild {
             process,
             timings: ForkCopyTimings {
                 create_process_us: create_started.elapsed().as_micros(),
                 ..ForkCopyTimings::default()
             },
         };
+        unsafe { finish_preparing_child(child, ready) }
+    }
+
+    unsafe fn finish_preparing_child(
+        mut child: PreparedChild,
+        ready: HANDLE,
+    ) -> Result<PreparedChild, ForkError> {
+        let process = child.process;
         let ready_started = std::time::Instant::now();
         let wait_handles = [ready, process.hProcess];
         let wait_status = unsafe {
@@ -7694,7 +7880,7 @@ mod windows {
                     continue;
                 }
                 if fork_mapping_trace_enabled() {
-                    eprintln!(
+                    fork_copy_trace!(
                         "kinakaze fork: mapping order rejected overlap left=#{mapping_index} base={:#x} len={:#x} storage={:?} right=#{} base={:#x} len={:#x} storage={:?}",
                         mapping.base,
                         mapping.len,
@@ -7787,7 +7973,7 @@ mod windows {
                             size_of::<MEMORY_BASIC_INFORMATION>(),
                         )
                     };
-                    eprintln!(
+                    fork_copy_trace!(
                         "kinakaze fork: reservation group #{group_index} failed base={:#x} len={:#x} returned={:#x} error={} query_base={:#x} allocation_base={:#x} region_size={:#x} state={:#x}",
                         group.base,
                         group.len,
@@ -7806,9 +7992,10 @@ mod windows {
                 });
             }
             if fork_trace_enabled() {
-                eprintln!(
+                fork_copy_trace!(
                     "kinakaze fork: reserved placeholder group base={:#x} len={:#x}",
-                    group.base, group.len
+                    group.base,
+                    group.len
                 );
             }
         }
@@ -7860,7 +8047,7 @@ mod windows {
             if reserved as usize != group.base {
                 let os_code = unsafe { GetLastError() };
                 if fork_mapping_trace_enabled() {
-                    eprintln!(
+                    fork_copy_trace!(
                         "kinakaze fork: ordinary group #{group_index} replacement failed base={:#x} len={:#x} returned={:#x} error={}",
                         group.base, group.len, reserved as usize, os_code,
                     );
@@ -7954,7 +8141,7 @@ mod windows {
                         size_of::<MEMORY_BASIC_INFORMATION>(),
                     )
                 };
-                eprintln!(
+                fork_copy_trace!(
                     "kinakaze fork: private reserve view failed base={address:#x} len={length:#x} returned={:#x} error={} query_base={:#x} allocation_base={:#x} region_size={:#x} state={:#x}",
                     view.Value as usize,
                     os_code,
@@ -8075,7 +8262,7 @@ mod windows {
             || info.State != MEM_RESERVE
         {
             if fork_mapping_trace_enabled() {
-                eprintln!(
+                fork_copy_trace!(
                     "kinakaze fork: carved placeholder is not exact address={address:#x} len={length:#x} query_base={:#x} allocation_base={:#x} region_size={:#x} state={:#x} protect={:#x}",
                     info.BaseAddress as usize,
                     info.AllocationBase as usize,
@@ -8297,7 +8484,7 @@ mod windows {
                 });
             debug_assert_ne!(mapping.behavior, ForkMappingBehavior::Omit);
             if fork_trace_enabled() {
-                eprintln!(
+                fork_copy_trace!(
                     "kinakaze fork: guest mapping #{mapping_index} base={:#x} len={:#x} storage={:?} behavior={:?} backing_slot={:#x} backing_offset={:#x}",
                     mapping.base,
                     mapping.len,
@@ -8341,7 +8528,7 @@ mod windows {
                     && mapping_end.is_some_and(|end| remote_end.is_some_and(|limit| end <= limit));
                 if !ordinary_replaces_placeholder {
                     if fork_mapping_trace_enabled() {
-                        eprintln!(
+                        fork_copy_trace!(
                             "kinakaze fork: guest mapping #{mapping_index} unavailable: query_base={:#x} allocation_base={:#x} region_size={:#x} state={:#x} protect={:#x}",
                             remote.BaseAddress as usize,
                             remote.AllocationBase as usize,
@@ -8429,7 +8616,7 @@ mod windows {
                                     size_of::<MEMORY_BASIC_INFORMATION>(),
                                 )
                             };
-                            eprintln!(
+                            fork_copy_trace!(
                                 "kinakaze fork: guest mapping #{mapping_index} MapViewOfFile3 failed: returned={:#x} section={:#x} error={} query_base={:#x} allocation_base={:#x} region_size={:#x} state={:#x} protect={:#x}",
                                 view.Value as usize,
                                 section_handle as usize,
@@ -8518,9 +8705,10 @@ mod windows {
                         if committed as usize != cursor {
                             let os_code = unsafe { GetLastError() };
                             if fork_mapping_trace_enabled() {
-                                eprintln!(
+                                fork_copy_trace!(
                                     "kinakaze fork: guest mapping #{mapping_index} commit failed at {cursor:#x} len={region_len:#x}: returned={:#x} error={}",
-                                    committed as usize, os_code,
+                                    committed as usize,
+                                    os_code,
                                 );
                             }
                             super::LAST_NATIVE_FAILURE_LINE.store(line!(), Ordering::Release);
@@ -8623,9 +8811,10 @@ mod windows {
                     {
                         let os_code = unsafe { GetLastError() };
                         if fork_mapping_trace_enabled() {
-                            eprintln!(
+                            fork_copy_trace!(
                                 "kinakaze fork: guest mapping #{mapping_index} protect failed at {cursor:#x} len={region_len:#x} protection={:#x}: error={}",
-                                protection, os_code,
+                                protection,
+                                os_code,
                             );
                         }
                         super::LAST_NATIVE_FAILURE_LINE.store(line!(), Ordering::Release);
@@ -8684,7 +8873,7 @@ mod windows {
         });
         if arena_contains_stack || mapping_contains_stack {
             if fork_trace_enabled() {
-                eprintln!(
+                fork_copy_trace!(
                     "kinakaze fork: resume stack {saved_rsp:#x} is contained in the copied {}",
                     if arena_contains_stack {
                         "managed arena"
@@ -8707,7 +8896,7 @@ mod windows {
         {
             let os_code = unsafe { GetLastError() };
             if fork_trace_enabled() {
-                eprintln!(
+                fork_copy_trace!(
                     "kinakaze fork: parent stack query failed rsp={saved_rsp:#x} error={}",
                     os_code
                 );
@@ -8730,9 +8919,10 @@ mod windows {
             )
         };
         if fork_trace_enabled() {
-            eprintln!(
+            fork_copy_trace!(
                 "kinakaze fork: parent stack rsp={saved_rsp:#x} allocation_base={allocation_base:#x} region_base={:#x} region_size={:#x} stack_limit={stack_limit:#x} stack_base={stack_base:#x}",
-                parent_info.BaseAddress as usize, parent_info.RegionSize,
+                parent_info.BaseAddress as usize,
+                parent_info.RegionSize,
             );
         }
         if allocation_base >= saved_rsp || saved_rsp < stack_limit || saved_rsp >= stack_base {
@@ -8965,7 +9155,7 @@ mod windows {
         {
             let failure = os_error(stage);
             if fork_mapping_trace_enabled() {
-                eprintln!(
+                fork_copy_trace!(
                     "kinakaze fork: copy failed stage={stage:?} source={source:p} destination={destination:p} len={len:#x} copied={written:#x} error={}",
                     failure.os_code
                 );
@@ -9647,11 +9837,24 @@ mod windows {
         {
             return;
         }
-        let Some((ready, bootstrap)) = (unsafe { parse_loader_handles() }) else {
+        let Some((ready, bootstrap, pooled)) = (unsafe { parse_loader_handles() }) else {
             return;
         };
         if unsafe { load_bootstrap_modules(bootstrap) }.is_err() {
             unsafe { ExitProcess(125) };
+        }
+        if let Some((activate, parked)) = pooled {
+            // Idle stock blocks without consuming a core. The activation
+            // handshake returns to user mode before the parent suspends us.
+            if unsafe { SetEvent(parked) } == 0
+                || unsafe { WaitForSingleObject(activate, u32::MAX) } != WAIT_OBJECT_0
+            {
+                unsafe { ExitProcess(126) };
+            }
+            unsafe {
+                CloseHandle(activate);
+                CloseHandle(parked);
+            }
         }
         if unsafe { SetEvent(ready) } == 0 {
             unsafe { ExitProcess(126) };
@@ -9719,16 +9922,22 @@ mod windows {
                 }
                 return Err(());
             }
-            // Windows initializes the DLL through its loader.  Its PE sections,
-            // loader locks, TLS and kernel objects are never copied from parent.
-            let loaded = unsafe {
-                windows_sys::Win32::System::LibraryLoader::LoadLibraryExW(
-                    path,
-                    ptr::null_mut(),
-                    windows_sys::Win32::System::LibraryLoader::LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR
-                        | windows_sys::Win32::System::LibraryLoader::LOAD_LIBRARY_SEARCH_SYSTEM32,
-                )
-            };
+            // Loading the runtime already loaded most of its dependencies.
+            // Acquire the same owning loader reference by full module path
+            // before repeating LoadLibrary's filesystem resolution for every
+            // manifest entry. An unloaded DLL still takes the ordinary loader
+            // path and executes its own initializer, TLS and kernel setup.
+            let mut loaded = ptr::null_mut();
+            if unsafe { GetModuleHandleExW(0, path, &mut loaded) } == 0 {
+                loaded = unsafe {
+                    windows_sys::Win32::System::LibraryLoader::LoadLibraryExW(
+                        path,
+                        ptr::null_mut(),
+                        windows_sys::Win32::System::LibraryLoader::LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR
+                            | windows_sys::Win32::System::LibraryLoader::LOAD_LIBRARY_SEARCH_SYSTEM32,
+                    )
+                };
+            }
             if loaded.is_null() || loaded as usize != expected {
                 if crate::fork_trace_enabled() {
                     eprintln!(
@@ -9783,7 +9992,7 @@ mod windows {
         Ok(())
     }
 
-    unsafe fn parse_loader_handles() -> Option<(HANDLE, HANDLE)> {
+    unsafe fn parse_loader_handles() -> Option<(HANDLE, HANDLE, Option<(HANDLE, HANDLE)>)> {
         let command = unsafe { GetCommandLineW() };
         if command.is_null() {
             return None;
@@ -9813,7 +10022,19 @@ mod windows {
             }
             cursor += 1;
             let bootstrap = unsafe { parse_decimal(command, len, &mut cursor) }?;
-            return Some((ready as HANDLE, bootstrap as HANDLE));
+            let pooled = if cursor < len && unsafe { *command.add(cursor) } == b':' as u16 {
+                cursor += 1;
+                let activate = unsafe { parse_decimal(command, len, &mut cursor) }?;
+                if cursor >= len || unsafe { *command.add(cursor) } != b':' as u16 {
+                    return None;
+                }
+                cursor += 1;
+                let parked = unsafe { parse_decimal(command, len, &mut cursor) }?;
+                Some((activate as HANDLE, parked as HANDLE))
+            } else {
+                None
+            };
+            return Some((ready as HANDLE, bootstrap as HANDLE, pooled));
         }
         None
     }

@@ -326,7 +326,10 @@ pub(crate) fn serialize(keep: impl Fn(i32) -> bool) -> Result<Vec<u8>, i32> {
                 if let Some(s) = &*item.shared.lock().map_err(|_| EIO)? {
                     crate::state_codec::word(&mut bytes, e.description_id);
                     crate::state_codec::word(&mut bytes, s.id());
-                    crate::state_codec::word(&mut bytes, s.pin.raw() as u64);
+                    crate::state_codec::word(
+                        &mut bytes,
+                        crate::native_transfer::encode(s.pin.raw() as u64),
+                    );
                 }
             }
         }
@@ -340,7 +343,7 @@ pub(crate) fn restore(bytes: &[u8]) -> bool {
         while !r.0.is_empty() {
             let id = r.word()?;
             let store_id = r.word()?;
-            let raw = r.word()?;
+            let raw = crate::native_transfer::decode(r.word()?)?;
             let inherited = crate::fs::object::Object::owned(raw as _)?;
             let store = Store::user_object(store_id, false).and_then(Shared::new).inspect_err(|error| {
                 kinakaze_runtime::fork_diagnostic(format_args!(

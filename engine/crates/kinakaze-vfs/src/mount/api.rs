@@ -266,7 +266,7 @@ pub(crate) fn serialize(keep: impl Fn(i32) -> bool) -> Result<Vec<u8>, i32> {
         word(&mut bytes, id);
         word(&mut bytes, pins.len() as u64);
         for pin in pins {
-            word(&mut bytes, pin.raw() as u64);
+            word(&mut bytes, crate::native_transfer::encode(pin.raw() as u64));
         }
     }
     Ok(bytes)
@@ -280,7 +280,7 @@ pub(crate) fn restore(bytes: &[u8]) -> bool {
             let id = r.word()?;
             let mut objects = Vec::new();
             for _ in 0..r.count()? {
-                let raw = r.word()? as usize;
+                let raw = crate::native_transfer::decode(r.word()?)? as usize;
                 let object = Object::reopen(raw as _, ACCESS)?;
                 crate::platform::try_set_inheritable(object.raw() as usize, true)?;
                 objects.push(Arc::new(object));
