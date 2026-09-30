@@ -28,7 +28,7 @@ impl ReadCache {
         bytes: &mut [u8],
     ) -> Result<usize, i32> {
         let idle = self.idle.lock().map_err(|_| EIO)?.take();
-        let reader = match idle {
+        let mut reader = match idle {
             Some(reader) => reader,
             None => {
                 // A reopen must never turn a write-only imported descriptor
@@ -38,12 +38,11 @@ impl ReadCache {
                 }
                 let object = Object::reopen(original, GENERIC_READ | QUERY_ACCESS)?;
                 let key = crate::xattr::InodeKey::from_handle(object.raw())?;
-                let mutex = if retain_mutex() {
-                    crate::xattr::InodeMutex::open(&key).ok()
-                } else {
-                    None
-                };
-                Reader { object, key, mutex }
+                Reader {
+                    object,
+                    key,
+                    mutex: None,
+                }
             }
         };
         // Ownership is exclusive throughout all asynchronous I/O. Concurrent
@@ -54,8 +53,12 @@ impl ReadCache {
             let _lock = mutex.acquire()?;
             super::read_locked_object(&reader.object, offset, bytes)?.ok_or(EIO)
         } else {
-            let _lock = reader.key.acquire()?;
-            super::read_locked_object(&reader.object, offset, bytes)?.ok_or(EIO)
+            let lock = reader.key.acquire()?;
+            let result = super::read_locked_object(&reader.object, offset, bytes)?.ok_or(EIO);
+            if retain_mutex() {
+                reader.mutex = lock.into_mutex().ok();
+            }
+            result
         };
         let mut idle = self.idle.lock().map_err(|_| EIO)?;
         if idle.is_none() {

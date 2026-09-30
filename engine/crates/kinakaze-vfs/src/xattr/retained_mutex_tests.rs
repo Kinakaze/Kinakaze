@@ -71,3 +71,23 @@ fn retained_mutex_recovers_a_terminated_native_owner() {
     drop(file);
     std::fs::remove_file(path).unwrap();
 }
+
+#[test]
+fn completed_transaction_retains_its_handle_and_releases_only_its_own_recursion() {
+    let (file, key, path) = fixture();
+    let outer = key.acquire().unwrap();
+    let inner = key.acquire().unwrap();
+    let raw = inner.0.0;
+    let retained = inner.into_mutex().unwrap();
+    assert_eq!(retained.0.0, raw);
+    assert!(!other_thread_can_acquire(key.0.clone()));
+    drop(outer);
+    assert!(other_thread_can_acquire(key.0.clone()));
+    let guard = retained.acquire().unwrap();
+    assert!(!other_thread_can_acquire(key.0.clone()));
+    drop(guard);
+    assert!(other_thread_can_acquire(key.0.clone()));
+    drop(retained);
+    drop(file);
+    std::fs::remove_file(path).unwrap();
+}

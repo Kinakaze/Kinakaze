@@ -76,6 +76,7 @@ pub(crate) struct InodeMutexGuard<'a> {
     _thread: std::marker::PhantomData<*mut ()>,
 }
 impl InodeMutex {
+    #[cfg(test)]
     pub(crate) fn open(key: &InodeKey) -> Result<Self, i32> {
         Handle::new(unsafe { CreateMutexW(ptr::null(), 0, key.0.as_ptr()) }).map(Self)
     }
@@ -116,6 +117,20 @@ impl InodeKey {
     }
 }
 impl InodeLock {
+    /// Unlock this transaction and retain its exact native capability. A fresh
+    /// mutex was acquired atomically by CreateMutex; the first read therefore
+    /// needs no extra open or wait just to populate its private cache.
+    pub(crate) fn into_mutex(self) -> Result<InodeMutex, i32> {
+        let raw = self.0.0;
+        if unsafe { ReleaseMutex(raw) } == 0 {
+            return Err(errno_from_win32(unsafe { GetLastError() }));
+        }
+        // Ownership of the single handle moves to InodeMutex. Suppress both
+        // this guard's second unlock and its Handle's CloseHandle.
+        std::mem::forget(self);
+        Ok(InodeMutex(Handle(raw)))
+    }
+
     pub(crate) fn acquire(file: HANDLE) -> Result<Self, i32> {
         InodeKey::from_handle(file)?.acquire()
     }
