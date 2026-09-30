@@ -141,6 +141,14 @@ struct ExecTransaction {
     candidate_exit: Option<i32>,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NativeExecState {
+    Unreserved,
+    Pending,
+    Committed,
+    Aborted,
+}
+
 pub struct StateManager {
     epoch: u64,
     token: String,
@@ -524,7 +532,10 @@ impl StateManager {
         match request {
             Request::NativeFork { transaction, spec } => {
                 if !spec.valid() {
-                    return Err(error(ErrorCode::InvalidRequest, "invalid native fork specification"));
+                    return Err(error(
+                        ErrorCode::InvalidRequest,
+                        "invalid native fork specification",
+                    ));
                 }
                 let transaction = self.owned_transaction(pid, transaction)?;
                 if transaction.state != TransactionState::Prepared {
@@ -532,7 +543,7 @@ impl StateManager {
                 }
                 Ok(Reply::Ok)
             }
-            Request::ImageSnapshot { .. } | Request::Kernel(_) => {
+            Request::NativeExec | Request::ImageSnapshot { .. } | Request::Kernel(_) => {
                 Ok(Reply::Ok)
             }
             Request::MarkPrewarmReady => {
@@ -1449,13 +1460,51 @@ impl StateManager {
     /// None revokes an uncommitted native candidate; true releases a committed
     /// candidate to normal process ownership; false retains the rollback guard.
     pub fn native_fork_state(&self, transaction: u64, peer: PeerIdentity) -> Option<bool> {
-        if self.processes.values().any(|p| p.peer == peer && matches!(p.state, ProcessState::Active)) {
+        if self
+            .processes
+            .values()
+            .any(|p| p.peer == peer && matches!(p.state, ProcessState::Active))
+        {
             return Some(true);
         }
         match self.transactions.get(&transaction)?.state {
-            TransactionState::Prepared | TransactionState::Adopted | TransactionState::Ready => Some(false),
+            TransactionState::Prepared | TransactionState::Adopted | TransactionState::Ready => {
+                Some(false)
+            }
             TransactionState::Committed => Some(true),
             TransactionState::Aborted => None,
+        }
+    }
+
+    /// Init's rollback custody is keyed by both pinned native identities. A
+    /// committed replacement survives its original process's native death.
+    pub fn native_exec_state(&self, parent: PeerIdentity, child: PeerIdentity) -> NativeExecState {
+        if self
+            .processes
+            .values()
+            .any(|p| p.peer == child && matches!(p.state, ProcessState::Active))
+        {
+            return NativeExecState::Committed;
+        }
+        if let Some(transaction) = self
+            .exec_transactions
+            .values()
+            .find(|t| t.owner_peer == parent && t.target == child)
+        {
+            return match transaction.state {
+                TransactionState::Committed => NativeExecState::Committed,
+                TransactionState::Aborted => NativeExecState::Aborted,
+                _ => NativeExecState::Pending,
+            };
+        }
+        if self
+            .processes
+            .values()
+            .any(|p| p.peer == parent && matches!(p.state, ProcessState::Active))
+        {
+            NativeExecState::Unreserved
+        } else {
+            NativeExecState::Aborted
         }
     }
 

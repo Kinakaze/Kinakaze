@@ -31,17 +31,65 @@ static AUTHORITY: ProcessAuthority = ProcessAuthority {
     memory_target,
     image_snapshot,
     native_fork,
+    native_exec,
 };
 
-fn native_fork(transaction: u64, spec: kinakaze_v2_protocol::native_fork::Spec) -> Option<guest_process::authority::NativeFork> {
+fn native_exec() -> Option<guest_process::authority::NativeExec> {
     use std::os::windows::io::{FromRawHandle, OwnedHandle};
-    let Reply::NativeFork { worker: Some(worker) } = request(Request::NativeFork { transaction, spec }).ok()? else { return None; };
-    if worker.handles.iter().any(|&h| h == 0 || h > isize::MAX as u64)
-        || worker.handles.iter().enumerate().any(|(i,h)| worker.handles[..i].contains(h)) {
+    let Reply::NativeExec {
+        worker: Some(worker),
+    } = request(Request::NativeExec).ok()?
+    else {
+        return None;
+    };
+    if worker.pid == 0
+        || worker
+            .handles
+            .iter()
+            .any(|&h| h == 0 || h > isize::MAX as u64)
+        || worker
+            .handles
+            .iter()
+            .enumerate()
+            .any(|(i, h)| worker.handles[..i].contains(h))
+    {
+        return None;
+    }
+    Some(guest_process::authority::NativeExec {
+        handles: worker
+            .handles
+            .map(|h| unsafe { OwnedHandle::from_raw_handle(h as _) }),
+        pid: worker.pid,
+    })
+}
+
+fn native_fork(
+    transaction: u64,
+    spec: kinakaze_v2_protocol::native_fork::Spec,
+) -> Option<guest_process::authority::NativeFork> {
+    use std::os::windows::io::{FromRawHandle, OwnedHandle};
+    let Reply::NativeFork {
+        worker: Some(worker),
+    } = request(Request::NativeFork { transaction, spec }).ok()?
+    else {
+        return None;
+    };
+    if worker
+        .handles
+        .iter()
+        .any(|&h| h == 0 || h > isize::MAX as u64)
+        || worker
+            .handles
+            .iter()
+            .enumerate()
+            .any(|(i, h)| worker.handles[..i].contains(h))
+    {
         return None;
     }
     Some(guest_process::authority::NativeFork {
-        handles: worker.handles.map(|h| unsafe { OwnedHandle::from_raw_handle(h as _) }),
+        handles: worker
+            .handles
+            .map(|h| unsafe { OwnedHandle::from_raw_handle(h as _) }),
         pid: worker.pid,
         tid: worker.tid,
     })

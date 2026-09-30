@@ -5,6 +5,7 @@ use std::io::{self, Read, Write};
 
 pub mod image_cache;
 pub mod kernel;
+pub mod native_exec;
 pub mod native_fork;
 
 // V4 acknowledges completed transactions in the next request envelope. Older
@@ -91,6 +92,8 @@ pub enum Request {
         transaction: u64,
         spec: native_fork::Spec,
     },
+    /// Claim a fresh worker parked before runtime session initialization.
+    NativeExec,
     /// Resolve an authorized logical process for process_vm_readv/writev.
     ProcessMemoryTarget {
         pid: u32,
@@ -228,6 +231,9 @@ pub enum Reply {
     },
     NativeFork {
         worker: Option<native_fork::Worker>,
+    },
+    NativeExec {
+        worker: Option<native_exec::Worker>,
     },
     ProcessMemoryTarget {
         host_pid: u32,

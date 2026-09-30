@@ -37,7 +37,9 @@
 use core::arch::naked_asm;
 use core::ffi::{CStr, c_char, c_int, c_void};
 use core::ptr;
-use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle, RawHandle};
+use std::os::windows::io::{
+    AsRawHandle, BorrowedHandle, FromRawHandle, IntoRawHandle, OwnedHandle, RawHandle,
+};
 
 use windows_sys::Win32::Foundation::{CloseHandle, GetLastError};
 use windows_sys::Win32::System::Threading::ResumeThread;
@@ -113,6 +115,7 @@ struct SpawnedProcess {
     process: windows_sys::Win32::Foundation::HANDLE,
     thread: windows_sys::Win32::Foundation::HANDLE,
     pid: u32,
+    activation: Option<OwnedHandle>,
 }
 
 impl SpawnedProcess {
@@ -121,6 +124,15 @@ impl SpawnedProcess {
     }
 
     fn resume(&mut self) -> Result<(), c_int> {
+        if let Some(activation) = self.activation.take() {
+            if unsafe {
+                windows_sys::Win32::System::Threading::SetEvent(activation.as_raw_handle())
+            } == 0
+            {
+                return Err(kinakaze_vfs::errno_from_win32(unsafe { GetLastError() }));
+            }
+            return Ok(());
+        }
         let previous = unsafe { ResumeThread(self.thread) };
         if previous == u32::MAX {
             return Err(kinakaze_vfs::errno_from_win32(unsafe { GetLastError() }));
@@ -387,7 +399,71 @@ fn spawn_suspended_exec(
         process: pi.hProcess,
         thread: pi.hThread,
         pid: pi.dwProcessId,
+        activation: None,
     })
+}
+
+fn prepare_preloaded_exec(
+    worker: kinakaze_runtime::authority::NativeExec,
+    executable: &std::path::Path,
+    cwd: Option<&std::path::Path>,
+) -> std::io::Result<SpawnedProcess> {
+    use kinakaze_v2_protocol::native_exec::{CAPACITY, Launch};
+    use windows_sys::Win32::System::Memory::{FILE_MAP_WRITE, MapViewOfFile, UnmapViewOfFile};
+    let [process, activate, control] = worker.handles;
+    let child = SpawnedProcess {
+        process: process.into_raw_handle(),
+        thread: ptr::null_mut(),
+        pid: worker.pid,
+        activation: Some(activate),
+    };
+    let prepare = || {
+        let cwd = cwd
+            .map(std::path::Path::to_owned)
+            .map(Ok)
+            .unwrap_or_else(std::env::current_dir)?;
+        let launch = Launch {
+            executable: executable
+                .to_str()
+                .ok_or_else(|| std::io::Error::other("exec path is not UTF-8"))?
+                .into(),
+            cwd: cwd
+                .to_str()
+                .ok_or_else(|| std::io::Error::other("exec cwd is not UTF-8"))?
+                .into(),
+        };
+        let bytes = launch
+            .encode()
+            .ok_or_else(|| std::io::Error::other("exec activation exceeds bounds"))?;
+        let view =
+            unsafe { MapViewOfFile(control.as_raw_handle(), FILE_MAP_WRITE, 0, 0, CAPACITY) };
+        if view.Value.is_null() {
+            return Err(std::io::Error::last_os_error());
+        }
+        unsafe {
+            ptr::copy_nonoverlapping(bytes.as_ptr(), view.Value.cast(), bytes.len());
+            UnmapViewOfFile(view);
+        }
+        Ok(())
+    };
+    if let Err(error) = prepare() {
+        let _ = child.kill();
+        return Err(error);
+    }
+    Ok(child)
+}
+
+fn finish_exec_snapshot(
+    portable: &mut Option<kinakaze_vfs::PortableExecState>,
+    target: Option<u32>,
+) {
+    if let Some(state) = portable.take() {
+        if let Some(pid) = target {
+            state.finish(pid);
+        }
+    } else {
+        kinakaze_vfs::finish_exec_state(target);
+    }
 }
 
 /// Finds the process-wide wait coordinator exported by the hosting ELF loader.
@@ -795,27 +871,57 @@ pub unsafe extern "sysv64" fn kinakaze_abi_execve(
     // A recoverable exec error leaves this guest image running. In particular,
     // a vfork child may retry exec or do cleanup before `_exit`; only committed
     // replacement or actual exit may release its suspended parent.
-    let exec_payload = match kinakaze_vfs::prepare_exec_state_from_image(
-        &environment,
-        &exec_image,
-        Some(&arguments),
-    ) {
-        Ok(payload) => payload,
-        Err(error) => {
-            kinakaze_runtime::fork_diagnostic(format_args!(
-                "kinakaze: exec snapshot failed path={guest_path:?} errno={error}"
-            ));
-            set_errno(error);
-            return -1;
+    let mut portable = None;
+    let mut pooled_child = None;
+    if std::env::var_os("KINAKAZE_EXEC_POOL").as_deref() == Some(std::ffi::OsStr::new("1"))
+        && let Ok(state) = kinakaze_vfs::prepare_portable_exec_state_from_image(
+            &environment,
+            &exec_image,
+            Some(&arguments),
+        )
+        && let Some(worker) = kinakaze_runtime::authority::native_exec()
+        && let Ok(child) = prepare_preloaded_exec(worker, &host_path, host_cwd.as_deref())
+    {
+        trace_spawn_phase(&spawn_started, "execve", "native-exec-hit");
+        portable = Some(state);
+        pooled_child = Some(child);
+    }
+    let exec_payload = if portable.is_some() {
+        Vec::new()
+    } else {
+        match kinakaze_vfs::prepare_exec_state_from_image(
+            &environment,
+            &exec_image,
+            Some(&arguments),
+        ) {
+            Ok(payload) => payload,
+            Err(error) => {
+                kinakaze_runtime::fork_diagnostic(format_args!(
+                    "kinakaze: exec snapshot failed path={guest_path:?} errno={error}"
+                ));
+                set_errno(error);
+                return -1;
+            }
         }
     };
     trace_spawn_phase(&spawn_started, "execve", "handoff-serialized");
-    match spawn_suspended_exec(&loader, &cmd_args, host_cwd.as_deref(), None, None) {
+    match pooled_child.map(Ok).unwrap_or_else(|| {
+        spawn_suspended_exec(&loader, &cmd_args, host_cwd.as_deref(), None, None)
+    }) {
         Ok(mut child) => {
             trace_spawn_phase(&spawn_started, "execve", "process-created-suspended");
-            let Some(handoff) = kinakaze_vfs::stage_exec_handoff(child.id(), &exec_payload) else {
+            let handoff = if let Some(state) = &mut portable {
+                // The prepared worker is still blocked on its private event.
+                // It cannot inspect guest state before reservation and resume.
+                unsafe { state.transfer_to(BorrowedHandle::borrow_raw(child.process)) }
+                    .ok()
+                    .and_then(|payload| kinakaze_vfs::stage_exec_handoff(child.id(), payload))
+            } else {
+                kinakaze_vfs::stage_exec_handoff(child.id(), &exec_payload)
+            };
+            let Some(handoff) = handoff else {
                 let _ = child.kill();
-                kinakaze_vfs::finish_exec_state(None);
+                finish_exec_snapshot(&mut portable, None);
                 let _ = child.wait();
                 set_errno(kinakaze_vfs::EIO);
                 return -1;
@@ -842,14 +948,14 @@ pub unsafe extern "sysv64" fn kinakaze_abi_execve(
             );
             if !adopted {
                 let _ = child.kill();
-                kinakaze_vfs::finish_exec_state(None);
+                finish_exec_snapshot(&mut portable, None);
                 let _ = child.wait();
                 set_errno(kinakaze_vfs::EIO);
                 return -1;
             }
             if let Err(error) = child.resume() {
                 let _ = child.kill();
-                kinakaze_vfs::finish_exec_state(None);
+                finish_exec_snapshot(&mut portable, None);
                 let _ = child.wait();
                 if adopted {
                     kinakaze_vfs::job::rollback_exec_replacement(namespace_pid);
@@ -860,7 +966,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_execve(
             trace_spawn_phase(&spawn_started, "execve", "process-resumed");
             if !handoff.wait_until_owned(&child) {
                 let _ = child.kill();
-                kinakaze_vfs::finish_exec_state(None);
+                finish_exec_snapshot(&mut portable, None);
                 let _ = child.wait();
                 if adopted {
                     kinakaze_vfs::job::rollback_exec_replacement(namespace_pid);
@@ -872,7 +978,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_execve(
             // The child owns the shared frame, so the parent can now publish
             // process-specific WSADuplicateSocketW recipes. This call waits for
             // libc's acknowledgement before the wrapper closes source sockets.
-            kinakaze_vfs::finish_exec_state(Some(child.id()));
+            finish_exec_snapshot(&mut portable, Some(child.id()));
             trace_spawn_phase(&spawn_started, "execve", "socket-handoff-finished");
             if let Err(error) = kinakaze_vfs::job::finish_exec_replacement() {
                 let _ = child.kill();
@@ -916,7 +1022,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_execve(
             crate::process::terminate_host_process(code)
         }
         Err(error) => {
-            kinakaze_vfs::finish_exec_state(None);
+            finish_exec_snapshot(&mut portable, None);
             kinakaze_runtime::fork_diagnostic(format_args!(
                 "kinakaze: exec process creation failed path={guest_path:?} error={error}"
             ));

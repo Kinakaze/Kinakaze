@@ -1,9 +1,9 @@
 # Portable exec snapshot ownership
 
 `prepare_portable_exec_state_from_image` prepares VFS state for an unpublished
-replacement that has an independent Windows handle table. This is a prerequisite
-for preloading exec workers; the current exec launch path is not switched to a
-pool by this change, and no installation speedup is claimed for it.
+replacement that has an independent Windows handle table. The optional
+[native exec pool](native-exec-pool.md) uses this ownership contract. The snapshot
+API itself does not establish an installation performance improvement.
 
 Each native handle is duplicated into a non-inheritable local owner while its
 serializer still holds the source table lock or object reference. Repeated
@@ -29,8 +29,8 @@ transfer rolls back all capabilities created by that attempt.
 Focused native tests exercise real cross-process file offsets, pipes, FIFO,
 Unix sockets, UDP, eventfd, CLOEXEC and borrowed stdio after the source descriptors
 are closed and reused. Other cases check native handle reuse, non-inheritance,
-error/panic cleanup and cancellation. Full exec-worker integration and an updated
-complete-install measurement remain separate work.
+error/panic cleanup and cancellation. Worker integration and complete-install
+measurements are documented separately.
 
 Validation on 2026-10-01: release native tests passed for `native_transfer::tests`
 (10) and `exec_` (18, one overlapping test), totaling 27 distinct tests. The
