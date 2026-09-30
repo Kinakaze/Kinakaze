@@ -17,6 +17,7 @@ use crate::set_errno;
 mod keys;
 pub(crate) mod mount_api;
 pub mod mqueue;
+pub(crate) mod robust;
 mod sched_api;
 use kinakaze_vfs::{EAGAIN, EFAULT, EINVAL, ENOSYS, ENOTDIR, EPERM, ETIMEDOUT};
 pub use mount_api::*;
@@ -2612,6 +2613,7 @@ mod futex_handoff {
         }
         super::FUTEX_QUEUES.store(core::ptr::null_mut(), super::Ordering::Release);
         crate::futex::reset_after_fork();
+        super::robust::reset_after_fork();
         0
     }
 
@@ -4728,6 +4730,10 @@ unsafe fn dispatch_syscall(number: i64, arguments: [u64; 6]) -> i64 {
             argument5 as *mut c_int,
             argument6 as u32,
         ),
+        SYS_SET_ROBUST_LIST => robust::set(argument1 as usize, argument2 as usize),
+        SYS_GET_ROBUST_LIST => {
+            robust::get(argument1 as i32, argument2 as usize, argument3 as usize)
+        }
         SYS_SCHED_SETAFFINITY => {
             let outcome = unsafe {
                 set_affinity(
@@ -5954,6 +5960,7 @@ fn clear_child_tid() {
 /// Raw `SYS_exit` terminates only the calling Linux task. The last remaining
 /// task performs process exit so the job registry receives the final status.
 fn exit_current_guest_thread(status: i32) -> ! {
+    robust::exit_current();
     clear_child_tid();
     if kinakaze_runtime::retire_guest_thread() {
         crate::process::kinakaze_abi__exit(status);

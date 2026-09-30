@@ -558,6 +558,11 @@ fn finish_current_thread(result: usize) {
         }
     });
     kinakaze_tls::run_thread_destructors();
+    let hook = KERNEL_THREAD_EXIT.load(Ordering::Acquire);
+    if hook != 0 {
+        let hook: extern "sysv64" fn() = unsafe { core::mem::transmute(hook) };
+        hook();
+    }
     sched::unregister(id);
     HELD_RWLOCKS.with_borrow_mut(Vec::clear);
     if let Ok(mut values) = results().lock() {
@@ -584,6 +589,16 @@ fn finish_current_thread(result: usize) {
     if kinakaze_runtime::retire_guest_thread() {
         cleanup::last_thread_exit();
     }
+}
+
+/// libc installs its kernel task cleanup without a pthread -> libc dependency.
+/// It runs after guest destructors and before guest stack/TID retirement.
+#[cfg(all(windows, target_arch = "x86_64"))]
+static KERNEL_THREAD_EXIT: AtomicUsize = AtomicUsize::new(0);
+
+#[cfg(all(windows, target_arch = "x86_64"))]
+pub fn install_kernel_thread_exit(hook: extern "sysv64" fn()) {
+    KERNEL_THREAD_EXIT.store(hook as usize, Ordering::Release);
 }
 
 #[cfg(all(windows, target_arch = "x86_64"))]

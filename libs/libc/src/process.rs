@@ -47,6 +47,7 @@ use termination::{Handler, exit_handlers};
 /// Terminates immediately, without handlers or flushing.
 #[unsafe(no_mangle)]
 pub extern "sysv64" fn kinakaze_abi__exit(status: c_int) -> ! {
+    crate::sysadmin::robust::exit_current();
     if std::env::var_os("KINAKAZE_REPORT_TRAPS").is_some() {
         eprintln!(
             "kinakaze: libc _exit({status}) in host pid {}",
@@ -66,6 +67,7 @@ pub extern "sysv64" fn kinakaze_abi__exit(status: c_int) -> ! {
 /// WIFSIGNALED, not WIFEXITED. Publish exactly one terminal reason, then perform
 /// the same vfork rendezvous and immediate host termination as ordinary exit.
 pub(crate) fn terminate_from_signal(signal: i32) -> ! {
+    crate::sysadmin::robust::exit_current();
     kinakaze_vfs::job::publish_termination(signal);
     crate::exec::complete_vfork(false);
     terminate_host_process((128 + signal) as u32)
