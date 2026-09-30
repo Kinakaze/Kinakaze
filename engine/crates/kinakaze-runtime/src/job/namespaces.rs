@@ -243,7 +243,7 @@ pub(super) unsafe fn exiting(base: *mut u8, entry: *mut u8) {
         let flags = unsafe { load32(parent, SLOT_FLAGS) };
         if flags & (FLAG_SUBREAPER | FLAG_ZOMBIE) == FLAG_SUBREAPER {
             let host = unsafe { load32(parent, SLOT_PID) };
-            if alive(host) && start_token(host) == unsafe { load64(parent, SLOT_TOKEN) } {
+            if live_owner(host, unsafe { load64(parent, SLOT_TOKEN) }) {
                 reaper = ancestor;
                 break;
             }

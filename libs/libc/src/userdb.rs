@@ -2093,8 +2093,8 @@ pub unsafe extern "sysv64" fn kinakaze_abi_capget(header: *mut c_void, data: *mu
         crate::set_errno(EINVAL);
         return -1;
     }
-    let own_pid = crate::process::kinakaze_abi_getpid();
-    if header.pid != 0 && header.pid != own_pid {
+    // Zero selects the caller directly; no PID-namespace lookup is needed.
+    if header.pid != 0 && header.pid != crate::process::kinakaze_abi_getpid() {
         crate::set_errno(ESRCH);
         return -1;
     }
@@ -2139,8 +2139,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_capset(
             return -1;
         }
     };
-    let own_pid = crate::process::kinakaze_abi_getpid();
-    if header.pid != 0 && header.pid != own_pid {
+    if header.pid != 0 && header.pid != crate::process::kinakaze_abi_getpid() {
         crate::set_errno(EPERM);
         return -1;
     }
