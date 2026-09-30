@@ -19,6 +19,8 @@ use windows_sys::Win32::Storage::FileSystem::{
     GetFileSizeEx,
 };
 
+mod read_cache;
+pub(crate) use read_cache::ReadCache;
 pub(crate) mod merkle;
 pub use merkle::Descriptor;
 mod transaction;
@@ -454,20 +456,30 @@ pub(crate) fn read_object(
     bytes: &mut [u8],
 ) -> Result<Option<usize>, i32> {
     let _lock = crate::xattr::InodeLock::acquire(object.raw())?;
-    let record = read_record(&object)?;
-    let size = match &record {
-        Some(record) => record.descriptor.data_size(),
-        None => native_size(&object)?,
+    read_locked_object(object, offset, bytes)
+}
+
+// Caller holds the inode transaction throughout metadata and I/O completion.
+fn read_locked_object(
+    object: &Object,
+    offset: u64,
+    bytes: &mut [u8],
+) -> Result<Option<usize>, i32> {
+    let Some(record) = read_record(object)? else {
+        // Absence remains protected through completion. Native reads already
+        // stop at EOF; an extra size query cannot improve that boundary.
+        return object.read_at(offset, bytes).map(Some);
     };
+    let size = record.descriptor.data_size();
     let length = bytes
         .len()
         .min(size.saturating_sub(offset).min(usize::MAX as u64) as usize);
     if length == 0 {
         return Ok(Some(0));
     }
-    let Some(record) = record.filter(|record| record.state == ENABLED) else {
+    if record.state != ENABLED {
         return object.read_at(offset, &mut bytes[..length]).map(Some);
-    };
+    }
     read_verified_record(object, &record, offset, &mut bytes[..length]).map(Some)
 }
 

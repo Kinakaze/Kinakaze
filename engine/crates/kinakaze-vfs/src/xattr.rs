@@ -58,19 +58,68 @@ impl Drop for Handle {
 }
 
 pub(crate) struct InodeLock(Handle);
-impl InodeLock {
-    pub(crate) fn acquire(file: HANDLE) -> Result<Self, i32> {
+/// The lock name derives only from native identity. Retain this key only while
+/// an owned inode handle prevents file-id reuse; no mutable metadata is cached.
+pub(crate) struct InodeKey(Vec<u16>);
+/// A retained named mutex capability. The caller keeps its native inode alive
+/// throughout this object's lifetime, preventing identity reuse. This object
+/// stores no metadata and is rebuilt rather than inherited by fork caches.
+pub(crate) struct InodeMutex(Handle);
+// Windows mutex handles may be used concurrently by multiple native threads.
+// Ownership belongs to an acquiring thread, not to the handle itself.
+unsafe impl Send for InodeMutex {}
+unsafe impl Sync for InodeMutex {}
+
+pub(crate) struct InodeMutexGuard<'a> {
+    mutex: &'a InodeMutex,
+    // ReleaseMutex must execute on the same native thread as acquisition.
+    _thread: std::marker::PhantomData<*mut ()>,
+}
+impl InodeMutex {
+    pub(crate) fn open(key: &InodeKey) -> Result<Self, i32> {
+        Handle::new(unsafe { CreateMutexW(ptr::null(), 0, key.0.as_ptr()) }).map(Self)
+    }
+    pub(crate) fn acquire(&self) -> Result<InodeMutexGuard<'_>, i32> {
+        acquire_mutex(self.0.0)?;
+        Ok(InodeMutexGuard {
+            mutex: self,
+            _thread: std::marker::PhantomData,
+        })
+    }
+}
+impl Drop for InodeMutexGuard<'_> {
+    fn drop(&mut self) {
+        unsafe { ReleaseMutex(self.mutex.0.0) };
+    }
+}
+impl InodeKey {
+    pub(crate) fn from_information(info: &BY_HANDLE_FILE_INFORMATION) -> Self {
+        Self(
+            format!(
+                r"Local\kinakaze.xattr.v1.{:08x}.{:08x}{:08x}",
+                info.dwVolumeSerialNumber, info.nFileIndexHigh, info.nFileIndexLow,
+            )
+            .encode_utf16()
+            .chain(Some(0))
+            .collect(),
+        )
+    }
+    pub(crate) fn from_handle(file: HANDLE) -> Result<Self, i32> {
         let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
         if unsafe { GetFileInformationByHandle(file, &mut info) } == 0 {
             return Err(errno_from_win32(unsafe { GetLastError() }));
         }
-        let name: Vec<u16> = format!(
-            r"Local\kinakaze.xattr.v1.{:08x}.{:08x}{:08x}",
-            info.dwVolumeSerialNumber, info.nFileIndexHigh, info.nFileIndexLow,
-        )
-        .encode_utf16()
-        .chain(Some(0))
-        .collect();
+        Ok(Self::from_information(&info))
+    }
+    pub(crate) fn acquire(&self) -> Result<InodeLock, i32> {
+        InodeLock::acquire_name(&self.0)
+    }
+}
+impl InodeLock {
+    pub(crate) fn acquire(file: HANDLE) -> Result<Self, i32> {
+        InodeKey::from_handle(file)?.acquire()
+    }
+    fn acquire_name(name: &[u16]) -> Result<Self, i32> {
         // A newly created mutex can be owned atomically by its creator. Most
         // inode transactions are uncontended and close the last handle on
         // return, so avoid a separate kernel wait for that common case.
@@ -80,32 +129,40 @@ impl InodeLock {
         if unsafe { GetLastError() } != ERROR_ALREADY_EXISTS {
             return Ok(Self(mutex));
         }
-        match unsafe { WaitForSingleObject(mutex.0, 0) } {
-            WAIT_OBJECT_0 | WAIT_ABANDONED => return Ok(Self(mutex)),
-            WAIT_TIMEOUT => {}
-            _ => return Err(EIO),
-        }
-        let interrupt = crate::interrupt::current();
-        if interrupt.is_null() {
-            return Err(EIO);
-        }
-        let handles = [mutex.0, interrupt];
-        loop {
-            crate::signal::register_waiter();
-            if crate::signal::interrupt_pending() {
-                crate::signal::unregister_waiter();
-                return Err(crate::EINTR);
-            }
-            let result = unsafe { WaitForMultipleObjects(2, handles.as_ptr(), 0, INFINITE) };
+        acquire_mutex(mutex.0)?;
+        Ok(Self(mutex))
+    }
+}
+
+fn acquire_mutex(mutex: HANDLE) -> Result<(), i32> {
+    match unsafe { WaitForSingleObject(mutex, 0) } {
+        WAIT_OBJECT_0 | WAIT_ABANDONED => return Ok(()),
+        WAIT_TIMEOUT => {}
+        _ => return Err(EIO),
+    }
+    let interrupt = crate::interrupt::current();
+    if interrupt.is_null() {
+        return Err(EIO);
+    }
+    let handles = [mutex, interrupt];
+    loop {
+        crate::signal::register_waiter();
+        if crate::signal::interrupt_pending() {
             crate::signal::unregister_waiter();
-            match result {
-                WAIT_OBJECT_0 | WAIT_ABANDONED => return Ok(Self(mutex)),
-                value if value == WAIT_OBJECT_0 + 1 => {} // stale or blocked signal: recheck
-                _ => return Err(EIO),
-            }
+            return Err(crate::EINTR);
+        }
+        let result = unsafe { WaitForMultipleObjects(2, handles.as_ptr(), 0, INFINITE) };
+        crate::signal::unregister_waiter();
+        match result {
+            WAIT_OBJECT_0 | WAIT_ABANDONED => return Ok(()),
+            value if value == WAIT_OBJECT_0 + 1 => {} // stale or blocked signal: recheck
+            _ => return Err(EIO),
         }
     }
 }
+
+#[cfg(test)]
+mod retained_mutex_tests;
 impl Drop for InodeLock {
     fn drop(&mut self) {
         unsafe { ReleaseMutex(self.0.0) };

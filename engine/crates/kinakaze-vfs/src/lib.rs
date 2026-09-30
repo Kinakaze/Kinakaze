@@ -3718,6 +3718,8 @@ struct RetiredDescriptor {
     release_borrowed: bool,
     #[cfg(windows)]
     detached: Option<unix::Detached>,
+    #[cfg(windows)]
+    description: Option<ofd::Retired>,
 }
 
 impl RetiredDescriptor {
@@ -3728,6 +3730,8 @@ impl RetiredDescriptor {
         // below would then destroy along with that thread's live handle.
         #[cfg(windows)]
         let mut detached = None;
+        #[cfg(windows)]
+        let mut description = None;
         let (entry, description_survivor, release_borrowed) = {
             let slot = table.slots.get_mut(fd as usize).ok_or(EBADF)?;
             let closing = *slot.as_ref().ok_or(EBADF)?;
@@ -3788,7 +3792,9 @@ impl RetiredDescriptor {
                 mount::native::closed(entry.description_id);
                 pipe_inode::closed(entry.description_id);
                 #[cfg(windows)]
-                ofd::closed(entry.description_id);
+                {
+                    description = ofd::closed(entry.description_id);
+                }
                 #[cfg(windows)]
                 usernet::closed(entry.description_id);
             }
@@ -3801,6 +3807,8 @@ impl RetiredDescriptor {
             release_borrowed,
             #[cfg(windows)]
             detached,
+            #[cfg(windows)]
+            description,
         })
     }
 
@@ -3811,7 +3819,11 @@ impl RetiredDescriptor {
             release_borrowed,
             #[cfg(windows)]
             detached,
+            #[cfg(windows)]
+            description,
         } = self;
+        #[cfg(windows)]
+        drop(description);
         #[cfg(windows)]
         epoll::descriptor_closed(entry.description_id, description_survivor);
         #[cfg(windows)]

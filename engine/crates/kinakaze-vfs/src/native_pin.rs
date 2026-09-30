@@ -1,7 +1,7 @@
 //! Operation-local inode pins. Descriptor lookup, validation and native
 //! duplication share one table guard; no I/O or guest callback holds that guard.
 
-use crate::{EBADF, EIO, EOPNOTSUPP, FdEntry, FdKind, errno_from_win32};
+use crate::{EBADF, EIO, EOPNOTSUPP, FdEntry, FdFlags, FdKind, errno_from_win32};
 use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle, RawHandle};
 use windows_sys::Win32::Foundation::{DUPLICATE_SAME_ACCESS, DuplicateHandle, GetLastError};
 use windows_sys::Win32::System::Threading::GetCurrentProcess;
@@ -11,25 +11,38 @@ fn duplicate(mut entry: FdEntry) -> Result<(FdEntry, NativePin), i32> {
     if !matches!(entry.kind, FdKind::File | FdKind::Directory) {
         return Err(EOPNOTSUPP);
     }
-    let mut handle = std::ptr::null_mut();
-    let process = unsafe { GetCurrentProcess() };
-    if unsafe {
-        DuplicateHandle(
-            process,
-            entry.raw as _,
-            process,
-            &mut handle,
-            0,
-            0,
-            DUPLICATE_SAME_ACCESS,
-        )
-    } == 0
-    {
-        return Err(errno_from_win32(unsafe { GetLastError() }));
-    }
-    let handle = unsafe { OwnedHandle::from_raw_handle(handle.cast()) };
     let overlay = crate::mount::overlay::reference(entry)?;
     let native = crate::mount::native::reference(entry)?;
+    let handle = if overlay.is_none() && crate::ofd::native_pin_cache_enabled() {
+        PinHandle::Shared(crate::ofd::native_pin(entry)?)
+    } else {
+        let mut handle = std::ptr::null_mut();
+        let process = unsafe { GetCurrentProcess() };
+        if unsafe {
+            DuplicateHandle(
+                process,
+                entry.raw as _,
+                process,
+                &mut handle,
+                0,
+                0,
+                DUPLICATE_SAME_ACCESS,
+            )
+        } == 0
+        {
+            return Err(errno_from_win32(unsafe { GetLastError() }));
+        }
+        PinHandle::Owned(unsafe { OwnedHandle::from_raw_handle(handle.cast()) })
+    };
+    let reader = if entry.kind == FdKind::File
+        && !entry.flags.contains(FdFlags::VERITY_WRITABLE)
+        && !entry.flags.contains(FdFlags::NOATIME)
+        && overlay.is_none()
+    {
+        Some(crate::ofd::read_cache(entry.description_id)?)
+    } else {
+        None
+    };
     entry.raw = handle.as_raw_handle() as usize;
     Ok((
         entry,
@@ -37,15 +50,30 @@ fn duplicate(mut entry: FdEntry) -> Result<(FdEntry, NativePin), i32> {
             handle,
             overlay,
             _native: native,
+            reader,
         },
     ))
 }
 
 /// Inode and mount policy captured atomically before close/reuse can intervene.
 pub struct NativePin {
-    handle: OwnedHandle,
+    handle: PinHandle,
     overlay: Option<crate::mount::overlay::Description>,
     _native: Option<crate::mount::native::Description>,
+    reader: Option<std::sync::Arc<crate::fs::verity::ReadCache>>,
+}
+
+enum PinHandle {
+    Owned(OwnedHandle),
+    Shared(std::sync::Arc<crate::fs::object::Object>),
+}
+impl AsRawHandle for PinHandle {
+    fn as_raw_handle(&self) -> RawHandle {
+        match self {
+            Self::Owned(handle) => handle.as_raw_handle(),
+            Self::Shared(handle) => handle.raw().cast(),
+        }
+    }
 }
 impl AsRawHandle for NativePin {
     fn as_raw_handle(&self) -> RawHandle {
@@ -102,6 +130,14 @@ impl NativePin {
                 }
             }
             return Ok(count);
+        }
+        if let Some(reader) = &self.reader {
+            let bytes = if len == 0 {
+                &mut []
+            } else {
+                unsafe { std::slice::from_raw_parts_mut(buffer, len) }
+            };
+            return reader.read(self.as_raw_handle(), entry.offset, bytes);
         }
         unsafe { crate::platform_read_pinned_once(entry, buffer, len) }
     }

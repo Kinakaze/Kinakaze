@@ -44,6 +44,8 @@ struct Description {
     shared: Mutex<Option<Arc<Shared>>>,
     object: Mutex<Option<Arc<Store>>>,
     directory: Mutex<Option<Arc<Vec<crate::fs::NativeDirectoryEntry>>>>,
+    reader: OnceLock<Arc<crate::fs::verity::ReadCache>>,
+    native_pin: Mutex<Option<Arc<crate::fs::object::Object>>>,
 }
 fn descriptions() -> &'static Mutex<HashMap<u64, Arc<Description>>> {
     static ITEMS: OnceLock<Mutex<HashMap<u64, Arc<Description>>>> = OnceLock::new();
@@ -73,6 +75,8 @@ fn local(id: u64) -> Result<Arc<Description>, i32> {
                 shared: Mutex::new(None),
                 object: Mutex::new(None),
                 directory: Mutex::new(None),
+                reader: OnceLock::new(),
+                native_pin: Mutex::new(None),
             })
         })
         .clone())
@@ -233,11 +237,45 @@ pub(crate) fn attach(entry: FdEntry, id: u64) -> Result<(), i32> {
     *item.shared.lock().map_err(|_| EIO)? = Some(store);
     Ok(())
 }
-pub(crate) fn closed(id: u64) {
-    if let Ok(mut items) = descriptions().lock() {
-        items.remove(&id);
-    }
+pub(crate) struct Retired {
+    _description: Arc<Description>,
 }
+pub(crate) fn closed(id: u64) -> Option<Retired> {
+    // Retire all private handles after the descriptor-table write guard is
+    // released. A concurrent metadata/read pin keeps its original owner alive.
+    descriptions()
+        .lock()
+        .ok()?
+        .remove(&id)
+        .map(|description| Retired {
+            _description: description,
+        })
+}
+
+pub(crate) fn native_pin_cache_enabled() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED
+        .get_or_init(|| !std::env::var_os("KINAKAZE_NATIVE_PIN").is_some_and(|value| value == "0"))
+}
+
+pub(crate) fn native_pin(entry: FdEntry) -> Result<Arc<crate::fs::object::Object>, i32> {
+    let description = local(entry.description_id)?;
+    let mut pin = description.native_pin.lock().map_err(|_| EIO)?;
+    if pin.is_none() {
+        *pin = Some(Arc::new(crate::fs::object::Object::duplicate(
+            entry.raw as _,
+        )?));
+    }
+    Ok(pin.as_ref().unwrap().clone())
+}
+
+pub(crate) fn read_cache(id: u64) -> Result<Arc<crate::fs::verity::ReadCache>, i32> {
+    Ok(local(id)?
+        .reader
+        .get_or_init(|| Arc::new(Default::default()))
+        .clone())
+}
+
 /// Pin a descriptor-backed section once per open description. The descriptor
 /// table lock held by the caller prevents raw-handle reuse while opening it.
 /// Dup shares this pin; final close releases it; fork restore rebuilds it lazily.
@@ -358,6 +396,8 @@ pub(crate) fn restore(bytes: &[u8]) -> bool {
                     shared: Mutex::new(Some(store)),
                     object: Mutex::new(None),
                     directory: Mutex::new(None),
+                reader: OnceLock::new(),
+                native_pin: Mutex::new(None),
                 }),
             );
         }

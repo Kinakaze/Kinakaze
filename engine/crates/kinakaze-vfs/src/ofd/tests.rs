@@ -107,3 +107,83 @@ fn promoted_alias_publishes_its_completed_write_read_and_seek_position() {
     drop(shared);
     assert!(!path.exists());
 }
+
+#[test]
+fn native_pins_share_one_capability_and_survive_final_close_and_slot_reuse() {
+    use std::os::windows::io::AsRawHandle;
+    let path = std::env::temp_dir().join(format!(
+        "kinakaze-ofd-pin-{}-{}.tmp",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::write(&path, b"original").unwrap();
+    let file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
+        .custom_flags(FILE_FLAG_OVERLAPPED)
+        .open(&path)
+        .unwrap();
+    let alias_file = file.try_clone().unwrap();
+    let flags = FdFlags::OVERLAPPED
+        .union(FdFlags::SEEKABLE)
+        .union(FdFlags::READ_ACCESS)
+        .union(FdFlags::WRITE_ACCESS);
+    let fd = crate::install(file.into_raw_handle() as usize, FdKind::File, flags).unwrap();
+    let alias = crate::install_duplicate(
+        alias_file.into_raw_handle() as usize,
+        FdKind::File,
+        flags,
+        crate::get(fd).unwrap(),
+    )
+    .unwrap();
+    let (entry, first) = crate::native_pin::pin_native_fd(fd, |_| Ok(())).unwrap();
+    let (_, second) = crate::native_pin::pin_native_fd(alias, |_| Ok(())).unwrap();
+    if native_pin_cache_enabled() {
+        assert_eq!(first.as_raw_handle(), second.as_raw_handle());
+    }
+    let renamed = path.with_extension("old");
+    std::fs::rename(&path, &renamed).unwrap();
+    std::fs::write(&path, b"replacement").unwrap();
+    crate::close(fd).unwrap();
+    crate::close(alias).unwrap();
+    let replacement_file = std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(FILE_FLAG_OVERLAPPED)
+        .open(&path)
+        .unwrap();
+    let reused = crate::install(
+        replacement_file.into_raw_handle() as usize,
+        FdKind::File,
+        flags,
+    )
+    .unwrap();
+    assert_eq!(reused, fd);
+    let mut bytes = [0u8; 8];
+    assert_eq!(
+        unsafe { first.read_once(entry, bytes.as_mut_ptr(), bytes.len()) },
+        Ok(8)
+    );
+    assert_eq!(&bytes, b"original");
+    assert!(
+        !descriptions()
+            .lock()
+            .unwrap()
+            .contains_key(&entry.description_id)
+    );
+    crate::close(reused).unwrap();
+    drop(second);
+    drop(first);
+    drop(
+        std::fs::OpenOptions::new()
+            .read(true)
+            .share_mode(0)
+            .open(&renamed)
+            .unwrap(),
+    );
+    std::fs::remove_file(renamed).unwrap();
+    std::fs::remove_file(path).unwrap();
+}
