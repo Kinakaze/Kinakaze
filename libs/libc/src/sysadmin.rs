@@ -9,11 +9,15 @@
 //! a success-shaped no-op cannot substitute for a missing mount or namespace.
 
 use core::ffi::{CStr, c_char, c_int, c_void};
-use core::sync::atomic::{AtomicI32, AtomicPtr, AtomicUsize, Ordering};
+use core::sync::atomic::{AtomicBool, AtomicI32, AtomicPtr, AtomicU64, AtomicUsize, Ordering};
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 
 use crate::set_errno;
+mod futex_requeue;
+#[cfg(test)]
+mod futex_requeue_race_tests;
+mod futex_vector;
 mod keys;
 pub(crate) mod mount_api;
 pub mod mqueue;
@@ -2538,7 +2542,26 @@ struct FutexWaiter {
     address: AtomicUsize,
     bitset: u32,
     thread: u32,
+    park: crate::futex::ParkIdentity,
+    token: AtomicU64,
 }
+
+impl FutexWaiter {
+    fn new(address: usize, bitset: u32) -> Result<Arc<Self>, i32> {
+        let park = crate::futex::park_identity()?;
+        Ok(Arc::new(Self {
+            address: AtomicUsize::new(address),
+            bitset,
+            thread: park.thread,
+            park,
+            token: AtomicU64::new(0),
+        }))
+    }
+}
+
+// Only processes that use mixed requeues inspect private bridge records. Set
+// before publication, so the hint can have false positives but never miss them.
+static FUTEX_PRIVATE_BRIDGED: AtomicBool = AtomicBool::new(false);
 
 type FutexQueue = HashMap<usize, VecDeque<Arc<FutexWaiter>>>;
 
@@ -2561,7 +2584,10 @@ impl From<*mut c_int> for FutexAddress {
 
 impl FutexAddress {
     fn resolve(word: *mut c_int, private: bool) -> Result<Self, i64> {
-        futex_word(word)?;
+        futex_key_address(word)?;
+        if !private {
+            futex_word(word)?;
+        }
         // All unflagged keys use the kernel-domain queue, even for private
         // memory, so mixed private/shared requeues remain atomic. PRIVATE_FLAG
         // retains the process-local fast path and its separate key namespace.
@@ -2612,6 +2638,7 @@ mod futex_handoff {
             return kinakaze_vfs::EINVAL;
         }
         super::FUTEX_QUEUES.store(core::ptr::null_mut(), super::Ordering::Release);
+        super::FUTEX_PRIVATE_BRIDGED.store(false, super::Ordering::Release);
         crate::futex::reset_after_fork();
         super::robust::reset_after_fork();
         0
@@ -2636,13 +2663,24 @@ mod futex_handoff {
     static INITIALIZER: extern "C" fn() = initializer;
 }
 
-fn futex_word(address: *mut c_int) -> Result<&'static AtomicI32, i64> {
-    if address.is_null() {
-        return Err(-i64::from(EFAULT));
-    }
+/// Linux's private key needs only an aligned user VA, including unmapped
+/// addresses. Reading a value is a separate operation. This guest uses the
+/// x86-64 four-level user window (TASK_SIZE_MAX), not host mapped-page probes.
+fn futex_key_address(address: *mut c_int) -> Result<(), i64> {
     if (address as usize) & (core::mem::align_of::<i32>() - 1) != 0 {
         return Err(-i64::from(EINVAL));
     }
+    if (address as usize)
+        .checked_add(size_of::<i32>())
+        .is_none_or(|end| end > (1usize << 47) - 4096)
+    {
+        return Err(-i64::from(EFAULT));
+    }
+    Ok(())
+}
+
+fn futex_word(address: *mut c_int) -> Result<&'static AtomicI32, i64> {
+    futex_key_address(address)?;
     futex_access(address as usize, size_of::<i32>(), false)?;
     // SAFETY: a Linux futex word is a naturally aligned, process-shared i32.
     // Its storage is owned by the guest and must outlive every wait on it.
@@ -2774,11 +2812,11 @@ fn select_futex_wake(queues: &mut FutexQueue, address: usize, count: u32, bitset
 
 fn futex_wake(address: impl Into<FutexAddress>, count: u32, bitset: u32) -> i64 {
     let address = address.into();
-    if let Err(error) = futex_word(address.word) {
-        return error;
-    }
     if bitset == 0 {
         return -i64::from(EINVAL);
+    }
+    if let Err(error) = futex_key_address(address.word) {
+        return error;
     }
     // The legacy wake ABI checks its signed limit after the first selection.
     let count = (count as i32).max(1) as u32;
@@ -2786,10 +2824,21 @@ fn futex_wake(address: impl Into<FutexAddress>, count: u32, bitset: u32) -> i64 
         return crate::futex::wake(key, count, bitset)
             .map_or_else(|error| -i64::from(error), i64::from);
     }
+    if FUTEX_PRIVATE_BRIDGED.load(Ordering::Acquire) {
+        return futex_requeue::wake(address, count, bitset);
+    }
+    #[cfg(test)]
+    futex_requeue_race_tests::pause_after_hint(address.key);
     let waiters = {
         let mut queues = futex_queues()
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
+        // A mixed requeue can publish the bridge after the hint was read but
+        // before this mutex was acquired. Check again under the queue lock.
+        if FUTEX_PRIVATE_BRIDGED.load(Ordering::Acquire) {
+            drop(queues);
+            return futex_requeue::wake(address, count, bitset);
+        }
         select_futex_wake(&mut queues, address.key, count, bitset)
     };
     waiters as i64
@@ -2823,9 +2872,30 @@ fn futex_wake_op(
         )
         .map_or_else(|error| -i64::from(error), i64::from);
     }
+    if FUTEX_PRIVATE_BRIDGED.load(Ordering::Acquire) {
+        return futex_requeue::wake_op(
+            address,
+            (count as i32).max(1) as u32,
+            address2,
+            (count2 as i32).max(1) as u32,
+            || futex_atomic_op(word, encoded),
+        );
+    }
+    #[cfg(test)]
+    futex_requeue_race_tests::pause_after_hint(address.key);
     let mut queues = futex_queues()
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
+    if FUTEX_PRIVATE_BRIDGED.load(Ordering::Acquire) {
+        drop(queues);
+        return futex_requeue::wake_op(
+            address,
+            (count as i32).max(1) as u32,
+            address2,
+            (count2 as i32).max(1) as u32,
+            || futex_atomic_op(word, encoded),
+        );
+    }
     let wake_second = match futex_atomic_op(word, encoded) {
         Ok(second) => second,
         Err(error) => return error,
@@ -2870,19 +2940,26 @@ fn futex_atomic_op(word: &AtomicI32, encoded: u32) -> Result<bool, i64> {
         0 => old == comparison,
         1 => old != comparison,
         2 => old < comparison,
-        3 => old <= comparison,
-        4 => old > comparison,
-        5 => old >= comparison,
+        3 => old >= comparison,
+        4 => old <= comparison,
+        5 => old > comparison,
         _ => return Err(-i64::from(ENOSYS)),
     })
 }
 
 /// Returns false if a concurrent wake already removed this sleep record.
-fn unqueue_futex(waiter: &Arc<FutexWaiter>) -> bool {
+fn unqueue_futex(waiter: &Arc<FutexWaiter>) -> Result<bool, i64> {
     let mut queues = futex_queues()
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
     let current = waiter.address.load(Ordering::Acquire);
+    let token = waiter.token.load(Ordering::Acquire);
+    if token != 0 {
+        drop(queues);
+        let mut transaction =
+            crate::futex::Transaction::begin().map_err(|error| -i64::from(error))?;
+        return Ok(transaction.cancel(token));
+    }
     let removed = queues.get_mut(&current).is_some_and(|queue| {
         queue
             .iter()
@@ -2891,7 +2968,7 @@ fn unqueue_futex(waiter: &Arc<FutexWaiter>) -> bool {
             .is_some()
     });
     remove_empty_futex_queue(&mut queues, current);
-    removed
+    Ok(removed)
 }
 
 fn futex_wait(
@@ -2904,13 +2981,12 @@ fn futex_wait(
 ) -> i64 {
     use kinakaze_vfs::{EINTR, EIO, interrupt, signal};
     use windows_sys::Win32::Foundation::{WAIT_OBJECT_0, WAIT_TIMEOUT};
-    use windows_sys::Win32::System::Threading::{INFINITE, WaitForSingleObject};
+    use windows_sys::Win32::System::Threading::INFINITE;
 
     let address = address.into();
-    let word = match futex_word(address.word) {
-        Ok(word) => word,
-        Err(error) => return error,
-    };
+    if let Err(error) = futex_word(address.word) {
+        return error;
+    }
     if bitset == 0 {
         return -i64::from(EINVAL);
     }
@@ -2934,18 +3010,25 @@ fn futex_wait(
     if event.is_null() {
         return -i64::from(EIO);
     }
-    let waiter = Arc::new(FutexWaiter {
-        address: AtomicUsize::new(address.key),
-        bitset,
-        thread: interrupt::current_thread_id(),
-    });
     loop {
+        let waiter = match FutexWaiter::new(address.key, bitset) {
+            Ok(waiter) => waiter,
+            Err(error) => return -i64::from(error),
+        };
+        let park = match crate::futex::park() {
+            Ok(park) => park,
+            Err(error) => return -i64::from(error),
+        };
         let mut queues = futex_queues()
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
         // Registration and the second value check share the wake-side lock. A
         // concurrent wake therefore sees us or we see the changed word; there is
         // no interval in which both operations can miss each other.
+        let word = match futex_word(address.word) {
+            Ok(word) => word,
+            Err(error) => return error,
+        };
         if word.load(Ordering::SeqCst) != expected {
             return -i64::from(EAGAIN);
         }
@@ -2960,18 +3043,30 @@ fn futex_wait(
         // Check after registration, closing the signal-before-park window.
         // Never run a guest handler while its outer futex remains queued:
         // handlers may themselves wait, wake or fork.
-        let pending = signal::pending() & !signal::blocked_mask() != 0;
-        let remaining = duration.map(|limit| limit.saturating_sub(started.elapsed()));
-        let milliseconds = remaining.map_or(INFINITE, |left| {
-            left.as_nanos()
-                .div_ceil(1_000_000)
-                .min(u128::from(INFINITE - 1)) as u32
-        });
+        let pending = signal::interrupt_pending();
         let status = if pending {
             WAIT_OBJECT_0
         } else {
-            // SAFETY: the event belongs to the calling thread for its lifetime.
-            unsafe { WaitForSingleObject(event, milliseconds) }
+            loop {
+                let remaining = duration.map(|limit| limit.saturating_sub(started.elapsed()));
+                let milliseconds = remaining.map_or(INFINITE, |left| {
+                    left.as_nanos()
+                        .div_ceil(1_000_000)
+                        .min(u128::from(INFINITE - 1)) as u32
+                });
+                // SAFETY: both events belong to the calling thread.
+                let status =
+                    unsafe { kinakaze_vfs::deadline_wait::any(&[event, park], milliseconds) };
+                if status == WAIT_OBJECT_0 + 1
+                    && matches!(
+                        futex_requeue::selected(core::iter::once(&waiter)),
+                        Ok(false)
+                    )
+                {
+                    continue; // SetEvent without a committed selection
+                }
+                break status;
+            }
         };
         let removed = unqueue_futex(&waiter);
 
@@ -2979,10 +3074,14 @@ fn futex_wait(
         let expired = duration.is_some_and(|limit| started.elapsed() >= limit);
         let delivery = signal::deliver_pending();
         // As in Linux __futex_wait, a selected wake wins over timeout/signal.
+        let removed = match removed {
+            Ok(removed) => removed,
+            Err(error) => return error,
+        };
         if !removed {
             return 0;
         }
-        if status != WAIT_OBJECT_0 && status != WAIT_TIMEOUT {
+        if status != WAIT_OBJECT_0 && status != WAIT_OBJECT_0 + 1 && status != WAIT_TIMEOUT {
             return -i64::from(EIO);
         }
         if expired {
@@ -3021,6 +3120,14 @@ fn futex_syscall(
     ) {
         return -i64::from(ENOSYS);
     }
+    // Linux checks non-PI requeue counts, and a wake's empty bit mask,
+    // before resolving either futex key. Keep faults from taking precedence.
+    if (matches!(cmd, FUTEX_REQUEUE | FUTEX_CMP_REQUEUE)
+        && ((val as i32) < 0 || (timeout as usize as u32 as i32) < 0))
+        || (cmd == FUTEX_WAKE_BITSET && val3 == 0)
+    {
+        return -i64::from(EINVAL);
+    }
     let private = flags & FUTEX_PRIVATE_FLAG != 0;
     let address = match FutexAddress::resolve(uaddr, private) {
         Ok(address) => address,
@@ -3047,35 +3154,49 @@ fn futex_syscall(
         FUTEX_WAKE_BITSET => futex_wake(address, val, val3),
         FUTEX_REQUEUE | FUTEX_CMP_REQUEUE => {
             let requeue_count = timeout as usize as u32;
-            if (val as i32) < 0 || (requeue_count as i32) < 0 {
-                return -i64::from(EINVAL);
-            }
             let destination = match FutexAddress::resolve(uaddr2, private) {
                 Ok(address) => address,
                 Err(error) => return error,
             };
-            let word = match futex_word(uaddr) {
-                Ok(word) => word,
-                Err(error) => return error,
+            let comparison = if cmd == FUTEX_CMP_REQUEUE {
+                let word = match futex_word(uaddr) {
+                    Ok(word) => word,
+                    Err(error) => return error,
+                };
+                Some((word, val3 as i32))
+            } else {
+                None
             };
-            if let Err(error) = futex_word(uaddr2) {
-                return error;
-            }
             if let (Some(key), Some(target)) = (address.shared, destination.shared) {
-                return crate::futex::requeue(
-                    key,
-                    target,
+                return crate::futex::requeue(key, target, val, requeue_count, comparison)
+                    .map_or_else(|error| -i64::from(error), i64::from);
+            }
+            if FUTEX_PRIVATE_BRIDGED.load(Ordering::Acquire) {
+                return futex_requeue::requeue(
+                    address,
+                    destination,
                     val,
                     requeue_count,
-                    (cmd == FUTEX_CMP_REQUEUE).then_some((word, val3 as i32)),
-                )
-                .map_or_else(|error| -i64::from(error), i64::from);
+                    comparison.map(|(_, value)| value),
+                );
             }
+            #[cfg(test)]
+            futex_requeue_race_tests::pause_after_hint(address.key);
             let (woken, moved) = {
                 let mut queues = futex_queues()
                     .lock()
                     .unwrap_or_else(|poisoned| poisoned.into_inner());
-                if cmd == FUTEX_CMP_REQUEUE && word.load(Ordering::SeqCst) != val3 as i32 {
+                if FUTEX_PRIVATE_BRIDGED.load(Ordering::Acquire) {
+                    drop(queues);
+                    return futex_requeue::requeue(
+                        address,
+                        destination,
+                        val,
+                        requeue_count,
+                        comparison.map(|(_, value)| value),
+                    );
+                }
+                if comparison.is_some_and(|(word, value)| word.load(Ordering::SeqCst) != value) {
                     return -i64::from(EAGAIN);
                 }
                 let selected =
@@ -3437,6 +3558,19 @@ unsafe fn dispatch_syscall(number: i64, arguments: [u64; 6]) -> i64 {
             })();
             result.unwrap_or_else(|error| -i64::from(error))
         }
+        449 => futex_vector::waitv(
+            argument1 as usize,
+            argument2 as u32,
+            argument3 as u32,
+            argument4 as _,
+            argument5 as i32,
+        ),
+        456 => futex_requeue::syscall(
+            argument1 as usize,
+            argument2 as u32,
+            argument3 as i32,
+            argument4 as i32,
+        ),
         454 => {
             let flags = argument4 as u32;
             if flags & !0x83 != 0
@@ -3450,9 +3584,6 @@ unsafe fn dispatch_syscall(number: i64, arguments: [u64; 6]) -> i64 {
                 Ok(address) => address,
                 Err(error) => return error,
             };
-            if let Err(error) = futex_word(address.word) {
-                return error;
-            }
             // futex2 fixes legacy FUTEX_WAKE's zero-count wake-one behavior.
             if argument3 as i32 == 0 {
                 0
@@ -7184,9 +7315,9 @@ mod tests {
                     0 => old == -1,
                     1 => old != -1,
                     2 => old < -1,
-                    3 => old <= -1,
-                    4 => old > -1,
-                    _ => old >= -1,
+                    3 => old >= -1,
+                    4 => old <= -1,
+                    _ => old > -1,
                 };
                 let woken = wake_op(
                     &first,

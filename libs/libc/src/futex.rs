@@ -5,9 +5,27 @@
 //! survive an abandoned mutex; wake events are signaled BEFORE publication,
 //! under that mutex, so killing a waker cannot strand a committed wake.
 
-use core::{mem::size_of, ptr};
+use core::{cell::Cell, mem::size_of, ptr};
 use std::sync::atomic::{AtomicI32, AtomicPtr, AtomicU32, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
+
+mod wait_group;
+pub(crate) use wait_group::WaitGroup;
+mod hybrid;
+pub(crate) use hybrid::{ParkIdentity, Transaction, park, park_identity};
+
+#[inline]
+pub(crate) fn optimized() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| std::env::var_os("KINAKAZE_FUTEX_OPT").is_none_or(|v| v != "0"))
+}
+
+thread_local! {
+    // Compare the host incarnation on every use: fork must never reuse the
+    // parent's identity. These cells have no destructor or inherited lock.
+    static PROCESS_BIRTH: Cell<Option<(u32, u64)>> = const { Cell::new(None) };
+    static THREAD_BIRTH: Cell<Option<(u32, u32, u64)>> = const { Cell::new(None) };
+}
 
 use kinakaze_vfs::{EAGAIN, EINTR, EIO, ENOMEM, ETIMEDOUT, errno_from_win32, interrupt, signal};
 use windows_sys::Win32::Foundation::{
@@ -30,6 +48,11 @@ use windows_sys::Win32::System::Threading::{
 pub(crate) struct Key([u64; 5]);
 
 impl Key {
+    pub(crate) fn flagged_private(address: usize) -> Result<Self, i32> {
+        let mut key = Self::private(address)?;
+        key.0[0] = 4;
+        Ok(key)
+    }
     pub(crate) fn private(address: usize) -> Result<Self, i32> {
         Ok(Self([
             1,
@@ -60,7 +83,13 @@ fn timestamp(value: FILETIME) -> u64 {
 }
 
 fn process_birth() -> Result<u64, i32> {
-    // Do not cache a PID or birth time in copied fork state.
+    let host = std::process::id();
+    if optimized()
+        && let Some((owner, born)) = PROCESS_BIRTH.get()
+        && owner == host
+    {
+        return Ok(born);
+    }
     let (mut born, mut end, mut kernel, mut user) = unsafe { core::mem::zeroed() };
     if unsafe {
         GetProcessTimes(
@@ -74,7 +103,23 @@ fn process_birth() -> Result<u64, i32> {
     {
         return Err(errno_from_win32(unsafe { GetLastError() }));
     }
-    Ok(timestamp(born))
+    let born = timestamp(born);
+    PROCESS_BIRTH.set(Some((host, born)));
+    Ok(born)
+}
+
+fn current_thread_birth() -> Result<u64, i32> {
+    let host = std::process::id();
+    let thread = unsafe { GetCurrentThreadId() };
+    if optimized()
+        && let Some((owner, id, born)) = THREAD_BIRTH.get()
+        && (owner, id) == (host, thread)
+    {
+        return Ok(born);
+    }
+    let born = thread_birth(unsafe { GetCurrentThread() })?;
+    THREAD_BIRTH.set(Some((host, thread, born)));
+    Ok(born)
 }
 
 /// Stored in the managed backing record and copied unchanged by fork. New
@@ -102,6 +147,9 @@ struct Record {
 
 impl Record {
     fn event_name(self, domain: u64) -> Vec<u16> {
+        if self.reserved & hybrid::PRIVATE_PARK != 0 {
+            return hybrid::park_name(domain, self.host, self.thread, self.born);
+        }
         wide(&format!(
             r"Local\kinakaze.futex.wait.v1.{domain:016x}.{:016x}",
             self.token
@@ -245,6 +293,10 @@ mod tests {
     }
 }
 
+#[cfg(test)]
+#[path = "futex/queue_tests.rs"]
+mod queue_tests;
+
 fn thread_birth(thread: HANDLE) -> Result<u64, i32> {
     let (mut born, mut end, mut kernel, mut user) = unsafe { core::mem::zeroed() };
     if unsafe { GetThreadTimes(thread, &mut born, &mut end, &mut kernel, &mut user) } == 0 {
@@ -338,7 +390,8 @@ impl Shared {
         }
     }
 
-    fn load(&self) -> Result<Vec<Record>, i32> {
+    /// Caller holds the named mutex, including throughout use of the slice.
+    fn records(&self) -> Result<&[Record], i32> {
         let active = self.header().active.load(Ordering::Acquire);
         if active > 1 {
             return Err(EIO);
@@ -349,8 +402,15 @@ impl Shared {
             if count > CAPACITY {
                 return Err(EIO);
             }
-            Ok(std::slice::from_raw_parts(ptr::addr_of!((*bank).records).cast(), count).to_vec())
+            Ok(std::slice::from_raw_parts(
+                ptr::addr_of!((*bank).records).cast(),
+                count,
+            ))
         }
+    }
+
+    fn load(&self) -> Result<Vec<Record>, i32> {
+        Ok(self.records()?.to_vec())
     }
 
     fn commit(&self, records: &[Record]) {
@@ -368,6 +428,28 @@ impl Shared {
         self.header().active.store(next, Ordering::Release);
     }
 
+    fn reserve(&self, records: &mut Vec<Record>, count: usize) -> Result<(), i32> {
+        // Cursor maintenance is advisory; the committed bank remains the only
+        // authority after an abandoned transaction. Sweep fully at capacity.
+        if optimized() && records.len().saturating_add(count) <= CAPACITY {
+            if !records.is_empty() {
+                let cursor = unsafe { &mut (*self.view.Value.cast::<Header>()).reserved };
+                let index = *cursor as usize % records.len();
+                *cursor = cursor.wrapping_add(1);
+                if records[index].dead() {
+                    records.remove(index);
+                }
+            }
+        } else {
+            records.retain(|record| !record.dead());
+        }
+        if records.len().saturating_add(count) > CAPACITY {
+            Err(ENOMEM)
+        } else {
+            Ok(())
+        }
+    }
+
     fn select(
         &self,
         records: &mut Vec<Record>,
@@ -375,6 +457,15 @@ impl Shared {
         count: u32,
         bitset: u32,
     ) -> Result<u32, i32> {
+        // Requeue may request zero wakes while moving members. A zero budget
+        // must not scan or compact the queue; this also preserves dead rows
+        // for the subsequent transfer's normal lifetime checks.
+        if count == 0 {
+            return Ok(0);
+        }
+        if optimized() {
+            return self.select_compact(records, key, count, bitset);
+        }
         let mut selected = 0;
         let mut index = 0;
         while index < records.len() && selected < count {
@@ -410,6 +501,52 @@ impl Shared {
             selected += 1;
         }
         Ok(selected)
+    }
+
+    fn select_compact(
+        &self,
+        records: &mut Vec<Record>,
+        key: Key,
+        count: u32,
+        bitset: u32,
+    ) -> Result<u32, i32> {
+        let mut selected = 0;
+        let mut error = None;
+        // Stable, linear compaction preserves FIFO and commits earlier wakes
+        // even if a later native call fails. Repeated Vec::remove was quadratic.
+        records.retain(|&record| {
+            if error.is_some()
+                || selected >= count
+                || record.key != key
+                || record.bitset & bitset == 0
+            {
+                return true;
+            }
+            if record.dead() {
+                return false;
+            }
+            let event = match Handle::new(unsafe {
+                OpenEventW(
+                    EVENT_MODIFY_STATE,
+                    0,
+                    record.event_name(self.domain).as_ptr(),
+                )
+            }) {
+                Ok(event) => event,
+                Err(_) if record.dead() => return false,
+                Err(e) => {
+                    error = Some(e);
+                    return true;
+                }
+            };
+            if unsafe { SetEvent(event.0) } == 0 {
+                error = Some(errno_from_win32(unsafe { GetLastError() }));
+                return true;
+            }
+            selected += 1;
+            false
+        });
+        error.map_or(Ok(selected), Err)
     }
 }
 
@@ -481,16 +618,44 @@ fn shared() -> Result<&'static Shared, i32> {
 pub(crate) fn reset_after_fork() {
     // Neither the parent's handles nor its local allocations belong to the child.
     CACHE.store(ptr::null_mut(), Ordering::Release);
+    PROCESS_BIRTH.set(None);
+    THREAD_BIRTH.set(None);
+    hybrid::reset_after_fork();
 }
 
 pub(crate) fn wake(key: Key, count: u32, bitset: u32) -> Result<u32, i32> {
     let shared = shared()?;
     let _guard = shared.acquire()?;
+    if optimized()
+        && !shared
+            .records()?
+            .iter()
+            .any(|r| r.key == key && r.bitset & bitset != 0)
+    {
+        return Ok(0);
+    }
     let mut records = shared.load()?;
     let result = shared.select(&mut records, key, count, bitset);
     // A late error must not roll back earlier, already selected wakes.
     shared.commit(&records);
     result
+}
+
+#[cfg(test)]
+pub(crate) fn count_for_test(key: Key) -> usize {
+    let shared = shared().unwrap();
+    let _guard = shared.acquire().unwrap();
+    shared
+        .records()
+        .unwrap()
+        .iter()
+        .filter(|record| record.key == key)
+        .count()
+}
+
+#[cfg(test)]
+pub(crate) fn key_parts_for_test(key: Key) -> [u64; 5] {
+    key.0
 }
 
 pub(crate) fn requeue(
@@ -502,27 +667,47 @@ pub(crate) fn requeue(
 ) -> Result<u32, i32> {
     let shared = shared()?;
     let _guard = shared.acquire()?;
-    let mut records = shared.load()?;
     if comparison.is_some_and(|(word, expected)| word.load(Ordering::SeqCst) != expected) {
         return Err(EAGAIN);
     }
+    if optimized() && !shared.records()?.iter().any(|r| r.key == key) {
+        return Ok(0);
+    }
+    let mut records = shared.load()?;
     let result = (|| {
         let woken = shared.select(&mut records, key, count, u32::MAX)?;
         let mut moved = 0;
         let mut transfers = Vec::new();
-        let mut index = 0;
-        while index < records.len() && moved < move_count {
-            if records[index].key != key {
-                index += 1;
-                continue;
+        if optimized() {
+            records.retain(|&record| {
+                if record.key != key || moved >= move_count {
+                    return true;
+                }
+                if record.dead() {
+                    return false;
+                }
+                transfers.push(Record {
+                    key: destination,
+                    ..record
+                });
+                moved += 1;
+                false
+            });
+        } else {
+            let mut index = 0;
+            while index < records.len() && moved < move_count {
+                if records[index].key != key {
+                    index += 1;
+                    continue;
+                }
+                let mut record = records.remove(index);
+                if record.dead() {
+                    continue;
+                }
+                record.key = destination;
+                transfers.push(record);
+                moved += 1;
             }
-            let mut record = records.remove(index);
-            if record.dead() {
-                continue;
-            }
-            record.key = destination;
-            transfers.push(record);
-            moved += 1;
         }
         records.extend(transfers);
         Ok(woken + moved)
@@ -540,8 +725,16 @@ pub(crate) fn wake_op(
 ) -> Result<u32, i32> {
     let shared = shared()?;
     let _guard = shared.acquire()?;
-    let mut records = shared.load()?;
     let second = operation()?;
+    if optimized()
+        && !shared
+            .records()?
+            .iter()
+            .any(|r| r.key == key || (second && r.key == destination))
+    {
+        return Ok(0);
+    }
+    let mut records = shared.load()?;
     let result = (|| {
         let first = shared.select(&mut records, key, count, u32::MAX)?;
         Ok(first
@@ -559,6 +752,7 @@ struct Waiter {
     shared: &'static Shared,
     record: Record,
     event: Handle,
+    retired: Cell<Option<bool>>,
 }
 
 impl Waiter {
@@ -574,16 +768,12 @@ impl Waiter {
             return Err(EAGAIN);
         }
         let mut records = shared.load()?;
-        // Reap on enqueue so repeated killed waiters cannot consume the domain.
-        records.retain(|record| !record.dead());
-        if records.len() == CAPACITY {
-            return Err(ENOMEM);
-        }
+        shared.reserve(&mut records, 1)?;
         let token = shared.header().next_token.fetch_add(1, Ordering::Relaxed);
         let record = Record {
             key,
             token,
-            born: thread_birth(unsafe { GetCurrentThread() })?,
+            born: current_thread_birth()?,
             host: std::process::id(),
             thread: unsafe { GetCurrentThreadId() },
             bitset,
@@ -598,23 +788,30 @@ impl Waiter {
             shared,
             record,
             event,
+            retired: Cell::new(None),
         })
     }
 
     /// Check selection and optionally cancel, following the token even after
     /// another process requeues it. Returns true only for a committed wake.
     fn finish(&self, cancel: bool) -> Result<bool, i32> {
+        if let Some(woken) = self.retired.get() {
+            return Ok(woken);
+        }
         let _guard = self.shared.acquire()?;
-        let mut records = self.shared.load()?;
+        let records = self.shared.records()?;
         let Some(index) = records
             .iter()
             .position(|record| record.token == self.record.token)
         else {
+            self.retired.set(Some(true));
             return Ok(true);
         };
         if cancel {
+            let mut records = records.to_vec();
             records.remove(index);
             self.shared.commit(&records);
+            self.retired.set(Some(false));
         }
         Ok(false)
     }
@@ -622,7 +819,9 @@ impl Waiter {
 
 impl Drop for Waiter {
     fn drop(&mut self) {
-        let _ = self.finish(true);
+        if self.retired.get().is_none() {
+            let _ = self.finish(true);
+        }
     }
 }
 
@@ -643,7 +842,7 @@ pub(crate) fn wait(
         let waiter = Waiter::enqueue(expected, bitset, &load)?;
         signal::register_waiter();
         let outcome = loop {
-            let pending = signal::pending() & !signal::blocked_mask() != 0;
+            let pending = signal::interrupt_pending();
             let expired = duration.is_some_and(|limit| started.elapsed() >= limit);
             if pending || expired {
                 break waiter.finish(true).and_then(|woken| {
