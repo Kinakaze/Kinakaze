@@ -473,13 +473,15 @@ def module_outputs(module, native_owners):
     """Emit ordinary linker exports and the data-size query C ABI."""
     definition = [f'LIBRARY "{module["soname"]}"', 'EXPORTS']
     objects = []
+    local_targets = set()
     for symbol in module['exports']:
         target = symbol['runtime_export']
         owner = native_owners.get(target, module['soname'])
         binding = target if owner == module['soname'] else f'{owner}.{target}'
         suffix = ' DATA' if symbol['kind'] == 'object' else ''
-        if owner == module['soname']:
+        if owner == module['soname'] and target not in local_targets:
             definition.append(f'  {target}{suffix}')
+            local_targets.add(target)
         names = [symbol['name'], *(f'{symbol["name"]}@{version}' for version in symbol['versions'])]
         for name in names:
             private = ' PRIVATE' if name != target or owner != module['soname'] else ''

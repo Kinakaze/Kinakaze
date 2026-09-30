@@ -231,6 +231,9 @@ EXPORTS
   "pthread_mutexattr_destroy@GLIBC_2.2.5"=pthread_mutexattr_destroy PRIVATE
   pthread_mutexattr_getprotocol
   "pthread_mutexattr_getprotocol"=pthread_mutexattr_getprotocol
+  pthread_mutexattr_getpshared
+  "pthread_mutexattr_getpshared"=pthread_mutexattr_getpshared
+  "pthread_mutexattr_getpshared@GLIBC_2.2.5"=pthread_mutexattr_getpshared PRIVATE
   pthread_mutexattr_getrobust
   "pthread_mutexattr_getrobust"=pthread_mutexattr_getrobust
   "pthread_mutexattr_getrobust@GLIBC_2.12"=pthread_mutexattr_getrobust PRIVATE
@@ -243,6 +246,7 @@ EXPORTS
   "pthread_mutexattr_init@GLIBC_2.2.5"=pthread_mutexattr_init PRIVATE
   pthread_mutexattr_setprotocol
   "pthread_mutexattr_setprotocol"=pthread_mutexattr_setprotocol
+  pthread_mutexattr_setpshared
   "pthread_mutexattr_setpshared"=pthread_mutexattr_setpshared
   "pthread_mutexattr_setpshared@GLIBC_2.2.5"=pthread_mutexattr_setpshared PRIVATE
   pthread_mutexattr_setrobust
@@ -380,8 +384,3 @@ EXPORTS
   "waitpid@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_waitpid PRIVATE
   "write"=libc.so.6.kinakaze_abi_write PRIVATE
   "write@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_write PRIVATE
-
-  pthread_mutexattr_setpshared
-  pthread_mutexattr_getpshared
-  "pthread_mutexattr_getpshared"=pthread_mutexattr_getpshared
-  "pthread_mutexattr_getpshared@GLIBC_2.2.5"=pthread_mutexattr_getpshared PRIVATE

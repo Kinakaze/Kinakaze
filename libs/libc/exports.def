@@ -2989,6 +2989,10 @@ EXPORTS
   "pthread_mutexattr_destroy"=kinakaze_abi_pthread_mutexattr_destroy PRIVATE
   "pthread_mutexattr_destroy@GLIBC_2.34"=kinakaze_abi_pthread_mutexattr_destroy PRIVATE
   "pthread_mutexattr_getprotocol"=libpthread.so.0.pthread_mutexattr_getprotocol PRIVATE
+  kinakaze_abi_pthread_mutexattr_getpshared
+  "pthread_mutexattr_getpshared"=kinakaze_abi_pthread_mutexattr_getpshared PRIVATE
+  "pthread_mutexattr_getpshared@GLIBC_2.2.5"=kinakaze_abi_pthread_mutexattr_getpshared PRIVATE
+  "pthread_mutexattr_getpshared@GLIBC_2.34"=kinakaze_abi_pthread_mutexattr_getpshared PRIVATE
   "pthread_mutexattr_getrobust"=libpthread.so.0.pthread_mutexattr_getrobust PRIVATE
   "pthread_mutexattr_getrobust@GLIBC_2.34"=libpthread.so.0.pthread_mutexattr_getrobust PRIVATE
   "pthread_mutexattr_getrobust_np"=libpthread.so.0.pthread_mutexattr_getrobust PRIVATE
@@ -3003,6 +3007,7 @@ EXPORTS
   "pthread_mutexattr_setprotocol@GLIBC_2.34"=libpthread.so.0.pthread_mutexattr_setprotocol PRIVATE
   kinakaze_abi_pthread_mutexattr_setpshared
   "pthread_mutexattr_setpshared"=kinakaze_abi_pthread_mutexattr_setpshared PRIVATE
+  "pthread_mutexattr_setpshared@GLIBC_2.2.5"=kinakaze_abi_pthread_mutexattr_setpshared PRIVATE
   "pthread_mutexattr_setpshared@GLIBC_2.34"=kinakaze_abi_pthread_mutexattr_setpshared PRIVATE
   "pthread_mutexattr_setrobust"=libpthread.so.0.pthread_mutexattr_setrobust PRIVATE
   "pthread_mutexattr_setrobust@GLIBC_2.34"=libpthread.so.0.pthread_mutexattr_setrobust PRIVATE
@@ -4479,9 +4484,3 @@ EXPORTS
   kinakaze_abi_xprt_unregister
   "xprt_unregister"=kinakaze_abi_xprt_unregister PRIVATE
   "xprt_unregister@GLIBC_2.2.5"=kinakaze_abi_xprt_unregister PRIVATE
-
-  kinakaze_abi_pthread_mutexattr_getpshared
-  "pthread_mutexattr_getpshared"=kinakaze_abi_pthread_mutexattr_getpshared PRIVATE
-  "pthread_mutexattr_getpshared@GLIBC_2.2.5"=kinakaze_abi_pthread_mutexattr_getpshared PRIVATE
-  "pthread_mutexattr_getpshared@GLIBC_2.34"=kinakaze_abi_pthread_mutexattr_getpshared PRIVATE
-  "pthread_mutexattr_setpshared@GLIBC_2.2.5"=kinakaze_abi_pthread_mutexattr_setpshared PRIVATE

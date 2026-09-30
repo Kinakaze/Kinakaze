@@ -263,5 +263,28 @@ class SharedMutexVersionsTest(unittest.TestCase):
             self.assertEqual(generate.symbol_versions('libpthread.so.0', name, {}), ['GLIBC_2.2.5'])
             self.assertEqual(generate.symbol_versions('libc.so.6', name, {}), ['GLIBC_2.2.5', 'GLIBC_2.34'])
 
+
+class AliasDefinitionTest(unittest.TestCase):
+    def test_aliases_keep_every_guest_name_without_duplicate_native_exports(self):
+        for kind, target, suffix in [('function', 'kinakaze_abi_target', ''),
+                                     ('object', 'kinakaze_abi_environ', ' DATA')]:
+            with self.subTest(kind=kind):
+                symbols = [dict(name=name, runtime_export=target, kind=kind,
+                                size=8 if kind == 'object' else 0,
+                                alignment=8 if kind == 'object' else 1,
+                                versions=['GLIBC_2.2.5', 'GLIBC_2.34'])
+                           for name in ('first', 'second')]
+                module = dict(soname='libc.so.6', directory=Path('libc'), exports=symbols)
+                outputs = generate.module_outputs(module, {target: 'libc.so.6'})
+                lines = outputs[Path('libc/exports.def')].splitlines()
+                self.assertEqual(lines.count(f'  {target}{suffix}'), 1)
+                for name in ('first', 'second'):
+                    for version in ('', '@GLIBC_2.2.5', '@GLIBC_2.34'):
+                        self.assertIn(f'  "{name}{version}"={target}{suffix} PRIVATE', lines)
+                forwarded = generate.module_outputs(module, {target: 'libpthread.so.0'})
+                lines = forwarded[Path('libc/exports.def')].splitlines()
+                self.assertNotIn(f'  {target}{suffix}', lines)
+                self.assertIn(f'  "first"=libpthread.so.0.{target}{suffix} PRIVATE', lines)
+
 if __name__ == "__main__":
     unittest.main()
