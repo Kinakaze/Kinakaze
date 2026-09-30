@@ -37,6 +37,54 @@ pub(super) struct UnpublishedCode {
     start: usize,
     length: usize,
     tls_encoding: std::cell::RefCell<TlsEncoding>,
+    syscall_encoding: std::cell::RefCell<Option<SyscallTemplate>>,
+    syscall_templates: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct SyscallEncodingKey {
+    dispatcher: usize,
+    thread_pointer: Option<usize>,
+    transition: Option<usize>,
+}
+
+struct SyscallTemplate {
+    key: SyscallEncodingKey,
+    bytes: Vec<u8>,
+    patches: SyscallPatchSites,
+}
+
+#[derive(Clone, Copy)]
+struct SyscallPatchSites {
+    returns: [usize; 2],
+    logical: [usize; 3],
+}
+
+impl SyscallTemplate {
+    fn new(key: SyscallEncodingKey) -> Result<Self, ExecutionError> {
+        let mut bytes = Vec::with_capacity(STUB_SIZE);
+        let patches = emit_syscall_stub(
+            &mut bytes,
+            key.dispatcher,
+            0,
+            key.thread_pointer,
+            key.transition,
+        )?;
+        Ok(Self {
+            key,
+            bytes,
+            patches,
+        })
+    }
+
+    fn append(&self, code: &mut Vec<u8>, logical: usize) -> [usize; 2] {
+        let base = code.len();
+        code.extend_from_slice(&self.bytes);
+        for offset in self.patches.logical {
+            code[base + offset..base + offset + 8].copy_from_slice(&(logical as u64).to_le_bytes());
+        }
+        self.patches.returns.map(|offset| base + offset)
+    }
 }
 
 /// Scratch belongs to one unpublished segment, never to a guest thread or a
@@ -68,7 +116,36 @@ impl UnpublishedCode {
             start,
             length,
             tls_encoding: std::cell::RefCell::new(TlsEncoding::new()),
+            syscall_encoding: std::cell::RefCell::new(None),
+            syscall_templates: std::env::var_os("KINAKAZE_SYSCALL_TEMPLATE")
+                .is_none_or(|v| v != "0")
+                && std::env::var_os("KINAKAZE_BREAK_SYSCALL_RETURN").is_none(),
         }
+    }
+
+    fn emit_syscall(
+        &self,
+        code: &mut Vec<u8>,
+        key: SyscallEncodingKey,
+        logical: usize,
+    ) -> Result<[usize; 2], ExecutionError> {
+        if !self.syscall_templates {
+            return Ok(emit_syscall_stub(
+                code,
+                key.dispatcher,
+                logical,
+                key.thread_pointer,
+                key.transition,
+            )?
+            .returns);
+        }
+        // Segment-local cache has no global lock or inherited process pointers.
+        // The xstate format and TLS slots remain identical throughout prepare.
+        let mut cache = self.syscall_encoding.borrow_mut();
+        if cache.as_ref().is_none_or(|template| template.key != key) {
+            *cache = Some(SyscallTemplate::new(key)?);
+        }
+        Ok(cache.as_ref().unwrap().append(code, logical))
     }
 
     fn contains(&self, address: usize, length: usize) -> bool {
@@ -622,20 +699,32 @@ unsafe fn install_syscall_impl(
     let trampoline = allocate_near(address)?;
     let mut code = Vec::with_capacity(STUB_SIZE);
     code.extend_from_slice(&snapshot[..prefix_len]);
-    let (relocated_return_immediate, frame_return_immediate) = emit_syscall_stub(
-        &mut code,
-        syscall_dispatcher,
-        address
-            .checked_add(prefix_len + first.len())
-            .ok_or(ExecutionError::AddressOverflow)?,
-        thread_pointer_teb_offset,
-        host_transition_teb_offset,
-    )?;
+    let logical = address
+        .checked_add(prefix_len + first.len())
+        .ok_or(ExecutionError::AddressOverflow)?;
+    let key = SyscallEncodingKey {
+        dispatcher: syscall_dispatcher,
+        thread_pointer: thread_pointer_teb_offset,
+        transition: host_transition_teb_offset,
+    };
+    let returns = match unpublished {
+        Some(range) => range.emit_syscall(&mut code, key, logical)?,
+        None => {
+            emit_syscall_stub(
+                &mut code,
+                syscall_dispatcher,
+                logical,
+                thread_pointer_teb_offset,
+                host_transition_teb_offset,
+            )?
+            .returns
+        }
+    };
 
     let relocated_continuation = trampoline
         .checked_add(code.len())
         .ok_or(ExecutionError::AddressOverflow)?;
-    for offset in [relocated_return_immediate, frame_return_immediate] {
+    for offset in returns {
         code[offset..offset + 8].copy_from_slice(&(relocated_continuation as u64).to_le_bytes());
     }
 
@@ -756,7 +845,7 @@ fn emit_syscall_stub(
     guest_instruction: usize,
     thread_pointer_teb_offset: Option<usize>,
     host_transition_teb_offset: Option<usize>,
-) -> Result<(usize, usize), ExecutionError> {
+) -> Result<SyscallPatchSites, ExecutionError> {
     use kinakaze_tls::thread_pointer::{
         ACTIVE_RAW_SYSCALL_FRAME_POINTER_OFFSET, ExtendedStateFormat,
         RAW_SYSCALL_FRAME_EXTENDED_STATE_OFFSET, RAW_SYSCALL_FRAME_PREVIOUS_OFFSET,
@@ -852,6 +941,7 @@ fn emit_syscall_stub(
     emit_load_transition_field(code, host_transition_teb_offset, active_guest_instruction);
     code.extend_from_slice(&[0x4c, 0x89, 0x5c, 0x24, 0x60]); // mov [rsp+96],r11
     code.extend_from_slice(&[0x48, 0xb9]); // mov rcx, imm64
+    let logical_frame_immediate = code.len();
     code.extend_from_slice(&(guest_instruction as u64).to_le_bytes());
     emit_store_rcx_to_transition(code, host_transition_teb_offset);
     code.extend_from_slice(&active_guest_instruction.to_le_bytes());
@@ -958,6 +1048,7 @@ fn emit_syscall_stub(
     // be exactly one word below the interrupted stack, and that word must equal
     // the interrupted PC.
     code.extend_from_slice(&[0x48, 0xb9]); // mov rcx, logical continuation
+    let logical_translation_immediate = code.len();
     code.extend_from_slice(&(guest_instruction as u64).to_le_bytes());
     code.extend_from_slice(&[0x48, 0x39, 0x4c, 0x24, 0x68]); // cmp [rsp+104],rcx
     code.extend_from_slice(&[0x74, 0x00]); // je translation_done
@@ -1023,11 +1114,19 @@ fn emit_syscall_stub(
     code.extend_from_slice(&[0x4c, 0x8b, 0x5c, 0x24, 0x08]); // selected guest rsp
     code.extend_from_slice(&[0x4c, 0x89, 0xdc]); // mov rsp,r11
     code.extend_from_slice(&[0x49, 0xbb]); // mov r11, expected continuation
+    let logical_return_immediate = code.len();
     code.extend_from_slice(&(guest_instruction as u64).to_le_bytes());
     code.extend_from_slice(&[0x4c, 0x39, 0xd9]); // cmp rcx,r11
     code.extend_from_slice(&[0x74, 0x02]); // je normal relocated continuation
     code.extend_from_slice(&[0xff, 0xe1]); // jmp rcx (handler-selected continuation)
-    Ok((relocated_return_immediate, frame_return_immediate))
+    Ok(SyscallPatchSites {
+        returns: [relocated_return_immediate, frame_return_immediate],
+        logical: [
+            logical_frame_immediate,
+            logical_translation_immediate,
+            logical_return_immediate,
+        ],
+    })
 }
 
 fn emit_load_host_transition(code: &mut Vec<u8>, teb_offset: u32) {
@@ -1297,6 +1396,73 @@ fn register_run(base: usize) -> bool {
 #[cfg(all(test, windows, target_arch = "x86_64"))]
 mod tests {
     use super::*;
+
+    #[test]
+    fn syscall_templates_preserve_site_relocations_and_prefixes() {
+        let range = unsafe { UnpublishedCode::new(0, 0) };
+        for key in [
+            SyscallEncodingKey {
+                dispatcher: 0x1234_5678,
+                thread_pointer: Some(0x1490),
+                transition: Some(0x1498),
+            },
+            SyscallEncodingKey {
+                dispatcher: 0x9876_5432,
+                thread_pointer: None,
+                transition: Some(0x1500),
+            },
+        ] {
+            for logical in [2, 0x1234_5678_9abc, 0x7fff_ffff_ffff] {
+                for prefix in [&[][..], &[0xb8, 0x3c, 0, 0, 0][..]] {
+                    let mut cached = prefix.to_vec();
+                    let mut direct = prefix.to_vec();
+                    let offsets = range.emit_syscall(&mut cached, key, logical).unwrap();
+                    let expected = emit_syscall_stub(
+                        &mut direct,
+                        key.dispatcher,
+                        logical,
+                        key.thread_pointer,
+                        key.transition,
+                    )
+                    .unwrap();
+                    assert_eq!(offsets, expected.returns);
+                    assert_eq!(cached, direct);
+                    // Both continuation references must patch within this site,
+                    // including an exit-number prefix preceding the template.
+                    for offset in offsets {
+                        cached[offset..offset + 8].copy_from_slice(&0x1234_abcd_u64.to_le_bytes());
+                    }
+                    let mut decoder = Decoder::new(64, &cached, DecoderOptions::NONE);
+                    while decoder.can_decode() {
+                        assert!(!decoder.decode().is_invalid());
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    #[ignore = "paired release syscall template benchmark"]
+    fn benchmark_syscall_templates() {
+        let range = unsafe { UnpublishedCode::new(0, 0) };
+        let key = SyscallEncodingKey {
+            dispatcher: 0x1234_5678,
+            thread_pointer: Some(0x1490),
+            transition: Some(0x1498),
+        };
+        let mut code = Vec::with_capacity(STUB_SIZE);
+        let began = std::time::Instant::now();
+        for site in 1..=100_000 {
+            code.clear();
+            std::hint::black_box(range.emit_syscall(&mut code, key, site * 4096 + 2).unwrap());
+            std::hint::black_box(&code);
+        }
+        println!(
+            "SYSCALL_TEMPLATE_BENCH {{\"optimized\":{},\"generate_100000_ns\":{}}}",
+            range.syscall_templates,
+            began.elapsed().as_nanos()
+        );
+    }
 
     #[test]
     fn direct_fs_encoding_matches_block_encoder() {
