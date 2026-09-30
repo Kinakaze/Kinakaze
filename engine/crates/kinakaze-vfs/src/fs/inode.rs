@@ -53,8 +53,13 @@ pub(super) fn update_locked(
     change: impl FnOnce(&mut Record) -> Result<(), i32>,
 ) -> Result<(), i32> {
     let mut record = read_object(object)?;
+    let original = record.clone();
     change(&mut record)?;
-    ea::write(object, EA_NAME, &record.encode()?)
+    if record == original {
+        Ok(())
+    } else {
+        ea::write(object, EA_NAME, &record.encode()?)
+    }
 }
 
 /// Whole-record copy for an unpublished inode; does not copy guest xattrs.

@@ -90,3 +90,46 @@ fn install_ownership_retains_inode_identity_and_clears_privilege_bits() {
         Err(crate::ENOENT)
     );
 }
+
+#[test]
+fn repeated_install_metadata_still_clears_capabilities_and_checks_permissions() {
+    let f = Fixture::new();
+    let path = f.guest("payload");
+    let fd = open(&path, O_CREAT | O_EXCL | O_RDWR, 0o644).unwrap();
+    let owner = Ownership {
+        uid: 0,
+        gid: 0,
+        caller: 0,
+        group_member: true,
+    };
+    fchown(fd, false, &owner).unwrap();
+    let attrs = crate::xattr::Attributes::from_fd(fd, true).unwrap();
+    attrs.set(b"user.retained", b"unchanged", 0).unwrap();
+    for _ in 0..3 {
+        // UID/GID/mode already match; chown must still remove a newly added
+        // capability, and repeated chmod must preserve the other inode fields.
+        attrs.set(b"security.capability", b"fixture", 0).unwrap();
+        fchown(fd, false, &owner).unwrap();
+        assert_eq!(
+            attrs.get(b"security.capability"),
+            Err(crate::xattr::ENODATA)
+        );
+        chmod_descriptor(fd, 0o644, false).unwrap();
+        let stat = fstat(fd).unwrap();
+        assert_eq!(
+            (stat.st_uid, stat.st_gid, stat.st_mode),
+            (0, 0, S_IFREG | 0o644)
+        );
+        assert_eq!(attrs.get(b"user.retained").unwrap(), b"unchanged");
+    }
+    let denied = Ownership {
+        caller: 123,
+        ..owner
+    };
+    assert_eq!(fchown(fd, false, &denied), Err(crate::EPERM));
+    chmod_descriptor(fd, 0o6750, false).unwrap();
+    fchown(fd, false, &owner).unwrap();
+    assert_eq!(fstat(fd).unwrap().st_mode & 0o7777, 0o750);
+    drop(attrs);
+    crate::close(fd).unwrap();
+}

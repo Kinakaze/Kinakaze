@@ -1909,6 +1909,7 @@ fn set_ownership_object(query: &object::Object, owner: &Ownership) -> Result<(),
     let handle = query.raw();
     let _lock = crate::xattr::InodeLock::acquire(handle)?;
     let (stat, mut record) = stat_metadata_and_record(handle, query, false)?;
+    let original = record.clone();
     owner.check(&stat)?;
     if owner.uid != u32::MAX {
         record.uid = Some(owner.uid);
@@ -1922,7 +1923,9 @@ fn set_ownership_object(query: &object::Object, owner: &Ownership) -> Result<(),
     }
     // The same inode lock covers permission checks, the record read and its
     // update. Re-reading the EA here cannot improve freshness under this lock.
-    ea::write(query, inode::EA_NAME, &record.encode()?)?;
+    if record != original {
+        ea::write(query, inode::EA_NAME, &record.encode()?)?;
+    }
     if stat.st_mode & S_IFMT == S_IFREG && (owner.uid != u32::MAX || owner.gid != u32::MAX) {
         match crate::xattr::Attributes::remove_private_locked(query, b"security.capability") {
             Ok(()) | Err(crate::xattr::ENODATA) => {}
