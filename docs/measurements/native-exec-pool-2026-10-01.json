@@ -202,5 +202,149 @@
     "Same frozen distribution; fork transfer and fork pool enabled in every row.",
     "Exec pool is the changed switch. Diagnostics disabled. Four alternating 128-iteration runs.",
     "Unmodified control paths varied substantially in adjacent runs; these observations are not an isolated whole-install estimate."
-  ]
+  ],
+  "complete_install": {
+    "settings": {
+      "transfer": true,
+      "fork_pool": true,
+      "exec_pool_order": [
+        "off",
+        "on"
+      ],
+      "diagnostics": false
+    },
+    "runs": [
+      {
+        "label": "off",
+        "report": "artifacts\\node-install-20260930\\root-exec-off-install\\report.json",
+        "passed": true,
+        "install_ms": 313816.8572,
+        "download_ms": 2329.8909,
+        "verify_ms": 27417.8949,
+        "dpkg_timings": {
+          "installed_packages": 357,
+          "unpack_seconds": 299.0,
+          "configure_seconds": 8.0,
+          "resolution_seconds": 1
+        },
+        "job": {
+          "user_ms": 136484.375,
+          "kernel_ms": 232031.25,
+          "total_cpu_ms": 368515.625,
+          "processes": 5275,
+          "active_processes": 0,
+          "page_faults": 44903078,
+          "read_bytes": 766349995,
+          "write_bytes": 390105289,
+          "read_ops": 547677,
+          "write_ops": 348749,
+          "other_ops": 14942080,
+          "other_bytes": 465336934
+        },
+        "host": {
+          "samples": 313,
+          "samples_with_compiler": 313,
+          "median_cpu_percent": 42.5
+        }
+      },
+      {
+        "label": "on",
+        "report": "artifacts\\node-install-20260930\\root-exec-on-install\\report.json",
+        "passed": true,
+        "install_ms": 266655.0172,
+        "download_ms": 2311.6637,
+        "verify_ms": 18518.5835,
+        "dpkg_timings": {
+          "installed_packages": 357,
+          "unpack_seconds": 256.0,
+          "configure_seconds": 5.0,
+          "resolution_seconds": 1
+        },
+        "job": {
+          "user_ms": 129750.0,
+          "kernel_ms": 230734.375,
+          "total_cpu_ms": 360484.375,
+          "processes": 5275,
+          "active_processes": 0,
+          "page_faults": 44955387,
+          "read_bytes": 765769495,
+          "write_bytes": 390355173,
+          "read_ops": 551362,
+          "write_ops": 352575,
+          "other_ops": 14951230,
+          "other_bytes": 464680213
+        },
+        "host": {
+          "samples": 266,
+          "samples_with_compiler": 0,
+          "median_cpu_percent": 43.05
+        }
+      }
+    ],
+    "distribution_hashes_rechecked": 59,
+    "observed_wall_time_reduction_percent": 15.028459726732624,
+    "target_met": false,
+    "limitations": "Single off/on order with compilers observed throughout the off installation and absent during on; no compilation or competing benchmark was started by this chat during either run. Frozen distribution predates concurrent later main commits. This is an observed wall-time difference, not isolated attribution.",
+    "distribution_hashes": {
+      "worker.exe": "31dbcc30dce0fc7ace24a582992cc68ebb774e3c4488ba6db9bd947d707c6b8c",
+      "init.exe": "9d35c5d25e8debc2d29064f8f6508b813a9ff60d939fe6251f34facc88240e1a",
+      "rootfs.manifest.json": "14905978ccf97543bdc6cda4155879fd87c57243a972137beecd83adf7d2e60f",
+      "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+      "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "rootfs\\lib\\kinakaze_alloc.so": "aa05eee4cede33a0f1b5660b81ed0b2b647e843cc7157e5618929b3e2734b9de",
+      "rootfs\\lib\\kinakaze_elf.so": "6640b177f98d59c75d4e627c915f19dd6b8d8affa55eefaa41516e9a51211bcc",
+      "rootfs\\lib\\kinakaze_guest_engine.so": "6c2306dd5aef7e883dc488cc813c3f995c00776930ca88ed98c13c73a6b4c488",
+      "rootfs\\lib\\kinakaze_kernel.so": "c49d3215332e0954e27297f550eba3f6bf83811295f6f474c5e3e98e37ea3c9b",
+      "rootfs\\lib\\kinakaze_tls.so": "33cd09ed85e443ee525b61b3f0278167da587388e4022152bcb25555260a2a68",
+      "rootfs\\lib\\kinakaze_vfs.so": "1b62be351f2a295cf820aec22eb1f7b777214d9b4a2e3359bd5609b80ce8e7c5",
+      "rootfs\\lib\\ld-linux-x86-64.so.2": "066620c82103f66804795149942c87cc826f20ad877a4ca3ce84f5d20c766ce7",
+      "rootfs\\lib\\libasound.so.2": "f9b3918528dc369b989c991d3835ac6dcc622a8f267aaa41a7d2dc001a678101",
+      "rootfs\\lib\\libc.so.6": "cd90f4fe1e7ac1d89cb40e622d2f0af13cc6e2c9d4538211e9d4780902161cd8",
+      "rootfs\\lib\\libcuda.so.1": "e1fc8a1c89d59b1518e651868c8ffe267e1846e91751f61011d6a4f317870dee",
+      "rootfs\\lib\\libdisplay.so.1": "18c68cb607f424db113b8cc1754542d12e36af3d6419b974a0f0aa4c64f56f81",
+      "rootfs\\lib\\libdl.so.2": "aad3290b3aa69a8b27e7e0404cfe60c48bf28e1e39145cd575b7f12f2fd7383e",
+      "rootfs\\lib\\libEGL.so.1": "a31ad7c8f6d18315366781d3bad8dbc0a74968e10f1208c1e8405c0e9840cd83",
+      "rootfs\\lib\\libGL.so.1": "5dabf8a3ddd56ebf9f1c6c76f037006f3776c8cdc282510e7ca6429e819d49ad",
+      "rootfs\\lib\\libGLESv2.so.2": "6198b219f6d1d4ec9d12f9699b1894460a160523cc4083b7ca699bedaf817f27",
+      "rootfs\\lib\\libGLX.so.0": "36bc2b1127d247da56b9c77ab3d74f8be43230c742c27718f101e044b5ec36c3",
+      "rootfs\\lib\\libkinakaze-runtime.so.1": "55c7338a6c36c911040ba037960f0541d2517494d7164455482135fd6921dc29",
+      "rootfs\\lib\\libm.so.6": "77fe8bf785dfb9acd5144aa9b6d3f94b0a03766838aad2728127e384e6575e1a",
+      "rootfs\\lib\\libOpenGL.so.0": "47c46e4e2a242e4cfe984b6ae098f2050f3addf83430a17abc4375b76352497f",
+      "rootfs\\lib\\libpipewire-0.3.so.0": "9a49a06f54ea07148ce24a5c10a2f8663e1ab85876a655326a9e54d0ea15701e",
+      "rootfs\\lib\\libpthread.so.0": "5ac9ffecc6bd1a693759fd3a460908aa3a5df75acfe2d6191d3027b3b06ca319",
+      "rootfs\\lib\\libpulse.so.0": "12acdbe69c0c27476c7b962d34011ea09e93c88b25e2b18e7c1f7cb2e763e9d7",
+      "rootfs\\lib\\libresolv.so.2": "755f11cd017f5ba37c748025cfd1689ec94cacc88c47a9c791c084dcde7943b5",
+      "rootfs\\lib\\librt.so.1": "80f42ab8753c964237dd193737c260536bfc248bf69e17711347ea6c8dfcf235",
+      "rootfs\\lib\\libvulkan.so.1": "93a052b6f89879f7d9996069d4c69362978fea6f9acf46af88e182905ca8b051",
+      "rootfs\\lib\\libX11-xcb.so.1": "64731dd7eb4c2e1fa2b5a88a8c3d55f709e087cf106e90cd42cf546174855215",
+      "rootfs\\lib\\libX11.so.6": "c15fae0011e47b69db201245515a5ff5b16e7f186d134e70bfd7c3f88619045b",
+      "rootfs\\lib\\libxcb.so.1": "af20f0d7334362409bf30e180749608fcc15e8551ebaeb56cc1fb0c233cd7a64",
+      "rootfs\\lib\\libXcursor.so.1": "2b49b89329834373c28c291bc569e30e811a8d67bb85daede4821b80968bf27d",
+      "rootfs\\lib\\libXext.so.6": "7334a2c2389d3eda16387d55ba23188f1c9249ef88bdd2f2d3eaf89f66cb6a12",
+      "rootfs\\lib\\libXi.so.6": "b06b9c64957bef55fcc788d3ed82080587c9b01978e16329fd8c777bdfe7abbf",
+      "rootfs\\lib\\libXinerama.so.1": "02b7635bdff6bad628b00616a646a53684528c77fa8ce0dffeddd6d3679a0bb2",
+      "rootfs\\lib\\libXrandr.so.2": "80a9e9b06c60090563247fc2cdd71ab2aecd9c7dba8173bbbd2dd7c4d3d3c6c4",
+      "rootfs\\lib\\libXrender.so.1": "7cfb115b2191be8ba4b0f0b28352bf2970894663f9d21ce2fc10a66dc208ead3",
+      "rootfs\\lib\\libXxf86vm.so.1": "cf8989dcd683cf8cc82f9375f0f5ca7ca1c52cb8f1f8638d5ef3b395c03507db",
+      "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+      "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+    }
+  }
 }

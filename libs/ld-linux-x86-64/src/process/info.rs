@@ -99,6 +99,13 @@ pub unsafe extern "sysv64" fn kinakaze_process_dladdr(
         let linker = unsafe { &*linker };
         let target = address as usize;
         for provider in linker.provider_images() {
+            let provider = match provider {
+                Ok(provider) => provider,
+                Err(error) => {
+                    super::set_dl_error(error);
+                    return 0;
+                }
+            };
             let inside = provider.base() <= target
                 && provider
                     .base()
@@ -252,6 +259,13 @@ pub unsafe extern "sysv64" fn kinakaze_process_dl_iterate_phdr(
             })
             .collect::<Vec<_>>();
         for provider in linker.provider_images() {
+            let provider = match provider {
+                Ok(provider) => provider,
+                Err(error) => {
+                    super::set_dl_error(error);
+                    return -1;
+                }
+            };
             let Some((headers, count)) = provider.program_headers() else {
                 continue;
             };

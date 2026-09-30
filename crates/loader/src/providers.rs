@@ -238,10 +238,15 @@ pub fn load(
             registry.register(bind_module(path, module, Arc::clone(&shared), Some(api))?)?;
         } else {
             let shared = Arc::clone(&shared);
-            registry.register_deferred(module.soname.clone(), path.clone(), move || {
-                bind_module(path, module, shared, None)
-                    .map_err(|error| guest_link::LinkError::InvalidProvider(error.to_string()))
-            })?;
+            let identity = module.canonical_path()?;
+            registry.register_deferred_with_identity(
+                module.soname.clone(),
+                identity,
+                move || {
+                    bind_module(path, module, shared, None)
+                        .map_err(|error| guest_link::LinkError::InvalidProvider(error.to_string()))
+                },
+            )?;
         }
     }
     Ok(Arc::new(registry))

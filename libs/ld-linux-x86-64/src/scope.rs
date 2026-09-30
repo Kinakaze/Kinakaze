@@ -16,6 +16,9 @@ use kinakaze_elf::{DynamicSymbol, STB_WEAK};
 use crate::LinkError;
 use crate::object::{MappedObject, ObjectId};
 
+#[cfg(windows)]
+mod fork_image;
+
 /// Where a symbol was found and what it resolves to.
 #[derive(Clone, Copy, Debug)]
 pub struct Resolution {
@@ -65,30 +68,100 @@ impl Resolution {
 /// A registered, already-bound ELF facade and its paired Windows DLL.
 /// The historical internal type name remains to keep runtime handles stable.
 pub struct DllProvider {
-    image: std::sync::Arc<dyn crate::ProviderImage>,
-    symbol_indices: std::collections::HashMap<String, usize>,
+    image: std::sync::OnceLock<Result<std::sync::Arc<dyn crate::ProviderImage>, String>>,
+    #[cfg(windows)]
+    pending: Option<fork_image::Pending>,
+    base: usize,
+    symbol_indices: std::sync::OnceLock<SymbolIndices>,
     pub path: PathBuf,
     pub name: String,
     pub(crate) references: usize,
     pub(crate) nodelete: bool,
 }
 
+enum SymbolIndices {
+    Sorted,
+    Indexed(std::collections::HashMap<String, usize>),
+}
+
+impl SymbolIndices {
+    fn new(symbols: &[crate::ProviderSymbol]) -> Self {
+        // Native declarations already come in name order. Reuse that order
+        // instead of allocating another owned copy of every export name.
+        if symbols.windows(2).all(|pair| pair[0].name < pair[1].name) {
+            Self::Sorted
+        } else {
+            Self::Indexed(
+                symbols
+                    .iter()
+                    .enumerate()
+                    .map(|(index, symbol)| (symbol.name.clone(), index))
+                    .collect(),
+            )
+        }
+    }
+
+    fn find(&self, symbols: &[crate::ProviderSymbol], name: &str) -> Option<usize> {
+        match self {
+            Self::Sorted => symbols
+                .binary_search_by(|symbol| symbol.name.as_str().cmp(name))
+                .ok(),
+            Self::Indexed(indices) => indices.get(name).copied(),
+        }
+    }
+}
+
 impl DllProvider {
     pub fn from_registered(image: std::sync::Arc<dyn crate::ProviderImage>) -> Self {
         Self {
-            symbol_indices: image
-                .symbols()
-                .iter()
-                .enumerate()
-                .map(|(index, symbol)| (symbol.name.clone(), index))
-                .collect(),
-            path: std::fs::canonicalize(image.path())
-                .unwrap_or_else(|_| image.path().to_path_buf()),
+            // A fork child often execs without another symbol lookup. Delay
+            // the lookup index until a lookup actually needs it.
+            symbol_indices: std::sync::OnceLock::new(),
+            path: image
+                .canonical_path()
+                .map(ToOwned::to_owned)
+                .unwrap_or_else(|| {
+                    std::fs::canonicalize(image.path())
+                        .unwrap_or_else(|_| image.path().to_path_buf())
+                }),
             name: image.soname().to_owned(),
-            image,
+            base: image.base(),
+            image: std::sync::OnceLock::from(Ok(image)),
+            #[cfg(windows)]
+            pending: None,
             references: 1,
             nodelete: false,
         }
+    }
+
+    #[cfg(windows)]
+    pub(crate) fn from_fork(
+        registry: std::sync::Arc<crate::ProviderRegistry>,
+        name: &str,
+        base: usize,
+    ) -> Result<Self, LinkError> {
+        if let Some(pending) = fork_image::Pending::new(&registry, name, base)? {
+            return Ok(Self {
+                path: pending.path().to_path_buf(),
+                name: name.to_owned(),
+                base,
+                image: std::sync::OnceLock::new(),
+                pending: Some(pending),
+                symbol_indices: std::sync::OnceLock::new(),
+                references: 1,
+                nodelete: false,
+            });
+        }
+        // Non-native adapters keep the existing eager reconstruction path.
+        let image = registry
+            .get(name)?
+            .ok_or_else(|| LinkError::InvalidProvider(format!("missing fork provider {name}")))?;
+        if image.base() != base {
+            return Err(LinkError::InvalidProvider(format!(
+                "fork provider moved: {name}"
+            )));
+        }
+        Ok(Self::from_registered(image))
     }
 
     pub fn add_reference(&mut self) -> Result<(), LinkError> {
@@ -109,10 +182,37 @@ impl DllProvider {
         self.nodelete = true;
     }
     pub fn base(&self) -> usize {
-        self.image.base()
+        self.base
     }
-    pub fn image(&self) -> &dyn crate::ProviderImage {
-        self.image.as_ref()
+    pub fn image(&self) -> Result<&dyn crate::ProviderImage, LinkError> {
+        self.image
+            .get_or_init(|| {
+                #[cfg(windows)]
+                if let Some(pending) = &self.pending {
+                    return pending
+                        .materialize(&self.name, self.base)
+                        .map_err(|error| error.to_string());
+                }
+                Err("provider image unavailable".to_owned())
+            })
+            .as_ref()
+            .map(|image| image.as_ref())
+            .map_err(|error| LinkError::InvalidProvider(error.clone()))
+    }
+
+    fn indexed_symbol(
+        &self,
+        name: &str,
+    ) -> Result<Option<(usize, &crate::ProviderSymbol)>, LinkError> {
+        let symbols = self.image()?.symbols();
+        let Some(index) = self
+            .symbol_indices
+            .get_or_init(|| SymbolIndices::new(symbols))
+            .find(symbols, name)
+        else {
+            return Ok(None);
+        };
+        Ok(symbols.get(index).map(|symbol| (index, symbol)))
     }
 
     pub fn symbol(&self, name: &str) -> Result<Option<usize>, LinkError> {
@@ -128,14 +228,7 @@ impl DllProvider {
             return Ok(None);
         }
         let Some((index, symbol)) = self
-            .symbol_indices
-            .get(name)
-            .and_then(|index| {
-                self.image
-                    .symbols()
-                    .get(*index)
-                    .map(|symbol| (*index, symbol))
-            })
+            .indexed_symbol(name)?
             .filter(|(_, symbol)| symbol.matches_version(version))
         else {
             return Ok(None);
@@ -147,7 +240,7 @@ impl DllProvider {
                 tls_offset: Some(offset),
                 ..Resolution::from_address(0)
             },
-            _ => Resolution::from_address(self.image.symbol_address(index)?),
+            _ => Resolution::from_address(self.image()?.symbol_address(index)?),
         };
         resolved.size = symbol.size;
         Ok(Some(resolved))
@@ -160,13 +253,8 @@ impl DllProvider {
         size: u64,
         source: usize,
     ) -> Result<(), LinkError> {
-        if let Some((index, symbol)) = self.symbol_indices.get(name).and_then(|index| {
-            self.image
-                .symbols()
-                .get(*index)
-                .map(|symbol| (*index, symbol))
-        }) {
-            if self.image.symbol_address(index)? != source {
+        if let Some((index, symbol)) = self.indexed_symbol(name)? {
+            if self.image()?.symbol_address(index)? != source {
                 return Ok(());
             }
             if symbol.kind != crate::ProviderSymbolKind::Object {
@@ -174,7 +262,7 @@ impl DllProvider {
                     symbol: name.to_owned(),
                 });
             }
-            self.image.redirect_copy(name, address, size)?;
+            self.image()?.redirect_copy(name, address, size)?;
         }
         Ok(())
     }

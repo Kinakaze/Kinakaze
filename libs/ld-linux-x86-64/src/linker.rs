@@ -261,7 +261,7 @@ impl Linker {
                     let path = kinakaze_vfs::resolve_linux_path(&guest)
                         .map(|path| kinakaze_vfs::to_guest_path(&path))
                         .unwrap_or(guest);
-                    (provider.name.as_str(), path, provider.image().base())
+                    (provider.name.as_str(), path, provider.base())
                 }
             };
             let _ = writeln!(result, "\t{name} => {path} (0x{base:016x})");
@@ -271,7 +271,9 @@ impl Linker {
 
     /// Loaded facade modules, including RTLD_LOCAL modules for dladdr and
     /// dl_iterate_phdr. The iterator borrows the linker's lifetime-pinned images.
-    pub fn provider_images(&self) -> impl Iterator<Item = &dyn crate::ProviderImage> {
+    pub fn provider_images(
+        &self,
+    ) -> impl Iterator<Item = Result<&dyn crate::ProviderImage, LinkError>> {
         self.scope
             .dlls
             .iter()

@@ -59,5 +59,30 @@ both samples without it. However, unchanged fork and posix_spawn controls had
 large adjacent-run fluctuations, so this is not an isolated estimate of the
 whole-install saving. All four rows, Job counters, binary hashes and source
 hashes are retained in [the measurement JSON](measurements/native-exec-pool-2026-10-01.json).
-The complete cached installation target of 180 seconds remains unverified for
-this distribution.
+Two complete cached installations then passed on independent original-seed
+roots, with native fork preparation enabled for both runs. All 357 packages,
+Node/npm smoke checks, empty dpkg audit and empty complete file verification
+passed. All 59 distribution hashes matched across runs and were rechecked
+afterward. Traces and profiling were disabled; package hooks and durability
+operations remained enabled.
+
+| Phase | Exec preparation off | Exec preparation on |
+| --- | ---: | ---: |
+| Installation, excluding download | 313.817 s | 266.655 s |
+| Download, separately measured | 2.330 s | 2.312 s |
+| Complete file verification | 27.418 s | 18.519 s |
+| Installation Job CPU | 368.516 s | 360.484 s |
+
+The observed installation difference is 47.162 seconds (15.0%). This single
+off/on pair is not an isolated causal estimate: compilers from other work were
+observed in all 313 installation samples for the off run and none of the 266
+samples for the on run. Median whole-host utilization was 42.5% and 43.05%,
+respectively; similar utilization does not establish similar contention.
+This chat started no compilation or competing benchmark during either run.
+The measured binaries were frozen before later concurrent main-branch changes;
+their source checkpoint and hashes remain in the measurement JSON.
+
+The 180-second target is **not met**: the enabled run remains 86.655 seconds
+above it. Raw reports are retained under
+`artifacts/node-install-20260930/root-exec-{off,on}-install/report.json`, with
+host observations under `artifacts/apt-180-20260930/root-exec-{off,on}-host.jsonl`.
