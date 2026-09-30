@@ -110,8 +110,10 @@ Unix 首轮五次测量中候选为 72.015 ms、对照为 67.714 ms；因这一�
 3. 完整 robust pthread 属性、consistent/not-recoverable 状态、跨进程 robust
    查询权限、所有线程的 exit_group/exec/宿主强制终止恢复和 PID/TID 复用验证。
    本轮 get_robust_list 仅覆盖当前进程线程；现有 pthread robust/PI 属性拒绝仍保留。
-4. 统一 mutex/condition 的事件驱动后端后移除 timed mutex 与 condition 的周期
-   探测，覆盖取消、信号、隐式解锁和重锁，避免漏唤醒。
+4. 默认 mutex/condition 事件后端已移除 timed mutex 与 condition 的周期探测；
+   原生竞争、取消、隐式解锁及重锁验证见
+   [pthread 阶段记录](pthread-event-parking-2026-10-01.md)。继续补充客体信号、
+   GNU cleanup、fork 与完整发行包验证。
 5. 分片私有 futex/VFS 热表，Unix 共享数据环及事件驱动背压，保留 SCM_RIGHTS、
    凭据、shutdown、消息边界、epoll 边沿和 fork/exec 行为。
 6. 测量 SIMD/AVX2、ERMS/汇编及按大小分派的复制策略；只对确认的热点启用。

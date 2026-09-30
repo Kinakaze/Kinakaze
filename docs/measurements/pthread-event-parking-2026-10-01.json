@@ -1,0 +1,166 @@
+{
+  "baseline_commit": "198838d62ced13e60855b17dc566ee17a387c0e4",
+  "source_sha256": {
+    "libs/libpthread/src/lib.rs": "0c8f245097eda468adacf9ab3d62eac1a62d9b299dcb5ff3e3093a38d2572924",
+    "libs/libpthread/src/parking.rs": "830830b8f6b56d858480cd5b264c3a0bfb1753a6621f10122dc166744b5c6120",
+    "libs/libpthread/src/parking/tests.rs": "85177788da87061e8ccd194153ca7658c282b5b8018884183775fdd75f5e8b41"
+  },
+  "native_tests": {
+    "passed": true,
+    "binary_sha256": "cb0c6945e44db338779c88f9d1ddb3c6dee5d21f0dc1b3f7b7801b4dedd52048",
+    "rows": [
+      {
+        "mode": "default",
+        "exit_code": 0,
+        "seconds": 0.7065808000043035,
+        "summary": "test result: ok. 45 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.64s",
+        "log": "artifacts\\pthread-event-goal-20261001\\default-tests.log"
+      },
+      {
+        "mode": "control",
+        "exit_code": 0,
+        "seconds": 0.6658068999968236,
+        "summary": "test result: ok. 45 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.64s",
+        "log": "artifacts\\pthread-event-goal-20261001\\control-tests.log"
+      }
+    ]
+  },
+  "benchmark": {
+    "passed": true,
+    "case": "pthread",
+    "binary": "F:\\crysoacu2\\artifacts\\pthread-event-goal-20261001\\binaries\\kinakaze_libpthread-6a4d296ac0654593.exe",
+    "sha256": "cb0c6945e44db338779c88f9d1ddb3c6dee5d21f0dc1b3f7b7801b4dedd52048",
+    "dependencies": {
+      "kinakaze_alloc.so": "a95e357a7ca183a365c8a19b60e5fd7766574e19c32cacb72a83a0c6e9e88e8e",
+      "kinakaze_kernel.so": "63009c74d5f4d1f443b3fe707a81549e82b76a3d747af9df7b39864b7f386b38",
+      "kinakaze_tls.so": "6cb82eeee224b0e1e776594620e400752d6cd1add4f8ae8f2970ac6807f3a26d",
+      "kinakaze_vfs.so": "d0cea11d1239e719a855b9a007b14463a65d26693731b56f2302b746a38a36ab"
+    },
+    "rows": [
+      {
+        "blocked_cpu_20_ns": 0,
+        "blocked_20_cycles": 22944505,
+        "unlock_to_acquire_20_ns": 17166700,
+        "round": 0,
+        "enabled": false,
+        "warmup": true
+      },
+      {
+        "blocked_cpu_20_ns": 0,
+        "blocked_20_cycles": 4310472,
+        "unlock_to_acquire_20_ns": 345800,
+        "round": 0,
+        "enabled": true,
+        "warmup": true
+      },
+      {
+        "blocked_cpu_20_ns": 0,
+        "blocked_20_cycles": 4708778,
+        "unlock_to_acquire_20_ns": 451500,
+        "round": 1,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "blocked_cpu_20_ns": 0,
+        "blocked_20_cycles": 20659445,
+        "unlock_to_acquire_20_ns": 24106700,
+        "round": 1,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "blocked_cpu_20_ns": 0,
+        "blocked_20_cycles": 21380774,
+        "unlock_to_acquire_20_ns": 18233300,
+        "round": 2,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "blocked_cpu_20_ns": 0,
+        "blocked_20_cycles": 4456661,
+        "unlock_to_acquire_20_ns": 394100,
+        "round": 2,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "blocked_cpu_20_ns": 0,
+        "blocked_20_cycles": 5018960,
+        "unlock_to_acquire_20_ns": 526500,
+        "round": 3,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "blocked_cpu_20_ns": 0,
+        "blocked_20_cycles": 21749011,
+        "unlock_to_acquire_20_ns": 17811400,
+        "round": 3,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "blocked_cpu_20_ns": 0,
+        "blocked_20_cycles": 20212996,
+        "unlock_to_acquire_20_ns": 17025000,
+        "round": 4,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "blocked_cpu_20_ns": 0,
+        "blocked_20_cycles": 4435941,
+        "unlock_to_acquire_20_ns": 437500,
+        "round": 4,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "blocked_cpu_20_ns": 31250000,
+        "blocked_20_cycles": 5231390,
+        "unlock_to_acquire_20_ns": 472500,
+        "round": 5,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "blocked_cpu_20_ns": 0,
+        "blocked_20_cycles": 20461019,
+        "unlock_to_acquire_20_ns": 11381700,
+        "round": 5,
+        "enabled": false,
+        "warmup": false
+      }
+    ],
+    "medians_ns": {
+      "control": {
+        "blocked_cpu_20_ns": 0,
+        "unlock_to_acquire_20_ns": 17811400
+      },
+      "candidate": {
+        "blocked_cpu_20_ns": 0,
+        "unlock_to_acquire_20_ns": 451500
+      }
+    },
+    "medians_cycles": {
+      "control": {
+        "blocked_20_cycles": 20659445
+      },
+      "candidate": {
+        "blocked_20_cycles": 4708778
+      }
+    }
+  },
+  "frozen_binary_sha256": {
+    "kinakaze_alloc.so": "a95e357a7ca183a365c8a19b60e5fd7766574e19c32cacb72a83a0c6e9e88e8e",
+    "serde_derive-ebb234dc8366345c.dll": "fbe2d98d2fae107010ca2cfb92804ec7b869ddf572c8fa27fce2d7574f48e3b1",
+    "kinakaze_kernel.so": "63009c74d5f4d1f443b3fe707a81549e82b76a3d747af9df7b39864b7f386b38",
+    "kinakaze_tls.so": "6cb82eeee224b0e1e776594620e400752d6cd1add4f8ae8f2970ac6807f3a26d",
+    "kinakaze_vfs.so": "d0cea11d1239e719a855b9a007b14463a65d26693731b56f2302b746a38a36ab",
+    "kinakaze_libpthread-6a4d296ac0654593.exe": "cb0c6945e44db338779c88f9d1ddb3c6dee5d21f0dc1b3f7b7801b4dedd52048",
+    "std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc"
+  },
+  "guest_validation": "pending for this pthread backend"
+}

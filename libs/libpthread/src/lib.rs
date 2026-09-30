@@ -3,6 +3,8 @@
 #[cfg(all(windows, target_arch = "x86_64"))]
 mod cleanup;
 #[cfg(all(windows, target_arch = "x86_64"))]
+mod parking;
+#[cfg(all(windows, target_arch = "x86_64"))]
 pub mod sched;
 #[cfg(all(windows, target_arch = "x86_64"))]
 mod stack;
@@ -558,6 +560,7 @@ fn finish_current_thread(result: usize) {
         }
     });
     kinakaze_tls::run_thread_destructors();
+    parking::retire_thread();
     let hook = KERNEL_THREAD_EXIT.load(Ordering::Acquire);
     if hook != 0 {
         let hook: extern "sysv64" fn() = unsafe { core::mem::transmute(hook) };
@@ -1821,8 +1824,8 @@ pub unsafe extern "sysv64" fn pthread_mutex_lock(mutex: *mut usize) -> i32 {
 #[unsafe(no_mangle)]
 /// Acquires a mutex, giving up at an absolute `CLOCK_REALTIME` deadline.
 ///
-/// Windows SRW locks have no timed acquire, so this polls `TryAcquire` with a
-/// short backoff. A deadline that has already passed is reported as `ETIMEDOUT`
+/// Contended acquisitions park on a per-thread native event and deadline timer.
+/// A deadline that has already passed is reported as `ETIMEDOUT`
 /// after one non-blocking attempt, which is what POSIX requires and what keeps a
 /// stale deadline from blocking forever.
 ///
@@ -1869,6 +1872,9 @@ pub unsafe extern "sysv64" fn pthread_mutex_clocklock(
     }
     // SAFETY: the caller supplied a readable timespec for a contended lock.
     let deadline = unsafe { *deadline };
+    if parking::enabled() {
+        return unsafe { parking::timed_mutex(mutex, clock_id, deadline) };
+    }
     let mut backoff = Duration::from_micros(50);
     loop {
         let left = if deadline.tv_sec < 0 && (0..1_000_000_000).contains(&deadline.tv_nsec) {
@@ -1938,6 +1944,7 @@ pub unsafe extern "sysv64" fn pthread_mutex_unlock(mutex: *mut usize) -> i32 {
     }
     // SAFETY: the caller must own this pthread mutex.
     unsafe { ReleaseSRWLockExclusive(mutex.cast::<SRWLOCK>()) };
+    parking::released(mutex);
     0
 }
 
@@ -2193,9 +2200,9 @@ pub extern "sysv64" fn pthread_cond_destroy(cond: *mut usize) -> i32 {
 #[unsafe(no_mangle)]
 /// Atomically releases a mutex, waits, then reacquires the mutex.
 ///
-/// Windows performs the release and reacquire inside the kernel, bypassing the
-/// ownership bookkeeping that `RECURSIVE` and `ERRORCHECK` mutexes rely on. That
-/// matches POSIX, which leaves waiting on a non-`NORMAL` mutex undefined.
+/// The event queue registers before releasing the mutex and reacquires it
+/// before returning or running cancellation cleanup. Typed mutex ownership
+/// follows the same unlock/acquire bookkeeping as explicit mutex operations.
 ///
 /// # Safety
 ///
@@ -2204,6 +2211,9 @@ pub extern "sysv64" fn pthread_cond_destroy(cond: *mut usize) -> i32 {
 pub unsafe extern "sysv64" fn pthread_cond_wait(cond: *mut usize, mutex: *mut usize) -> i32 {
     if cond.is_null() || mutex.is_null() {
         return EINVAL;
+    }
+    if parking::enabled() {
+        return unsafe { parking::condition(cond, mutex, None) };
     }
     cancel_condition_wait(cond);
     // Native condition variables cannot wait on a separate cancellation
@@ -2239,7 +2249,7 @@ fn cancel_condition_wait(cond: *mut usize) {
 }
 
 /// Dispatch signals with the condition's mutex released, as while sleeping.
-/// The bounded native wait also bounds cooperative signal delivery latency.
+/// The interrupt event wakes the event backend for cooperative signal delivery.
 /// In particular JSC's suspend handler must acknowledge a directed signal even
 /// when the target spends its entire lifetime in pthread condition waits.
 #[cfg(all(windows, target_arch = "x86_64"))]
@@ -2261,9 +2271,7 @@ unsafe fn deliver_condition_signals(mutex: *mut usize) -> i32 {
 /// for its configured clock passes.
 ///
 /// On `ETIMEDOUT` the mutex is reacquired before returning, as POSIX requires,
-/// because `SleepConditionVariableSRW` restores the lock on every exit path. A
-/// deadline in the past returns `ETIMEDOUT` with the mutex still held and no wait
-/// performed at all.
+/// including when the absolute deadline has already passed.
 ///
 /// # Safety
 ///
@@ -2312,10 +2320,24 @@ unsafe fn cond_wait_deadline(
     clock_id: i32,
     deadline: Timespec,
 ) -> i32 {
+    if parking::enabled() {
+        return unsafe { parking::condition(cond, mutex, Some((deadline, clock_id))) };
+    }
     cancel_condition_wait(cond);
-    let left = match remaining_until(&deadline, clock_id) {
+    let left = match parking::remaining(&deadline, clock_id) {
         Ok(Some(left)) => left,
-        Ok(None) => return ETIMEDOUT,
+        Ok(None) => {
+            let error = unsafe { pthread_mutex_unlock(mutex) };
+            if error != 0 {
+                return error;
+            }
+            let error = unsafe { pthread_mutex_lock(mutex) };
+            if error != 0 {
+                return error;
+            }
+            cancel_condition_wait(cond);
+            return ETIMEDOUT;
+        }
         Err(error) => return error,
     };
     // Round fractional milliseconds up and bound cancellation latency as
@@ -2364,6 +2386,9 @@ pub unsafe extern "sysv64" fn pthread_cond_signal(cond: *mut usize) -> i32 {
     if cond.is_null() {
         return EINVAL;
     }
+    if parking::enabled() {
+        return parking::signal(cond, false);
+    }
     // SAFETY: pthread_cond_t has the layout of CONDITION_VARIABLE.
     unsafe { WakeConditionVariable(cond.cast::<CONDITION_VARIABLE>()) };
     0
@@ -2379,6 +2404,9 @@ pub unsafe extern "sysv64" fn pthread_cond_signal(cond: *mut usize) -> i32 {
 pub unsafe extern "sysv64" fn pthread_cond_broadcast(cond: *mut usize) -> i32 {
     if cond.is_null() {
         return EINVAL;
+    }
+    if parking::enabled() {
+        return parking::signal(cond, true);
     }
     // SAFETY: pthread_cond_t has the layout of CONDITION_VARIABLE.
     unsafe { WakeAllConditionVariable(cond.cast::<CONDITION_VARIABLE>()) };
@@ -3114,6 +3142,7 @@ fn cancel_self() -> Arc<CancelState> {
 pub extern "sysv64" fn pthread_cancel(thread: usize) -> i32 {
     if thread == pthread_self() {
         cancel_self().requested.store(true, Ordering::Release);
+        parking::interrupt(thread);
         return 0;
     }
     let Ok(mut states) = cancel_states().lock() else {
@@ -3121,6 +3150,7 @@ pub extern "sysv64" fn pthread_cancel(thread: usize) -> i32 {
     };
     if let Some(state) = states.get(&thread) {
         state.requested.store(true, Ordering::Release);
+        parking::interrupt(thread);
         return 0;
     }
     // No state yet means the thread has either finished or never existed; only
@@ -3135,6 +3165,7 @@ pub extern "sysv64" fn pthread_cancel(thread: usize) -> i32 {
     let state = new_cancel_state();
     state.requested.store(true, Ordering::Release);
     states.insert(thread, state);
+    parking::interrupt(thread);
     0
 }
 
@@ -3562,6 +3593,7 @@ unsafe extern "system" fn fork_child(payload: *const u8, len: usize) -> i32 {
     }
 
     let _ = SELF_ID.try_with(|slot| slot.set(self_id));
+    parking::reset_after_fork();
     cleanup::restore_snapshot(cleanup_state);
     stack::restore_snapshot(stack_state);
     if let Err(error) = sched::reset_after_fork(self_id) {

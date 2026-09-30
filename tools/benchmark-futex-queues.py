@@ -13,6 +13,7 @@ import subprocess
 
 
 CASES = {
+    'pthread': ('KINAKAZE_PTHREAD_PARK_OPT', 'parking::tests::benchmark_event_parking', 'PTHREAD_PARK_BENCH'),
     'futex': ('KINAKAZE_FUTEX_OPT', 'futex::queue_tests::benchmark_shared_queue', 'FUTEX_BENCH'),
     'waitv-background': ('KINAKAZE_FUTEX_OPT', 'sysadmin::futex_vector::batch_tests::benchmark_vector_registration', 'FUTEX_VECTOR_BENCH'),
     'waitv': ('KINAKAZE_FUTEX_OPT', 'sysadmin::futex_vector::tests::benchmark_waitv_registration', 'WAITV_BENCH'),
@@ -61,6 +62,12 @@ def main():
             label: {key: statistics.median(row[key] for row in report['rows'] if not row['warmup'] and row['enabled'] == enabled) for key in metrics}
             for label, enabled in [('control', False), ('candidate', True)]
         }
+        cycles = [key for key in report['rows'][0] if key.endswith('_cycles')]
+        if cycles:
+            report['medians_cycles'] = {
+                label: {key: statistics.median(row[key] for row in report['rows'] if not row['warmup'] and row['enabled'] == enabled) for key in cycles}
+                for label, enabled in [('control', False), ('candidate', True)]
+            }
         report['passed'] = True
         print(json.dumps(report['medians_ns'], indent=2))
     except Exception as error:
