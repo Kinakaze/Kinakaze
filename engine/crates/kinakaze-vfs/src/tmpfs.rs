@@ -28,6 +28,7 @@ pub(crate) mod socket;
 pub mod sysfs;
 pub(crate) mod watch;
 pub(crate) use observation::Scope as Observation;
+mod read_pages;
 const PAGE: u64 = 4096;
 static VOLUMES: Mutex<BTreeMap<u64, Arc<Volume>>> = Mutex::new(BTreeMap::new());
 struct Volume {
@@ -1440,22 +1441,9 @@ pub fn read(fd: i32, buffer: &mut [u8], position: Option<u64>) -> Result<usize, 
                 return Err(EISDIR);
             }
             let count = buffer.len().min(n.size.saturating_sub(at) as usize);
-            buffer[..count].fill(0);
-            let mut done = 0;
-            while done < count {
-                let pos = at + done as u64;
-                let part = (PAGE - pos % PAGE).min((count - done) as u64) as usize;
-                if let Some(slot) = n.pages.get(&(pos / PAGE)) {
-                    unsafe {
-                        ptr::copy_nonoverlapping(
-                            v.page(*slot)?.add((pos % PAGE) as usize),
-                            buffer[done..].as_mut_ptr(),
-                            part,
-                        );
-                    }
-                }
-                done += part;
-            }
+            // Pages are pinned by the mapping transaction and volume snapshot.
+            // The volume maps backing slots contiguously at PAGE granularity.
+            unsafe { read_pages::read(&n.pages, at, &mut buffer[..count], |slot| v.page(slot)) }?;
             if count != 0
                 && flags & O_NOATIME == 0
                 && l.flags & 1024 == 0
