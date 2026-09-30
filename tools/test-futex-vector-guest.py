@@ -1,4 +1,4 @@
-"""Run vector/requeue futex ABI/alias/fork probes in a real Debian worker."""
+"""Run futex ABI, signal, alias and fork probes in a real Debian worker."""
 import argparse
 import json
 import os
@@ -11,9 +11,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('root', 'dist', 'output'):
         parser.add_argument('--' + name, type=Path, required=True)
-    parser.add_argument('--probe', choices=('vector', 'requeue'), default='vector')
+    parser.add_argument('--probe', choices=('scalar', 'signal', 'vector', 'requeue'), default='vector')
     args = parser.parse_args()
-    name, marker = {'vector': ('FutexVectorProbe.py', 'FUTEX_VECTOR_PASS'),
+    name, marker = {'scalar': ('FutexScalarProbe.py', 'FUTEX_SCALAR_PASS'),
+                    'signal': ('FutexSignalRestartProbe.py', 'FUTEX_SIGNAL_RESTART_PASS'),
+                    'vector': ('FutexVectorProbe.py', 'FUTEX_VECTOR_PASS'),
                     'requeue': ('FutexRequeueProbe.py', 'FUTEX_REQUEUE_PASS')}[args.probe]
     source = (Path(__file__).resolve().parents[1] / 'tests/guest' / name).read_text(encoding='utf-8')
     records = []

@@ -16,6 +16,15 @@ def load_script(name):
 
 
 class PathAuditTests(unittest.TestCase):
+    def test_scalar_wait_route_names_its_handler_without_implying_coverage(self):
+        module = load_script('audit-syscall-paths.py')
+        report = module.inventory(Path(__file__).resolve().parents[1])
+        row = next(row for row in report['syscalls'] if row['number'] == 455)
+        self.assertEqual(row['status'], 'dispatched')
+        self.assertIn('futex_scalar::wait', row['handlers'])
+        self.assertEqual(row['completion'], 'unproven')
+        self.assertTrue(all(path['status'] == 'pending' for path in row['paths'].values()))
+
     def test_every_linux_table_entry_has_all_review_axes_without_claims(self):
         module = load_script('audit-syscall-paths.py')
         root = Path(__file__).resolve().parents[1]

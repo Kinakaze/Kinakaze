@@ -1,0 +1,336 @@
+{
+  "date": "2026-10-01",
+  "implementation_commits": [
+    "8ec3cf3",
+    "6d8d0ca",
+    "8fde49d"
+  ],
+  "dependency_baseline": "1e050ec (isolated review worktree; baseline fork registration interface retained)",
+  "scope": "futex scalar wait entry, signal restart, scalar/vector/requeue regressions; not all syscall paths or end-to-end performance",
+  "native": {
+    "passed": true,
+    "artifacts_unchanged": true,
+    "build_sha256": "0899f5fd6d8511b0f8dea32380b1da32c708205b2805c910308812f5c0aa2b60",
+    "executables": {
+      "kinakaze_libc": "kinakaze_libc-39bf3e5edd681555.exe"
+    },
+    "rows": [
+      {
+        "optimized": true,
+        "returncode": 0,
+        "summary": [
+          "test result: ok. 600 passed; 0 failed; 14 ignored; 0 measured; 0 filtered out; finished in 9.65s"
+        ]
+      },
+      {
+        "optimized": false,
+        "returncode": 0,
+        "summary": [
+          "test result: ok. 600 passed; 0 failed; 14 ignored; 0 measured; 0 filtered out; finished in 10.44s"
+        ]
+      }
+    ],
+    "files_sha256": {
+      "kinakaze_alloc.so": "063b56fc6cddf24f74bbed7d78532ce2483f2ea8f24e51ee29d864e658a2231d",
+      "serde_derive-ebb234dc8366345c.dll": "afea9c8cd547b5be0cab2d59e013b83abccb9be4ec68b807476b332ffef2b195",
+      "kinakaze_elf.so": "a5d3ee9bfb90dbc4b7f5cbdb4e29dc461777d63d272ee4e38731136e51cf9f6f",
+      "kinakaze_kernel.so": "b0e1720d1c24e3573be5a6e3f7d3f40602cb4e1a7676890fbc2d5774dac839c1",
+      "kinakaze_tls.so": "32a70f194e1eba9641ae3961dde5f1ccaf92fd6c608a1a9153f35d3e9037c44b",
+      "kinakaze_vfs.so": "c7af3fff5073e6c535d09bb559e35c71742abafba8f51145b1ea4fcba96ed950",
+      "libm.so.6": "ce23e5f7b3279897c4934d4104f64fc07e020eeab74c33cd02241fda7b7fc0bd",
+      "libpthread.so.0": "aafbad28085bf7c4626a2e4dde8cf4a97d430ceadc2bf86a3516354e7cc8d47d",
+      "ld-linux-x86-64.so.2": "4d5ed7014e87ed85b2c93baeeee47e77b7be7bc36813ac40f892ab1cf3c5379f",
+      "kinakaze_libc-39bf3e5edd681555.exe": "3846a19de939cbfc32710df918ab95f73a391d08787facab54fd0a8e3e3e8ed6",
+      "std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc"
+    }
+  },
+  "guest": {
+    "build_sha256": "89772ba0253007f4e3107565ed6df6c1507c29f01415de1d128c896917856c5b",
+    "images_sha256": {
+      "rootfs/lib/kinakaze_elf.so": "a5d3ee9bfb90dbc4b7f5cbdb4e29dc461777d63d272ee4e38731136e51cf9f6f",
+      "rootfs/lib/libXrender.so.1": "c0a4c9c82734b1053f441bb044f1fbe108304df15ca0355fc6db0b1c58367e9b",
+      "rootfs/lib/libXinerama.so.1": "82be6be819939f29ea0cd9b91dbd5f56adf21c4fd968372577e23485d90d2fe9",
+      "rootfs/lib/libGLESv2.so.2": "09cb80d1eabf459a92409fd9f943588007cc24fb58918fe710b936dffb22f53e",
+      "rootfs/lib/libXcursor.so.1": "03b3ab9f795611b90f3b7f26fd8a1d35fc40ae63d81a68cccd29b0d020f3f079",
+      "rootfs/lib/libXxf86vm.so.1": "027a3c6fc75a4fe20ec5c074696573062f1bfd88f7fd0a3b07c21b8a42569981",
+      "rootfs/lib/libGLX.so.0": "cb1b2db13a534a5c8f56e04a548255c6f9dcc80680f93aa8711801f7e6917b5a",
+      "rootfs/lib/libOpenGL.so.0": "25427e9c90395a3b605cb5bab04b30d42321e1a186a9f1c2bb4ccd77887c9884",
+      "rootfs/lib/libX11-xcb.so.1": "611e34a02a122a59cfdf9f03b61a85b2a17344e512e781d75b22ca7615438aa0",
+      "init.exe": "504400407a99056a90e384f931f6f85b919664c51dd9ff3aed02c07be7fdc81e",
+      "rootfs/lib/libEGL.so.1": "e3a1dba8a0731f467fc6931c7be0306e61d190ec85f5fb35a84a61a6604d207d",
+      "rootfs/lib/libdl.so.2": "71ec61f234779f1b56377a56e4a44a8f3659d2025e250739d1e9a9f1c45e4f4e",
+      "worker.exe": "ff77e9596370831e4557986196f5a22ba7c4c5d032dd0215cb756a9195b10643",
+      "rootfs/lib/kinakaze_alloc.so": "169ad77ffb1f67dbea44992b66039456ffbbf254c9cce6df0f6bcb49658f41a4",
+      "rootfs/lib/kinakaze_kernel.so": "a2a6f72aa904db1b74a3587216e2cf093df9fdbef4708c226377923981fb5cad",
+      "rootfs/lib/kinakaze_tls.so": "8861d2733690e3c596329539b1afa617273e44ed1efe790f2b8630a7a40a6a35",
+      "rootfs/lib/libm.so.6": "c2f5db9e4db4b72b658290072ba13a1d58b12bc355ee02953835d9288b3e3050",
+      "rootfs/lib/libdisplay.so.1": "961c67911796d39fdd49e9573cefcffed8d2c25103db0e034351bc7568f7cb41",
+      "rootfs/lib/kinakaze_vfs.so": "09374f5a821905c6b518b871503d18e6735e7048e621ddc2c0f9ce84c2bae502",
+      "rootfs/lib/libcuda.so.1": "5ede03313e69b18b60cfdb902f3e850256fdff6ab33f8a22ff60217fec581a30",
+      "rootfs/lib/libpthread.so.0": "2a95fec449212d53ff72fdf832f95e1849735812d3f61492a8f954e46976eeae",
+      "rootfs/lib/ld-linux-x86-64.so.2": "28b60e0cba03b775be4a17136204ef16dc70ca265dab2baaf702fcd45e3dfc37",
+      "rootfs/lib/libc.so.6": "17cce5a6285542508ca0d27b4bd24fb9a54d6b4820d64e562ccd3b6f63811884",
+      "rootfs/lib/libresolv.so.2": "74be2166d84ea8aa1cb7ab1fd279328f5fc565501e577921a422d03345ceb324",
+      "rootfs/lib/librt.so.1": "8b10c513ee7e4bc6746df1cf86042826216dc751320dd102d533e414c85e64ac",
+      "rootfs/lib/libpipewire-0.3.so.0": "9d9b3242314d2fd6d1a19426c5c75531b63d360a1a165795fbe14c2602db2de1",
+      "rootfs/lib/libpulse.so.0": "aca689eacf880b5cbbda460ced408e5692da9d1e182efa2142f2788a8279390f",
+      "rootfs/lib/libasound.so.2": "eac8d745d8700f87c9e03e5ad94516113d4295aef462f9884e24ff3ca5c2190f",
+      "rootfs/lib/kinakaze_guest_engine.so": "e0d27d56cbae91e4c3bd02d894154785c2c2228c007acdfa5b5f0d3e075974a0",
+      "rootfs/lib/libkinakaze-runtime.so.1": "d9b2cac84c930584c629b42d4fe254e63912ae3e903b90f266a7635f24d92362",
+      "rootfs/lib/libX11.so.6": "5ba568f0d5eea0f5fed4ea7d4ea8ccd2e33fdebecb23dc21e911af1d572674ff",
+      "rootfs/lib/libXrandr.so.2": "75b40ac212bcb61d9fdf3a21eef82099604a5d850ad0e447e00a32e9fce37fe6",
+      "rootfs/lib/libXext.so.6": "f5e47f0ce2fc3256ab9172e7936e2f3bb10fa252137c4c645d04db263145b575",
+      "rootfs/lib/libGL.so.1": "b6508a2d7f3d8878d9b7fe3ef0f3a10a4dbd603ca0bda0f65b558fb658bbb823",
+      "rootfs/lib/libXi.so.6": "bf9fa4ab9ef3541d01bc091ec2bc4c629a97674829bbc1e4df19f68ba11ffe19",
+      "rootfs/lib/libxcb.so.1": "6efd265b91e38d3a8b891339b2369aeecb569ec2434821d85d307433578fbfed",
+      "rootfs/lib/libvulkan.so.1": "07d5aab6b249a108bf84ea6f74687be8812fad7e81411975fea717c2004f892c",
+      "std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc"
+    },
+    "probes": {
+      "scalar": {
+        "passed": true,
+        "report": "artifacts/syscall-all-paths-20261001/guest-scalar/report.json",
+        "report_sha256": "a039c1aa6b7c9713208babbd8c88d37e90cdba11354da2f1a97ccaa9150f2f89",
+        "rows": [
+          {
+            "optimized": false,
+            "status": "passed",
+            "exit_code": 0,
+            "missing_markers": []
+          },
+          {
+            "optimized": true,
+            "status": "passed",
+            "exit_code": 0,
+            "missing_markers": []
+          }
+        ]
+      },
+      "signal": {
+        "passed": true,
+        "report": "artifacts/syscall-all-paths-20261001/guest-signal/report.json",
+        "report_sha256": "b1a0d066715bba0d34fbe45734b3ebb720d8d6882cd26828177386b0ded29358",
+        "rows": [
+          {
+            "optimized": false,
+            "status": "passed",
+            "exit_code": 0,
+            "missing_markers": []
+          },
+          {
+            "optimized": true,
+            "status": "passed",
+            "exit_code": 0,
+            "missing_markers": []
+          }
+        ]
+      },
+      "vector": {
+        "passed": true,
+        "report": "artifacts/syscall-all-paths-20261001/guest-vector/report.json",
+        "report_sha256": "ed3e42a9f67e84a950926b1fd7a258f605ef1683a76d37365de9974dea671e6a",
+        "rows": [
+          {
+            "optimized": false,
+            "status": "passed",
+            "exit_code": 0,
+            "missing_markers": []
+          },
+          {
+            "optimized": true,
+            "status": "passed",
+            "exit_code": 0,
+            "missing_markers": []
+          }
+        ]
+      },
+      "requeue": {
+        "passed": true,
+        "report": "artifacts/syscall-all-paths-20261001/guest-requeue/report.json",
+        "report_sha256": "f74e384d775f19964fb8234d2913a4d4ce787981e501aa306ee7fee5425abfa8",
+        "rows": [
+          {
+            "optimized": false,
+            "status": "passed",
+            "exit_code": 0,
+            "missing_markers": []
+          },
+          {
+            "optimized": true,
+            "status": "passed",
+            "exit_code": 0,
+            "missing_markers": []
+          }
+        ]
+      }
+    }
+  },
+  "coverage": {
+    "syscalls": 375,
+    "status_counts": {
+      "dispatched": 304,
+      "missing-dispatch": 70,
+      "explicit-refusal": 1
+    },
+    "required_path_reviews": 3750,
+    "verified_path_reviews": 0
+  },
+  "benchmark": {
+    "passed": true,
+    "case": "wait2",
+    "binary": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\native-restart-final\\kinakaze_libc-39bf3e5edd681555.exe",
+    "sha256": "3846a19de939cbfc32710df918ab95f73a391d08787facab54fd0a8e3e3e8ed6",
+    "dependencies": {
+      "kinakaze_alloc.so": "063b56fc6cddf24f74bbed7d78532ce2483f2ea8f24e51ee29d864e658a2231d",
+      "kinakaze_elf.so": "a5d3ee9bfb90dbc4b7f5cbdb4e29dc461777d63d272ee4e38731136e51cf9f6f",
+      "kinakaze_kernel.so": "b0e1720d1c24e3573be5a6e3f7d3f40602cb4e1a7676890fbc2d5774dac839c1",
+      "kinakaze_tls.so": "32a70f194e1eba9641ae3961dde5f1ccaf92fd6c608a1a9153f35d3e9037c44b",
+      "kinakaze_vfs.so": "c7af3fff5073e6c535d09bb559e35c71742abafba8f51145b1ea4fcba96ed950",
+      "ld-linux-x86-64.so.2": "4d5ed7014e87ed85b2c93baeeee47e77b7be7bc36813ac40f892ab1cf3c5379f",
+      "libm.so.6": "ce23e5f7b3279897c4934d4104f64fc07e020eeab74c33cd02241fda7b7fc0bd",
+      "libpthread.so.0": "aafbad28085bf7c4626a2e4dde8cf4a97d430ceadc2bf86a3516354e7cc8d47d"
+    },
+    "rows": [
+      {
+        "iterations": 5000,
+        "background_iterations": 128,
+        "private_ns": 6723200,
+        "shared_ns": 30894400,
+        "shared_background_ns": 325799600,
+        "round": 0,
+        "enabled": false,
+        "warmup": true
+      },
+      {
+        "iterations": 5000,
+        "background_iterations": 128,
+        "private_ns": 6259000,
+        "shared_ns": 32037400,
+        "shared_background_ns": 2462800,
+        "round": 0,
+        "enabled": true,
+        "warmup": true
+      },
+      {
+        "iterations": 5000,
+        "background_iterations": 128,
+        "private_ns": 6832500,
+        "shared_ns": 35533600,
+        "shared_background_ns": 2519600,
+        "round": 1,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 5000,
+        "background_iterations": 128,
+        "private_ns": 7001900,
+        "shared_ns": 31970500,
+        "shared_background_ns": 311141400,
+        "round": 1,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "iterations": 5000,
+        "background_iterations": 128,
+        "private_ns": 6111200,
+        "shared_ns": 30171800,
+        "shared_background_ns": 295524500,
+        "round": 2,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "iterations": 5000,
+        "background_iterations": 128,
+        "private_ns": 6388900,
+        "shared_ns": 38039900,
+        "shared_background_ns": 2219500,
+        "round": 2,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 5000,
+        "background_iterations": 128,
+        "private_ns": 6225300,
+        "shared_ns": 27692700,
+        "shared_background_ns": 2367500,
+        "round": 3,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 5000,
+        "background_iterations": 128,
+        "private_ns": 6295100,
+        "shared_ns": 31268300,
+        "shared_background_ns": 330531300,
+        "round": 3,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "iterations": 5000,
+        "background_iterations": 128,
+        "private_ns": 8449300,
+        "shared_ns": 31893700,
+        "shared_background_ns": 316679600,
+        "round": 4,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "iterations": 5000,
+        "background_iterations": 128,
+        "private_ns": 6214000,
+        "shared_ns": 28774300,
+        "shared_background_ns": 3499400,
+        "round": 4,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 5000,
+        "background_iterations": 128,
+        "private_ns": 6028600,
+        "shared_ns": 28640100,
+        "shared_background_ns": 2344900,
+        "round": 5,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 5000,
+        "background_iterations": 128,
+        "private_ns": 6505000,
+        "shared_ns": 30604100,
+        "shared_background_ns": 310453800,
+        "round": 5,
+        "enabled": false,
+        "warmup": false
+      }
+    ],
+    "medians_ns": {
+      "control": {
+        "private_ns": 6505000,
+        "shared_ns": 31268300,
+        "shared_background_ns": 311141400
+      },
+      "candidate": {
+        "private_ns": 6225300,
+        "shared_ns": 28774300,
+        "shared_background_ns": 2367500
+      }
+    }
+  },
+  "benchmark_scope": "Expired absolute timeout registration/retirement through raw 455; 5000 private and unflagged iterations; 128 background iterations with 2048 unrelated members; no thread wakeup latency or cross-process throughput.",
+  "benchmark_schedule": "After build and guest checks; one warmup, five alternating rounds, isolated helper domain for each child process.",
+  "remaining": [
+    "PI",
+    "robust pthread",
+    "realtime clock changes during wait",
+    "all syscall/VFS/memory/Unix IO path proofs and measurements"
+  ]
+}

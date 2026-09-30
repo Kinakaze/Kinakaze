@@ -68,7 +68,7 @@ def inventory(root):
         body = '\n'.join(lines[routed['line'] - 1:arm_end[routed['line']]]) if routed['line'] else ''
         handlers = sorted(set(re.findall(
             r'\b((?:(?:crate|[a-zA-Z_]\w*)::)*(?:kinakaze_abi_\w+|futex_\w+|waitv))\s*\(', body)
-            + re.findall(r'\b(futex_requeue::syscall)\s*\(', body)))
+            + re.findall(r'\b(futex_(?:requeue::syscall|scalar::wait))\s*\(', body)))
         rows.append(dict(
             **routed,
             owner=contract['owner'],
@@ -89,6 +89,7 @@ def inventory(root):
                root / 'libs/libc/src/futex.rs',
                root / 'libs/libc/src/sysadmin/futex_vector.rs',
                root / 'libs/libc/src/sysadmin/futex_requeue.rs',
+               root / 'libs/libc/src/sysadmin/futex_scalar.rs',
                root / 'libs/libc/src/futex/hybrid.rs',
                root / 'libs/libc/src/futex/wait_group.rs',
                root / 'engine/crates/kinakaze-vfs/src/lib.rs',
