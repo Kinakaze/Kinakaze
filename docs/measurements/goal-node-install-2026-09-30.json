@@ -227,6 +227,81 @@
         "r6-dist.json": "85e3bcbb1638bed882d5c833807a34932792150bb8590869ade649c53d9eef84",
         "r6-environment.json": "ac12d26d7f3900b9c900bc9ffa7e5c0aed7199c2c2b6b667228f9502f062ee3c"
       }
+    },
+    {
+      "name": "r6-quiet",
+      "passed": true,
+      "installed_packages": 357,
+      "phases": [
+        {
+          "phase": "update",
+          "status": "passed",
+          "milliseconds": 884.9121
+        },
+        {
+          "phase": "download",
+          "status": "passed",
+          "milliseconds": 2130.7873
+        },
+        {
+          "phase": "plan",
+          "status": "passed",
+          "milliseconds": 533.8549
+        },
+        {
+          "phase": "install",
+          "status": "passed",
+          "milliseconds": 294489.5482
+        },
+        {
+          "phase": "node-smoke",
+          "status": "passed",
+          "milliseconds": 655.1139
+        },
+        {
+          "phase": "npm-smoke",
+          "status": "passed",
+          "milliseconds": 1253.5081
+        },
+        {
+          "phase": "audit",
+          "status": "passed",
+          "milliseconds": 170.3534
+        },
+        {
+          "phase": "verify",
+          "status": "passed",
+          "milliseconds": 16575.6169
+        }
+      ],
+      "installation_job": {
+        "user_ms": 116359.375,
+        "kernel_ms": 231953.125,
+        "total_cpu_ms": 348312.5,
+        "processes": 5391,
+        "active_processes": 0,
+        "page_faults": 43149881,
+        "read_bytes": 897457922,
+        "write_bytes": 412674154,
+        "read_ops": 573245,
+        "write_ops": 367083,
+        "other_ops": 12566907,
+        "other_bytes": 410922514
+      },
+      "quiet_start": true,
+      "runtime_flags": {
+        "KINAKAZE_FORK_TRANSFER": "1",
+        "KINAKAZE_FORK_POOL": "1"
+      },
+      "installation_load_samples": 146,
+      "samples_with_foreign_cpu_activity": 15,
+      "observer_cpu_seconds": 0.484375,
+      "evidence_sha256": {
+        "install-r6-quiet/report.json": "583559c477eca3675d8554521b2302f1699921efeb9743175449a72f9298323e",
+        "r6-source.json": "fc30745b88e912e155597c2f5d8411f37020347202d04f7f2d438713bf93228c",
+        "r6-dist.json": "85e3bcbb1638bed882d5c833807a34932792150bb8590869ade649c53d9eef84",
+        "r6-quiet-environment.json": "eea4c75640c48cf206bc5fc81fce219991e576530fbc23684f0a8df673f207a8"
+      }
     }
   ]
 }

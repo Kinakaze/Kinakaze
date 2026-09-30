@@ -268,4 +268,14 @@ Evidence is `install-r6/report.json`, `r6-source.json`, `r6-dist.json` and
 current r6 source is `source-integrated`. A same-distribution follow-up uses
 a fresh root and requires 20 consecutive seconds without observed competing
 compiler/worker CPU activity before starting any guest command. Waiting is
-outside all measured installation phases. The target remains unmet.
+outside all measured installation phases.
+
+That same-build follow-up completed in **294.490 seconds**, with all 357
+packages and every post-install check passing. Verification took 16.576 seconds.
+Job CPU was 348.313 seconds, with 5,391 processes and 43,149,881 page faults.
+The recorder used 0.484 CPU seconds. It started after the quiet prerequisite,
+but foreign work resumed in 15 of 146 installation samples. This improves the
+measurement conditions without establishing an idle-host result. The remaining
+gap to 180 seconds is about 114 seconds; waiting for less competition alone
+did not achieve the target. Evidence is `install-r6-quiet/report.json` and
+`r6-quiet-environment.json`, using the unchanged `r6-dist.json` distribution.
