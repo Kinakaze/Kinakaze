@@ -27,7 +27,7 @@ FILTERS = {
 
 def execute(command, *, cwd, timeout, env=None):
     process = subprocess.Popen(command, cwd=cwd, env=env, stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE, text=True)
+                               stderr=subprocess.PIPE, text=True, encoding='utf-8', errors='replace')
     try:
         stdout, stderr = process.communicate(timeout=timeout)
         return subprocess.CompletedProcess(command, process.returncode, stdout, stderr)

@@ -41,6 +41,8 @@ def audit(root):
             else:
                 numbers = [value(token)]
             for number in numbers:
+                if number in dispatch:
+                    raise ValueError(f'duplicate syscall dispatch {number} at lines {dispatch[number]["line"]} and {line}')
                 dispatch[number] = dict(line=line, status='dispatched', direct_errno=None)
                 refusal = re.fullmatch(r'\s*-i64::from\((\w+)\),?\s*', body)
                 if refusal:
