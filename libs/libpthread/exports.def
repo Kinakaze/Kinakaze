@@ -385,3 +385,7 @@ EXPORTS
   pthread_mutexattr_getpshared
   "pthread_mutexattr_getpshared"=pthread_mutexattr_getpshared
   "pthread_mutexattr_getpshared@GLIBC_2.2.5"=pthread_mutexattr_getpshared PRIVATE
+
+  pthread_condattr_getpshared
+  "pthread_condattr_getpshared"=pthread_condattr_getpshared
+  "pthread_condattr_getpshared@GLIBC_2.2.5"=pthread_condattr_getpshared PRIVATE

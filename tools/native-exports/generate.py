@@ -81,6 +81,7 @@ LIBC_PTHREAD_FORWARDERS = {"pthread_attr_getschedpolicy", "pthread_attr_getsched
                           "pthread_sigmask", "pthread_mutex_clocklock", "pthread_cond_clockwait",
                           "pthread_mutexattr_setrobust", "pthread_mutexattr_getrobust", "pthread_mutex_consistent",
                           "pthread_mutexattr_setpshared", "pthread_mutexattr_getpshared",
+                          "pthread_condattr_setpshared", "pthread_condattr_getpshared",
                           "pthread_mutexattr_setrobust_np", "pthread_mutexattr_getrobust_np", "pthread_mutex_consistent_np",
                           "pthread_mutexattr_setprotocol", "pthread_mutexattr_getprotocol",
                           "pthread_attr_setaffinity_np", "pthread_attr_getaffinity_np",
@@ -115,7 +116,8 @@ PTHREAD_SHARED_VERSIONS = {
     (soname, name): versions
     for soname, versions in (("libpthread.so.0", {"GLIBC_2.2.5"}),
                              ("libc.so.6", {"GLIBC_2.2.5", "GLIBC_2.34"}))
-    for name in ("pthread_mutexattr_setpshared", "pthread_mutexattr_getpshared")
+    for name in ("pthread_mutexattr_setpshared", "pthread_mutexattr_getpshared",
+                 "pthread_condattr_setpshared", "pthread_condattr_getpshared")
 }
 
 

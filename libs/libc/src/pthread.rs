@@ -520,7 +520,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_pthread_condattr_setpshared(
     attr: *mut c_void,
     pshared: i32,
 ) -> i32 {
-    libpthread::pthread_condattr_setpshared(attr.cast::<PthreadCondAttr>(), pshared)
+    unsafe { libpthread::pthread_condattr_setpshared(attr.cast::<PthreadCondAttr>(), pshared) }
 }
 
 #[unsafe(no_mangle)]
@@ -685,4 +685,12 @@ pub unsafe extern "sysv64" fn kinakaze_abi_pthread_mutexattr_getpshared(
     pshared: *mut i32,
 ) -> i32 {
     unsafe { libpthread::pthread_mutexattr_getpshared(attr.cast(), pshared) }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_pthread_condattr_getpshared(
+    attr: *const c_void,
+    pshared: *mut i32,
+) -> i32 {
+    unsafe { libpthread::pthread_condattr_getpshared(attr.cast(), pshared) }
 }

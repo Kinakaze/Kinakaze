@@ -1,6 +1,7 @@
 //! Process-shared mutexes identified by values in the public 40-byte object.
 //! Native handles and thread ownership stay local; repair state is shared.
 use super::*;
+pub(super) mod condition;
 use std::cell::RefCell;
 use std::sync::atomic::{AtomicPtr, AtomicU64};
 use windows_sys::Win32::Foundation::{CloseHandle, FILETIME, HANDLE, WAIT_ABANDONED};
@@ -189,21 +190,23 @@ fn handle(key: Key) -> Result<Arc<NativeHandle>, i32> {
     }
     Ok(value)
 }
-pub(super) unsafe fn init(mutex: *mut usize, flags: i32) -> i32 {
-    let birth = match process_birth() {
-        Ok(value) => value,
-        Err(error) => return error,
-    };
-    let generation =
-        match NEXT.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1)) {
-            Ok(value) => value,
-            Err(_) => return EAGAIN,
-        };
-    let key = Key {
+fn new_identity() -> Result<Key, i32> {
+    let birth = process_birth()?;
+    let generation = NEXT
+        .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+        .map_err(|_| EAGAIN)?;
+    Ok(Key {
         domain: kinakaze_runtime::authority::domain_id(),
         creator: std::process::id(),
         birth,
         generation,
+    })
+}
+
+pub(super) unsafe fn init(mutex: *mut usize, flags: i32) -> i32 {
+    let key = match new_identity() {
+        Ok(key) => key,
+        Err(error) => return error,
     };
     if let Err(error) = handle(key) {
         return error;

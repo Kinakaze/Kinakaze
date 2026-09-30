@@ -7,8 +7,8 @@ use core::{cell::RefCell, ptr};
 use std::sync::atomic::AtomicPtr;
 use windows_sys::Win32::Foundation::{CloseHandle, HANDLE, WAIT_OBJECT_0};
 use windows_sys::Win32::System::Threading::{
-    CancelWaitableTimer, CreateEventW, CreateWaitableTimerW, INFINITE, ResetEvent, SetEvent,
-    SetWaitableTimer, WaitForMultipleObjects,
+    CancelWaitableTimer, CreateEventW, CreateWaitableTimerW, GetCurrentThread, GetCurrentThreadId,
+    GetThreadTimes, INFINITE, ResetEvent, SetEvent, SetWaitableTimer, WaitForMultipleObjects,
 };
 
 pub(super) fn enabled() -> bool {
@@ -16,8 +16,32 @@ pub(super) fn enabled() -> bool {
     *ENABLED.get_or_init(|| std::env::var_os("KINAKAZE_PTHREAD_PARK_OPT").is_none_or(|v| v != "0"))
 }
 
+#[derive(Clone, Copy)]
+pub(super) struct Identity {
+    pub host: u32,
+    pub thread: u32,
+    pub birth: u64,
+}
+
+pub(super) fn event_name(domain: u64, identity: Identity) -> Vec<u16> {
+    format!(
+        "Local\\kinakaze.pthread.park.v1.{domain:016x}.{:08x}.{:08x}.{:016x}",
+        identity.host, identity.thread, identity.birth
+    )
+    .encode_utf16()
+    .chain(Some(0))
+    .collect()
+}
+
+pub(super) fn identity() -> Result<Identity, i32> {
+    handles(false)?;
+    PARK.with_borrow(|slot| slot.as_ref().map(|p| p.identity).ok_or(EAGAIN))
+}
+
 struct Park {
     host: u32,
+    domain: u64,
+    identity: Identity,
     event: usize,
     timer: usize,
 }
@@ -36,17 +60,42 @@ thread_local! {
 fn handles(timed: bool) -> Result<(HANDLE, HANDLE), i32> {
     PARK.with_borrow_mut(|slot| {
         let host = std::process::id();
+        let domain = kinakaze_runtime::authority::domain_id();
         if slot.as_ref().is_some_and(|park| park.host != host) {
             // The copied integer may identify an unrelated handle in a worker.
             core::mem::forget(slot.take());
+        } else if slot.as_ref().is_some_and(|park| park.domain != domain) {
+            // Provider warmup may precede installation of the manager domain.
+            drop(slot.take());
         }
         if slot.is_none() {
-            let event = unsafe { CreateEventW(ptr::null(), 0, 0, ptr::null()) };
+            let (mut born, mut end, mut kernel, mut user) = unsafe { core::mem::zeroed() };
+            if unsafe {
+                GetThreadTimes(
+                    GetCurrentThread(),
+                    &mut born,
+                    &mut end,
+                    &mut kernel,
+                    &mut user,
+                )
+            } == 0
+            {
+                return Err(EAGAIN);
+            }
+            let identity = Identity {
+                host,
+                thread: unsafe { GetCurrentThreadId() },
+                birth: (u64::from(born.dwHighDateTime) << 32) | u64::from(born.dwLowDateTime),
+            };
+            let name = event_name(domain, identity);
+            let event = unsafe { CreateEventW(ptr::null(), 0, 0, name.as_ptr()) };
             if event.is_null() {
                 return Err(EAGAIN);
             }
             *slot = Some(Park {
                 host,
+                domain,
+                identity,
                 event: event as usize,
                 timer: 0,
             });
@@ -201,6 +250,9 @@ fn signal_rows(rows: &mut [Row], count: usize, condition: bool) -> i32 {
 }
 
 pub(super) fn signal(cond: *mut usize, all: bool) -> i32 {
+    if unsafe { shared::condition::is_cond(cond) } {
+        return unsafe { shared::condition::signal(cond, all) };
+    }
     let mut rows = queues().rows.lock().unwrap_or_else(PoisonError::into_inner);
     rows.get_mut(&(cond as usize, true)).map_or(0, |rows| {
         signal_rows(rows, if all { usize::MAX } else { 1 }, true)
@@ -340,6 +392,44 @@ pub(super) unsafe fn timed_mutex(mutex: *mut usize, clock: i32, deadline: Timesp
     result
 }
 
+enum ConditionTicket {
+    Private(Ticket),
+    Shared {
+        local: Ticket,
+        shared: shared::condition::Ticket,
+    },
+}
+impl ConditionTicket {
+    unsafe fn register(cond: *mut usize, event: HANDLE) -> Result<Self, i32> {
+        let local = Ticket::register((cond as usize, true), event);
+        if unsafe { shared::condition::is_cond(cond) } {
+            let shared = unsafe { shared::condition::Ticket::register(cond) }?;
+            Ok(Self::Shared { local, shared })
+        } else {
+            Ok(Self::Private(local))
+        }
+    }
+    fn selected(&self) -> Result<bool, i32> {
+        match self {
+            Self::Private(ticket) => Ok(ticket.selected()),
+            Self::Shared { shared, .. } => shared.selected(),
+        }
+    }
+    fn finish(&mut self) -> Result<(bool, bool), i32> {
+        match self {
+            Self::Private(ticket) => {
+                let selected = ticket.finish();
+                Ok((selected, selected))
+            }
+            Self::Shared { local, shared } => {
+                let result = shared.finish();
+                local.finish();
+                result.map(|kind| (kind != 0, kind == 1))
+            }
+        }
+    }
+}
+
 pub(super) unsafe fn condition(
     cond: *mut usize,
     mutex: *mut usize,
@@ -376,14 +466,22 @@ pub(super) unsafe fn condition(
     if interrupt.is_null() {
         return EAGAIN;
     }
-    let mut ticket = Ticket::register((cond as usize, true), event);
+    let mut ticket = match unsafe { ConditionTicket::register(cond, event) } {
+        Ok(ticket) => ticket,
+        Err(error) => return error,
+    };
     let error = unsafe { pthread_mutex_unlock(mutex) };
     if error != 0 {
         return error;
     }
-    let result = loop {
-        if cancellation_pending() || ticket.selected() {
+    let mut result = loop {
+        if cancellation_pending() {
             break 0;
+        }
+        match ticket.selected() {
+            Ok(true) => break 0,
+            Ok(false) => {}
+            Err(error) => break error,
         }
         if kinakaze_vfs::signal::interrupt_pending() {
             break 0;
@@ -410,14 +508,20 @@ pub(super) unsafe fn condition(
     if deadline.is_some() {
         unsafe { CancelWaitableTimer(timer) };
     }
-    let selected = ticket.finish();
+    let (selected, replace) = match ticket.finish() {
+        Ok(value) => value,
+        Err(error) => {
+            result = error;
+            (false, false)
+        }
+    };
     drop(ticket); // ExitThread and guest cleanup do not unwind Rust locals.
     let error = unsafe { pthread_mutex_lock(mutex) };
     if error != 0 && error != 130 {
         return error;
     }
     if cancellation_pending() {
-        if selected {
+        if replace {
             let _ = signal(cond, false);
         }
         pthread_testcancel();
@@ -433,7 +537,7 @@ pub(super) unsafe fn condition(
     }
     // A handler may itself request cancellation while the mutex was released.
     if cancellation_pending() {
-        if selected {
+        if replace {
             let _ = signal(cond, false);
         }
         pthread_testcancel();

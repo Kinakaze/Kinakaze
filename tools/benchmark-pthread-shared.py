@@ -1,4 +1,4 @@
-"""Pair cached and uncached shared mutex runs from one frozen native build."""
+"""Pair shared pthread optimization modes from one frozen native build."""
 import argparse
 import hashlib
 import json
@@ -13,11 +13,22 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--native', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--iterations', type=int, default=100_000)
+    parser.add_argument('--probe', choices=('mutex', 'empty-cond'), default='mutex')
+    parser.add_argument('--iterations', type=int)
     parser.add_argument('--pairs', type=int, default=5)
     args = parser.parse_args()
+    if args.iterations is None:
+        args.iterations = 10_000 if args.probe == 'empty-cond' else 100_000
     if args.iterations <= 0 or args.pairs <= 0:
         parser.error('iterations and pairs must be positive')
+    if args.probe == 'empty-cond' and args.iterations != 10_000:
+        parser.error('the empty-cond native fixture uses exactly 10000 iterations')
+    test_name, marker, scope = {
+        'mutex': ('shared::tests::benchmark_shared_mutex_cache', 'SHARED_MUTEX_BENCH',
+                  'native shared mutex uncontended lock/unlock; no workload throughput claim'),
+        'empty-cond': ('shared::condition::tests::benchmark_empty_shared_signal', 'SHARED_COND_BENCH',
+                       'native empty shared condition signal; no occupied-queue or workload throughput claim'),
+    }[args.probe]
     folder = args.native.resolve(strict=True)
     manifest = json.loads((folder / 'manifest.json').read_text(encoding='utf-8'))
     executable = folder / manifest['executables']['kinakaze_libpthread']
@@ -27,11 +38,11 @@ def main():
             environment = dict(os.environ, PATH=str(folder) + os.pathsep + os.environ['PATH'],
                                KINAKAZE_PTHREAD_SHARED_CACHE_OPT=str(enabled),
                                KINAKAZE_BENCH_ITERATIONS=str(args.iterations))
-            result = subprocess.run([str(executable), '--exact', 'shared::tests::benchmark_shared_mutex_cache',
+            result = subprocess.run([str(executable), '--exact', test_name,
                                      '--ignored', '--nocapture', '--test-threads=1'],
                                     env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                     text=True, encoding='utf-8', errors='replace', timeout=60, check=True)
-            match = re.search(r'SHARED_MUTEX_BENCH iterations=(\d+) elapsed_ns=(\d+) cached=(true|false)',
+            match = re.search(marker + r' iterations=(\d+) elapsed_ns=(\d+) cached=(true|false)',
                               result.stdout)
             if not match or int(match[1]) != args.iterations or (match[3] == 'true') != bool(enabled):
                 raise RuntimeError('native benchmark record does not match requested configuration:\n' + result.stdout)
@@ -41,7 +52,7 @@ def main():
             print(json.dumps(row), flush=True)
     control = [r['elapsed_ns'] / r['iterations'] for r in rows if not r['warmup'] and not r['cached']]
     candidate = [r['elapsed_ns'] / r['iterations'] for r in rows if not r['warmup'] and r['cached']]
-    report = dict(scope='native shared mutex uncontended lock/unlock; no workload throughput claim',
+    report = dict(scope=scope, probe=args.probe,
                   executable_sha256=hashlib.sha256(executable.read_bytes()).hexdigest(),
                   native_manifest=manifest, rows=rows, control_median_ns=statistics.median(control),
                   candidate_median_ns=statistics.median(candidate),

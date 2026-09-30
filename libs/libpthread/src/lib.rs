@@ -129,9 +129,9 @@ pub struct Timespec {
     pub tv_nsec: i64,
 }
 
-/// Linux x86_64 `pthread_condattr_t` is one 32-bit word. We retain the selected
-/// clock in that word and transfer it to process-local condition metadata during
-/// `pthread_cond_init`.
+/// Linux x86_64 `pthread_condattr_t` is one 32-bit word: bit zero selects
+/// process sharing and bit one selects CLOCK_MONOTONIC. Shared condition objects
+/// retain both flags; private clock metadata remains local to the process.
 #[cfg(all(windows, target_arch = "x86_64"))]
 #[derive(Clone, Copy)]
 #[repr(C)]
@@ -2261,7 +2261,7 @@ pub unsafe extern "sysv64" fn pthread_condattr_setclock(
     if attr.is_null() || !matches!(clock_id, CLOCK_REALTIME | CLOCK_MONOTONIC) {
         return EINVAL;
     }
-    unsafe { (*attr).clock_id = clock_id };
+    unsafe { (*attr).clock_id = ((*attr).clock_id & 1) | (clock_id << 1) };
     0
 }
 
@@ -2274,24 +2274,38 @@ pub unsafe extern "sysv64" fn pthread_condattr_getclock(
     if attr.is_null() || clock_id.is_null() {
         return EINVAL;
     }
-    unsafe { clock_id.write((*attr).clock_id) };
+    unsafe { clock_id.write(((*attr).clock_id >> 1) & 1) };
     0
 }
 
 #[cfg(all(windows, target_arch = "x86_64"))]
 #[unsafe(no_mangle)]
-pub extern "sysv64" fn pthread_condattr_setpshared(
+pub unsafe extern "sysv64" fn pthread_condattr_setpshared(
     attr: *mut PthreadCondAttr,
     pshared: i32,
 ) -> i32 {
-    if attr.is_null() || !matches!(pshared, PTHREAD_PROCESS_PRIVATE | PTHREAD_PROCESS_SHARED) {
-        EINVAL
-    } else if pshared == PTHREAD_PROCESS_SHARED {
-        // A Windows condition variable cannot synchronize another process.
-        ENOSYS
-    } else {
-        0
+    if attr.is_null() || !matches!(pshared, 0 | 1) {
+        return EINVAL;
     }
+    unsafe {
+        (*attr).clock_id = ((*attr).clock_id & !1) | pshared;
+    }
+    0
+}
+
+#[cfg(all(windows, target_arch = "x86_64"))]
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn pthread_condattr_getpshared(
+    attr: *const PthreadCondAttr,
+    pshared: *mut i32,
+) -> i32 {
+    if attr.is_null() || pshared.is_null() {
+        return EINVAL;
+    }
+    unsafe {
+        *pshared = (*attr).clock_id & 1;
+    }
+    0
 }
 
 #[cfg(all(windows, target_arch = "x86_64"))]
@@ -2305,16 +2319,29 @@ pub unsafe extern "sysv64" fn pthread_cond_init(cond: *mut usize, _attr: *const 
     if cond.is_null() {
         return EINVAL;
     }
-    let clock_id = if _attr.is_null() {
-        CLOCK_REALTIME
+    let flags = if _attr.is_null() {
+        0
     } else {
         unsafe { (*_attr.cast::<PthreadCondAttr>()).clock_id }
     };
-    if !matches!(clock_id, CLOCK_REALTIME | CLOCK_MONOTONIC) {
+    if flags & !3 != 0 {
         return EINVAL;
     }
-    // CONDITION_VARIABLE_INIT is all zeroes.
-    unsafe { cond.write(0) };
+    let clock_id = (flags >> 1) & 1;
+    if flags & 1 != 0 {
+        let result = unsafe { shared::condition::init(cond, clock_id) };
+        if result == 0 {
+            cond_clocks()
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .remove(&(cond as usize));
+        }
+        return result;
+    }
+    // Clear the full public object, including a prior process-shared marker.
+    unsafe {
+        core::ptr::write_bytes(cond.cast::<u8>(), 0, 48);
+    }
     if let Ok(mut clocks) = cond_clocks().lock() {
         clocks.remove(&(cond as usize));
         if clock_id != CLOCK_REALTIME {
@@ -2331,6 +2358,9 @@ pub unsafe extern "sysv64" fn pthread_cond_init(cond: *mut usize, _attr: *const 
 pub extern "sysv64" fn pthread_cond_destroy(cond: *mut usize) -> i32 {
     if cond.is_null() {
         return EINVAL;
+    }
+    if unsafe { shared::condition::is_cond(cond) } {
+        return unsafe { shared::condition::destroy(cond) };
     }
     if let Ok(mut clocks) = cond_clocks().lock() {
         clocks.remove(&(cond as usize));
@@ -2356,7 +2386,11 @@ pub unsafe extern "sysv64" fn pthread_cond_wait(cond: *mut usize, mutex: *mut us
     if cond.is_null() || mutex.is_null() {
         return EINVAL;
     }
-    if parking::enabled() || unsafe { shared::is_mutex(mutex) || robust::is_mutex(mutex) } {
+    if parking::enabled()
+        || unsafe {
+            shared::condition::is_cond(cond) || shared::is_mutex(mutex) || robust::is_mutex(mutex)
+        }
+    {
         return unsafe { parking::condition(cond, mutex, None) };
     }
     cancel_condition_wait(cond);
@@ -2429,11 +2463,15 @@ pub unsafe extern "sysv64" fn pthread_cond_timedwait(
     if cond.is_null() || mutex.is_null() || deadline.is_null() {
         return EINVAL;
     }
-    let clock_id = cond_clocks()
-        .lock()
-        .ok()
-        .and_then(|clocks| clocks.get(&(cond as usize)).copied())
-        .unwrap_or(CLOCK_REALTIME);
+    let clock_id = if unsafe { shared::condition::is_cond(cond) } {
+        unsafe { shared::condition::clock(cond) }
+    } else {
+        cond_clocks()
+            .lock()
+            .ok()
+            .and_then(|clocks| clocks.get(&(cond as usize)).copied())
+            .unwrap_or(CLOCK_REALTIME)
+    };
     unsafe { cond_wait_deadline(cond, mutex, clock_id, *deadline) }
 }
 
@@ -2464,7 +2502,11 @@ unsafe fn cond_wait_deadline(
     clock_id: i32,
     deadline: Timespec,
 ) -> i32 {
-    if parking::enabled() || unsafe { shared::is_mutex(mutex) || robust::is_mutex(mutex) } {
+    if parking::enabled()
+        || unsafe {
+            shared::condition::is_cond(cond) || shared::is_mutex(mutex) || robust::is_mutex(mutex)
+        }
+    {
         return unsafe { parking::condition(cond, mutex, Some((deadline, clock_id))) };
     }
     cancel_condition_wait(cond);
@@ -2530,6 +2572,9 @@ pub unsafe extern "sysv64" fn pthread_cond_signal(cond: *mut usize) -> i32 {
     if cond.is_null() {
         return EINVAL;
     }
+    if unsafe { shared::condition::is_cond(cond) } {
+        return unsafe { shared::condition::signal(cond, false) };
+    }
     if parking::enabled() {
         return parking::signal(cond, false);
     }
@@ -2552,6 +2597,9 @@ pub unsafe extern "sysv64" fn pthread_cond_signal(cond: *mut usize) -> i32 {
 pub unsafe extern "sysv64" fn pthread_cond_broadcast(cond: *mut usize) -> i32 {
     if cond.is_null() {
         return EINVAL;
+    }
+    if unsafe { shared::condition::is_cond(cond) } {
+        return unsafe { shared::condition::signal(cond, true) };
     }
     if parking::enabled() {
         return parking::signal(cond, true);
@@ -4628,13 +4676,13 @@ mod tests {
     #[test]
     fn cond_timedwait_times_out_holding_the_mutex() {
         let mut mutex = [0usize; 5];
-        let mut cond: usize = 0;
+        let mut cond = [0usize; 6];
         assert_eq!(
             unsafe { pthread_mutex_init(mutex.as_mut_ptr(), core::ptr::null()) },
             0
         );
         assert_eq!(
-            unsafe { pthread_cond_init(&raw mut cond, core::ptr::null()) },
+            unsafe { pthread_cond_init(cond.as_mut_ptr(), core::ptr::null()) },
             0
         );
 
@@ -4642,8 +4690,11 @@ mod tests {
         let deadline = deadline_in(Duration::from_millis(50));
         assert_eq!(
             wait_past_spurious_wakeups(|| unsafe {
-                let result =
-                    pthread_cond_timedwait(&raw mut cond, mutex.as_mut_ptr(), &raw const deadline);
+                let result = pthread_cond_timedwait(
+                    cond.as_mut_ptr(),
+                    mutex.as_mut_ptr(),
+                    &raw const deadline,
+                );
                 assert_eq!(pthread_mutex_trylock(mutex.as_mut_ptr()), EBUSY);
                 result
             }),
@@ -4653,7 +4704,7 @@ mod tests {
         // one that frees it.
         assert_eq!(unsafe { pthread_mutex_unlock(mutex.as_mut_ptr()) }, 0);
 
-        assert_eq!(pthread_cond_destroy(&raw mut cond), 0);
+        assert_eq!(pthread_cond_destroy(cond.as_mut_ptr()), 0);
         assert_eq!(pthread_mutex_destroy(mutex.as_mut_ptr()), 0);
     }
 
@@ -5031,18 +5082,18 @@ mod tests {
     fn pthread_cond_broadcast_multi_waiter_wakeup() {
         const WAITERS: usize = 8;
         let mut mutex = [0usize; 5];
-        let mut cond: usize = 0;
+        let mut cond = [0usize; 6];
         assert_eq!(
             unsafe { pthread_mutex_init(mutex.as_mut_ptr(), core::ptr::null()) },
             0
         );
         assert_eq!(
-            unsafe { pthread_cond_init(&raw mut cond, core::ptr::null()) },
+            unsafe { pthread_cond_init(cond.as_mut_ptr(), core::ptr::null()) },
             0
         );
 
         let shared_mutex = Shared::of(mutex.as_mut_ptr());
-        let shared_cond = Shared::of(&raw mut cond);
+        let shared_cond = Shared::of(cond.as_mut_ptr());
         let waiting_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let predicate = Arc::new(std::sync::atomic::AtomicBool::new(false));
         let done_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -5075,7 +5126,7 @@ mod tests {
         unsafe {
             pthread_mutex_lock(mutex.as_mut_ptr());
             predicate.store(true, std::sync::atomic::Ordering::SeqCst);
-            assert_eq!(pthread_cond_broadcast(&raw mut cond), 0);
+            assert_eq!(pthread_cond_broadcast(cond.as_mut_ptr()), 0);
             pthread_mutex_unlock(mutex.as_mut_ptr());
         }
 
@@ -5087,7 +5138,7 @@ mod tests {
             done_count.load(std::sync::atomic::Ordering::SeqCst),
             WAITERS
         );
-        assert_eq!(pthread_cond_destroy(&raw mut cond), 0);
+        assert_eq!(pthread_cond_destroy(cond.as_mut_ptr()), 0);
         assert_eq!(pthread_mutex_destroy(mutex.as_mut_ptr()), 0);
     }
 
@@ -5307,8 +5358,8 @@ mod tests {
 
     #[test]
     fn cond_timedwait_with_monotonic_and_realtime_deadlines() {
-        let mut cond: usize = 0;
-        let mut realtime_cond: usize = 0;
+        let mut cond = [0usize; 6];
+        let mut realtime_cond = [0usize; 6];
         let mut mutex = [0usize; 5];
         let mut cond_attr = PthreadCondAttr {
             clock_id: CLOCK_REALTIME,
@@ -5319,12 +5370,12 @@ mod tests {
             0
         );
         assert_eq!(
-            unsafe { pthread_cond_init(&raw mut cond, &raw const cond_attr as *const c_void) },
+            unsafe { pthread_cond_init(cond.as_mut_ptr(), &raw const cond_attr as *const c_void) },
             0
         );
         assert_eq!(pthread_condattr_destroy(&raw mut cond_attr), 0);
         assert_eq!(
-            unsafe { pthread_cond_init(&raw mut realtime_cond, std::ptr::null()) },
+            unsafe { pthread_cond_init(realtime_cond.as_mut_ptr(), std::ptr::null()) },
             0
         );
         assert_eq!(
@@ -5345,7 +5396,7 @@ mod tests {
         };
         let start = std::time::Instant::now();
         let ret = wait_past_spurious_wakeups(|| unsafe {
-            pthread_cond_timedwait(&raw mut cond, mutex.as_mut_ptr(), &raw const mono_ts)
+            pthread_cond_timedwait(cond.as_mut_ptr(), mutex.as_mut_ptr(), &raw const mono_ts)
         });
         let elapsed = start.elapsed();
         assert_eq!(
@@ -5370,7 +5421,7 @@ mod tests {
         let start = std::time::Instant::now();
         let ret = wait_past_spurious_wakeups(|| unsafe {
             pthread_cond_timedwait(
-                &raw mut realtime_cond,
+                realtime_cond.as_mut_ptr(),
                 mutex.as_mut_ptr(),
                 &raw const real_ts,
             )
@@ -5388,7 +5439,7 @@ mod tests {
         assert_eq!(unsafe { pthread_mutex_unlock(mutex.as_mut_ptr()) }, 0);
 
         // 3. Early wakeup on CLOCK_MONOTONIC wait
-        let cond_shared = Shared::of(&raw mut cond);
+        let cond_shared = Shared::of(cond.as_mut_ptr());
         let mutex_shared = Shared::of(mutex.as_mut_ptr());
         let handle = std::thread::spawn(move || {
             std::thread::sleep(Duration::from_millis(20));
@@ -5405,7 +5456,7 @@ mod tests {
         };
         let start = std::time::Instant::now();
         let ret = unsafe {
-            pthread_cond_timedwait(&raw mut cond, mutex.as_mut_ptr(), &raw const mono_ts)
+            pthread_cond_timedwait(cond.as_mut_ptr(), mutex.as_mut_ptr(), &raw const mono_ts)
         };
         let elapsed = start.elapsed();
         assert_eq!(ret, 0, "signalled condvar must return 0");
@@ -5417,8 +5468,8 @@ mod tests {
         assert_eq!(unsafe { pthread_mutex_unlock(mutex.as_mut_ptr()) }, 0);
         handle.join().unwrap();
 
-        assert_eq!(pthread_cond_destroy(&raw mut cond), 0);
-        assert_eq!(pthread_cond_destroy(&raw mut realtime_cond), 0);
+        assert_eq!(pthread_cond_destroy(cond.as_mut_ptr()), 0);
+        assert_eq!(pthread_cond_destroy(realtime_cond.as_mut_ptr()), 0);
         assert_eq!(pthread_mutex_destroy(mutex.as_mut_ptr()), 0);
     }
 
@@ -5456,14 +5507,14 @@ mod tests {
 
     #[test]
     fn pthread_cond_clockwait_timeout_and_signal() {
-        let mut cond = 0usize;
+        let mut cond = [0usize; 6];
         let mut mutex = [0usize; 5];
         assert_eq!(
             unsafe { pthread_mutex_init(mutex.as_mut_ptr(), core::ptr::null()) },
             0
         );
         assert_eq!(
-            unsafe { pthread_cond_init(&raw mut cond, core::ptr::null()) },
+            unsafe { pthread_cond_init(cond.as_mut_ptr(), core::ptr::null()) },
             0
         );
 
@@ -5476,7 +5527,7 @@ mod tests {
         };
         let res = wait_past_spurious_wakeups(|| unsafe {
             pthread_cond_clockwait(
-                &raw mut cond,
+                cond.as_mut_ptr(),
                 mutex.as_mut_ptr(),
                 CLOCK_MONOTONIC,
                 &raw const ts,
@@ -5485,7 +5536,7 @@ mod tests {
         assert_eq!(res, ETIMEDOUT);
         assert_eq!(unsafe { pthread_mutex_unlock(mutex.as_mut_ptr()) }, 0);
 
-        assert_eq!(pthread_cond_destroy(&raw mut cond), 0);
+        assert_eq!(pthread_cond_destroy(cond.as_mut_ptr()), 0);
         assert_eq!(pthread_mutex_destroy(mutex.as_mut_ptr()), 0);
     }
 

@@ -4485,3 +4485,9 @@ EXPORTS
   "pthread_mutexattr_getpshared@GLIBC_2.2.5"=kinakaze_abi_pthread_mutexattr_getpshared PRIVATE
   "pthread_mutexattr_getpshared@GLIBC_2.34"=kinakaze_abi_pthread_mutexattr_getpshared PRIVATE
   "pthread_mutexattr_setpshared@GLIBC_2.2.5"=kinakaze_abi_pthread_mutexattr_setpshared PRIVATE
+
+  kinakaze_abi_pthread_condattr_getpshared
+  "pthread_condattr_getpshared"=kinakaze_abi_pthread_condattr_getpshared PRIVATE
+  "pthread_condattr_getpshared@GLIBC_2.2.5"=kinakaze_abi_pthread_condattr_getpshared PRIVATE
+  "pthread_condattr_getpshared@GLIBC_2.34"=kinakaze_abi_pthread_condattr_getpshared PRIVATE
+  "pthread_condattr_setpshared@GLIBC_2.2.5"=kinakaze_abi_pthread_condattr_setpshared PRIVATE

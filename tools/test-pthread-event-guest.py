@@ -17,6 +17,7 @@ PROBES = {
                                          'PTHREAD_EVENT_SIGNAL_OK', 'PTHREAD_EVENT_FORK_OK']),
     'robust': ('PthreadRobustProbe', ['PTHREAD_ROBUST_MUTEX_OK']),
     'shared': ('PthreadSharedMutexProbe', ['PTHREAD_SHARED_MUTEX_OK']),
+    'shared-cond': ('PthreadSharedCondProbe', ['PTHREAD_SHARED_COND_OK']),
 }
 
 
@@ -28,6 +29,8 @@ def main():
     parser.add_argument('--probe', action='append', choices=PROBES)
     parser.add_argument('--event-case', action='append', choices=('timed', 'signal', 'fork'))
     parser.add_argument('--timeout', type=float, default=120)
+    parser.add_argument('--shared-cancel', action='store_true',
+                        help='compile GNU condition cleanup with a shared mutex and condition')
     parser.add_argument('--robust-cancel', action='store_true',
                         help='compile the real GNU condition cleanup probe with a robust mutex')
     args = parser.parse_args()
@@ -45,10 +48,12 @@ def main():
             inputs[fixture.name] = hashlib.sha256(fixture.read_bytes()).hexdigest()
         shutil.copyfile(source / (name + '.py'), staging / (name + '.py'))
         defines = ['-DPROBE_ROBUST_MUTEX'] if key == 'cancel' and args.robust_cancel else []
+        if key == 'cancel' and args.shared_cancel:
+            defines += ['-DPROBE_SHARED_COND']
         subprocess.run([args.clang, '--target=x86_64-linux-gnu', '-fuse-ld=lld',
                         '-fPIC', '-shared', '-nostdlib', '-O2', *defines, str(source / (name + '.c')),
                         '-o', str(staging / (name + '.so'))], check=True)
-    report = dict(root=str(args.root.resolve()), dist=str(args.dist.resolve()), robust_cancel=args.robust_cancel,
+    report = dict(root=str(args.root.resolve()), dist=str(args.dist.resolve()), robust_cancel=args.robust_cancel, shared_cancel=args.shared_cancel,
                   staging=str(staging), fixture_sha256=inputs,
                   distribution_sha256=distribution_hashes(args.dist), rows=[])
     switches = ('KINAKAZE_PTHREAD_PARK_OPT', 'KINAKAZE_PTHREAD_SHARED_CACHE_OPT')
