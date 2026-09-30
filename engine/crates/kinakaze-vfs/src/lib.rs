@@ -3180,12 +3180,26 @@ pub fn read(fd: i32, buffer: &mut [u8]) -> Result<usize, i32> {
     }
     read_inner(fd, buffer)
 }
+#[cfg(windows)]
+#[inline]
+fn io_route_optimized() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| std::env::var_os("KINAKAZE_IO_ROUTE_OPT").is_none_or(|v| v != "0"))
+}
+
+#[cfg(all(test, windows))]
+mod io_route_tests;
+
 fn read_inner(fd: i32, buffer: &mut [u8]) -> Result<usize, i32> {
     #[cfg(windows)]
-    if matches!(
-        get(fd)?.kind,
-        FdKind::TmpfsFile | FdKind::TmpfsDirectory | FdKind::MessageQueue | FdKind::SysfsFile
-    ) {
+    let route = io_route_optimized();
+    #[cfg(windows)]
+    if !route
+        && matches!(
+            get(fd)?.kind,
+            FdKind::TmpfsFile | FdKind::TmpfsDirectory | FdKind::MessageQueue | FdKind::SysfsFile
+        )
+    {
         return tmpfs::read(fd, buffer, None);
     }
     #[cfg(windows)]
@@ -3216,6 +3230,15 @@ fn read_inner(fd: i32, buffer: &mut [u8]) -> Result<usize, i32> {
             return Err(err);
         }
     };
+    #[cfg(windows)]
+    if route
+        && matches!(
+            entry.kind,
+            FdKind::TmpfsFile | FdKind::TmpfsDirectory | FdKind::MessageQueue | FdKind::SysfsFile
+        )
+    {
+        return tmpfs::read(fd, buffer, None);
+    }
     if entry.flags.contains(FdFlags::PATH_ONLY) {
         return Err(EBADF);
     }
@@ -3416,10 +3439,14 @@ pub fn write(fd: i32, buffer: &[u8]) -> Result<usize, i32> {
 }
 fn write_inner(fd: i32, buffer: &[u8]) -> Result<usize, i32> {
     #[cfg(windows)]
-    if matches!(
-        get(fd)?.kind,
-        FdKind::TmpfsFile | FdKind::TmpfsDirectory | FdKind::MessageQueue | FdKind::SysfsFile
-    ) {
+    let route = io_route_optimized();
+    #[cfg(windows)]
+    if !route
+        && matches!(
+            get(fd)?.kind,
+            FdKind::TmpfsFile | FdKind::TmpfsDirectory | FdKind::MessageQueue | FdKind::SysfsFile
+        )
+    {
         return tmpfs::write(fd, buffer, None);
     }
     if trace_enabled() {
@@ -3429,6 +3456,15 @@ fn write_inner(fd: i32, buffer: &[u8]) -> Result<usize, i32> {
     let (entry, _inode_pin) = native_pin::read_entry(fd)?;
     #[cfg(not(windows))]
     let entry = get(fd)?;
+    #[cfg(windows)]
+    if route
+        && matches!(
+            entry.kind,
+            FdKind::TmpfsFile | FdKind::TmpfsDirectory | FdKind::MessageQueue | FdKind::SysfsFile
+        )
+    {
+        return tmpfs::write(fd, buffer, None);
+    }
     if entry.flags.contains(FdFlags::PATH_ONLY) {
         return Err(EBADF);
     }
