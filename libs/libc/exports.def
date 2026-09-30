@@ -4515,3 +4515,10 @@ EXPORTS
   kinakaze_abi_xprt_unregister
   "xprt_unregister"=kinakaze_abi_xprt_unregister PRIVATE
   "xprt_unregister@GLIBC_2.2.5"=kinakaze_abi_xprt_unregister PRIVATE
+  "pthread_mutex_consistent_np"=libpthread.so.0.pthread_mutex_consistent PRIVATE
+  "pthread_mutex_consistent_np@GLIBC_2.4"=libpthread.so.0.pthread_mutex_consistent PRIVATE
+  "pthread_mutexattr_getrobust_np"=libpthread.so.0.pthread_mutexattr_getrobust PRIVATE
+  "pthread_mutexattr_getrobust_np@GLIBC_2.4"=libpthread.so.0.pthread_mutexattr_getrobust PRIVATE
+  "pthread_mutexattr_setrobust_np"=libpthread.so.0.pthread_mutexattr_setrobust PRIVATE
+  "pthread_mutexattr_setrobust_np@GLIBC_2.4"=libpthread.so.0.pthread_mutexattr_setrobust PRIVATE
+  "pthread_mutexattr_getrobust@GLIBC_2.34"=libpthread.so.0.pthread_mutexattr_getrobust PRIVATE

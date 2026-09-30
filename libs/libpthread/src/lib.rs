@@ -5,6 +5,8 @@ mod cleanup;
 #[cfg(all(windows, target_arch = "x86_64"))]
 mod parking;
 #[cfg(all(windows, target_arch = "x86_64"))]
+mod robust;
+#[cfg(all(windows, target_arch = "x86_64"))]
 pub mod sched;
 #[cfg(all(windows, target_arch = "x86_64"))]
 mod stack;
@@ -231,6 +233,7 @@ fn results() -> &'static Mutex<HashMap<usize, usize>> {
 #[cfg(all(windows, target_arch = "x86_64"))]
 thread_local! {
     static SELF_ID: Cell<usize> = const { Cell::new(0) };
+    static CREATED_PTHREAD: Cell<bool> = const { Cell::new(false) };
 }
 
 #[cfg(all(windows, target_arch = "x86_64"))]
@@ -507,6 +510,7 @@ unsafe extern "system" fn native_thread_start(packet: *mut c_void) -> u32 {
         }
     }
     SELF_ID.with(|slot| slot.set(id));
+    CREATED_PTHREAD.with(|slot| slot.set(true));
     CANCEL_SELF.with(|slot| {
         let _ = slot.set(cancel);
     });
@@ -551,7 +555,6 @@ unsafe extern "system" fn native_thread_start(packet: *mut c_void) -> u32 {
 
 #[cfg(all(windows, target_arch = "x86_64"))]
 fn finish_current_thread(result: usize) {
-    let id = pthread_self();
     // Destructors can contain cancellation points; an already exiting thread
     // must not recursively reenter exit while its cleanup records are live.
     let _ = CANCEL_SELF.try_with(|slot| {
@@ -560,15 +563,36 @@ fn finish_current_thread(result: usize) {
         }
     });
     kinakaze_tls::run_thread_destructors();
-    parking::retire_thread();
     let hook = KERNEL_THREAD_EXIT.load(Ordering::Acquire);
     if hook != 0 {
         let hook: extern "sysv64" fn() = unsafe { core::mem::transmute(hook) };
         hook();
     }
+    retire_pthread_metadata(Some(result));
+    if kinakaze_runtime::retire_guest_thread() {
+        cleanup::last_thread_exit();
+    }
+}
+
+/// Raw SYS_exit bypasses guest cleanup/TSD destructors. Retire native pthread
+/// owners and publish the initially-null join result; libc still clears TID and
+/// decrements the common task count exactly once.
+#[cfg(all(windows, target_arch = "x86_64"))]
+pub fn retire_raw_thread() {
+    kinakaze_tls::abandon_thread_destructors();
+    let created = CREATED_PTHREAD.try_with(Cell::get).unwrap_or(false);
+    retire_pthread_metadata(created.then_some(0));
+}
+
+#[cfg(all(windows, target_arch = "x86_64"))]
+fn retire_pthread_metadata(result: Option<usize>) {
+    let id = pthread_self();
+    parking::retire_thread();
     sched::unregister(id);
     HELD_RWLOCKS.with_borrow_mut(Vec::clear);
-    if let Ok(mut values) = results().lock() {
+    if let Some(result) = result
+        && let Ok(mut values) = results().lock()
+    {
         values.insert(id, result);
     }
     if let Ok(mut states) = cancel_states().lock() {
@@ -581,6 +605,7 @@ fn finish_current_thread(result: usize) {
     // Keep stack ownership and its object metadata in the same fork snapshot.
     let mapping_transaction = kinakaze_runtime::begin_fork_mapping_transaction();
     if let Some((base, end)) = stack::retire_current() {
+        robust::retire_range(base, end);
         // A stack object's lifetime ended with its thread. Retaining its
         // address would make a later fork repair freed or repurposed memory.
         if let Ok(mut records) = mutex_records().lock() {
@@ -589,9 +614,6 @@ fn finish_current_thread(result: usize) {
         }
     }
     drop(mapping_transaction);
-    if kinakaze_runtime::retire_guest_thread() {
-        cleanup::last_thread_exit();
-    }
 }
 
 /// libc installs its kernel task cleanup without a pthread -> libc dependency.
@@ -1705,12 +1727,33 @@ pub unsafe extern "sysv64" fn pthread_mutex_init(
     if mutex.is_null() {
         return EINVAL;
     }
-    let kind = if attr.is_null() {
-        PTHREAD_MUTEX_NORMAL
+    let flags = if attr.is_null() {
+        0
     } else {
-        // SAFETY: the caller supplied an initialized pthread_mutexattr_t.
         unsafe { (*attr).kind }
     };
+    if flags & !(robust::ATTR_ROBUST | PTHREAD_MUTEX_KIND_MASK) != 0 {
+        return EINVAL;
+    }
+    let kind = flags & PTHREAD_MUTEX_KIND_MASK;
+    if flags & robust::ATTR_ROBUST != 0 {
+        let kind = if kind == PTHREAD_MUTEX_ADAPTIVE_NP {
+            PTHREAD_MUTEX_NORMAL
+        } else {
+            kind
+        };
+        let result = unsafe { robust::init(mutex, kind) };
+        if result == 0 {
+            let mut records = mutex_records()
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner);
+            if records.remove(&(mutex as usize)).is_some() {
+                TYPED_MUTEXES.fetch_sub(1, Ordering::AcqRel);
+            }
+        }
+        return result;
+    }
+    unsafe { robust::forget(mutex) };
     if mutex_trace_enabled() && kind != PTHREAD_MUTEX_NORMAL {
         eprintln!("kinakaze: [MUTEX] init typed mutex={mutex:p} attr={attr:p} kind={kind}");
     }
@@ -1762,6 +1805,9 @@ pub extern "sysv64" fn pthread_mutex_destroy(mutex: *mut usize) -> i32 {
     if mutex.is_null() {
         return EINVAL;
     }
+    if unsafe { robust::is_mutex(mutex) } {
+        return unsafe { robust::destroy(mutex) };
+    }
     if TYPED_MUTEXES.load(Ordering::Acquire) == 0 {
         return 0;
     }
@@ -1789,6 +1835,9 @@ pub extern "sysv64" fn pthread_mutex_destroy(mutex: *mut usize) -> i32 {
 pub unsafe extern "sysv64" fn pthread_mutex_lock(mutex: *mut usize) -> i32 {
     if mutex.is_null() {
         return EINVAL;
+    }
+    if unsafe { robust::is_mutex(mutex) } {
+        return unsafe { robust::acquire(mutex, None, false) };
     }
     match plan_lock(mutex) {
         LockPlan::Recursed => return 0,
@@ -1858,6 +1907,9 @@ pub unsafe extern "sysv64" fn pthread_mutex_clocklock(
     if mutex.is_null() || deadline.is_null() {
         return EINVAL;
     }
+    if unsafe { robust::is_mutex(mutex) } {
+        return unsafe { robust::acquire(mutex, Some((&*deadline, clock_id)), false) };
+    }
     match plan_lock(mutex) {
         LockPlan::Recursed => return 0,
         LockPlan::Failed(error) => return error,
@@ -1909,6 +1961,9 @@ pub unsafe extern "sysv64" fn pthread_mutex_trylock(mutex: *mut usize) -> i32 {
     if mutex.is_null() {
         return EINVAL;
     }
+    if unsafe { robust::is_mutex(mutex) } {
+        return unsafe { robust::acquire(mutex, None, true) };
+    }
     match plan_lock(mutex) {
         LockPlan::Recursed => return 0,
         // An ERRORCHECK relock reports EDEADLK from lock but EBUSY from trylock,
@@ -1936,6 +1991,9 @@ pub unsafe extern "sysv64" fn pthread_mutex_trylock(mutex: *mut usize) -> i32 {
 pub unsafe extern "sysv64" fn pthread_mutex_unlock(mutex: *mut usize) -> i32 {
     if mutex.is_null() {
         return EINVAL;
+    }
+    if unsafe { robust::is_mutex(mutex) } {
+        return unsafe { robust::unlock(mutex) };
     }
     match plan_unlock(mutex) {
         UnlockPlan::Retained => return 0,
@@ -2003,9 +2061,7 @@ pub unsafe extern "sysv64" fn pthread_mutexattr_getprotocol(
 
 #[cfg(all(windows, target_arch = "x86_64"))]
 #[unsafe(no_mangle)]
-/// Reports the capabilities of the SRW-backed mutex implementation. Robust
-/// owner-death recovery is optional; callers such as TDB can select file locks
-/// when this attribute returns ENOTSUP. Never accept it as a normal mutex.
+/// Selects robust owner-death recovery for a private mutex.
 pub unsafe extern "sysv64" fn pthread_mutexattr_setrobust(
     attr: *mut PthreadMutexAttr,
     robustness: i32,
@@ -2013,7 +2069,15 @@ pub unsafe extern "sysv64" fn pthread_mutexattr_setrobust(
     if attr.is_null() || !(0..=1).contains(&robustness) {
         return EINVAL;
     }
-    if robustness == 1 { 95 } else { 0 }
+    unsafe {
+        (*attr).kind = ((*attr).kind & !robust::ATTR_ROBUST)
+            | if robustness == 1 {
+                robust::ATTR_ROBUST
+            } else {
+                0
+            };
+    }
+    0
 }
 
 #[cfg(all(windows, target_arch = "x86_64"))]
@@ -2026,16 +2090,18 @@ pub unsafe extern "sysv64" fn pthread_mutexattr_getrobust(
         return EINVAL;
     }
     unsafe {
-        *robustness = 0;
+        *robustness = i32::from((*attr).kind & robust::ATTR_ROBUST != 0);
     }
     0
 }
 
 #[cfg(all(windows, target_arch = "x86_64"))]
 #[unsafe(no_mangle)]
-pub unsafe extern "sysv64" fn pthread_mutex_consistent(_mutex: *mut usize) -> i32 {
-    // No successfully initialized mutex can be robust/inconsistent above.
-    EINVAL
+pub unsafe extern "sysv64" fn pthread_mutex_consistent(mutex: *mut usize) -> i32 {
+    if mutex.is_null() || !unsafe { robust::is_mutex(mutex) } {
+        return EINVAL;
+    }
+    unsafe { robust::consistent(mutex) }
 }
 
 #[cfg(all(windows, target_arch = "x86_64"))]
@@ -2061,7 +2127,7 @@ pub unsafe extern "sysv64" fn pthread_mutexattr_settype(
         return EINVAL;
     }
     // SAFETY: checked above.
-    unsafe { (*attr).kind = kind };
+    unsafe { (*attr).kind = ((*attr).kind & !PTHREAD_MUTEX_KIND_MASK) | kind };
     if mutex_trace_enabled() {
         eprintln!("kinakaze: [MUTEX] attr settype attr={attr:p} kind={kind}");
     }
@@ -2084,7 +2150,7 @@ pub unsafe extern "sysv64" fn pthread_mutexattr_gettype(
         return EINVAL;
     }
     // SAFETY: checked above.
-    unsafe { kind.write((*attr).kind) };
+    unsafe { kind.write((*attr).kind & PTHREAD_MUTEX_KIND_MASK) };
     0
 }
 
@@ -2212,7 +2278,7 @@ pub unsafe extern "sysv64" fn pthread_cond_wait(cond: *mut usize, mutex: *mut us
     if cond.is_null() || mutex.is_null() {
         return EINVAL;
     }
-    if parking::enabled() {
+    if parking::enabled() || unsafe { robust::is_mutex(mutex) } {
         return unsafe { parking::condition(cond, mutex, None) };
     }
     cancel_condition_wait(cond);
@@ -2320,7 +2386,7 @@ unsafe fn cond_wait_deadline(
     clock_id: i32,
     deadline: Timespec,
 ) -> i32 {
-    if parking::enabled() {
+    if parking::enabled() || unsafe { robust::is_mutex(mutex) } {
         return unsafe { parking::condition(cond, mutex, Some((deadline, clock_id))) };
     }
     cancel_condition_wait(cond);
@@ -2390,6 +2456,10 @@ pub unsafe extern "sysv64" fn pthread_cond_signal(cond: *mut usize) -> i32 {
         return parking::signal(cond, false);
     }
     // SAFETY: pthread_cond_t has the layout of CONDITION_VARIABLE.
+    let error = parking::signal(cond, false);
+    if error != 0 {
+        return error;
+    }
     unsafe { WakeConditionVariable(cond.cast::<CONDITION_VARIABLE>()) };
     0
 }
@@ -2409,6 +2479,10 @@ pub unsafe extern "sysv64" fn pthread_cond_broadcast(cond: *mut usize) -> i32 {
         return parking::signal(cond, true);
     }
     // SAFETY: pthread_cond_t has the layout of CONDITION_VARIABLE.
+    let error = parking::signal(cond, true);
+    if error != 0 {
+        return error;
+    }
     unsafe { WakeAllConditionVariable(cond.cast::<CONDITION_VARIABLE>()) };
     0
 }
@@ -3418,6 +3492,13 @@ fn serialize_pthread_fork() -> Option<Vec<u8>> {
         out.extend_from_slice(&(address as u64).to_le_bytes());
         out.extend_from_slice(&(clock as u64).to_le_bytes());
     }
+    let robust_rows = robust::snapshot();
+    out.extend_from_slice(&(robust_rows.len() as u64).to_le_bytes());
+    for row in robust_rows {
+        for word in row {
+            out.extend_from_slice(&word.to_le_bytes());
+        }
+    }
     Some(out)
 }
 
@@ -3481,7 +3562,7 @@ fn read_cond_clocks(reader: &mut ForkReader<'_>) -> Option<HashMap<usize, i32>> 
             return None;
         }
     }
-    (reader.at == reader.bytes.len()).then_some(clocks)
+    Some(clocks)
 }
 
 #[cfg(all(windows, target_arch = "x86_64"))]
@@ -3628,6 +3709,12 @@ unsafe extern "system" fn fork_child(payload: *const u8, len: usize) -> i32 {
         return EINVAL;
     };
 
+    let Some(restored_robust) = robust::read_snapshot(&mut reader) else {
+        return EINVAL;
+    };
+    if let Err(error) = unsafe { robust::restore(restored_robust, self_id) } {
+        return error;
+    }
     if let Ok(mut clocks) = cond_clocks().lock() {
         *clocks = restored_clocks;
     } else {
@@ -3635,6 +3722,7 @@ unsafe extern "system" fn fork_child(payload: *const u8, len: usize) -> i32 {
     }
 
     let _ = SELF_ID.try_with(|slot| slot.set(self_id));
+    let _ = CREATED_PTHREAD.try_with(|slot| slot.set(false));
     parking::reset_after_fork();
     cleanup::restore_snapshot(cleanup_state);
     stack::restore_snapshot(stack_state);
@@ -3751,15 +3839,19 @@ fn register_fork_participant() {
         return;
     }
     let key = 0x5054_4852_4541_4432u64 ^ (module as usize as u64).rotate_left(11);
-    let _ = unsafe { kinakaze_runtime::register_fork_participant_without_inherited_handles(kinakaze_runtime::ForkParticipant {
-        abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
-        priority: 1_000,
-        key,
-        prepare: Some(fork_prepare),
-        snapshot: Some(fork_snapshot),
-        parent: Some(fork_parent),
-        child: Some(fork_child),
-    }) };
+    let _ = unsafe {
+        kinakaze_runtime::register_fork_participant_without_inherited_handles(
+            kinakaze_runtime::ForkParticipant {
+                abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
+                priority: 1_000,
+                key,
+                prepare: Some(fork_prepare),
+                snapshot: Some(fork_snapshot),
+                parent: Some(fork_parent),
+                child: Some(fork_child),
+            },
+        )
+    };
 }
 
 #[cfg(all(windows, target_arch = "x86_64"))]
@@ -4152,9 +4244,11 @@ mod tests {
     }
 
     #[test]
-    fn unsupported_robust_attribute_leaves_the_original_type_usable() {
+    fn robust_attribute_toggle_preserves_the_original_type() {
         let mut attr = mutexattr_of(PTHREAD_MUTEX_RECURSIVE);
-        assert_eq!(unsafe { pthread_mutexattr_setrobust(&raw mut attr, 1) }, 95);
+        assert_eq!(unsafe { pthread_mutexattr_setrobust(&raw mut attr, 1) }, 0);
+        assert_eq!(attr.kind & PTHREAD_MUTEX_KIND_MASK, PTHREAD_MUTEX_RECURSIVE);
+        assert_eq!(unsafe { pthread_mutexattr_setrobust(&raw mut attr, 0) }, 0);
         assert_eq!(attr.kind, PTHREAD_MUTEX_RECURSIVE);
         let mut robustness = -1;
         assert_eq!(
@@ -5102,10 +5196,12 @@ mod tests {
     fn fork_condition_clock_extension_validates_legacy_and_corrupt_payloads() {
         let decode = |words: &[u64]| {
             let bytes: Vec<_> = words.iter().flat_map(|word| word.to_le_bytes()).collect();
-            read_cond_clocks(&mut ForkReader {
+            let mut reader = ForkReader {
                 bytes: &bytes,
                 at: 0,
-            })
+            };
+            let result = read_cond_clocks(&mut reader)?;
+            (reader.at == bytes.len()).then_some(result)
         };
         assert!(decode(&[]).unwrap().is_empty());
         assert!(decode(&[0]).unwrap().is_empty());

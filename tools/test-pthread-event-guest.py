@@ -15,6 +15,7 @@ PROBES = {
     'cancel': ('PthreadCondCancelProbe', ['PTHREAD_COND_CANCEL_CLEANUP_OK']),
     'event': ('PthreadEventParkingProbe', ['PTHREAD_EVENT_TIMED_OK',
                                          'PTHREAD_EVENT_SIGNAL_OK', 'PTHREAD_EVENT_FORK_OK']),
+    'robust': ('PthreadRobustProbe', ['PTHREAD_ROBUST_MUTEX_OK']),
 }
 
 
@@ -26,6 +27,8 @@ def main():
     parser.add_argument('--probe', action='append', choices=PROBES)
     parser.add_argument('--event-case', action='append', choices=('timed', 'signal', 'fork'))
     parser.add_argument('--timeout', type=float, default=120)
+    parser.add_argument('--robust-cancel', action='store_true',
+                        help='compile the real GNU condition cleanup probe with a robust mutex')
     args = parser.parse_args()
     selected = args.probe or list(PROBES)
     source = Path(__file__).resolve().parents[1] / 'tests/guest'
@@ -40,10 +43,11 @@ def main():
             fixture = source / (name + suffix)
             inputs[fixture.name] = hashlib.sha256(fixture.read_bytes()).hexdigest()
         shutil.copyfile(source / (name + '.py'), staging / (name + '.py'))
+        defines = ['-DPROBE_ROBUST_MUTEX'] if key == 'cancel' and args.robust_cancel else []
         subprocess.run([args.clang, '--target=x86_64-linux-gnu', '-fuse-ld=lld',
-                        '-fPIC', '-shared', '-nostdlib', '-O2', str(source / (name + '.c')),
+                        '-fPIC', '-shared', '-nostdlib', '-O2', *defines, str(source / (name + '.c')),
                         '-o', str(staging / (name + '.so'))], check=True)
-    report = dict(root=str(args.root.resolve()), dist=str(args.dist.resolve()),
+    report = dict(root=str(args.root.resolve()), dist=str(args.dist.resolve()), robust_cancel=args.robust_cancel,
                   staging=str(staging), fixture_sha256=inputs,
                   distribution_sha256=distribution_hashes(args.dist), rows=[])
     previous = os.environ.get('KINAKAZE_PTHREAD_PARK_OPT')

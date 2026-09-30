@@ -214,7 +214,9 @@ pub fn load(
 ) -> Result<Arc<ProviderRegistry>, Box<dyn std::error::Error>> {
     let _total = kinakaze_v2_host_win::StartupSpan::begin("providers-total");
     let discovery = kinakaze_v2_host_win::StartupSpan::begin("providers-discover");
-    let modules = ModuleCatalog::discover(&kinakaze_v2_bridge::native::directory(dist))?;
+    let directory = kinakaze_v2_bridge::native::directory(dist).canonicalize()?;
+    let modules =
+        shared_catalog(&directory, api)?.map_or_else(|| ModuleCatalog::discover(&directory), Ok)?;
     drop(discovery);
     if !modules
         .modules
@@ -250,6 +252,64 @@ pub fn load(
         }
     }
     Ok(Arc::new(registry))
+}
+
+fn shared_catalog(
+    directory: &Path,
+    api: &RuntimeApiV1,
+) -> Result<Option<ModuleCatalog>, Box<dyn std::error::Error>> {
+    use kinakaze_v2_protocol::{Reply, Request, RpcError};
+    // Keep a same-build comparison path for profiling and troubleshooting.
+    if std::env::var_os("KINAKAZE_NATIVE_CATALOG").is_some_and(|value| value == "0") {
+        return Ok(None);
+    }
+    let Some(directory_text) = directory.to_str() else {
+        return Ok(None);
+    };
+    let request = serde_json::to_vec(&Request::NativeCatalog {
+        directory: directory_text.into(),
+    })?;
+    let mut response = [0u8; kinakaze_v2_abi::RPC_BUFFER_SIZE];
+    let mut length = 0;
+    let status = unsafe {
+        (api.call)(
+            api.context,
+            request.as_ptr(),
+            request.len() as u32,
+            response.as_mut_ptr(),
+            response.len() as u32,
+            &mut length,
+        )
+    };
+    // Old managers and configurations without a pool retain full validation.
+    // A valid negative cache answer has no transferred resources.
+    if status != STATUS_OK {
+        return Ok(None);
+    }
+    let bytes = response
+        .get(..length as usize)
+        .ok_or("invalid catalog response length")?;
+    let response: Result<Reply, RpcError> = serde_json::from_slice(bytes)?;
+    match response? {
+        Reply::NativeCatalog { snapshot: None } => Ok(None),
+        Reply::NativeCatalog {
+            snapshot: Some((length, handles)),
+        } => {
+            // The session's authenticated init created the section and denies
+            // writes to its sources. No caller-supplied handle enters here.
+            let view = unsafe {
+                kinakaze_v2_host_win::ReadOnlySectionView::adopt(
+                    &handles,
+                    length.try_into()?,
+                    2 * 1024 * 1024,
+                )?
+            };
+            Ok(Some(unsafe {
+                ModuleCatalog::from_snapshot(directory, view)?
+            }))
+        }
+        _ => Err("invalid native catalog response".into()),
+    }
 }
 
 fn bind_module(

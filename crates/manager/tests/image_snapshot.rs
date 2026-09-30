@@ -25,6 +25,12 @@ fn request() -> Request {
     }
 }
 
+fn catalog() -> Request {
+    Request::NativeCatalog {
+        directory: "C:\\session\\native".into(),
+    }
+}
+
 #[test]
 fn only_live_worker_owners_can_request_native_image_capabilities() {
     let mut manager = StateManager::new(1, "images".into());
@@ -38,9 +44,14 @@ fn only_live_worker_owners_can_request_native_image_capabilities() {
             manager.handle(client, request()).unwrap_err().code,
             ErrorCode::Unauthorized
         );
+        assert_eq!(
+            manager.handle(client, catalog()).unwrap_err().code,
+            ErrorCode::Unauthorized
+        );
     }
     let owner = connect(&mut manager, ClientRole::Worker, 20);
     assert_eq!(manager.handle(owner, request()).unwrap(), Reply::Ok);
+    assert_eq!(manager.handle(owner, catalog()).unwrap(), Reply::Ok);
     let Reply::ForkPrepared(ticket) = manager
         .handle(owner, Request::PrepareFork { request_key: 1 })
         .unwrap()
@@ -54,8 +65,12 @@ fn only_live_worker_owners_can_request_native_image_capabilities() {
         manager.handle(child, request()).unwrap_err().code,
         ErrorCode::NotReady
     );
+    // Provider restoration needs immutable declarations before fork commit;
+    // it cannot use them to mutate manager state or release guest execution.
+    assert_eq!(manager.handle(child, catalog()).unwrap(), Reply::Ok);
     manager.process_exited(peer(20));
     assert!(manager.handle(owner, request()).is_err());
+    assert!(manager.handle(child, catalog()).is_err());
 }
 
 #[test]
@@ -77,12 +92,17 @@ fn exec_candidate_can_read_images_but_retired_owner_cannot() {
     };
     let child = connect(&mut manager, ClientRole::Worker, 21);
     assert_eq!(manager.handle(child, request()).unwrap(), Reply::Ok);
+    assert_eq!(manager.handle(child, catalog()).unwrap(), Reply::Ok);
     manager.handle(child, Request::MarkReady).unwrap();
     manager
         .handle(owner, Request::CommitExec { transaction })
         .unwrap();
     assert_eq!(
         manager.handle(owner, request()).unwrap_err().code,
+        ErrorCode::Unauthorized
+    );
+    assert_eq!(
+        manager.handle(owner, catalog()).unwrap_err().code,
         ErrorCode::Unauthorized
     );
 }

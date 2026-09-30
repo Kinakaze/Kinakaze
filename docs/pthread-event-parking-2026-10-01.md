@@ -12,7 +12,8 @@ signal/broadcast 选择当前队列成员；取消直接设置线程事件，重
 退休记录，避免 ExitThread 跳过 Rust 析构而留下悬挂队列成员。
 
 普通无竞争 SRW acquire 保留原路径。新队列仅服务已有的进程私有 pthread
-对象；pshared、PI、robust pthread 属性和状态仍属于后续工作。fork 子进程
+对象；pshared 和 PI 仍属于后续工作。进程私有 robust mutex 的后续实现见
+[robust 记录](pthread-private-robust-2026-10-01.md)。fork 子进程
 清空等待队列，并避免关闭父进程的事件句柄。完整发行包的 guest fork、
 GNU cleanup 和信号探针验证见下文。
 
