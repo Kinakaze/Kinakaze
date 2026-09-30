@@ -3369,6 +3369,12 @@ fn serialize_pthread_fork() -> Option<Vec<u8>> {
         rw_states.push((*handle, orphaned));
     }
     drop(rw);
+    let clocks: Vec<_> = cond_clocks()
+        .lock()
+        .ok()?
+        .iter()
+        .map(|(address, clock)| (*address, *clock))
+        .collect();
 
     let mut out = Vec::new();
     out.extend_from_slice(&FORK_PTHREAD_MAGIC.to_le_bytes());
@@ -3405,6 +3411,12 @@ fn serialize_pthread_fork() -> Option<Vec<u8>> {
     }
     for word in stack::snapshot() {
         out.extend_from_slice(&word.to_le_bytes());
+    }
+    // Guest object bytes do not contain this process-local clock side table.
+    out.extend_from_slice(&(clocks.len() as u64).to_le_bytes());
+    for (address, clock) in clocks {
+        out.extend_from_slice(&(address as u64).to_le_bytes());
+        out.extend_from_slice(&(clock as u64).to_le_bytes());
     }
     Some(out)
 }
@@ -3446,6 +3458,30 @@ impl<'a> ForkReader<'a> {
         self.at = end;
         Some(value)
     }
+}
+
+#[cfg(all(windows, target_arch = "x86_64"))]
+fn read_cond_clocks(reader: &mut ForkReader<'_>) -> Option<HashMap<usize, i32>> {
+    if reader.at == reader.bytes.len() {
+        return Some(HashMap::new()); // legacy handoffs had no clock extension
+    }
+    let count = usize::try_from(reader.u64()?).ok()?;
+    if count > reader.bytes.len().checked_sub(reader.at)? / 16 {
+        return None;
+    }
+    let mut clocks = HashMap::with_capacity(count);
+    for _ in 0..count {
+        let address = usize::try_from(reader.u64()?).ok()?;
+        let clock = reader.u64()?;
+        if address == 0
+            || address % core::mem::align_of::<usize>() != 0
+            || clock != CLOCK_MONOTONIC as u64
+            || clocks.insert(address, CLOCK_MONOTONIC).is_some()
+        {
+            return None;
+        }
+    }
+    (reader.at == reader.bytes.len()).then_some(clocks)
 }
 
 #[cfg(all(windows, target_arch = "x86_64"))]
@@ -3588,7 +3624,13 @@ unsafe extern "system" fn fork_child(payload: *const u8, len: usize) -> i32 {
             return EINVAL;
         }
     }
-    if reader.at != bytes.len() {
+    let Some(restored_clocks) = read_cond_clocks(&mut reader) else {
+        return EINVAL;
+    };
+
+    if let Ok(mut clocks) = cond_clocks().lock() {
+        *clocks = restored_clocks;
+    } else {
         return EINVAL;
     }
 
@@ -5053,6 +5095,35 @@ mod tests {
             let log = ORDER.lock().unwrap().clone();
             // FIFO order for parent: parent1 runs before parent2
             assert_eq!(log, vec!["prep2", "prep1", "parent1", "parent2"]);
+        }
+    }
+
+    #[test]
+    fn fork_condition_clock_extension_validates_legacy_and_corrupt_payloads() {
+        let decode = |words: &[u64]| {
+            let bytes: Vec<_> = words.iter().flat_map(|word| word.to_le_bytes()).collect();
+            read_cond_clocks(&mut ForkReader {
+                bytes: &bytes,
+                at: 0,
+            })
+        };
+        assert!(decode(&[]).unwrap().is_empty());
+        assert!(decode(&[0]).unwrap().is_empty());
+        assert_eq!(
+            decode(&[1, 0x1000, 1]).unwrap().get(&0x1000),
+            Some(&CLOCK_MONOTONIC)
+        );
+        for corrupt in [
+            vec![u64::MAX],  // bound count before allocation
+            vec![1, 0x1000], // truncated row
+            vec![1, 0, 1],
+            vec![1, 0x1001, 1],
+            vec![1, 0x1000, 0], // only non-default supported clocks belong here
+            vec![1, 0x1000, 0x1_0000_0001], // do not truncate a corrupt clock
+            vec![2, 0x1000, 1, 0x1000, 1], // duplicate object
+            vec![1, 0x1000, 1, 0], // trailing bytes
+        ] {
+            assert!(decode(&corrupt).is_none(), "accepted {corrupt:?}");
         }
     }
 

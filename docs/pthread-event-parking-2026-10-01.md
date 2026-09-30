@@ -13,8 +13,8 @@ signal/broadcast 选择当前队列成员；取消直接设置线程事件，重
 
 普通无竞争 SRW acquire 保留原路径。新队列仅服务已有的进程私有 pthread
 对象；pshared、PI、robust pthread 属性和状态仍属于后续工作。fork 子进程
-清空等待队列，并避免关闭父进程的事件句柄。guest fork、GNU cleanup 和
-信号探针还需针对完整发行包重新验证；本记录不将原生测试等同于客体证据。
+清空等待队列，并避免关闭父进程的事件句柄。完整发行包的 guest fork、
+GNU cleanup 和信号探针验证见下文。
 
 过期 condition deadline 在两种模式下都会解锁再重锁。取消时 mutex 必须在
 清理回调开始前重新取得，依据 [POSIX 条件等待规范](https://pubs.opengroup.org/onlinepubs/9799919799/functions/pthread_cond_clockwait.html)。
@@ -48,4 +48,33 @@ SHA-256：`cb0c6945e44db338779c88f9d1ddb3c6dee5d21f0dc1b3f7b7801b4dedd52048`。
 
 ```powershell
 python tools/benchmark-futex-queues.py --case pthread --binary artifacts/pthread-event-goal-20261001/binaries/kinakaze_libpthread-6a4d296ac0654593.exe --output artifacts/pthread-event-goal-20261001/benchmark.json --rounds 5
+```
+
+## 完整客体验证与 fork 时钟修复
+
+从已提交的 `8fde49d` 隔离构建整个 workspace，并一次替换发行包中的全部
+Cargo 产物。真实 Debian root 中，两种开关模式都通过已有 GNU cleanup 和
+condition cancellation 探针：真实 C 取消帧、LIFO 清理、取消重锁、fork 后
+退出清理均执行成功。新增 timed mutex 交接和 condition 信号探针也通过。
+
+新增 fork 探针在修复前的两种模式下均返回 112：父进程配置了 monotonic
+condition，子进程丢失 DLL 的时钟 side table，将 monotonic deadline 按
+realtime 解释而立即超时。快照现在在已有 cleanup/stack 扩展之后保存非默认
+condition 时钟；子进程替换预热 worker 的时钟表，再恢复线程状态。没有新
+扩展的旧 handoff 仍按空表解析；损坏计数、重复/未对齐地址、不支持的时钟、
+截断和尾部数据均被拒绝。
+
+修复后的完整 workspace release 构建成功，两种配置的原生套件各为
+**46 passed、0 failed、1 ignored**，三个客体探针组也全部通过。fork 探针先在父线程创建并使用事件/timer，随后确认子进程的 35 ms
+monotonic 等待确实等待，销毁并用默认时钟重新初始化后再确认 realtime
+超时。信号探针在阻塞等待时向线程发送 SIGUSR1，检查 handler 运行时 mutex
+可取得，随后 signal 结束等待并 join。每种配置在宿主启动 init/预热 worker
+之前设置开关，不依赖晚到的 guest environ。
+
+这些探针验证本项目的 fork 恢复和信号桥；执行时间不作为吞吐或公平性证明，
+也没有涵盖所有父进程锁竞争状态。初始失败和最终结果、完整发行包 SHA-256
+存于 [客体证据](measurements/pthread-event-guest-2026-10-01.json)。可复现命令：
+
+```powershell
+python tools/test-pthread-event-guest.py --root artifacts/goal-systemd-idle/debian-root --dist artifacts/pthread-event-goal-20261001/guest/candidate-fixed --output artifacts/pthread-event-goal-20261001/guest/reproduce
 ```

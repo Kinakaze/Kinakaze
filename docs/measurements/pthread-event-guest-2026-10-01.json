@@ -1,0 +1,718 @@
+{
+  "date": "2026-10-01",
+  "baseline": {
+    "head": "8fde49dcdd778a690c7a4cc95525f13dab5b4826",
+    "source": "F:\\crysoacu2\\artifacts\\syscall-io-goal-20260930\\commits\\verify-robust",
+    "pthread_source_sha256": {
+      "libs\\libpthread\\src\\cleanup.rs": "c5e0754fc105a9b6edf82825f96852d1475dd5c1f6cc3a127cd0a88ee573022f",
+      "libs\\libpthread\\src\\lib.rs": "0c8f245097eda468adacf9ab3d62eac1a62d9b299dcb5ff3e3093a38d2572924",
+      "libs\\libpthread\\src\\object_layout.rs": "68e400096d32a0355d2649be5b773383e99e8d125db33a5b380097d0953451f7",
+      "libs\\libpthread\\src\\parking.rs": "830830b8f6b56d858480cd5b264c3a0bfb1753a6621f10122dc166744b5c6120",
+      "libs\\libpthread\\src\\sched.rs": "364870723e6e23274ef1c1a316a7c9eca9ca3cea0d5dce257c49e92a50088087",
+      "libs\\libpthread\\src\\stack.rs": "799f2c350e01310d37014dfb93017c1717898000cd897b0aa02102911cf06a70",
+      "libs\\libpthread\\src\\parking\\tests.rs": "85177788da87061e8ccd194153ca7658c282b5b8018884183775fdd75f5e8b41"
+    }
+  },
+  "source": {
+    "baseline": "8fde49dcdd778a690c7a4cc95525f13dab5b4826",
+    "source_sha256": {
+      "libs\\libpthread\\src\\lib.rs": "399beb2a61dcfe77ec11836c873798b1fbf14588087b3ca698a9828083ba757a"
+    }
+  },
+  "before": {
+    "root": "F:\\crysoacu2\\artifacts\\goal-systemd-idle\\debian-root",
+    "dist": "F:\\crysoacu2\\artifacts\\pthread-event-goal-20261001\\guest\\candidate",
+    "staging": "F:\\crysoacu2\\artifacts\\goal-systemd-idle\\debian-root\\tmp\\kinakaze-pthread-events-eaf62ddcac294855b6f45f4340394242",
+    "fixture_sha256": {
+      "PthreadCleanupProbe.py": "1b46db8a5ffe05730b6d465dcf4031907626d5723dbcf139c8533e70e5a2ed44",
+      "PthreadCleanupProbe.c": "a964604a85b51c1d0e51d2453517924c4864d82aa6d209abfd9a96d62cb57948",
+      "PthreadCondCancelProbe.py": "0c024402fef652113bfafa80faa60fd2881f8149684eb36523ade2616897abd3",
+      "PthreadCondCancelProbe.c": "1663bb909cb5d8f2bab910cb2e89fe646b85129dad2968861c8b6c70a623713c",
+      "PthreadEventParkingProbe.py": "ae0af602b5f6a06fd6dd4bee4b80bc86afb5477069351f9c0810ee249afe0b47",
+      "PthreadEventParkingProbe.c": "298db9a7e8175f03540a2c6009ff6f2017cced6ba97853d2e92f3bf47d2de258"
+    },
+    "distribution_sha256": {
+      "worker.exe": "aa8998094ee88e47023b581873858a6527a69cfe1d756018bb604748f0a3190a",
+      "init.exe": "e4e5fbabdf659d958436ec898c44c3113e5853390f88209f7170cb95a4a860ff",
+      "rootfs.manifest.json": "efb5c990576e555db5ef532aaaac415b98bab802f3cebac145919a73a9f430c6",
+      "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+      "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+      "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "rootfs\\lib\\kinakaze_alloc.so": "0e971f742067d3d70f1d18ebafe9adf71e1c7cc1f081ae03f342ae709875acec",
+      "rootfs\\lib\\kinakaze_elf.so": "076c8c60552800e12108852457fccca95aa80dd07db200018346fb79272b9b93",
+      "rootfs\\lib\\kinakaze_guest_engine.so": "7a603cbca737f4dd9812ec05303bdcd0295861af14772b716f610bd5933e1da4",
+      "rootfs\\lib\\kinakaze_kernel.so": "9d48ce8c8368bbe2460e2a05b86d1c7e99e144e9b9c3bd875e5d4cc435ccecab",
+      "rootfs\\lib\\kinakaze_tls.so": "73d5fa1918134072d450e6318a1d479b9339b4e7f3fb1db095a4e24e0f2e5590",
+      "rootfs\\lib\\kinakaze_vfs.so": "39874b2d567cc9d06374ed7d7ac3bf40a1d99af3fb02cdcf645d4cc47d3a9481",
+      "rootfs\\lib\\ld-linux-x86-64.so.2": "0a6e89d9ab75e142cce5bae185bdfded9cd9c3dcd98dd02dd138cf6bcd206dd1",
+      "rootfs\\lib\\libasound.so.2": "193eb29da0436b753329bcc166a9f7420e04441435b95724b556e4e2f04c2976",
+      "rootfs\\lib\\libc.so.6": "51eb74f0becfdc4286afa8cdf8defa8fe8e282ac375c6105426f83cce1de117c",
+      "rootfs\\lib\\libcuda.so.1": "ff8062952007db1f8af75518efec7ae7db013fbfe8d348f3ba3e1310e4176e81",
+      "rootfs\\lib\\libdisplay.so.1": "152c76059947590a32b1d001958874445a8ad10d5b70657e78051e7c58244379",
+      "rootfs\\lib\\libdl.so.2": "a4ae83f619c76fe24439e2ac2116423a41d0d552fad8c0cbfc16c908f9d4df34",
+      "rootfs\\lib\\libEGL.so.1": "c8fb55abea9b451dae5d1968854d791c4b038c279b6ba048fe26710c95a36b85",
+      "rootfs\\lib\\libGL.so.1": "13682c07179f4aa452453889ef5ff943ba9413bfb9a3f0fe9538602acd9d3b82",
+      "rootfs\\lib\\libGLESv2.so.2": "0c0a3a8d71cc1ca787958be003575608e58c77b3f910cd78af13a5739a9fd293",
+      "rootfs\\lib\\libGLX.so.0": "2ced30e0cb468535aeab2d8a19f6de52eaa8731789bbb3c2021ca60229b6681b",
+      "rootfs\\lib\\libkinakaze-runtime.so.1": "eb79847ed3573c8b43a028be8531707ad3816055d533e2436d7a2abbd9e9cdcb",
+      "rootfs\\lib\\libm.so.6": "130bf94583ee4218e58f2672cc7ccd69922a88a79bc0027b856740cbdab8c7eb",
+      "rootfs\\lib\\libOpenGL.so.0": "087f0d86c5569da13b80c559ba719827260ea855cf567d15b35aff79b2821c27",
+      "rootfs\\lib\\libpipewire-0.3.so.0": "23e54cfc174784a1d48773df38a15635c8260e662d2d8e0c1279aacf7a561ff6",
+      "rootfs\\lib\\libpthread.so.0": "077fe849d31837590a58ed6878e00db8891f0c8bdda417721963f7f90b23f6fc",
+      "rootfs\\lib\\libpulse.so.0": "d4efdae83af58e54b3045fa7552986774a1ffa25bca3f2cee87335d5fd2b20dd",
+      "rootfs\\lib\\libresolv.so.2": "b8c7528e3ca1833bf6891f013f15b9a70be5f3debb0a6ad93e59b39de76ed65e",
+      "rootfs\\lib\\librt.so.1": "75d7c229f7d6e500f80357d9793957a42e9efedefe1f5e512a62f2ea6eabf9ca",
+      "rootfs\\lib\\libvulkan.so.1": "2fc47bfaa28985fa71e51c06d6217930c4c52e3ad685ccbdb239388b15e85864",
+      "rootfs\\lib\\libX11-xcb.so.1": "3f3baaf7ed866a0cdb5da56d76bc790b9571f8401c8af950ff6c79ef9c2520d7",
+      "rootfs\\lib\\libX11.so.6": "f14db41a6c9fc835f8401e9de5d83f4b1a8176a6a9f05f8b489aed910b794a11",
+      "rootfs\\lib\\libxcb.so.1": "527b69d768bba0c8a01ce668486618d67451140d258fbc2b3d046f7503265ae5",
+      "rootfs\\lib\\libXcursor.so.1": "db96286517e1c2ab0f0f114fb5d2366fe788822e9e71ab8e11c64b446109d3e8",
+      "rootfs\\lib\\libXext.so.6": "7bf9753c76b8c69be1fe629733da845ee80d02812c7b86a4d2bc45f758336828",
+      "rootfs\\lib\\libXi.so.6": "57349f73f2d19afc2af372488930661a4b3017432f373025ad0df5bd47034d09",
+      "rootfs\\lib\\libXinerama.so.1": "c1ecfc2025f1d7ca9e8aa8a707d4453bf415c5567e194b393276e615a82fd7a5",
+      "rootfs\\lib\\libXrandr.so.2": "de5e60bebd122e77baeff4fbf4014201c33043383ed6a79d9ec2c5953d7eecf9",
+      "rootfs\\lib\\libXrender.so.1": "b2ed6f2d54592b1d68deb6ba9e5a51a90ea2f801e234e697598334fdc4e2ab4f",
+      "rootfs\\lib\\libXxf86vm.so.1": "d596c8aa6b26788afa90f3044304556b9bab975f0293ad3fe797f3e0c9243757",
+      "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+      "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+    },
+    "rows": [
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3.11",
+          "/tmp/kinakaze-pthread-events-eaf62ddcac294855b6f45f4340394242/PthreadCleanupProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.4154,
+        "request_to_exit_ms": 289.0557,
+        "activation_to_exit_ms": 288.6403,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 15.625,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 93.75,
+          "cycles": 393370042,
+          "page_faults": 16332
+        },
+        "prepared_working_set_bytes": 13979648,
+        "cpu_metrics": {
+          "user_ms": 93.75,
+          "kernel_ms": 125.0,
+          "total_cpu_ms": 218.75,
+          "processes": 4,
+          "active_processes": 0,
+          "page_faults": 40051,
+          "read_bytes": 8026575,
+          "write_bytes": 22869,
+          "read_ops": 366,
+          "write_ops": 283,
+          "other_ops": 14709,
+          "other_bytes": 562773
+        },
+        "probe": "cleanup",
+        "optimized": false
+      },
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3.11",
+          "/tmp/kinakaze-pthread-events-eaf62ddcac294855b6f45f4340394242/PthreadCondCancelProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.3608,
+        "request_to_exit_ms": 351.0924,
+        "activation_to_exit_ms": 350.7316,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 15.625,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 93.75,
+          "cycles": 277518143,
+          "page_faults": 8742
+        },
+        "prepared_working_set_bytes": 13967360,
+        "cpu_metrics": {
+          "user_ms": 31.25,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 109.375,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 14401,
+          "read_bytes": 8011130,
+          "write_bytes": 9787,
+          "read_ops": 193,
+          "write_ops": 116,
+          "other_ops": 10614,
+          "other_bytes": 402705
+        },
+        "probe": "cancel",
+        "optimized": false
+      },
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3.11",
+          "/tmp/kinakaze-pthread-events-eaf62ddcac294855b6f45f4340394242/PthreadEventParkingProbe.py"
+        ],
+        "exit_code": 1,
+        "expected_exit": 0,
+        "status": "failed",
+        "missing_markers": [
+          "PTHREAD_EVENT_FORK_OK"
+        ],
+        "reservation_ms": 0.3417,
+        "request_to_exit_ms": 339.2096,
+        "activation_to_exit_ms": 338.8679,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 62.5,
+          "kernel_ms": 46.875,
+          "total_cpu_ms": 109.375,
+          "cycles": 355928317,
+          "page_faults": 13931
+        },
+        "prepared_working_set_bytes": 13979648,
+        "cpu_metrics": {
+          "user_ms": 109.375,
+          "kernel_ms": 93.75,
+          "total_cpu_ms": 203.125,
+          "processes": 2,
+          "active_processes": 0,
+          "page_faults": 26128,
+          "read_bytes": 8020027,
+          "write_bytes": 14639,
+          "read_ops": 252,
+          "write_ops": 178,
+          "other_ops": 12009,
+          "other_bytes": 457700
+        },
+        "probe": "event",
+        "optimized": false
+      },
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3.11",
+          "/tmp/kinakaze-pthread-events-eaf62ddcac294855b6f45f4340394242/PthreadCleanupProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.3479,
+        "request_to_exit_ms": 224.1301,
+        "activation_to_exit_ms": 223.7822,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 46.875,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 125.0,
+          "cycles": 366761077,
+          "page_faults": 16192
+        },
+        "prepared_working_set_bytes": 13996032,
+        "cpu_metrics": {
+          "user_ms": 109.375,
+          "kernel_ms": 171.875,
+          "total_cpu_ms": 281.25,
+          "processes": 4,
+          "active_processes": 0,
+          "page_faults": 36825,
+          "read_bytes": 8026054,
+          "write_bytes": 22260,
+          "read_ops": 360,
+          "write_ops": 275,
+          "other_ops": 13569,
+          "other_bytes": 517661
+        },
+        "probe": "cleanup",
+        "optimized": true
+      },
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3.11",
+          "/tmp/kinakaze-pthread-events-eaf62ddcac294855b6f45f4340394242/PthreadCondCancelProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.4222,
+        "request_to_exit_ms": 170.4961,
+        "activation_to_exit_ms": 170.0739,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 46.875,
+          "kernel_ms": 31.25,
+          "total_cpu_ms": 78.125,
+          "cycles": 281036073,
+          "page_faults": 8803
+        },
+        "prepared_working_set_bytes": 14036992,
+        "cpu_metrics": {
+          "user_ms": 62.5,
+          "kernel_ms": 46.875,
+          "total_cpu_ms": 109.375,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 11369,
+          "read_bytes": 8010609,
+          "write_bytes": 9178,
+          "read_ops": 187,
+          "write_ops": 108,
+          "other_ops": 9463,
+          "other_bytes": 357791
+        },
+        "probe": "cancel",
+        "optimized": true
+      },
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3.11",
+          "/tmp/kinakaze-pthread-events-eaf62ddcac294855b6f45f4340394242/PthreadEventParkingProbe.py"
+        ],
+        "exit_code": 1,
+        "expected_exit": 0,
+        "status": "failed",
+        "missing_markers": [
+          "PTHREAD_EVENT_FORK_OK"
+        ],
+        "reservation_ms": 0.3212,
+        "request_to_exit_ms": 1787.091,
+        "activation_to_exit_ms": 1786.7698,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 93.75,
+          "kernel_ms": 93.75,
+          "total_cpu_ms": 187.5,
+          "cycles": 394783511,
+          "page_faults": 13723
+        },
+        "prepared_working_set_bytes": 14036992,
+        "cpu_metrics": {
+          "user_ms": 156.25,
+          "kernel_ms": 93.75,
+          "total_cpu_ms": 250.0,
+          "processes": 2,
+          "active_processes": 0,
+          "page_faults": 25971,
+          "read_bytes": 8020070,
+          "write_bytes": 14594,
+          "read_ops": 254,
+          "write_ops": 177,
+          "other_ops": 11997,
+          "other_bytes": 457586
+        },
+        "probe": "event",
+        "optimized": true
+      }
+    ],
+    "passed": false
+  },
+  "after": {
+    "root": "F:\\crysoacu2\\artifacts\\goal-systemd-idle\\debian-root",
+    "dist": "F:\\crysoacu2\\artifacts\\pthread-event-goal-20261001\\guest\\candidate-fixed",
+    "staging": "F:\\crysoacu2\\artifacts\\goal-systemd-idle\\debian-root\\tmp\\kinakaze-pthread-events-fe9c1ca5adea4c118b7ba9611fea3dde",
+    "fixture_sha256": {
+      "PthreadCleanupProbe.py": "1b46db8a5ffe05730b6d465dcf4031907626d5723dbcf139c8533e70e5a2ed44",
+      "PthreadCleanupProbe.c": "a964604a85b51c1d0e51d2453517924c4864d82aa6d209abfd9a96d62cb57948",
+      "PthreadCondCancelProbe.py": "0c024402fef652113bfafa80faa60fd2881f8149684eb36523ade2616897abd3",
+      "PthreadCondCancelProbe.c": "1663bb909cb5d8f2bab910cb2e89fe646b85129dad2968861c8b6c70a623713c",
+      "PthreadEventParkingProbe.py": "ae0af602b5f6a06fd6dd4bee4b80bc86afb5477069351f9c0810ee249afe0b47",
+      "PthreadEventParkingProbe.c": "298db9a7e8175f03540a2c6009ff6f2017cced6ba97853d2e92f3bf47d2de258"
+    },
+    "distribution_sha256": {
+      "worker.exe": "aa8998094ee88e47023b581873858a6527a69cfe1d756018bb604748f0a3190a",
+      "init.exe": "e4e5fbabdf659d958436ec898c44c3113e5853390f88209f7170cb95a4a860ff",
+      "rootfs.manifest.json": "efb5c990576e555db5ef532aaaac415b98bab802f3cebac145919a73a9f430c6",
+      "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+      "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+      "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "rootfs\\lib\\kinakaze_alloc.so": "0e971f742067d3d70f1d18ebafe9adf71e1c7cc1f081ae03f342ae709875acec",
+      "rootfs\\lib\\kinakaze_elf.so": "076c8c60552800e12108852457fccca95aa80dd07db200018346fb79272b9b93",
+      "rootfs\\lib\\kinakaze_guest_engine.so": "f6385787cba786ef115484d4c055acaf0b11ce996b29a664557ebd9b4f5e98b6",
+      "rootfs\\lib\\kinakaze_kernel.so": "9d48ce8c8368bbe2460e2a05b86d1c7e99e144e9b9c3bd875e5d4cc435ccecab",
+      "rootfs\\lib\\kinakaze_tls.so": "73d5fa1918134072d450e6318a1d479b9339b4e7f3fb1db095a4e24e0f2e5590",
+      "rootfs\\lib\\kinakaze_vfs.so": "39874b2d567cc9d06374ed7d7ac3bf40a1d99af3fb02cdcf645d4cc47d3a9481",
+      "rootfs\\lib\\ld-linux-x86-64.so.2": "0a6e89d9ab75e142cce5bae185bdfded9cd9c3dcd98dd02dd138cf6bcd206dd1",
+      "rootfs\\lib\\libasound.so.2": "a3a9b004ed1f7b3f92d8ec1102b59fe982c5ec5881bb4cdea64a61505f82077a",
+      "rootfs\\lib\\libc.so.6": "c17d4ce7bcb68355e0d683443ff5c2e809b37e0ebc4429e262185b0d7d275d4d",
+      "rootfs\\lib\\libcuda.so.1": "ff8062952007db1f8af75518efec7ae7db013fbfe8d348f3ba3e1310e4176e81",
+      "rootfs\\lib\\libdisplay.so.1": "152c76059947590a32b1d001958874445a8ad10d5b70657e78051e7c58244379",
+      "rootfs\\lib\\libdl.so.2": "a4ae83f619c76fe24439e2ac2116423a41d0d552fad8c0cbfc16c908f9d4df34",
+      "rootfs\\lib\\libEGL.so.1": "c8fb55abea9b451dae5d1968854d791c4b038c279b6ba048fe26710c95a36b85",
+      "rootfs\\lib\\libGL.so.1": "7071a2380118892aaf1855a324c0bcd3a89d78ddb30bf55da23cbb41d0cbc261",
+      "rootfs\\lib\\libGLESv2.so.2": "0c0a3a8d71cc1ca787958be003575608e58c77b3f910cd78af13a5739a9fd293",
+      "rootfs\\lib\\libGLX.so.0": "2ced30e0cb468535aeab2d8a19f6de52eaa8731789bbb3c2021ca60229b6681b",
+      "rootfs\\lib\\libkinakaze-runtime.so.1": "4af3847a344c9d868bebbed2dd52a7fb98531b2f57350aba220f7d3b7730b405",
+      "rootfs\\lib\\libm.so.6": "130bf94583ee4218e58f2672cc7ccd69922a88a79bc0027b856740cbdab8c7eb",
+      "rootfs\\lib\\libOpenGL.so.0": "087f0d86c5569da13b80c559ba719827260ea855cf567d15b35aff79b2821c27",
+      "rootfs\\lib\\libpipewire-0.3.so.0": "de03087f6a3a5f28e7af1b4e9ee5f5aa110a73677daed1b4aef8b9145ba294b1",
+      "rootfs\\lib\\libpthread.so.0": "256e83c9cc61c6e808e35db3667d3fbb6fe6ed60ec11c0acef9834f2b3abb28b",
+      "rootfs\\lib\\libpulse.so.0": "6599cea746a583d6d340bed24075e816c4cb483847e1fc8161e1a885d231a083",
+      "rootfs\\lib\\libresolv.so.2": "f234353fc8d11a651d5155ea3652a34b0a9251cf6c937d47a9691683eed757ad",
+      "rootfs\\lib\\librt.so.1": "b22c90955b00189245ecda6de51d2dda56b8f63927a704aefb48374bc3de665b",
+      "rootfs\\lib\\libvulkan.so.1": "ece4236459c9dd7d054bd936a0de85b20cf108d617e1cb33acdca50038d71aeb",
+      "rootfs\\lib\\libX11-xcb.so.1": "3f3baaf7ed866a0cdb5da56d76bc790b9571f8401c8af950ff6c79ef9c2520d7",
+      "rootfs\\lib\\libX11.so.6": "345d26e0b34e49258ce04fac70cf3b0751838cad5ae1b4a18445a0ed9ecd600e",
+      "rootfs\\lib\\libxcb.so.1": "d1343ae144d0473e8448a7440e68c664846c43e464cd8f32ab8d99db10855150",
+      "rootfs\\lib\\libXcursor.so.1": "db96286517e1c2ab0f0f114fb5d2366fe788822e9e71ab8e11c64b446109d3e8",
+      "rootfs\\lib\\libXext.so.6": "9a1534364eaab5c3535c11cb53169a7866b089561dd22e7e99a2f91971da2c5c",
+      "rootfs\\lib\\libXi.so.6": "9141dfe40f76449b8f7c0c5b78b51465f5b40b7935328afb2ad4f7aca56c9790",
+      "rootfs\\lib\\libXinerama.so.1": "c1ecfc2025f1d7ca9e8aa8a707d4453bf415c5567e194b393276e615a82fd7a5",
+      "rootfs\\lib\\libXrandr.so.2": "f68ebb8ff5690464d2e30ae2f07e7070fc2d55d8d17098af72fddb54a36ff3b4",
+      "rootfs\\lib\\libXrender.so.1": "b2ed6f2d54592b1d68deb6ba9e5a51a90ea2f801e234e697598334fdc4e2ab4f",
+      "rootfs\\lib\\libXxf86vm.so.1": "d596c8aa6b26788afa90f3044304556b9bab975f0293ad3fe797f3e0c9243757",
+      "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+      "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+    },
+    "rows": [
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3.11",
+          "/tmp/kinakaze-pthread-events-fe9c1ca5adea4c118b7ba9611fea3dde/PthreadCleanupProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.4488,
+        "request_to_exit_ms": 261.4584,
+        "activation_to_exit_ms": 261.0096,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 46.875,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 125.0,
+          "cycles": 397223552,
+          "page_faults": 16217
+        },
+        "prepared_working_set_bytes": 13996032,
+        "cpu_metrics": {
+          "user_ms": 62.5,
+          "kernel_ms": 156.25,
+          "total_cpu_ms": 218.75,
+          "processes": 4,
+          "active_processes": 0,
+          "page_faults": 37710,
+          "read_bytes": 8026027,
+          "write_bytes": 22232,
+          "read_ops": 360,
+          "write_ops": 275,
+          "other_ops": 13697,
+          "other_bytes": 526871
+        },
+        "probe": "cleanup",
+        "optimized": false
+      },
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3.11",
+          "/tmp/kinakaze-pthread-events-fe9c1ca5adea4c118b7ba9611fea3dde/PthreadCondCancelProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.3777,
+        "request_to_exit_ms": 350.0807,
+        "activation_to_exit_ms": 349.703,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 31.25,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 109.375,
+          "cycles": 277931336,
+          "page_faults": 8663
+        },
+        "prepared_working_set_bytes": 13942784,
+        "cpu_metrics": {
+          "user_ms": 78.125,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 156.25,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 14323,
+          "read_bytes": 8011163,
+          "write_bytes": 9730,
+          "read_ops": 195,
+          "write_ops": 115,
+          "other_ops": 10574,
+          "other_bytes": 404825
+        },
+        "probe": "cancel",
+        "optimized": false
+      },
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3.11",
+          "/tmp/kinakaze-pthread-events-fe9c1ca5adea4c118b7ba9611fea3dde/PthreadEventParkingProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.3369,
+        "request_to_exit_ms": 421.8491,
+        "activation_to_exit_ms": 421.5122,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 62.5,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 140.625,
+          "cycles": 326218396,
+          "page_faults": 13860
+        },
+        "prepared_working_set_bytes": 14020608,
+        "cpu_metrics": {
+          "user_ms": 140.625,
+          "kernel_ms": 171.875,
+          "total_cpu_ms": 312.5,
+          "processes": 2,
+          "active_processes": 0,
+          "page_faults": 26076,
+          "read_bytes": 8018985,
+          "write_bytes": 14354,
+          "read_ops": 252,
+          "write_ops": 173,
+          "other_ops": 11950,
+          "other_bytes": 460157
+        },
+        "probe": "event",
+        "optimized": false
+      },
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3.11",
+          "/tmp/kinakaze-pthread-events-fe9c1ca5adea4c118b7ba9611fea3dde/PthreadCleanupProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.4341,
+        "request_to_exit_ms": 216.4343,
+        "activation_to_exit_ms": 216.0002,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 46.875,
+          "kernel_ms": 31.25,
+          "total_cpu_ms": 78.125,
+          "cycles": 363883945,
+          "page_faults": 16198
+        },
+        "prepared_working_set_bytes": 13914112,
+        "cpu_metrics": {
+          "user_ms": 93.75,
+          "kernel_ms": 125.0,
+          "total_cpu_ms": 218.75,
+          "processes": 3,
+          "active_processes": -1,
+          "page_faults": 36188,
+          "read_bytes": 8026054,
+          "write_bytes": 22259,
+          "read_ops": 360,
+          "write_ops": 275,
+          "other_ops": 13490,
+          "other_bytes": 520781
+        },
+        "probe": "cleanup",
+        "optimized": true
+      },
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3.11",
+          "/tmp/kinakaze-pthread-events-fe9c1ca5adea4c118b7ba9611fea3dde/PthreadCondCancelProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.539,
+        "request_to_exit_ms": 166.0672,
+        "activation_to_exit_ms": 165.5282,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 31.25,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 109.375,
+          "cycles": 270186658,
+          "page_faults": 8772
+        },
+        "prepared_working_set_bytes": 13971456,
+        "cpu_metrics": {
+          "user_ms": 31.25,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 109.375,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 11342,
+          "read_bytes": 8010606,
+          "write_bytes": 9174,
+          "read_ops": 187,
+          "write_ops": 108,
+          "other_ops": 9463,
+          "other_bytes": 358547
+        },
+        "probe": "cancel",
+        "optimized": true
+      },
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3.11",
+          "/tmp/kinakaze-pthread-events-fe9c1ca5adea4c118b7ba9611fea3dde/PthreadEventParkingProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.4369,
+        "request_to_exit_ms": 1853.3789,
+        "activation_to_exit_ms": 1852.942,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 62.5,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 140.625,
+          "cycles": 370443608,
+          "page_faults": 13818
+        },
+        "prepared_working_set_bytes": 13938688,
+        "cpu_metrics": {
+          "user_ms": 109.375,
+          "kernel_ms": 93.75,
+          "total_cpu_ms": 203.125,
+          "processes": 2,
+          "active_processes": 0,
+          "page_faults": 26043,
+          "read_bytes": 8018999,
+          "write_bytes": 14369,
+          "read_ops": 252,
+          "write_ops": 173,
+          "other_ops": 11929,
+          "other_bytes": 459953
+        },
+        "probe": "event",
+        "optimized": true
+      }
+    ],
+    "passed": true
+  },
+  "limitations": [
+    "Single guest runs are compatibility checks, not throughput measurements.",
+    "PI, pshared and complete robust pthread semantics remain pending."
+  ],
+  "logs": {
+    "build.jsonl": "93a8eb80814378d071362e4e38b7782dc05ef218b4ad4bd1ea6af353cbfb4a44",
+    "fix-build.jsonl": "cab9c9708f578c9c7d1d65298b42c8dedeefefae6312c7e378c157987ec7e9fb",
+    "before-fix/report.json": "47679a8703a95c7608a34491817678743de51d98290233aa1783df1c685e110b",
+    "after-fix/report.json": "8485671096fd3e97b1d50ddfa992129393a72e7971bdc098bf3c2e5d4ec07081",
+    "native-build.jsonl": "fb56b5660ea160f34994e87429ac0ed12575dd12db67508911f4c4c85244609e"
+  },
+  "native": {
+    "passed": true,
+    "binary_sha256": "1557779c45830cf2e2aae98ceef440718ce89064506d8ab581fee25ba8e72129",
+    "rows": [
+      {
+        "mode": "default",
+        "exit_code": 0,
+        "seconds": 0.7303054000003613,
+        "summary": "test result: ok. 46 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.66s",
+        "log": "artifacts\\pthread-event-goal-20261001\\guest\\default-native-tests.log"
+      },
+      {
+        "mode": "control",
+        "exit_code": 0,
+        "seconds": 0.6416771000003791,
+        "summary": "test result: ok. 46 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.62s",
+        "log": "artifacts\\pthread-event-goal-20261001\\guest\\control-native-tests.log"
+      }
+    ],
+    "dependency_manifest": {
+      "build": "F:\\crysoacu2\\artifacts\\pthread-event-goal-20261001\\guest\\native-build.jsonl",
+      "build_sha256": "fb56b5660ea160f34994e87429ac0ed12575dd12db67508911f4c4c85244609e",
+      "executables": {
+        "kinakaze_libpthread": "kinakaze_libpthread-6a4d296ac0654593.exe"
+      },
+      "files": {
+        "serde_derive-ebb234dc8366345c.dll": {
+          "source": "F:\\crysoacu2\\target\\commit-save-check\\release\\deps\\serde_derive-ebb234dc8366345c.dll",
+          "sha256": "fbe2d98d2fae107010ca2cfb92804ec7b869ddf572c8fa27fce2d7574f48e3b1"
+        },
+        "kinakaze_alloc.so": {
+          "source": "F:\\crysoacu2\\target\\commit-save-check\\release\\kinakaze_alloc.dll",
+          "sha256": "76e22f54510f522fa15b026e9530530893c4cab89d75f607d9de148b9e0841d0"
+        },
+        "kinakaze_kernel.so": {
+          "source": "F:\\crysoacu2\\target\\commit-save-check\\release\\kinakaze_kernel.dll",
+          "sha256": "2ec620f742ad1eb44a9a4da2fb04a61233f6811555caac6f7f7a0f58ecc06f88"
+        },
+        "kinakaze_tls.so": {
+          "source": "F:\\crysoacu2\\target\\commit-save-check\\release\\kinakaze_tls.dll",
+          "sha256": "5f37de4b0d4b6680132c44adee156006e1027b1a04bc271d9c32c612a2e7c1e9"
+        },
+        "kinakaze_vfs.so": {
+          "source": "F:\\crysoacu2\\target\\commit-save-check\\release\\kinakaze_vfs.dll",
+          "sha256": "ab88892fcbeb7c1c84b477912db04c55ec2cbdb8984f0199f908011f203b4d68"
+        },
+        "kinakaze_libpthread-6a4d296ac0654593.exe": {
+          "source": "F:\\crysoacu2\\target\\commit-save-check\\release\\deps\\kinakaze_libpthread-6a4d296ac0654593.exe",
+          "sha256": "1557779c45830cf2e2aae98ceef440718ce89064506d8ab581fee25ba8e72129"
+        },
+        "std-0cebe7c42cd80226.dll": {
+          "source": "C:\\Users\\nanaeo\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\std-0cebe7c42cd80226.dll",
+          "sha256": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc"
+        }
+      }
+    }
+  }
+}

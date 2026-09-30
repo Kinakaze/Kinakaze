@@ -40,6 +40,7 @@ robust ABI 对照 [Linux 6.12 futex 系统调用实现](https://github.com/torva
 | KINAKAZE_SYSCALL_TEMPLATE | ELF syscall 汇编桥模板复用 |
 | KINAKAZE_TMPFS_READ_OPT | 连续页合并及按空洞清零 |
 | KINAKAZE_IO_ROUTE_OPT | VFS/Unix I/O 描述符查询剪枝 |
+| KINAKAZE_PTHREAD_PARK_OPT | pthread timed mutex/condition 事件等待；取消和时钟兼容性修正始终启用 |
 
 robust 注册/退出恢复属于兼容性修正，不受这些性能开关控制。
 
@@ -255,3 +256,11 @@ syscall 模板、tmpfs 连续读取、VFS 路由、普通 robust-list 及 waitv/
 整合已分别保存。拆分提交时保留已提交的 fork 注册接口；普通 robust-list
 另从待提交树隔离构建，5 项 robust 回归和 41 项 pthread 测试全部通过，记录
 存于 `artifacts/syscall-io-goal-20260930/commits/robust-tests/report.json`。
+
+## pthread 事件等待整合
+
+私有 timed mutex 和 condition 已整合到每线程缓存的事件/timer 后端。
+原生配对基准及两种配置的完整 Debian 客体取消、信号、fork 探针已通过；
+fork 快照补齐非默认 condition 时钟，修复子进程立即超时。
+详见 [pthread 记录](pthread-event-parking-2026-10-01.md)。
+PI、pshared 和完整 robust pthread 状态仍属于持续目标。
