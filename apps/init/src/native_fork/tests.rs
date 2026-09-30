@@ -149,6 +149,7 @@ fn failed_delivery_cancels_only_its_exact_parent_and_transaction() {
         root: PathBuf::new(),
         dist: PathBuf::new(),
         state: Mutex::new(State::default()),
+        creating: Mutex::new(()),
     };
     pool.state.lock().unwrap().leases.push(Lease {
         transaction: 7,
@@ -167,4 +168,100 @@ fn failed_delivery_cancels_only_its_exact_parent_and_transaction() {
     pool.cancel_delivery(parent.peer, 7);
     assert!(pool.state.lock().unwrap().leases.is_empty());
     native_child.wait().unwrap();
+}
+
+fn empty_template() -> Arc<Template> {
+    Arc::new(Template {
+        spec: Spec {
+            tls_slots: 0,
+            modules: Vec::new(),
+        },
+        _pins: Vec::new(),
+    })
+}
+
+#[test]
+fn an_unpublished_candidate_is_killed_after_stop_or_template_replacement() {
+    for stop in [false, true] {
+        let expected = empty_template();
+        let candidate = fixture();
+        let native = ProcessHandle::open(candidate.peer.host_pid).unwrap();
+        let mut state = State {
+            template: Some(if stop {
+                Arc::clone(&expected)
+            } else {
+                empty_template()
+            }),
+            ..State::default()
+        };
+        state.publish(&expected, stop, Ok(candidate));
+        assert!(state.slots.is_empty());
+        native.wait().unwrap();
+        assert!(native.has_exited().unwrap());
+    }
+}
+
+#[test]
+fn publishing_requires_the_same_template_generation_even_when_specs_match() {
+    let expected = empty_template();
+    let mut state = State {
+        template: Some(Arc::clone(&expected)),
+        ..State::default()
+    };
+    let candidate = fixture();
+    let native = ProcessHandle::open(candidate.peer.host_pid).unwrap();
+    state.publish(&expected, false, Ok(candidate));
+    assert_eq!(state.slots.len(), 1);
+    assert!(!native.has_exited().unwrap());
+    state.slots.clear();
+    native.wait().unwrap();
+    state.template = Some(empty_template());
+    state.publish(
+        &expected,
+        false,
+        Err(io::Error::other("obsolete creation failure")),
+    );
+    assert_eq!(state.failures, 0);
+    let current = Arc::clone(state.template.as_ref().unwrap());
+    state.publish(
+        &current,
+        false,
+        Err(io::Error::other("current creation failure")),
+    );
+    assert_eq!(state.failures, 1);
+}
+
+#[test]
+fn creation_gate_allows_pool_access_but_blocks_shutdown_until_job_assignment() {
+    use std::sync::mpsc;
+    let pool = Arc::new(Pool::new(PathBuf::new(), PathBuf::new()));
+    let stopping = Arc::new(AtomicBool::new(false));
+    let (entered, entered_rx) = mpsc::channel();
+    let (release, release_rx) = mpsc::channel();
+    let creating = Arc::clone(&pool);
+    let stopped = Arc::clone(&stopping);
+    let thread = std::thread::spawn(move || {
+        let result = creating.prepare(&stopped, || {
+            entered.send(()).unwrap();
+            release_rx.recv_timeout(Duration::from_secs(10)).unwrap();
+            Err(io::Error::other("controlled creation failure"))
+        });
+        assert!(result.unwrap().is_err());
+    });
+    entered_rx.recv_timeout(Duration::from_secs(10)).unwrap();
+    assert!(pool.state.try_lock().is_ok());
+    assert!(matches!(
+        pool.creating.try_lock(),
+        Err(std::sync::TryLockError::WouldBlock)
+    ));
+    release.send(()).unwrap();
+    {
+        let _creation = pool.lock_creation();
+        stopping.store(true, Ordering::Release);
+    }
+    thread.join().unwrap();
+    assert!(
+        pool.prepare(&stopping, || panic!("created after stop"))
+            .is_none()
+    );
 }

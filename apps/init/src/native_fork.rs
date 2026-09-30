@@ -15,7 +15,10 @@ use std::{
     },
     path::{Path, PathBuf},
     ptr,
-    sync::{Arc, Mutex},
+    sync::{
+        Arc, Mutex, MutexGuard,
+        atomic::{AtomicBool, Ordering},
+    },
     time::{Duration, Instant},
 };
 use windows_sys::Win32::{
@@ -39,11 +42,12 @@ pub(super) struct Pool {
     root: PathBuf,
     dist: PathBuf,
     state: Mutex<State>,
+    creating: Mutex<()>,
 }
 
 #[derive(Default)]
 struct State {
-    template: Option<Template>,
+    template: Option<Arc<Template>>,
     slots: Vec<Standby>,
     leases: Vec<Lease>,
     failures: usize,
@@ -58,6 +62,34 @@ struct Lease {
     child: Standby,
 }
 impl State {
+    fn publish(&mut self, template: &Arc<Template>, stopping: bool, result: io::Result<Standby>) {
+        // An obsolete or shutdown-racing candidate is still exclusively owned
+        // here. Dropping it kills the process; no guest ever receives it.
+        if stopping
+            || self.slots.len() >= CAPACITY
+            || !self
+                .template
+                .as_ref()
+                .is_some_and(|current| Arc::ptr_eq(current, template))
+        {
+            return;
+        }
+        match result {
+            Ok(slot) => {
+                if trace() {
+                    eprintln!("init native fork: preparing pid={}", slot.peer.host_pid);
+                }
+                self.slots.push(slot);
+            }
+            Err(error) => {
+                if trace() {
+                    eprintln!("init native fork: preparation failed: {:?}", error.kind());
+                }
+                self.failures += 1;
+            }
+        }
+    }
+
     fn reap_leases(&mut self, manager: &kinakaze_v2_manager::StateManager) {
         self.leases.retain_mut(|lease| {
             match manager.native_fork_state(lease.transaction, lease.child.peer) {
@@ -119,7 +151,27 @@ impl Pool {
             root,
             dist,
             state: Mutex::new(State::default()),
+            creating: Mutex::new(()),
         }
+    }
+
+    pub fn lock_creation(&self) -> MutexGuard<'_, ()> {
+        self.creating.lock().unwrap()
+    }
+
+    fn prepare(
+        &self,
+        stopping: &AtomicBool,
+        create: impl FnOnce() -> io::Result<Standby>,
+    ) -> Option<io::Result<Standby>> {
+        // stop holds this gate before setting stopping. Creation and Job
+        // assignment finish before main may return, without blocking RPCs on
+        // the manager mutex. Never acquire manager/state while holding the gate.
+        let _creation = self.lock_creation();
+        if stopping.load(Ordering::Acquire) {
+            return None;
+        }
+        Some(create())
     }
 
     fn template(&self, spec: &Spec) -> io::Result<Option<Template>> {
@@ -171,7 +223,7 @@ impl Pool {
                 return Ok(None);
             };
             state.slots.clear();
-            state.template = Some(template);
+            state.template = Some(Arc::new(template));
             if trace() {
                 eprintln!("init native fork: template modules={}", spec.modules.len());
             }
@@ -230,7 +282,8 @@ pub(super) fn start(service: Arc<Service>) -> io::Result<()> {
         .spawn(move || {
             let pool = &service.pool.as_ref().unwrap().native_forks;
             loop {
-                // Match stop's mutex: creation + Job assignment cannot escape shutdown.
+                // Lock order is manager -> state. Process creation has its own
+                // shutdown gate and never holds either of these mutexes.
                 let manager = service.manager.lock().unwrap();
                 let mut state = pool.state.lock().unwrap();
                 if service.stopping.load(std::sync::atomic::Ordering::Acquire) {
@@ -250,23 +303,21 @@ pub(super) fn start(service: Arc<Service>) -> io::Result<()> {
                 });
                 state.failures += failed;
                 if state.failures < 3 && state.slots.len() < CAPACITY && state.template.is_some() {
-                    match spawn(&service, pool, &state.template.as_ref().unwrap().spec) {
-                        Ok(slot) => {
-                            if trace() {
-                                eprintln!("init native fork: preparing pid={}", slot.peer.host_pid);
-                            }
-                            state.slots.push(slot)
-                        }
-                        Err(error) => {
-                            if trace() {
-                                eprintln!(
-                                    "init native fork: preparation failed: {:?}",
-                                    error.kind()
-                                );
-                            }
-                            state.failures += 1
-                        }
+                    // Keep the old module pins alive even if take replaces the
+                    // template while CreateProcess is in flight.
+                    let template = Arc::clone(state.template.as_ref().unwrap());
+                    drop(state);
+                    drop(manager);
+                    let result =
+                        pool.prepare(&service.stopping, || spawn(&service, pool, &template.spec));
+                    let manager = service.manager.lock().unwrap();
+                    let mut state = pool.state.lock().unwrap();
+                    if let Some(result) = result {
+                        state.publish(&template, service.stopping.load(Ordering::Acquire), result);
                     }
+                    drop(state);
+                    drop(manager);
+                    continue;
                 }
                 let busy = !state.leases.is_empty()
                     || (state.failures < 3

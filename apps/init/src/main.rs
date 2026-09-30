@@ -44,6 +44,12 @@ impl Service {
         let first = {
             // Share the waiter's mutex so stop cannot race its predicate check.
             let _manager = self.manager.lock().unwrap();
+            // Native pool creation runs without the manager lock. Wait for its
+            // current child to enter the Job before allowing main to return.
+            let _creation = self
+                .pool
+                .as_ref()
+                .map(|pool| pool.native_forks.lock_creation());
             let first = !self.stopping.swap(true, Ordering::AcqRel);
             self.changed.notify_all();
             first
