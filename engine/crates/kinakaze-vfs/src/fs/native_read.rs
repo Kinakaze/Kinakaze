@@ -18,7 +18,12 @@ fn eligible(path: &str, flags: i32) -> bool {
         && !path.split('/').any(|part| part == "." || part == "..")
 }
 
-fn candidate_path<'a>(dirfd: i32, path: &'a str, absolute: &'a str, flags: i32) -> Option<&'a str> {
+pub(super) fn candidate_path<'a>(
+    dirfd: i32,
+    path: &'a str,
+    absolute: &'a str,
+    flags: i32,
+) -> Option<&'a str> {
     if path.starts_with('/') {
         return eligible(path, flags).then_some(path);
     }

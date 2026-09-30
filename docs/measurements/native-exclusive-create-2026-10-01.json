@@ -1,0 +1,2222 @@
+{
+  "passed": true,
+  "target_met": false,
+  "source_manifest": {
+    "base": "ca8020e20599e112c7694c6301cbd95be9677384",
+    "upstream_export_repair": {
+      "commit": "8adef3b2a75be15bd9d169331e850ee934bd68ba",
+      "hashes": {
+        "tools/native-exports/generate.py": "4642fcb66cba6e4989e9c9bb1bcbe34e4e1f0982e5945090542615cac339e5e8",
+        "libs/libc/exports.def": "102a9736becc39dee3a839da89a74f2b4bf9fcb58cc9b778cc53e19940456f62",
+        "libs/libpthread/exports.def": "ebd5c13b6c6e34c8aaf4b03811cec62ab4a5fbc4e16c1ab92004472c51a13578"
+      }
+    },
+    "source_hashes": {
+      "crates/loader/src/handoff.rs": "f0a616a2bab3aa27cc855c62d76abd1853fd1395bde14f9aca23b40621ae989f",
+      "engine/crates/guest-engine/src/lib.rs": "c5736903ad82267471384b8991762fc1f4102ecbb3c78453092ea30609c137f1",
+      "engine/crates/kinakaze-runtime/src/lib.rs": "96dfeafef2389291c32232fc43390402067649d6ca293115befe63711d75e21b",
+      "engine/crates/kinakaze-vfs/src/fs.rs": "6955278c90c84f28dce32acb15081d586116715c7ba68a37d849d5f96dc636e2",
+      "engine/crates/kinakaze-vfs/src/fs/native_read.rs": "3749c02f5beec4f3e0f3742560704c37ec832ac151a6cb54f124204e0c0adfbb",
+      "engine/crates/kinakaze-vfs/src/mount/overlay/native_open.rs": "e62cf055793a4305a4193b71f7921bce1cac8ba1abfa44baedc01cbbcc915389",
+      "libs/ld-linux-x86-64/src/process/fork.rs": "9f7a78310fedcaafaa66633dd5590514b60cb6456476aef090a5468a564341f3",
+      "libs/libc/exports.def": "102a9736becc39dee3a839da89a74f2b4bf9fcb58cc9b778cc53e19940456f62",
+      "libs/libc/src/fdio.rs": "177433d436a85cd80b1dd57e2fc463847bd5a4825e3830b05c83444f28ba3cc4",
+      "libs/libc/src/fdio/dump_advice.rs": "32d90369d52c2675c3d2bda0bb66d17e3da827e3f349eb92bb57d7d32cfce48a",
+      "libs/libc/src/fdio/fork_advice.rs": "2e9a2efaafc19b92c998122a6e74d7f64450aaca692e796cece180125e35b86e",
+      "libs/libc/src/fdio/program_break.rs": "2747cc0e7e5e1dd27e16f2fdf628f30f5693888740a67fde56437f453b314881",
+      "libs/libc/src/format/extension/registry.rs": "f46a7b0bde26d090f63d8026c0f0d0384a2e12af748b35eeacc95a255f842d7b",
+      "libs/libc/src/futex/wait_group.rs": "411bfaa1340515c7148ecc693d14387648a719f6854d538fc55461c9d2e873ed",
+      "libs/libc/src/locale/lifecycle.rs": "fb3794d7f9e6931d7d6905e0937cc9b45d624ecb1b5f9167d1a8bf2a570910c7",
+      "libs/libc/src/misc/program_name_fork.rs": "7f5c72c8ac74bd6df855c21cc69f545a602827cbb25c99546994acfe7fad38c0",
+      "libs/libc/src/netdb/nss.rs": "f2219d620157e4c3ea9bd9c055925441b54e32992cbf5d0128ea8100f45d949b",
+      "libs/libc/src/process/environment.rs": "18d7a1949a508f01e5f603976033aa835731acd52677e702dae70cb6496a4133",
+      "libs/libc/src/process/termination/lifecycle.rs": "a3adb55e8c06e401aedf6cb7e984c88bd62d1e0b23a14f747b113085d224c3d0",
+      "libs/libc/src/rand48.rs": "53e49250d771ce0d777193aee11c0fba64ef570cad8fffb2827f82bf43bde8e9",
+      "libs/libc/src/semaphore/named.rs": "f3f68f4f50f273e74c6ebbc545bca01f3bba00bcba4f949a54f206c44f2939a6",
+      "libs/libc/src/stdio/gnu_error.rs": "d4bb42fe26ee1f365921e7ffad783c3c301405563802a15b51986d19847d4546",
+      "libs/libc/src/stdio/lifecycle.rs": "454aac4c2d19cb188aa33bbf904f6401d59b4a0b996e10908f612265e7a50399",
+      "libs/libc/src/sysadmin.rs": "c27d5eab45609305c5295266edd40b71fce06dad223a42a4b8b2f82875b8364a",
+      "libs/libc/src/sysvipc/lifecycle.rs": "0f2ade0c1fccffbf43719dbe62dbb140a6d6184c0c0afac9f42bd4b525464e5e",
+      "libs/libc/src/term/password/lifecycle.rs": "d357164b4dadf072b849cc1d84cfc65f0a3b7ddca9530e7c79456d285a6356ae",
+      "libs/libc/src/time/zone_globals.rs": "4bd0ad4dccd82dac6df4ce29ed5bf5efb15f618dbd3c61c9bb1cc2e94506334d",
+      "libs/libc/src/uchar.rs": "c6b6525edd0936db17363b62e4fa429cf3a22ae22a4f84734f95fc9fe0d0ff1b",
+      "libs/libc/src/userdb.rs": "ddd7ab2a0b1698428d265b325954dd8cf84cb3d735ea8588a2b1c55d3e72a5c3",
+      "libs/libc/src/userdb/password_lock.rs": "0fe1398028fb0bace301ae81f6c175033063c53e9ab38dee91c1a4c32c2c454b",
+      "libs/libm/exports.def": "effdec00b2798941a51ad94de76129c707eb1f96bc462c633d157dd23c4d2e03",
+      "libs/libpthread/exports.def": "ebd5c13b6c6e34c8aaf4b03811cec62ab4a5fbc4e16c1ab92004472c51a13578",
+      "tools/native-exports/generate.py": "4642fcb66cba6e4989e9c9bb1bcbe34e4e1f0982e5945090542615cac339e5e8",
+      "engine/crates/kinakaze-vfs/src/fs/native_create.rs": "cd6877d166c9abd8f3697cd6fee535ebfeabfb981f0ab32945bef4aad9dd3bc8",
+      "engine/crates/kinakaze-vfs/src/fs/native_create/tests.rs": "e1683568424c2dcc5a52d54c01898b1583aec1c6c0b96b56685e9eadd56c43c4",
+      "tests/guest/NativeExclusiveCreateProbe.py": "e4c5520dabe157140d36012a2f30634a3606f79a7697b794a5210af99d8aff71"
+    },
+    "archive_sha256": "2b063029f29eeb5ee528fb7aa4902451b72b33b35be9c71e85d51546655e098e",
+    "formatting_note": "Exact build includes baseline formatting and regenerated duplicate libm declarations; only six native-create files comprise the implementation cohort"
+  },
+  "native_passed": 62,
+  "native_ignored": 1,
+  "guest_checks": 30,
+  "export_generator_tests": 24,
+  "packaged_native_modules": 29,
+  "guest_exports": 5971,
+  "benchmark": {
+    "action": "compare",
+    "diagnostic": false,
+    "root": "F:\\crysoacu2\\artifacts\\node-install-20260930\\apt180-r11-root-b",
+    "dist": "F:\\crysoacu2\\artifacts\\apt-180-20260930\\candidate-r14-native-create",
+    "hashes": {
+      "worker.exe": "5b52db57efba01426924e8883a183f50365eb275afb9de75e5209a77a5197b60",
+      "init.exe": "56687df2dd9f262443d46ec5d6321dac327e0ace99356288f4f904cc7070e80d",
+      "rootfs.manifest.json": "14905978ccf97543bdc6cda4155879fd87c57243a972137beecd83adf7d2e60f",
+      "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+      "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "rootfs\\lib\\kinakaze_alloc.so": "b550f736ff3affe6eb6324e77bd238fddd4731cb2c7c530a67291f810c8a3187",
+      "rootfs\\lib\\kinakaze_elf.so": "dc1bba45ab096c4a4db4280f0948b51eec7e3c3522f162c7dda2a05a6e046b85",
+      "rootfs\\lib\\kinakaze_guest_engine.so": "67bf4fe9b26b753a9fcdc6eff1a93a5e6199025cbe1105f52547c5e235420101",
+      "rootfs\\lib\\kinakaze_kernel.so": "221163504595ac1390d282e684ea1c6deccaead173fc24fb1808bdbbb1aa57c7",
+      "rootfs\\lib\\kinakaze_tls.so": "7749a354dc7e822bfd268a8e1a19197fbd02b5c9e68744eaa50eeb66b02121f2",
+      "rootfs\\lib\\kinakaze_vfs.so": "807937c65f87339ce827b927ce2fb7860eff43c3bd36f2c6fa4e2d06c08e89e4",
+      "rootfs\\lib\\ld-linux-x86-64.so.2": "39f23c9fedaa6d2d25a024563d2e5a90a2818e8cd58a44c3d29081cda303467f",
+      "rootfs\\lib\\libasound.so.2": "063286763eb82ba5a64eac05b61822acb35812b3824371252fa80aa54980324b",
+      "rootfs\\lib\\libc.so.6": "43968afb76300b0e8870a3265858036233ebffa67b64c0541bcb2d6edecd72ea",
+      "rootfs\\lib\\libcuda.so.1": "583fbd981ee762fee8b8896ad691c2f0fff894c6684b88d4d51310c11cc793b7",
+      "rootfs\\lib\\libdisplay.so.1": "0abb09917e88e5f6e95f41fc88d057f18a99386156c96ab05c343b4155ac8742",
+      "rootfs\\lib\\libdl.so.2": "d2fa52699c1987449f11d14b11221d7e04c380bd980ae7763b5255156f760309",
+      "rootfs\\lib\\libEGL.so.1": "ce5795000138256237397b634c092279b68370ca5793f968b2ac01b672d8118f",
+      "rootfs\\lib\\libGL.so.1": "4aea739b61c3b47321269bc20d8196ebb07455e5ad8949f9066c2940d543e995",
+      "rootfs\\lib\\libGLESv2.so.2": "cfa2b6e8c5eb069841182430a3ae89159bbe4a83f728fbb4f57c50eb691455ab",
+      "rootfs\\lib\\libGLX.so.0": "aa60ae47948f93ec0bbd2e4f46a80254715766c9cd3de0eebd73220102e0befe",
+      "rootfs\\lib\\libkinakaze-runtime.so.1": "306d0610d4c55f965ea6ad8541b4a8956d1533efc381d3d2bcd2a70b65226920",
+      "rootfs\\lib\\libm.so.6": "743817430fe95d0f3a74729a0a8500706c934266627c65be8a0d9b4432d08df0",
+      "rootfs\\lib\\libOpenGL.so.0": "ea22ec21d186a7af975b4cde363e86c88f81fcbb65d9336857e66fdba57016bd",
+      "rootfs\\lib\\libpipewire-0.3.so.0": "34dc54a26d2b0fe968edbc71346500cad11e502d00bec83f119c7540d0dd5fae",
+      "rootfs\\lib\\libpthread.so.0": "7ba90697491e171bea9b491079726ae8673fb92b6256537806608194486c7db0",
+      "rootfs\\lib\\libpulse.so.0": "ed0333f8242f0ac647a6c5fc53dcc135afb54f56bc01e79e190d32cfffd53c55",
+      "rootfs\\lib\\libresolv.so.2": "e7332e1b893600601780ebb4de4bd7fd34078ba44a100349867585f175ce55f7",
+      "rootfs\\lib\\librt.so.1": "edfc2e180a81957954f69191bae2cf433c4d29118ebdb2076b030b72e21a6021",
+      "rootfs\\lib\\libvulkan.so.1": "36f51d2472fb5ecc5e348f5d80c1ec60f06e15ce39d5e3435075c16cd4c6c5aa",
+      "rootfs\\lib\\libX11-xcb.so.1": "48909e8c68b503b3abb7f0b5cc1cc76ebac5cd17472f72f630d80b78af4c500a",
+      "rootfs\\lib\\libX11.so.6": "59bff27ce49917a4efc4c572220335d368666b775bc9258275cb675228907819",
+      "rootfs\\lib\\libxcb.so.1": "72d4e035bf8a131030b70e8d1b6306bad150e568ee3133a8a6631ec045ebf917",
+      "rootfs\\lib\\libXcursor.so.1": "709d8e4f3750440d48e9a054b8af6bac406834b81f1b37fbcf43b455321f526d",
+      "rootfs\\lib\\libXext.so.6": "80352d3cc65b01abba20730d3d91854d25c0be6a9ba12c638a7cbf42f833d486",
+      "rootfs\\lib\\libXi.so.6": "05f2d85b60ccc6a7620b33a2c043de5dd0d2fe3511d202d837239f2cfbbd9f25",
+      "rootfs\\lib\\libXinerama.so.1": "3909cc1afa5601e2f2fd95f2ede6f9e16179110df8185a8853f803128d3907b7",
+      "rootfs\\lib\\libXrandr.so.2": "cec2053cc481668a59ae8be8352ce8cf704b4dcacf9f78f2d077b96fb6c91a61",
+      "rootfs\\lib\\libXrender.so.1": "e78b691b39f0dc43288baeecbcdc77b1e9c2dd19ee8feaa4bfb2b98b8210aa1d",
+      "rootfs\\lib\\libXxf86vm.so.1": "e94090285bca1d3cbd84374013ea9867b4f266fab20ce15a1ee6e3fa31181bdd",
+      "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+      "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+    },
+    "order": [
+      0,
+      1,
+      1,
+      0,
+      1,
+      0
+    ],
+    "passed": true,
+    "rows": [
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3.11",
+          "-c",
+          "import os,time\nos.chmod('.',0o755)\nnames=[''+'payload-'+format(i,'05d') for i in range(2000)]\nflags=os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_CLOEXEC|os.O_NOFOLLOW\nt=time.monotonic_ns()\nfor name in names:\n fd=os.open(name,flags,0o640)\n assert os.write(fd,b'payload contents')==16\n os.close(fd)\nprint('EXCLUSIVE_CREATE_BENCH_OK', (time.monotonic_ns()-t)/1e6, flush=True)\nfor name in names:\n with open(name,'rb') as stream: assert stream.read()==b'payload contents'\n assert os.stat(name).st_mode&0o777==0o640\n os.unlink(name)\n"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.4143,
+        "request_to_exit_ms": 2695.6989,
+        "activation_to_exit_ms": 2695.2846,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 437.5,
+          "kernel_ms": 2062.5,
+          "total_cpu_ms": 2500.0,
+          "cycles": 7322920564,
+          "page_faults": 8124
+        },
+        "prepared_working_set_bytes": 13094912,
+        "cpu_metrics": {
+          "user_ms": 453.125,
+          "kernel_ms": 2109.375,
+          "total_cpu_ms": 2562.5,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 13408,
+          "read_bytes": 7554176,
+          "write_bytes": 41775,
+          "read_ops": 4169,
+          "write_ops": 2105,
+          "other_ops": 345611,
+          "other_bytes": 22562449
+        },
+        "index": 0,
+        "mode": 0,
+        "scenario": "relative",
+        "body_ms": 856.6759,
+        "pool_preparation_ms": 59.4051
+      },
+      {
+        "pid": 2,
+        "command": [
+          "/usr/bin/python3.11",
+          "-c",
+          "import os,time\nos.chmod('.',0o755)\nnames=['/var/tmp/kinakaze-relative-read-c9eb7420994a4dd480be84b1a4515396/'+'payload-'+format(i,'05d') for i in range(2000)]\nflags=os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_CLOEXEC|os.O_NOFOLLOW\nt=time.monotonic_ns()\nfor name in names:\n fd=os.open(name,flags,0o640)\n assert os.write(fd,b'payload contents')==16\n os.close(fd)\nprint('EXCLUSIVE_CREATE_BENCH_OK', (time.monotonic_ns()-t)/1e6, flush=True)\nfor name in names:\n with open(name,'rb') as stream: assert stream.read()==b'payload contents'\n assert os.stat(name).st_mode&0o777==0o640\n os.unlink(name)\n"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 139.4625,
+        "request_to_exit_ms": 2104.6553,
+        "activation_to_exit_ms": 1965.1928,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 406.25,
+          "kernel_ms": 1468.75,
+          "total_cpu_ms": 1875.0,
+          "cycles": 5567101306,
+          "page_faults": 9411
+        },
+        "prepared_working_set_bytes": 13090816,
+        "cpu_metrics": {
+          "user_ms": 437.5,
+          "kernel_ms": 1468.75,
+          "total_cpu_ms": 1906.25,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 12810,
+          "read_bytes": 415028,
+          "write_bytes": 36610,
+          "read_ops": 4110,
+          "write_ops": 2049,
+          "other_ops": 191472,
+          "other_bytes": 4564317
+        },
+        "index": 0,
+        "mode": 0,
+        "scenario": "absolute",
+        "body_ms": 742.8186,
+        "pool_preparation_ms": 59.4051
+      },
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3.11",
+          "-c",
+          "import os,time\nos.chmod('.',0o755)\nnames=['/var/tmp/kinakaze-relative-read-c9eb7420994a4dd480be84b1a4515396/'+'payload-'+format(i,'05d') for i in range(2000)]\nflags=os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_CLOEXEC|os.O_NOFOLLOW\nt=time.monotonic_ns()\nfor name in names:\n fd=os.open(name,flags,0o640)\n assert os.write(fd,b'payload contents')==16\n os.close(fd)\nprint('EXCLUSIVE_CREATE_BENCH_OK', (time.monotonic_ns()-t)/1e6, flush=True)\nfor name in names:\n with open(name,'rb') as stream: assert stream.read()==b'payload contents'\n assert os.stat(name).st_mode&0o777==0o640\n os.unlink(name)\n"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.3525,
+        "request_to_exit_ms": 1983.6798,
+        "activation_to_exit_ms": 1983.3273,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 312.5,
+          "kernel_ms": 1578.125,
+          "total_cpu_ms": 1890.625,
+          "cycles": 5609279880,
+          "page_faults": 8107
+        },
+        "prepared_working_set_bytes": 13127680,
+        "cpu_metrics": {
+          "user_ms": 312.5,
+          "kernel_ms": 1609.375,
+          "total_cpu_ms": 1921.875,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 17391,
+          "read_bytes": 7554296,
+          "write_bytes": 41828,
+          "read_ops": 4169,
+          "write_ops": 2105,
+          "other_ops": 184427,
+          "other_bytes": 4320983
+        },
+        "index": 1,
+        "mode": 1,
+        "scenario": "absolute",
+        "body_ms": 711.3884,
+        "pool_preparation_ms": 44.0909
+      },
+      {
+        "pid": 2,
+        "command": [
+          "/usr/bin/python3.11",
+          "-c",
+          "import os,time\nos.chmod('.',0o755)\nnames=[''+'payload-'+format(i,'05d') for i in range(2000)]\nflags=os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_CLOEXEC|os.O_NOFOLLOW\nt=time.monotonic_ns()\nfor name in names:\n fd=os.open(name,flags,0o640)\n assert os.write(fd,b'payload contents')==16\n os.close(fd)\nprint('EXCLUSIVE_CREATE_BENCH_OK', (time.monotonic_ns()-t)/1e6, flush=True)\nfor name in names:\n with open(name,'rb') as stream: assert stream.read()==b'payload contents'\n assert os.stat(name).st_mode&0o777==0o640\n os.unlink(name)\n"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.3211,
+        "request_to_exit_ms": 2543.0461,
+        "activation_to_exit_ms": 2542.725,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 359.375,
+          "kernel_ms": 2125.0,
+          "total_cpu_ms": 2484.375,
+          "cycles": 7278955092,
+          "page_faults": 9355
+        },
+        "prepared_working_set_bytes": 13111296,
+        "cpu_metrics": {
+          "user_ms": 359.375,
+          "kernel_ms": 2234.375,
+          "total_cpu_ms": 2593.75,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 12754,
+          "read_bytes": 414892,
+          "write_bytes": 36538,
+          "read_ops": 4110,
+          "write_ops": 2049,
+          "other_ops": 337483,
+          "other_bytes": 22296399
+        },
+        "index": 1,
+        "mode": 1,
+        "scenario": "relative",
+        "body_ms": 946.6535,
+        "pool_preparation_ms": 44.0909
+      },
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3.11",
+          "-c",
+          "import os,time\nos.chmod('.',0o755)\nnames=[''+'payload-'+format(i,'05d') for i in range(2000)]\nflags=os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_CLOEXEC|os.O_NOFOLLOW\nt=time.monotonic_ns()\nfor name in names:\n fd=os.open(name,flags,0o640)\n assert os.write(fd,b'payload contents')==16\n os.close(fd)\nprint('EXCLUSIVE_CREATE_BENCH_OK', (time.monotonic_ns()-t)/1e6, flush=True)\nfor name in names:\n with open(name,'rb') as stream: assert stream.read()==b'payload contents'\n assert os.stat(name).st_mode&0o777==0o640\n os.unlink(name)\n"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.3342,
+        "request_to_exit_ms": 2492.6213,
+        "activation_to_exit_ms": 2492.2871,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 421.875,
+          "kernel_ms": 1890.625,
+          "total_cpu_ms": 2312.5,
+          "cycles": 6909522252,
+          "page_faults": 8121
+        },
+        "prepared_working_set_bytes": 13111296,
+        "cpu_metrics": {
+          "user_ms": 515.625,
+          "kernel_ms": 1906.25,
+          "total_cpu_ms": 2421.875,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 17475,
+          "read_bytes": 7554172,
+          "write_bytes": 41771,
+          "read_ops": 4169,
+          "write_ops": 2105,
+          "other_ops": 338479,
+          "other_bytes": 22326619
+        },
+        "index": 2,
+        "mode": 1,
+        "scenario": "relative",
+        "body_ms": 804.7204,
+        "pool_preparation_ms": 42.7285
+      },
+      {
+        "pid": 2,
+        "command": [
+          "/usr/bin/python3.11",
+          "-c",
+          "import os,time\nos.chmod('.',0o755)\nnames=['/var/tmp/kinakaze-relative-read-c9eb7420994a4dd480be84b1a4515396/'+'payload-'+format(i,'05d') for i in range(2000)]\nflags=os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_CLOEXEC|os.O_NOFOLLOW\nt=time.monotonic_ns()\nfor name in names:\n fd=os.open(name,flags,0o640)\n assert os.write(fd,b'payload contents')==16\n os.close(fd)\nprint('EXCLUSIVE_CREATE_BENCH_OK', (time.monotonic_ns()-t)/1e6, flush=True)\nfor name in names:\n with open(name,'rb') as stream: assert stream.read()==b'payload contents'\n assert os.stat(name).st_mode&0o777==0o640\n os.unlink(name)\n"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.394,
+        "request_to_exit_ms": 1849.4131,
+        "activation_to_exit_ms": 1849.0191,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 218.75,
+          "kernel_ms": 1578.125,
+          "total_cpu_ms": 1796.875,
+          "cycles": 5243763883,
+          "page_faults": 9386
+        },
+        "prepared_working_set_bytes": 13119488,
+        "cpu_metrics": {
+          "user_ms": 218.75,
+          "kernel_ms": 1625.0,
+          "total_cpu_ms": 1843.75,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 12788,
+          "read_bytes": 415028,
+          "write_bytes": 36610,
+          "read_ops": 4110,
+          "write_ops": 2049,
+          "other_ops": 183475,
+          "other_bytes": 4308317
+        },
+        "index": 2,
+        "mode": 1,
+        "scenario": "absolute",
+        "body_ms": 676.8811,
+        "pool_preparation_ms": 42.7285
+      },
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3.11",
+          "-c",
+          "import os,time\nos.chmod('.',0o755)\nnames=['/var/tmp/kinakaze-relative-read-c9eb7420994a4dd480be84b1a4515396/'+'payload-'+format(i,'05d') for i in range(2000)]\nflags=os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_CLOEXEC|os.O_NOFOLLOW\nt=time.monotonic_ns()\nfor name in names:\n fd=os.open(name,flags,0o640)\n assert os.write(fd,b'payload contents')==16\n os.close(fd)\nprint('EXCLUSIVE_CREATE_BENCH_OK', (time.monotonic_ns()-t)/1e6, flush=True)\nfor name in names:\n with open(name,'rb') as stream: assert stream.read()==b'payload contents'\n assert os.stat(name).st_mode&0o777==0o640\n os.unlink(name)\n"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.3501,
+        "request_to_exit_ms": 2076.8293,
+        "activation_to_exit_ms": 2076.4792,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 187.5,
+          "kernel_ms": 1812.5,
+          "total_cpu_ms": 2000.0,
+          "cycles": 5872050148,
+          "page_faults": 8115
+        },
+        "prepared_working_set_bytes": 13094912,
+        "cpu_metrics": {
+          "user_ms": 203.125,
+          "kernel_ms": 1843.75,
+          "total_cpu_ms": 2046.875,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 16812,
+          "read_bytes": 7554302,
+          "write_bytes": 41836,
+          "read_ops": 4169,
+          "write_ops": 2105,
+          "other_ops": 192311,
+          "other_bytes": 4581067
+        },
+        "index": 3,
+        "mode": 0,
+        "scenario": "absolute",
+        "body_ms": 751.8912,
+        "pool_preparation_ms": 43.8893
+      },
+      {
+        "pid": 2,
+        "command": [
+          "/usr/bin/python3.11",
+          "-c",
+          "import os,time\nos.chmod('.',0o755)\nnames=[''+'payload-'+format(i,'05d') for i in range(2000)]\nflags=os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_CLOEXEC|os.O_NOFOLLOW\nt=time.monotonic_ns()\nfor name in names:\n fd=os.open(name,flags,0o640)\n assert os.write(fd,b'payload contents')==16\n os.close(fd)\nprint('EXCLUSIVE_CREATE_BENCH_OK', (time.monotonic_ns()-t)/1e6, flush=True)\nfor name in names:\n with open(name,'rb') as stream: assert stream.read()==b'payload contents'\n assert os.stat(name).st_mode&0o777==0o640\n os.unlink(name)\n"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.3566,
+        "request_to_exit_ms": 2782.4395,
+        "activation_to_exit_ms": 2782.0829,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 328.125,
+          "kernel_ms": 2437.5,
+          "total_cpu_ms": 2765.625,
+          "cycles": 7999963995,
+          "page_faults": 9355
+        },
+        "prepared_working_set_bytes": 13107200,
+        "cpu_metrics": {
+          "user_ms": 328.125,
+          "kernel_ms": 2453.125,
+          "total_cpu_ms": 2781.25,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 12751,
+          "read_bytes": 414898,
+          "write_bytes": 36546,
+          "read_ops": 4110,
+          "write_ops": 2049,
+          "other_ops": 345467,
+          "other_bytes": 22560317
+        },
+        "index": 3,
+        "mode": 0,
+        "scenario": "relative",
+        "body_ms": 1013.5152,
+        "pool_preparation_ms": 43.8893
+      },
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3.11",
+          "-c",
+          "import os,time\nos.chmod('.',0o755)\nnames=[''+'payload-'+format(i,'05d') for i in range(2000)]\nflags=os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_CLOEXEC|os.O_NOFOLLOW\nt=time.monotonic_ns()\nfor name in names:\n fd=os.open(name,flags,0o640)\n assert os.write(fd,b'payload contents')==16\n os.close(fd)\nprint('EXCLUSIVE_CREATE_BENCH_OK', (time.monotonic_ns()-t)/1e6, flush=True)\nfor name in names:\n with open(name,'rb') as stream: assert stream.read()==b'payload contents'\n assert os.stat(name).st_mode&0o777==0o640\n os.unlink(name)\n"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.2492,
+        "request_to_exit_ms": 2811.9357,
+        "activation_to_exit_ms": 2811.6865,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 406.25,
+          "kernel_ms": 2234.375,
+          "total_cpu_ms": 2640.625,
+          "cycles": 7765680936,
+          "page_faults": 8178
+        },
+        "prepared_working_set_bytes": 13107200,
+        "cpu_metrics": {
+          "user_ms": 453.125,
+          "kernel_ms": 2234.375,
+          "total_cpu_ms": 2687.5,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 13464,
+          "read_bytes": 7554172,
+          "write_bytes": 41771,
+          "read_ops": 4169,
+          "write_ops": 2105,
+          "other_ops": 337588,
+          "other_bytes": 22306055
+        },
+        "index": 4,
+        "mode": 1,
+        "scenario": "relative",
+        "body_ms": 859.8201,
+        "pool_preparation_ms": 47.2575
+      },
+      {
+        "pid": 2,
+        "command": [
+          "/usr/bin/python3.11",
+          "-c",
+          "import os,time\nos.chmod('.',0o755)\nnames=['/var/tmp/kinakaze-relative-read-c9eb7420994a4dd480be84b1a4515396/'+'payload-'+format(i,'05d') for i in range(2000)]\nflags=os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_CLOEXEC|os.O_NOFOLLOW\nt=time.monotonic_ns()\nfor name in names:\n fd=os.open(name,flags,0o640)\n assert os.write(fd,b'payload contents')==16\n os.close(fd)\nprint('EXCLUSIVE_CREATE_BENCH_OK', (time.monotonic_ns()-t)/1e6, flush=True)\nfor name in names:\n with open(name,'rb') as stream: assert stream.read()==b'payload contents'\n assert os.stat(name).st_mode&0o777==0o640\n os.unlink(name)\n"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.391,
+        "request_to_exit_ms": 1919.2798,
+        "activation_to_exit_ms": 1918.8888,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 171.875,
+          "kernel_ms": 1703.125,
+          "total_cpu_ms": 1875.0,
+          "cycles": 5457838883,
+          "page_faults": 9415
+        },
+        "prepared_working_set_bytes": 13103104,
+        "cpu_metrics": {
+          "user_ms": 171.875,
+          "kernel_ms": 1765.625,
+          "total_cpu_ms": 1937.5,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 12817,
+          "read_bytes": 415028,
+          "write_bytes": 36610,
+          "read_ops": 4110,
+          "write_ops": 2049,
+          "other_ops": 183477,
+          "other_bytes": 4308359
+        },
+        "index": 4,
+        "mode": 1,
+        "scenario": "absolute",
+        "body_ms": 707.2275,
+        "pool_preparation_ms": 47.2575
+      },
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3.11",
+          "-c",
+          "import os,time\nos.chmod('.',0o755)\nnames=['/var/tmp/kinakaze-relative-read-c9eb7420994a4dd480be84b1a4515396/'+'payload-'+format(i,'05d') for i in range(2000)]\nflags=os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_CLOEXEC|os.O_NOFOLLOW\nt=time.monotonic_ns()\nfor name in names:\n fd=os.open(name,flags,0o640)\n assert os.write(fd,b'payload contents')==16\n os.close(fd)\nprint('EXCLUSIVE_CREATE_BENCH_OK', (time.monotonic_ns()-t)/1e6, flush=True)\nfor name in names:\n with open(name,'rb') as stream: assert stream.read()==b'payload contents'\n assert os.stat(name).st_mode&0o777==0o640\n os.unlink(name)\n"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.299,
+        "request_to_exit_ms": 2027.8595,
+        "activation_to_exit_ms": 2027.5605,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 312.5,
+          "kernel_ms": 1656.25,
+          "total_cpu_ms": 1968.75,
+          "cycles": 5777064874,
+          "page_faults": 8164
+        },
+        "prepared_working_set_bytes": 13115392,
+        "cpu_metrics": {
+          "user_ms": 375.0,
+          "kernel_ms": 1656.25,
+          "total_cpu_ms": 2031.25,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 16909,
+          "read_bytes": 7554302,
+          "write_bytes": 41836,
+          "read_ops": 4169,
+          "write_ops": 2105,
+          "other_ops": 192342,
+          "other_bytes": 4582177
+        },
+        "index": 5,
+        "mode": 0,
+        "scenario": "absolute",
+        "body_ms": 743.6069,
+        "pool_preparation_ms": 44.7386
+      },
+      {
+        "pid": 2,
+        "command": [
+          "/usr/bin/python3.11",
+          "-c",
+          "import os,time\nos.chmod('.',0o755)\nnames=[''+'payload-'+format(i,'05d') for i in range(2000)]\nflags=os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_CLOEXEC|os.O_NOFOLLOW\nt=time.monotonic_ns()\nfor name in names:\n fd=os.open(name,flags,0o640)\n assert os.write(fd,b'payload contents')==16\n os.close(fd)\nprint('EXCLUSIVE_CREATE_BENCH_OK', (time.monotonic_ns()-t)/1e6, flush=True)\nfor name in names:\n with open(name,'rb') as stream: assert stream.read()==b'payload contents'\n assert os.stat(name).st_mode&0o777==0o640\n os.unlink(name)\n"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.3422,
+        "request_to_exit_ms": 2594.8577,
+        "activation_to_exit_ms": 2594.5155,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 484.375,
+          "kernel_ms": 2093.75,
+          "total_cpu_ms": 2578.125,
+          "cycles": 7452074257,
+          "page_faults": 9353
+        },
+        "prepared_working_set_bytes": 13139968,
+        "cpu_metrics": {
+          "user_ms": 500.0,
+          "kernel_ms": 2109.375,
+          "total_cpu_ms": 2609.375,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 12750,
+          "read_bytes": 414898,
+          "write_bytes": 36545,
+          "read_ops": 4110,
+          "write_ops": 2049,
+          "other_ops": 345466,
+          "other_bytes": 22560317
+        },
+        "index": 5,
+        "mode": 0,
+        "scenario": "relative",
+        "body_ms": 918.8675,
+        "pool_preparation_ms": 44.7386
+      }
+    ],
+    "count": 2000,
+    "toggle": "KINAKAZE_NATIVE_EXCLUSIVE_CREATE",
+    "native_read_open": true,
+    "staging": "F:\\crysoacu2\\artifacts\\node-install-20260930\\apt180-r11-root-b\\var\\tmp\\kinakaze-relative-read-c9eb7420994a4dd480be84b1a4515396",
+    "summary": {
+      "relative": {
+        "0": {
+          "body_ms": 918.8675,
+          "wall_ms": 2695.6989,
+          "cpu_ms": 2609.375,
+          "page_faults": 12751
+        },
+        "1": {
+          "body_ms": 859.8201,
+          "wall_ms": 2543.0461,
+          "cpu_ms": 2593.75,
+          "page_faults": 13464
+        }
+      },
+      "absolute": {
+        "0": {
+          "body_ms": 743.6069,
+          "wall_ms": 2076.8293,
+          "cpu_ms": 2031.25,
+          "page_faults": 16812
+        },
+        "1": {
+          "body_ms": 707.2275,
+          "wall_ms": 1919.2798,
+          "cpu_ms": 1921.875,
+          "page_faults": 12817
+        }
+      }
+    }
+  },
+  "guest_validation": {
+    "action": "validate",
+    "diagnostic": false,
+    "root": "F:\\crysoacu2\\artifacts\\node-install-20260930\\apt180-r11-root-b",
+    "dist": "F:\\crysoacu2\\artifacts\\apt-180-20260930\\candidate-r14-native-create",
+    "hashes": {
+      "worker.exe": "5b52db57efba01426924e8883a183f50365eb275afb9de75e5209a77a5197b60",
+      "init.exe": "56687df2dd9f262443d46ec5d6321dac327e0ace99356288f4f904cc7070e80d",
+      "rootfs.manifest.json": "14905978ccf97543bdc6cda4155879fd87c57243a972137beecd83adf7d2e60f",
+      "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+      "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "rootfs\\lib\\kinakaze_alloc.so": "b550f736ff3affe6eb6324e77bd238fddd4731cb2c7c530a67291f810c8a3187",
+      "rootfs\\lib\\kinakaze_elf.so": "dc1bba45ab096c4a4db4280f0948b51eec7e3c3522f162c7dda2a05a6e046b85",
+      "rootfs\\lib\\kinakaze_guest_engine.so": "67bf4fe9b26b753a9fcdc6eff1a93a5e6199025cbe1105f52547c5e235420101",
+      "rootfs\\lib\\kinakaze_kernel.so": "221163504595ac1390d282e684ea1c6deccaead173fc24fb1808bdbbb1aa57c7",
+      "rootfs\\lib\\kinakaze_tls.so": "7749a354dc7e822bfd268a8e1a19197fbd02b5c9e68744eaa50eeb66b02121f2",
+      "rootfs\\lib\\kinakaze_vfs.so": "807937c65f87339ce827b927ce2fb7860eff43c3bd36f2c6fa4e2d06c08e89e4",
+      "rootfs\\lib\\ld-linux-x86-64.so.2": "39f23c9fedaa6d2d25a024563d2e5a90a2818e8cd58a44c3d29081cda303467f",
+      "rootfs\\lib\\libasound.so.2": "063286763eb82ba5a64eac05b61822acb35812b3824371252fa80aa54980324b",
+      "rootfs\\lib\\libc.so.6": "43968afb76300b0e8870a3265858036233ebffa67b64c0541bcb2d6edecd72ea",
+      "rootfs\\lib\\libcuda.so.1": "583fbd981ee762fee8b8896ad691c2f0fff894c6684b88d4d51310c11cc793b7",
+      "rootfs\\lib\\libdisplay.so.1": "0abb09917e88e5f6e95f41fc88d057f18a99386156c96ab05c343b4155ac8742",
+      "rootfs\\lib\\libdl.so.2": "d2fa52699c1987449f11d14b11221d7e04c380bd980ae7763b5255156f760309",
+      "rootfs\\lib\\libEGL.so.1": "ce5795000138256237397b634c092279b68370ca5793f968b2ac01b672d8118f",
+      "rootfs\\lib\\libGL.so.1": "4aea739b61c3b47321269bc20d8196ebb07455e5ad8949f9066c2940d543e995",
+      "rootfs\\lib\\libGLESv2.so.2": "cfa2b6e8c5eb069841182430a3ae89159bbe4a83f728fbb4f57c50eb691455ab",
+      "rootfs\\lib\\libGLX.so.0": "aa60ae47948f93ec0bbd2e4f46a80254715766c9cd3de0eebd73220102e0befe",
+      "rootfs\\lib\\libkinakaze-runtime.so.1": "306d0610d4c55f965ea6ad8541b4a8956d1533efc381d3d2bcd2a70b65226920",
+      "rootfs\\lib\\libm.so.6": "743817430fe95d0f3a74729a0a8500706c934266627c65be8a0d9b4432d08df0",
+      "rootfs\\lib\\libOpenGL.so.0": "ea22ec21d186a7af975b4cde363e86c88f81fcbb65d9336857e66fdba57016bd",
+      "rootfs\\lib\\libpipewire-0.3.so.0": "34dc54a26d2b0fe968edbc71346500cad11e502d00bec83f119c7540d0dd5fae",
+      "rootfs\\lib\\libpthread.so.0": "7ba90697491e171bea9b491079726ae8673fb92b6256537806608194486c7db0",
+      "rootfs\\lib\\libpulse.so.0": "ed0333f8242f0ac647a6c5fc53dcc135afb54f56bc01e79e190d32cfffd53c55",
+      "rootfs\\lib\\libresolv.so.2": "e7332e1b893600601780ebb4de4bd7fd34078ba44a100349867585f175ce55f7",
+      "rootfs\\lib\\librt.so.1": "edfc2e180a81957954f69191bae2cf433c4d29118ebdb2076b030b72e21a6021",
+      "rootfs\\lib\\libvulkan.so.1": "36f51d2472fb5ecc5e348f5d80c1ec60f06e15ce39d5e3435075c16cd4c6c5aa",
+      "rootfs\\lib\\libX11-xcb.so.1": "48909e8c68b503b3abb7f0b5cc1cc76ebac5cd17472f72f630d80b78af4c500a",
+      "rootfs\\lib\\libX11.so.6": "59bff27ce49917a4efc4c572220335d368666b775bc9258275cb675228907819",
+      "rootfs\\lib\\libxcb.so.1": "72d4e035bf8a131030b70e8d1b6306bad150e568ee3133a8a6631ec045ebf917",
+      "rootfs\\lib\\libXcursor.so.1": "709d8e4f3750440d48e9a054b8af6bac406834b81f1b37fbcf43b455321f526d",
+      "rootfs\\lib\\libXext.so.6": "80352d3cc65b01abba20730d3d91854d25c0be6a9ba12c638a7cbf42f833d486",
+      "rootfs\\lib\\libXi.so.6": "05f2d85b60ccc6a7620b33a2c043de5dd0d2fe3511d202d837239f2cfbbd9f25",
+      "rootfs\\lib\\libXinerama.so.1": "3909cc1afa5601e2f2fd95f2ede6f9e16179110df8185a8853f803128d3907b7",
+      "rootfs\\lib\\libXrandr.so.2": "cec2053cc481668a59ae8be8352ce8cf704b4dcacf9f78f2d077b96fb6c91a61",
+      "rootfs\\lib\\libXrender.so.1": "e78b691b39f0dc43288baeecbcdc77b1e9c2dd19ee8feaa4bfb2b98b8210aa1d",
+      "rootfs\\lib\\libXxf86vm.so.1": "e94090285bca1d3cbd84374013ea9867b4f266fab20ce15a1ee6e3fa31181bdd",
+      "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+      "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+    },
+    "order": [
+      0,
+      1
+    ],
+    "passed": true,
+    "rows": [
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/NativeExclusiveCreateProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.2468,
+        "request_to_exit_ms": 152.0927,
+        "activation_to_exit_ms": 151.8459,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 31.25,
+          "kernel_ms": 46.875,
+          "total_cpu_ms": 78.125,
+          "cycles": 326217514,
+          "page_faults": 8877
+        },
+        "prepared_working_set_bytes": 13099008,
+        "cpu_metrics": {
+          "user_ms": 31.25,
+          "kernel_ms": 62.5,
+          "total_cpu_ms": 93.75,
+          "processes": 0,
+          "active_processes": -1,
+          "page_faults": 10849,
+          "read_bytes": 8520239,
+          "write_bytes": 9453,
+          "read_ops": 242,
+          "write_ops": 115,
+          "other_ops": 10317,
+          "other_bytes": 426272
+        },
+        "output": [
+          "NATIVE_EXCLUSIVE_CREATE_OK\n",
+          ""
+        ],
+        "mode": 0,
+        "probe": "NativeExclusiveCreateProbe",
+        "pool_preparation_ms": 543.5441
+      },
+      {
+        "pid": 2,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/NativeWriteLifetimeProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 5.1595,
+        "request_to_exit_ms": 461.1532,
+        "activation_to_exit_ms": 455.9937,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 0.0,
+          "kernel_ms": 125.0,
+          "total_cpu_ms": 125.0,
+          "cycles": 373668859,
+          "page_faults": 15033
+        },
+        "prepared_working_set_bytes": 13094912,
+        "cpu_metrics": {
+          "user_ms": 125.0,
+          "kernel_ms": 359.375,
+          "total_cpu_ms": 484.375,
+          "processes": 7,
+          "active_processes": 2,
+          "page_faults": 81744,
+          "read_bytes": 15736845,
+          "write_bytes": 30889,
+          "read_ops": 617,
+          "write_ops": 342,
+          "other_ops": 25044,
+          "other_bytes": 1056081
+        },
+        "output": [
+          "NATIVE_WRITE_LIFETIME_OK\n",
+          ""
+        ],
+        "mode": 0,
+        "probe": "NativeWriteLifetimeProbe",
+        "pool_preparation_ms": 543.5441
+      },
+      {
+        "pid": 3,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/NativePermissionProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 63.217,
+        "request_to_exit_ms": 559.0277,
+        "activation_to_exit_ms": 495.8107,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 46.875,
+          "kernel_ms": 93.75,
+          "total_cpu_ms": 140.625,
+          "cycles": 412218282,
+          "page_faults": 16198
+        },
+        "prepared_working_set_bytes": 13131776,
+        "cpu_metrics": {
+          "user_ms": 187.5,
+          "kernel_ms": 296.875,
+          "total_cpu_ms": 484.375,
+          "processes": 7,
+          "active_processes": 0,
+          "page_faults": 99739,
+          "read_bytes": 23245762,
+          "write_bytes": 40793,
+          "read_ops": 816,
+          "write_ops": 439,
+          "other_ops": 31243,
+          "other_bytes": 1315241
+        },
+        "output": [
+          "NATIVE_PERMISSIONS_OK\n",
+          ""
+        ],
+        "mode": 0,
+        "probe": "NativePermissionProbe",
+        "pool_preparation_ms": 543.5441
+      },
+      {
+        "pid": 6,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/NativePathMetadataProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.5194,
+        "request_to_exit_ms": 158.175,
+        "activation_to_exit_ms": 157.6556,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 31.25,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 109.375,
+          "cycles": 368257431,
+          "page_faults": 14012
+        },
+        "prepared_working_set_bytes": 13131776,
+        "cpu_metrics": {
+          "user_ms": 31.25,
+          "kernel_ms": 93.75,
+          "total_cpu_ms": 125.0,
+          "processes": 2,
+          "active_processes": 0,
+          "page_faults": 21738,
+          "read_bytes": 1661482,
+          "write_bytes": 16685,
+          "read_ops": 318,
+          "write_ops": 160,
+          "other_ops": 12879,
+          "other_bytes": 511970
+        },
+        "output": [
+          "NATIVE_PATH_METADATA_OK\n",
+          ""
+        ],
+        "mode": 0,
+        "probe": "NativePathMetadataProbe",
+        "pool_preparation_ms": 543.5441
+      },
+      {
+        "pid": 9,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/NativeReadOpenProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.3773,
+        "request_to_exit_ms": 108.3594,
+        "activation_to_exit_ms": 107.9821,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 62.5,
+          "kernel_ms": 46.875,
+          "total_cpu_ms": 109.375,
+          "cycles": 290554016,
+          "page_faults": 10619
+        },
+        "prepared_working_set_bytes": 13123584,
+        "cpu_metrics": {
+          "user_ms": 62.5,
+          "kernel_ms": 62.5,
+          "total_cpu_ms": 125.0,
+          "processes": 0,
+          "active_processes": -1,
+          "page_faults": 13259,
+          "read_bytes": 1070082,
+          "write_bytes": 5094,
+          "read_ops": 195,
+          "write_ops": 66,
+          "other_ops": 10630,
+          "other_bytes": 427303
+        },
+        "output": [
+          "NATIVE_READ_OPEN_OK\n",
+          ""
+        ],
+        "mode": 0,
+        "probe": "NativeReadOpenProbe",
+        "pool_preparation_ms": 543.5441
+      },
+      {
+        "pid": 12,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/RelativeNativeReadProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 4.3387,
+        "request_to_exit_ms": 108.4645,
+        "activation_to_exit_ms": 104.1258,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 15.625,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 93.75,
+          "cycles": 278090073,
+          "page_faults": 10170
+        },
+        "prepared_working_set_bytes": 13115392,
+        "cpu_metrics": {
+          "user_ms": 31.25,
+          "kernel_ms": 93.75,
+          "total_cpu_ms": 125.0,
+          "processes": 2,
+          "active_processes": 1,
+          "page_faults": 14314,
+          "read_bytes": 1069756,
+          "write_bytes": 5120,
+          "read_ops": 198,
+          "write_ops": 68,
+          "other_ops": 10954,
+          "other_bytes": 443420
+        },
+        "output": [
+          "RELATIVE_NATIVE_READ_OK\n",
+          ""
+        ],
+        "mode": 0,
+        "probe": "RelativeNativeReadProbe",
+        "pool_preparation_ms": 543.5441
+      },
+      {
+        "pid": 13,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/NativeReadCacheProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.3653,
+        "request_to_exit_ms": 343.09,
+        "activation_to_exit_ms": 342.7247,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 46.875,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 125.0,
+          "cycles": 408790785,
+          "page_faults": 20481
+        },
+        "prepared_working_set_bytes": 13135872,
+        "cpu_metrics": {
+          "user_ms": 234.375,
+          "kernel_ms": 234.375,
+          "total_cpu_ms": 468.75,
+          "processes": 7,
+          "active_processes": 0,
+          "page_faults": 82872,
+          "read_bytes": 13668151,
+          "write_bytes": 111268,
+          "read_ops": 682,
+          "write_ops": 446,
+          "other_ops": 21919,
+          "other_bytes": 954749
+        },
+        "output": [
+          "NATIVE_READ_CACHE_OK\n",
+          ""
+        ],
+        "mode": 0,
+        "probe": "NativeReadCacheProbe",
+        "pool_preparation_ms": 543.5441
+      },
+      {
+        "pid": 14,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/NativeLookupProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 31.8922,
+        "request_to_exit_ms": 189.0434,
+        "activation_to_exit_ms": 157.1512,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 62.5,
+          "kernel_ms": 31.25,
+          "total_cpu_ms": 93.75,
+          "cycles": 345557748,
+          "page_faults": 13399
+        },
+        "prepared_working_set_bytes": 13144064,
+        "cpu_metrics": {
+          "user_ms": 109.375,
+          "kernel_ms": 93.75,
+          "total_cpu_ms": 203.125,
+          "processes": 2,
+          "active_processes": 0,
+          "page_faults": 22379,
+          "read_bytes": 1295379,
+          "write_bytes": 11642,
+          "read_ops": 258,
+          "write_ops": 123,
+          "other_ops": 11982,
+          "other_bytes": 448264
+        },
+        "output": [
+          "NATIVE_NEGATIVE_LOOKUP_SYMLINK_CHROOT_OK\n",
+          ""
+        ],
+        "mode": 0,
+        "probe": "NativeLookupProbe",
+        "pool_preparation_ms": 543.5441
+      },
+      {
+        "pid": 20,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/ConcurrentVforkProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.3968,
+        "request_to_exit_ms": 837.5582,
+        "activation_to_exit_ms": 837.1614,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 78.125,
+          "kernel_ms": 406.25,
+          "total_cpu_ms": 484.375,
+          "cycles": 1576685333,
+          "page_faults": 71728
+        },
+        "prepared_working_set_bytes": 13152256,
+        "cpu_metrics": {
+          "user_ms": 1859.375,
+          "kernel_ms": 2843.75,
+          "total_cpu_ms": 4703.125,
+          "processes": 97,
+          "active_processes": 0,
+          "page_faults": 683630,
+          "read_bytes": 3298083,
+          "write_bytes": 535040,
+          "read_ops": 6057,
+          "write_ops": 5554,
+          "other_ops": 115109,
+          "other_bytes": 5093224
+        },
+        "output": [
+          "CONCURRENT_VFORK_OK\n",
+          ""
+        ],
+        "mode": 0,
+        "probe": "ConcurrentVforkProbe",
+        "pool_preparation_ms": 543.5441
+      },
+      {
+        "pid": 22,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/ForkNativeTransferProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.2252,
+        "request_to_exit_ms": 356.7629,
+        "activation_to_exit_ms": 356.5377,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 46.875,
+          "kernel_ms": 93.75,
+          "total_cpu_ms": 140.625,
+          "cycles": 376693377,
+          "page_faults": 14719
+        },
+        "prepared_working_set_bytes": 13160448,
+        "cpu_metrics": {
+          "user_ms": 140.625,
+          "kernel_ms": 187.5,
+          "total_cpu_ms": 328.125,
+          "processes": 4,
+          "active_processes": 0,
+          "page_faults": 58504,
+          "read_bytes": 8776490,
+          "write_bytes": 30765,
+          "read_ops": 503,
+          "write_ops": 273,
+          "other_ops": 18524,
+          "other_bytes": 787896
+        },
+        "output": [
+          "FORK_NATIVE_TRANSFER_OK\n",
+          ""
+        ],
+        "mode": 0,
+        "probe": "ForkNativeTransferProbe",
+        "pool_preparation_ms": 543.5441
+      },
+      {
+        "pid": 35,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/ForkNativeFallbackProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 108.9896,
+        "request_to_exit_ms": 250.1525,
+        "activation_to_exit_ms": 141.1629,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 15.625,
+          "kernel_ms": 62.5,
+          "total_cpu_ms": 78.125,
+          "cycles": 220268156,
+          "page_faults": 12565
+        },
+        "prepared_working_set_bytes": 13139968,
+        "cpu_metrics": {
+          "user_ms": 46.875,
+          "kernel_ms": 93.75,
+          "total_cpu_ms": 140.625,
+          "processes": 2,
+          "active_processes": -1,
+          "page_faults": 30524,
+          "read_bytes": 439891,
+          "write_bytes": 14055,
+          "read_ops": 249,
+          "write_ops": 169,
+          "other_ops": 8241,
+          "other_bytes": 360013
+        },
+        "output": [
+          "FORK_NATIVE_FALLBACK_OK\n",
+          ""
+        ],
+        "mode": 0,
+        "probe": "ForkNativeFallbackProbe",
+        "pool_preparation_ms": 543.5441
+      },
+      {
+        "pid": 74,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/ForkProviderMetadataProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 3.9355,
+        "request_to_exit_ms": 154.3333,
+        "activation_to_exit_ms": 150.3978,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 31.25,
+          "kernel_ms": 62.5,
+          "total_cpu_ms": 93.75,
+          "cycles": 236148490,
+          "page_faults": 13964
+        },
+        "prepared_working_set_bytes": 13139968,
+        "cpu_metrics": {
+          "user_ms": 125.0,
+          "kernel_ms": 125.0,
+          "total_cpu_ms": 250.0,
+          "processes": 3,
+          "active_processes": 0,
+          "page_faults": 40062,
+          "read_bytes": 455424,
+          "write_bytes": 24425,
+          "read_ops": 334,
+          "write_ops": 253,
+          "other_ops": 9794,
+          "other_bytes": 433171
+        },
+        "output": [
+          "FORK_PROVIDER_METADATA_OK\n",
+          ""
+        ],
+        "mode": 0,
+        "probe": "ForkProviderMetadataProbe",
+        "pool_preparation_ms": 543.5441
+      },
+      {
+        "pid": 77,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/ExecPrewarmPoolProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.5824,
+        "request_to_exit_ms": 2930.4996,
+        "activation_to_exit_ms": 2929.9172,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 15.625,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 93.75,
+          "cycles": 298490101,
+          "page_faults": 17518
+        },
+        "prepared_working_set_bytes": 13131776,
+        "cpu_metrics": {
+          "user_ms": 1296.875,
+          "kernel_ms": 2531.25,
+          "total_cpu_ms": 3828.125,
+          "processes": 26,
+          "active_processes": 0,
+          "page_faults": 580835,
+          "read_bytes": 202244282,
+          "write_bytes": 195312,
+          "read_ops": 6288,
+          "write_ops": 2345,
+          "other_ops": 258204,
+          "other_bytes": 10881151
+        },
+        "output": [
+          "EXEC_PREWARM_POOL_OK\n",
+          ""
+        ],
+        "mode": 0,
+        "probe": "ExecPrewarmPoolProbe",
+        "pool_preparation_ms": 543.5441
+      },
+      {
+        "pid": 80,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/PthreadRobustProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.3692,
+        "request_to_exit_ms": 181.2882,
+        "activation_to_exit_ms": 180.919,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 46.875,
+          "kernel_ms": 15.625,
+          "total_cpu_ms": 62.5,
+          "cycles": 332129961,
+          "page_faults": 18097
+        },
+        "prepared_working_set_bytes": 13152256,
+        "cpu_metrics": {
+          "user_ms": 156.25,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 234.375,
+          "processes": 4,
+          "active_processes": -1,
+          "page_faults": 39149,
+          "read_bytes": 1076662,
+          "write_bytes": 30629,
+          "read_ops": 409,
+          "write_ops": 288,
+          "other_ops": 11743,
+          "other_bytes": 512810
+        },
+        "output": [
+          "PTHREAD_ROBUST_MUTEX_OK\n",
+          ""
+        ],
+        "mode": 0,
+        "probe": "PthreadRobustProbe",
+        "pool_preparation_ms": 543.5441
+      },
+      {
+        "pid": 81,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/PthreadRobustAliasesProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 4.2846,
+        "request_to_exit_ms": 65.5124,
+        "activation_to_exit_ms": 61.2278,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 15.625,
+          "kernel_ms": 0.0,
+          "total_cpu_ms": 15.625,
+          "cycles": 171018149,
+          "page_faults": 9526
+        },
+        "prepared_working_set_bytes": 13139968,
+        "cpu_metrics": {
+          "user_ms": 15.625,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 93.75,
+          "processes": 0,
+          "active_processes": -1,
+          "page_faults": 12323,
+          "read_bytes": 432466,
+          "write_bytes": 4677,
+          "read_ops": 136,
+          "write_ops": 57,
+          "other_ops": 7200,
+          "other_bytes": 314455
+        },
+        "output": [
+          "PTHREAD_ROBUST_ALIASES_OK\n",
+          ""
+        ],
+        "mode": 0,
+        "probe": "PthreadRobustAliasesProbe",
+        "pool_preparation_ms": 543.5441
+      },
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/NativeExclusiveCreateProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.4123,
+        "request_to_exit_ms": 125.8494,
+        "activation_to_exit_ms": 125.4371,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 46.875,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 125.0,
+          "cycles": 308021172,
+          "page_faults": 8913
+        },
+        "prepared_working_set_bytes": 13103104,
+        "cpu_metrics": {
+          "user_ms": 109.375,
+          "kernel_ms": 93.75,
+          "total_cpu_ms": 203.125,
+          "processes": 2,
+          "active_processes": 1,
+          "page_faults": 16644,
+          "read_bytes": 8520242,
+          "write_bytes": 9457,
+          "read_ops": 242,
+          "write_ops": 115,
+          "other_ops": 11270,
+          "other_bytes": 448378
+        },
+        "output": [
+          "NATIVE_EXCLUSIVE_CREATE_OK\n",
+          ""
+        ],
+        "mode": 1,
+        "probe": "NativeExclusiveCreateProbe",
+        "pool_preparation_ms": 49.3872
+      },
+      {
+        "pid": 2,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/NativeWriteLifetimeProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 3.1037,
+        "request_to_exit_ms": 423.4086,
+        "activation_to_exit_ms": 420.3049,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 31.25,
+          "kernel_ms": 93.75,
+          "total_cpu_ms": 125.0,
+          "cycles": 374712928,
+          "page_faults": 15036
+        },
+        "prepared_working_set_bytes": 13078528,
+        "cpu_metrics": {
+          "user_ms": 187.5,
+          "kernel_ms": 250.0,
+          "total_cpu_ms": 437.5,
+          "processes": 7,
+          "active_processes": 2,
+          "page_faults": 80937,
+          "read_bytes": 15736869,
+          "write_bytes": 30914,
+          "read_ops": 617,
+          "write_ops": 342,
+          "other_ops": 25020,
+          "other_bytes": 1055023
+        },
+        "output": [
+          "NATIVE_WRITE_LIFETIME_OK\n",
+          ""
+        ],
+        "mode": 1,
+        "probe": "NativeWriteLifetimeProbe",
+        "pool_preparation_ms": 49.3872
+      },
+      {
+        "pid": 3,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/NativePermissionProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 138.9943,
+        "request_to_exit_ms": 579.8441,
+        "activation_to_exit_ms": 440.8498,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 15.625,
+          "kernel_ms": 109.375,
+          "total_cpu_ms": 125.0,
+          "cycles": 405687216,
+          "page_faults": 16169
+        },
+        "prepared_working_set_bytes": 13131776,
+        "cpu_metrics": {
+          "user_ms": 203.125,
+          "kernel_ms": 312.5,
+          "total_cpu_ms": 515.625,
+          "processes": 7,
+          "active_processes": 0,
+          "page_faults": 99846,
+          "read_bytes": 23245812,
+          "write_bytes": 40843,
+          "read_ops": 816,
+          "write_ops": 439,
+          "other_ops": 31229,
+          "other_bytes": 1315091
+        },
+        "output": [
+          "NATIVE_PERMISSIONS_OK\n",
+          ""
+        ],
+        "mode": 1,
+        "probe": "NativePermissionProbe",
+        "pool_preparation_ms": 49.3872
+      },
+      {
+        "pid": 6,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/NativePathMetadataProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.2631,
+        "request_to_exit_ms": 153.7839,
+        "activation_to_exit_ms": 153.5208,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 62.5,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 140.625,
+          "cycles": 362950762,
+          "page_faults": 13995
+        },
+        "prepared_working_set_bytes": 13152256,
+        "cpu_metrics": {
+          "user_ms": 93.75,
+          "kernel_ms": 109.375,
+          "total_cpu_ms": 203.125,
+          "processes": 2,
+          "active_processes": 0,
+          "page_faults": 21728,
+          "read_bytes": 1661491,
+          "write_bytes": 16696,
+          "read_ops": 318,
+          "write_ops": 160,
+          "other_ops": 12870,
+          "other_bytes": 511926
+        },
+        "output": [
+          "NATIVE_PATH_METADATA_OK\n",
+          ""
+        ],
+        "mode": 1,
+        "probe": "NativePathMetadataProbe",
+        "pool_preparation_ms": 49.3872
+      },
+      {
+        "pid": 9,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/NativeReadOpenProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.3477,
+        "request_to_exit_ms": 100.7531,
+        "activation_to_exit_ms": 100.4054,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 31.25,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 109.375,
+          "cycles": 284122739,
+          "page_faults": 10638
+        },
+        "prepared_working_set_bytes": 13135872,
+        "cpu_metrics": {
+          "user_ms": 46.875,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 125.0,
+          "processes": 0,
+          "active_processes": -1,
+          "page_faults": 13263,
+          "read_bytes": 1070088,
+          "write_bytes": 5101,
+          "read_ops": 195,
+          "write_ops": 66,
+          "other_ops": 10636,
+          "other_bytes": 427313
+        },
+        "output": [
+          "NATIVE_READ_OPEN_OK\n",
+          ""
+        ],
+        "mode": 1,
+        "probe": "NativeReadOpenProbe",
+        "pool_preparation_ms": 49.3872
+      },
+      {
+        "pid": 12,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/RelativeNativeReadProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 3.7733,
+        "request_to_exit_ms": 103.6148,
+        "activation_to_exit_ms": 99.8415,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 15.625,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 93.75,
+          "cycles": 270247074,
+          "page_faults": 10165
+        },
+        "prepared_working_set_bytes": 13160448,
+        "cpu_metrics": {
+          "user_ms": 78.125,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 156.25,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 13687,
+          "read_bytes": 1069762,
+          "write_bytes": 5127,
+          "read_ops": 198,
+          "write_ops": 68,
+          "other_ops": 10954,
+          "other_bytes": 443348
+        },
+        "output": [
+          "RELATIVE_NATIVE_READ_OK\n",
+          ""
+        ],
+        "mode": 1,
+        "probe": "RelativeNativeReadProbe",
+        "pool_preparation_ms": 49.3872
+      },
+      {
+        "pid": 13,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/NativeReadCacheProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.3466,
+        "request_to_exit_ms": 355.8008,
+        "activation_to_exit_ms": 355.4542,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 15.625,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 93.75,
+          "cycles": 403361858,
+          "page_faults": 20440
+        },
+        "prepared_working_set_bytes": 13144064,
+        "cpu_metrics": {
+          "user_ms": 250.0,
+          "kernel_ms": 218.75,
+          "total_cpu_ms": 468.75,
+          "processes": 7,
+          "active_processes": 0,
+          "page_faults": 82924,
+          "read_bytes": 13668202,
+          "write_bytes": 111320,
+          "read_ops": 682,
+          "write_ops": 446,
+          "other_ops": 21895,
+          "other_bytes": 954619
+        },
+        "output": [
+          "NATIVE_READ_CACHE_OK\n",
+          ""
+        ],
+        "mode": 1,
+        "probe": "NativeReadCacheProbe",
+        "pool_preparation_ms": 49.3872
+      },
+      {
+        "pid": 14,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/NativeLookupProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 133.3855,
+        "request_to_exit_ms": 263.5984,
+        "activation_to_exit_ms": 130.2129,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 31.25,
+          "kernel_ms": 93.75,
+          "total_cpu_ms": 125.0,
+          "cycles": 321885734,
+          "page_faults": 13401
+        },
+        "prepared_working_set_bytes": 13152256,
+        "cpu_metrics": {
+          "user_ms": 46.875,
+          "kernel_ms": 109.375,
+          "total_cpu_ms": 156.25,
+          "processes": 1,
+          "active_processes": -1,
+          "page_faults": 20190,
+          "read_bytes": 1295390,
+          "write_bytes": 11654,
+          "read_ops": 258,
+          "write_ops": 123,
+          "other_ops": 11551,
+          "other_bytes": 436790
+        },
+        "output": [
+          "NATIVE_NEGATIVE_LOOKUP_SYMLINK_CHROOT_OK\n",
+          ""
+        ],
+        "mode": 1,
+        "probe": "NativeLookupProbe",
+        "pool_preparation_ms": 49.3872
+      },
+      {
+        "pid": 20,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/ConcurrentVforkProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 4.5472,
+        "request_to_exit_ms": 828.745,
+        "activation_to_exit_ms": 824.1978,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 171.875,
+          "kernel_ms": 343.75,
+          "total_cpu_ms": 515.625,
+          "cycles": 1612840745,
+          "page_faults": 71053
+        },
+        "prepared_working_set_bytes": 13185024,
+        "cpu_metrics": {
+          "user_ms": 1796.875,
+          "kernel_ms": 2484.375,
+          "total_cpu_ms": 4281.25,
+          "processes": 97,
+          "active_processes": 0,
+          "page_faults": 684290,
+          "read_bytes": 3298905,
+          "write_bytes": 535863,
+          "read_ops": 6057,
+          "write_ops": 5554,
+          "other_ops": 116142,
+          "other_bytes": 5115631
+        },
+        "output": [
+          "CONCURRENT_VFORK_OK\n",
+          ""
+        ],
+        "mode": 1,
+        "probe": "ConcurrentVforkProbe",
+        "pool_preparation_ms": 49.3872
+      },
+      {
+        "pid": 22,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/ForkNativeTransferProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.2984,
+        "request_to_exit_ms": 370.987,
+        "activation_to_exit_ms": 370.6886,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 46.875,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 125.0,
+          "cycles": 367951940,
+          "page_faults": 14718
+        },
+        "prepared_working_set_bytes": 13148160,
+        "cpu_metrics": {
+          "user_ms": 62.5,
+          "kernel_ms": 250.0,
+          "total_cpu_ms": 312.5,
+          "processes": 4,
+          "active_processes": 0,
+          "page_faults": 58490,
+          "read_bytes": 8776521,
+          "write_bytes": 30797,
+          "read_ops": 503,
+          "write_ops": 273,
+          "other_ops": 18523,
+          "other_bytes": 787740
+        },
+        "output": [
+          "FORK_NATIVE_TRANSFER_OK\n",
+          ""
+        ],
+        "mode": 1,
+        "probe": "ForkNativeTransferProbe",
+        "pool_preparation_ms": 49.3872
+      },
+      {
+        "pid": 37,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/ForkNativeFallbackProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 34.2709,
+        "request_to_exit_ms": 170.6011,
+        "activation_to_exit_ms": 136.3302,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 15.625,
+          "kernel_ms": 62.5,
+          "total_cpu_ms": 78.125,
+          "cycles": 215405296,
+          "page_faults": 12556
+        },
+        "prepared_working_set_bytes": 13164544,
+        "cpu_metrics": {
+          "user_ms": 46.875,
+          "kernel_ms": 93.75,
+          "total_cpu_ms": 140.625,
+          "processes": 2,
+          "active_processes": -1,
+          "page_faults": 30514,
+          "read_bytes": 439910,
+          "write_bytes": 14075,
+          "read_ops": 249,
+          "write_ops": 169,
+          "other_ops": 8240,
+          "other_bytes": 359921
+        },
+        "output": [
+          "FORK_NATIVE_FALLBACK_OK\n",
+          ""
+        ],
+        "mode": 1,
+        "probe": "ForkNativeFallbackProbe",
+        "pool_preparation_ms": 49.3872
+      },
+      {
+        "pid": 74,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/ForkProviderMetadataProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 3.7273,
+        "request_to_exit_ms": 145.0724,
+        "activation_to_exit_ms": 141.3451,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 15.625,
+          "kernel_ms": 62.5,
+          "total_cpu_ms": 78.125,
+          "cycles": 231665270,
+          "page_faults": 13931
+        },
+        "prepared_working_set_bytes": 13123584,
+        "cpu_metrics": {
+          "user_ms": 62.5,
+          "kernel_ms": 187.5,
+          "total_cpu_ms": 250.0,
+          "processes": 2,
+          "active_processes": -1,
+          "page_faults": 39178,
+          "read_bytes": 455445,
+          "write_bytes": 24447,
+          "read_ops": 334,
+          "write_ops": 253,
+          "other_ops": 9714,
+          "other_bytes": 430505
+        },
+        "output": [
+          "FORK_PROVIDER_METADATA_OK\n",
+          ""
+        ],
+        "mode": 1,
+        "probe": "ForkProviderMetadataProbe",
+        "pool_preparation_ms": 49.3872
+      },
+      {
+        "pid": 77,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/ExecPrewarmPoolProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 3.7805,
+        "request_to_exit_ms": 2885.6918,
+        "activation_to_exit_ms": 2881.9113,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 15.625,
+          "kernel_ms": 78.125,
+          "total_cpu_ms": 93.75,
+          "cycles": 296688821,
+          "page_faults": 17514
+        },
+        "prepared_working_set_bytes": 13152256,
+        "cpu_metrics": {
+          "user_ms": 1375.0,
+          "kernel_ms": 2093.75,
+          "total_cpu_ms": 3468.75,
+          "processes": 26,
+          "active_processes": 0,
+          "page_faults": 581030,
+          "read_bytes": 202244461,
+          "write_bytes": 195492,
+          "read_ops": 6288,
+          "write_ops": 2345,
+          "other_ops": 258300,
+          "other_bytes": 10883195
+        },
+        "output": [
+          "EXEC_PREWARM_POOL_OK\n",
+          ""
+        ],
+        "mode": 1,
+        "probe": "ExecPrewarmPoolProbe",
+        "pool_preparation_ms": 49.3872
+      },
+      {
+        "pid": 80,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/PthreadRobustProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.3791,
+        "request_to_exit_ms": 161.7998,
+        "activation_to_exit_ms": 161.4207,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 15.625,
+          "kernel_ms": 93.75,
+          "total_cpu_ms": 109.375,
+          "cycles": 322904135,
+          "page_faults": 18130
+        },
+        "prepared_working_set_bytes": 13168640,
+        "cpu_metrics": {
+          "user_ms": 78.125,
+          "kernel_ms": 171.875,
+          "total_cpu_ms": 250.0,
+          "processes": 5,
+          "active_processes": 0,
+          "page_faults": 39852,
+          "read_bytes": 1076689,
+          "write_bytes": 30657,
+          "read_ops": 409,
+          "write_ops": 288,
+          "other_ops": 11809,
+          "other_bytes": 515224
+        },
+        "output": [
+          "PTHREAD_ROBUST_MUTEX_OK\n",
+          ""
+        ],
+        "mode": 1,
+        "probe": "PthreadRobustProbe",
+        "pool_preparation_ms": 49.3872
+      },
+      {
+        "pid": 81,
+        "command": [
+          "/usr/bin/python3.11",
+          "/var/tmp/kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea/PthreadRobustAliasesProbe.py"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.3841,
+        "request_to_exit_ms": 65.1738,
+        "activation_to_exit_ms": 64.7897,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 31.25,
+          "kernel_ms": 31.25,
+          "total_cpu_ms": 62.5,
+          "cycles": 172848023,
+          "page_faults": 9537
+        },
+        "prepared_working_set_bytes": 13164544,
+        "cpu_metrics": {
+          "user_ms": 46.875,
+          "kernel_ms": 46.875,
+          "total_cpu_ms": 93.75,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 12861,
+          "read_bytes": 432472,
+          "write_bytes": 4684,
+          "read_ops": 136,
+          "write_ops": 57,
+          "other_ops": 7194,
+          "other_bytes": 314591
+        },
+        "output": [
+          "PTHREAD_ROBUST_ALIASES_OK\n",
+          ""
+        ],
+        "mode": 1,
+        "probe": "PthreadRobustAliasesProbe",
+        "pool_preparation_ms": 49.3872
+      }
+    ],
+    "count": 2000,
+    "toggle": "KINAKAZE_NATIVE_EXCLUSIVE_CREATE",
+    "native_read_open": true,
+    "staging": "F:\\crysoacu2\\artifacts\\node-install-20260930\\apt180-r11-root-b\\var\\tmp\\kinakaze-relative-read-d6297ef9df9f49ffa6e47f82d1d190ea"
+  },
+  "native_regression": {
+    "profile": "release",
+    "suite": "focused",
+    "executable_artifacts": {
+      "kinakaze-vfs": "F:\\crysoacu2\\target\\apt180-r14-tests\\release\\deps\\kinakaze_vfs-6a49cb6eadeefdcb.exe"
+    },
+    "scope": "Build isolated native regression tests and stage their exact SONAME imports.\n\nThe default suite covers Windows debugging, descriptor/mapping lifetime, raw\nsyscall contracts, SYSV IPC and generated instruction bridges. DLL staging uses\nonly compiler artifacts from this invocation, avoiding mixed target graphs.\n",
+    "tests": [
+      {
+        "package": "kinakaze-vfs",
+        "filter": "fs::native_create::tests",
+        "exit_code": 0,
+        "seconds": 1.1140952999994624,
+        "stdout": "\nrunning 7 tests\ntest fs::native_create::tests::ancestor_junction_cannot_redirect_exclusive_creation ... ok\ntest fs::native_create::tests::each_creation_reads_current_parent_metadata_without_reusing_observations ... ok\ntest fs::native_create::tests::exclusive_create_publishes_live_setgid_metadata_and_retains_parent_identity ... ok\ntest fs::native_create::tests::exclusive_creation_never_mutates_existing_leaf_or_link_targets ... ok\ntest fs::native_create::tests::existing_readonly_and_nonexclusive_opens_remain_ineligible ... ok\ntest fs::native_create::tests::hosted_parent_links_and_regular_parents_keep_the_walker ... ok\ntest fs::native_create::tests::native_create_installs_access_flags_and_writable_verity_exclusion ... ok\n\ntest result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 887 filtered out; finished in 0.05s\n\n",
+        "stderr": ""
+      },
+      {
+        "package": "kinakaze-vfs",
+        "filter": "fs::native_read::tests",
+        "exit_code": 0,
+        "seconds": 1.2201860999994096,
+        "stdout": "\nrunning 8 tests\ntest fs::native_read::tests::complete_fast_path_installs_the_native_description_and_flags ... ok\ntest fs::native_read::tests::cwd_relative_lookup_retains_the_selected_visible_inode ... ok\ntest fs::native_read::tests::namespace_prefix_and_escaped_names_select_the_visible_file ... ok\ntest fs::native_read::tests::native_junctions_in_ancestors_cannot_bypass_the_guest_walker ... ok\ntest fs::native_read::tests::normalized_names_cannot_replace_dirfd_dot_or_trailing_slash_semantics ... ok\ntest fs::native_read::tests::retained_read_inode_survives_name_replacement_and_unlink ... ok\ntest fs::native_read::tests::special_inodes_links_and_component_rules_keep_the_walker ... ok\ntest fs::native_read::tests::write_create_directory_and_path_flags_are_ineligible ... ok\n\ntest result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 886 filtered out; finished in 1.19s\n\n",
+        "stderr": ""
+      },
+      {
+        "package": "kinakaze-vfs",
+        "filter": "fs::install_tests",
+        "exit_code": 0,
+        "seconds": 2.553359100005764,
+        "stdout": "\nrunning 5 tests\ntest fs::install_tests::descriptor_chmod_keeps_the_pinned_inode_and_rejects_link_and_stale_slots ... ok\ntest fs::install_tests::exclusive_install_create_rejects_existing_special_inodes ... ok\ntest fs::install_tests::install_ownership_retains_inode_identity_and_clears_privilege_bits ... ok\ntest fs::install_tests::repeated_install_metadata_still_clears_capabilities_and_checks_permissions ... ok\ntest fs::install_tests::writable_stat_reads_live_inode_metadata_and_survives_unlink ... ok\n\ntest result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 889 filtered out; finished in 2.12s\n\n",
+        "stderr": ""
+      },
+      {
+        "package": "kinakaze-vfs",
+        "filter": "fs::object::tests",
+        "exit_code": 0,
+        "seconds": 1.4183239999983925,
+        "stdout": "\nrunning 12 tests\ntest fs::object::tests::compound_inode_initialization_preserves_identity_xattrs_and_handles ... ok\ntest fs::object::tests::directory_enumeration_reopens_the_inode_and_spans_native_buffers ... ok\ntest fs::object::tests::guest_readdir_keeps_an_open_directory_outside_a_new_root ... ok\ntest fs::object::tests::large_symlink_record_grows_the_native_ea_query_buffer ... ok\ntest fs::object::tests::malformed_metadata_is_not_replaced_by_guessed_host_permissions ... ok\ntest fs::object::tests::metadata_queries_preserve_directory_atime_after_the_last_handle_closes ... ok\ntest fs::object::tests::native_ea_update_works_on_a_readonly_inode_and_preserves_guest_xattrs ... ok\ntest fs::object::tests::pinned_descriptor_survives_guest_close_and_inode_name_replacement ... ok\ntest fs::object::tests::readonly_unlink_detaches_name_and_retains_open_inode_attributes ... ok\ntest fs::object::tests::stat_metadata_survives_unlink_and_name_replacement ... ok\ntest fs::object::tests::stream_enumeration_grows_its_buffer_and_stays_on_the_same_inode ... ok\ntest fs::object::tests::symlink_and_device_records_follow_the_inode_after_rename ... ok\n\ntest result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 882 filtered out; finished in 1.38s\n\n",
+        "stderr": ""
+      },
+      {
+        "package": "kinakaze-vfs",
+        "filter": "fs::verity::tests",
+        "exit_code": 0,
+        "seconds": 0.4690877000030014,
+        "stdout": "\nrunning 21 tests\ntest fs::verity::tests::abandoned_preparing_tail_is_masked_and_recovered_before_write ... ok\ntest fs::verity::tests::abandoned_transaction_process_helper ... ok\ntest fs::verity::tests::cached_reader_owns_each_concurrent_positioned_request ... ok\ntest fs::verity::tests::checked_writer_alias_retains_exclusion_after_rename_unlink_and_fd_replacement ... ok\ntest fs::verity::tests::corruption_fails_before_unverified_bytes_are_returned ... ok\ntest fs::verity::tests::directory_ioctl_errors_distinguish_enable_from_measure ... ok\ntest fs::verity::tests::externally_installed_writer_still_checks_enabled_verity ... ok\ntest fs::verity::tests::granted_access_does_not_escalate_a_write_only_descriptor ... ok\ntest fs::verity::tests::hidden_merkle_writes_do_not_change_guest_mtime ... ok\ntest fs::verity::tests::malformed_persistent_state_fails_closed ... ok\ntest fs::verity::tests::native_existing_writer_blocks_enable_without_changing_file ... ok\ntest fs::verity::tests::native_readonly_mapping_same_eof_probe ... ignored, native capability diagnostic; does not define guest fs-verity behavior\ntest fs::verity::tests::opened_metadata_stays_on_one_inode_across_close_and_slot_reuse ... ok\ntest fs::verity::tests::opened_validates_path_only_before_descriptor_kind ... ok\ntest fs::verity::tests::persisted_tree_masks_tail_and_survives_hardlink_unlink ... ok\ntest fs::verity::tests::process_death_releases_inode_guard_and_next_process_recovers_tail ... ok\ntest fs::verity::tests::read_cache_does_not_escalate_imported_write_only_access ... ok\ntest fs::verity::tests::readonly_host_inode_is_not_temporarily_made_writable ... ok\ntest fs::verity::tests::reused_read_capability_observes_enable_corruption_and_original_inode ... ok\ntest fs::verity::tests::shared_reader_observes_enable_and_rejects_later_corruption ... ok\ntest fs::verity::tests::shared_writable_mapping_blocks_enable_after_fd_close ... ok\n\ntest result: ok. 20 passed; 0 failed; 1 ignored; 0 measured; 873 filtered out; finished in 0.44s\n\n",
+        "stderr": ""
+      },
+      {
+        "package": "kinakaze-vfs",
+        "filter": "path::root::tests",
+        "exit_code": 0,
+        "seconds": 0.03266489999805344,
+        "stdout": "\nrunning 3 tests\ntest path::root::tests::configured_root_preserves_namespace_across_native_prefix_forms ... ok\ntest path::root::tests::root_handoff_rejects_corruption_and_base_changes_before_mutation ... ok\ntest path::root::tests::root_path_encoding_is_bounded_absolute_and_preserves_utf16 ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 891 filtered out; finished in 0.00s\n\n",
+        "stderr": ""
+      },
+      {
+        "package": "kinakaze-vfs",
+        "filter": "mount::overlay::native_lookup::",
+        "exit_code": 0,
+        "seconds": 0.05082869999750983,
+        "stdout": "\nrunning 3 tests\ntest mount::overlay::native_lookup::attributes::tests::whole_path_query_refuses_ancestor_junctions ... ok\ntest mount::overlay::native_lookup::tests::lookup_observes_links_missing_parents_chroot_and_replacement ... ok\ntest mount::overlay::native_lookup::tests::stat_observations_expire_and_follow_replaced_links ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 891 filtered out; finished in 0.02s\n\n",
+        "stderr": ""
+      },
+      {
+        "package": "kinakaze-vfs",
+        "filter": "ofd::tests",
+        "exit_code": 0,
+        "seconds": 0.04434619999665301,
+        "stdout": "\nrunning 4 tests\ntest ofd::tests::metadata_opens_are_private_reused_by_aliases_and_retired_after_close ... ok\ntest ofd::tests::native_data_hole_seek_preserves_offset_on_failure ... ok\ntest ofd::tests::native_pins_share_one_capability_and_survive_final_close_and_slot_reuse ... ok\ntest ofd::tests::promoted_alias_publishes_its_completed_write_read_and_seek_position ... ok\n\ntest result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 890 filtered out; finished in 0.02s\n\n",
+        "stderr": ""
+      }
+    ]
+  },
+  "medians": {
+    "relative": {
+      "before": {
+        "body_ms": 918.8675,
+        "wall_ms": 2695.6989,
+        "cpu_ms": 2609.375,
+        "page_faults": 12751
+      },
+      "after": {
+        "body_ms": 859.8201,
+        "wall_ms": 2543.0461,
+        "cpu_ms": 2593.75,
+        "page_faults": 13464
+      },
+      "body_reduction_percent": 6.4261060490222945,
+      "job_cpu_reduction_percent": 0.5988023952095808
+    },
+    "absolute": {
+      "before": {
+        "body_ms": 743.6069,
+        "wall_ms": 2076.8293,
+        "cpu_ms": 2031.25,
+        "page_faults": 16812
+      },
+      "after": {
+        "body_ms": 707.2275,
+        "wall_ms": 1919.2798,
+        "cpu_ms": 1921.875,
+        "page_faults": 12817
+      },
+      "body_reduction_percent": 4.892289192044887,
+      "job_cpu_reduction_percent": 5.384615384615385
+    }
+  },
+  "host": {
+    "samples": 18,
+    "samples_with_foreign_compilers": 18,
+    "median_cpu_percent": 42.6
+  },
+  "interpretation": "Same frozen binary, alternating create switch, three samples per scenario and mode. Modest microbenchmark gains under shared-host compilation; no whole-install speedup or 180-second result established by this measurement. No concurrent build or benchmark from this task.",
+  "implementation_hashes": {
+    "engine/crates/kinakaze-vfs/src/fs.rs": "6955278c90c84f28dce32acb15081d586116715c7ba68a37d849d5f96dc636e2",
+    "engine/crates/kinakaze-vfs/src/fs/native_read.rs": "3749c02f5beec4f3e0f3742560704c37ec832ac151a6cb54f124204e0c0adfbb",
+    "engine/crates/kinakaze-vfs/src/mount/overlay/native_open.rs": "e62cf055793a4305a4193b71f7921bce1cac8ba1abfa44baedc01cbbcc915389",
+    "engine/crates/kinakaze-vfs/src/fs/native_create.rs": "cd6877d166c9abd8f3697cd6fee535ebfeabfb981f0ab32945bef4aad9dd3bc8",
+    "engine/crates/kinakaze-vfs/src/fs/native_create/tests.rs": "e1683568424c2dcc5a52d54c01898b1583aec1c6c0b96b56685e9eadd56c43c4",
+    "tests/guest/NativeExclusiveCreateProbe.py": "e4c5520dabe157140d36012a2f30634a3606f79a7697b794a5210af99d8aff71"
+  },
+  "evidence_sha256": {
+    "artifacts\\apt-180-20260930\\r14-native-create-packaged-sources.json": "1d2b171d653e1b223f993fd507b121d27d1b09dd1cc32d22472b2d6fc0d812fc",
+    "artifacts\\apt-180-20260930\\run-r14-native-create.py": "c66e7b8cbbbcaa1da70c2d80323524eed4b711dc13b779b8f431729530228d3e",
+    "artifacts\\apt-180-20260930\\run-native-r14.py": "182c5192b12d070dd87b5330177696e6d20a0fa158c8502a2ded62667af38d3e",
+    "artifacts\\apt-180-20260930\\native-r14-create.json": "9c0007c36536e00ca6f03e62a8f619c41aef7baa11838f266600649a0552a22a",
+    "artifacts\\apt-180-20260930\\native-r14-create-validated.log": "35d31307040d57a424e1fb8cbff1aab5e0a78de0e415df59295335c1dfc55b21",
+    "artifacts\\apt-180-20260930\\build-r14-native-create-packaged.log": "4f3a877301b453a218828f54e783d688990c258bb6e6ce7875ea2d2b599c9fbd",
+    "artifacts\\apt-180-20260930\\r14-generator-tests.log": "6b8ce70364274a73a2b54a309749c27de943b4d871d30fec1818009d0de68a4b",
+    "artifacts\\apt-180-20260930\\r14-native-create-compare\\report.json": "204a5a0a12a075b8dc32bc8f0c3f125c241febdf019565612bd7a383c82103f4",
+    "artifacts\\apt-180-20260930\\r14-native-create-compare\\host.jsonl": "30c461735adbecc34856b18741638d18d3b45213294fd3512fc8f07ad4ebec46",
+    "artifacts\\apt-180-20260930\\r14-native-create-validate\\report.json": "eecdfd2d064e768be52c1d68a9422422931152fc36b89a2db511735371857fe0",
+    "artifacts\\apt-180-20260930\\r14-native-create-validate\\host.jsonl": "8efa154239571586ddf1f2bb600bd5fd7b50219cce82996183a79dc21c21c55e"
+  }
+}

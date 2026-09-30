@@ -66,6 +66,19 @@ pub(crate) fn read_file(path: &Path) -> Result<Object, i32> {
     )
 }
 
+/// Pin an ordinary directory while rejecting reparses in every component.
+/// The directory constraint also rejects hosted links without an extra query.
+pub(crate) fn directory(path: &Path) -> Result<Object, i32> {
+    use windows_sys::Win32::Storage::FileSystem::{
+        FILE_READ_ATTRIBUTES, FILE_READ_EA, FILE_TRAVERSE,
+    };
+    open_with_options(
+        path,
+        FILE_READ_ATTRIBUTES | FILE_READ_EA | FILE_TRAVERSE,
+        0x0000_0001, // FILE_DIRECTORY_FILE; OBJ_DONT_REPARSE also rejects the leaf.
+    )
+}
+
 fn open_with_options(path: &Path, access: u32, options: u32) -> Result<Object, i32> {
     let wide = crate::path::wide_path(path)?;
     let mut name = Name(unsafe { std::mem::zeroed() });
