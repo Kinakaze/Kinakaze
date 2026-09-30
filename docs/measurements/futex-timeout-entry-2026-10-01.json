@@ -600,9 +600,17 @@
   },
   "remaining": [
     "PI owner state, donation chains, proxy requeue and task exit",
-    "robust pthread",
+    "process-shared robust pthread",
     "realtime clock changes during wait",
     "ordinary private/shared entry costs",
     "all syscall/VFS/memory/Unix IO path proofs and measurements"
-  ]
+  ],
+  "integrated_production_check": {
+    "passed": true,
+    "base_commit": "08c84f3",
+    "change": "Reconnect raw SYS_exit metadata retirement after its implementation was committed in 8ca87e6.",
+    "log": "artifacts/syscall-all-paths-20261001/integrated-production-check.log",
+    "log_sha256": "839975558a2cf5403f68ec9fdd6a60cc8c2d18986a4b826f3fc4cb648a96bb17",
+    "scope": "production libc compile check; not a rerun of the merged native suite"
+  }
 }

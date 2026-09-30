@@ -45,5 +45,6 @@ Diagnostics were excluded from the timing comparison.
 The measurement JSON contains source and distribution hashes, native and guest
 validation references, all timing rows and diagnostic spans:
 [shared catalog measurement](measurements/shared-native-catalog-2026-10-01.json).
-This catalog-only integration has not yet received a complete-install timing;
-the 180-second goal remains unmet.
+The subsequent [integrated installation](integrated-node-install-2026-10-01.md)
+completed in 220.020 seconds with the VFS metadata changes included. It does not
+isolate catalog savings; the 180-second goal remains unmet.
