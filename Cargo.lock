@@ -413,6 +413,7 @@ name = "kinakaze-v2-init"
 version = "1.0.0"
 dependencies = [
  "blake3",
+ "kinakaze-v2-bridge",
  "kinakaze-v2-host-win",
  "kinakaze-v2-manager",
  "kinakaze-v2-protocol",

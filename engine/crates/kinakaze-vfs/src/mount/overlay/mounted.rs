@@ -2386,24 +2386,30 @@ pub(crate) fn serialize(keep: impl Fn(i32) -> bool) -> Result<Vec<u8>, i32> {
             policy.map_or(0, |p| p.namespace),
             policy.map_or(0, |p| p.id),
             policy.map_or(0, |p| p.flags()),
-            description
-                .writer
-                .as_ref()
-                .and_then(|w| w.mount.as_ref())
-                .map_or(0, |w| w.raw() as u64),
-            description
-                .writer
-                .as_ref()
-                .map_or(0, |w| w.superblock.raw() as u64),
+            crate::native_transfer::encode(
+                description
+                    .writer
+                    .as_ref()
+                    .and_then(|w| w.mount.as_ref())
+                    .map_or(0, |w| w.raw() as u64),
+            ),
+            crate::native_transfer::encode(
+                description
+                    .writer
+                    .as_ref()
+                    .map_or(0, |w| w.superblock.raw() as u64),
+            ),
         ] {
             bytes.extend_from_slice(&word.to_le_bytes());
         }
         bytes.extend_from_slice(
-            &description
-                .anchor
-                .as_ref()
-                .map_or(0, |a| a.pin.raw() as u64)
-                .to_le_bytes(),
+            &crate::native_transfer::encode(
+                description
+                    .anchor
+                    .as_ref()
+                    .map_or(0, |a| a.pin.raw() as u64),
+            )
+            .to_le_bytes(),
         );
         let prefix = description
             .anchor
@@ -2431,7 +2437,9 @@ pub(crate) fn serialize(keep: impl Fn(i32) -> bool) -> Result<Vec<u8>, i32> {
             bytes.extend_from_slice(
                 &((entry.layer as u32) | (u32::from(entry.indexed) << 31)).to_le_bytes(),
             );
-            bytes.extend_from_slice(&(entry.object.raw() as u64).to_le_bytes());
+            bytes.extend_from_slice(
+                &crate::native_transfer::encode(entry.object.raw() as u64).to_le_bytes(),
+            );
         }
     }
     Ok(bytes)
@@ -2460,9 +2468,9 @@ pub(crate) fn restore(bytes: &[u8]) -> bool {
             let namespace = input.u64()?;
             let mount_id = input.u64()?;
             let flags = input.u64()?;
-            let writer_raw = input.u64()? as usize;
-            let super_raw = input.u64()? as usize;
-            let anchor_raw = input.u64()? as usize;
+            let writer_raw = crate::native_transfer::decode(input.u64()?)? as usize;
+            let super_raw = crate::native_transfer::decode(input.u64()?)? as usize;
+            let anchor_raw = crate::native_transfer::decode(input.u64()?)? as usize;
             let prefix_length = input.u32()? as usize;
             let prefix = std::str::from_utf8(input.take(prefix_length)?)
                 .map_err(|_| EIO)?
@@ -2533,7 +2541,7 @@ pub(crate) fn restore(bytes: &[u8]) -> bool {
             for _ in 0..node_count {
                 let layer_flags = input.u32()?;
                 let layer = (layer_flags & 0x7fff_ffff) as usize;
-                let raw = input.u64()? as usize;
+                let raw = crate::native_transfer::decode(input.u64()?)? as usize;
                 if raw == 0 || raw == usize::MAX {
                     return Err(EIO);
                 }

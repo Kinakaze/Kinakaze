@@ -30,7 +30,22 @@ static AUTHORITY: ProcessAuthority = ProcessAuthority {
     abort_exec,
     memory_target,
     image_snapshot,
+    native_fork,
 };
+
+fn native_fork(transaction: u64, spec: kinakaze_v2_protocol::native_fork::Spec) -> Option<guest_process::authority::NativeFork> {
+    use std::os::windows::io::{FromRawHandle, OwnedHandle};
+    let Reply::NativeFork { worker: Some(worker) } = request(Request::NativeFork { transaction, spec }).ok()? else { return None; };
+    if worker.handles.iter().any(|&h| h == 0 || h > isize::MAX as u64)
+        || worker.handles.iter().enumerate().any(|(i,h)| worker.handles[..i].contains(h)) {
+        return None;
+    }
+    Some(guest_process::authority::NativeFork {
+        handles: worker.handles.map(|h| unsafe { OwnedHandle::from_raw_handle(h as _) }),
+        pid: worker.pid,
+        tid: worker.tid,
+    })
+}
 
 pub(super) fn bootstrap() -> Result<(), i32> {
     guest_process::authority::install(&AUTHORITY).map_err(|_| STATUS_INTERNAL)?;

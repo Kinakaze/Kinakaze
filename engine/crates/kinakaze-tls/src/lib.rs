@@ -1355,7 +1355,7 @@ fn register_fork_handoff() {
         return;
     }
     let key = 0x544c_535f_484f_4f4bu64 ^ (module as usize as u64).rotate_left(17);
-    let _ = kinakaze_runtime::register_fork_participant(kinakaze_runtime::ForkParticipant {
+    let _ = unsafe { kinakaze_runtime::register_fork_participant_without_inherited_handles(kinakaze_runtime::ForkParticipant {
         abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
         priority: 20,
         key,
@@ -1363,7 +1363,7 @@ fn register_fork_handoff() {
         snapshot: Some(fork_snapshot),
         parent: None,
         child: Some(fork_child),
-    });
+    }) };
 }
 
 #[cfg(windows)]

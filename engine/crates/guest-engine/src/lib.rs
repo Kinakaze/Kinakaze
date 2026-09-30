@@ -1251,7 +1251,7 @@ unsafe extern "system" fn restore_engine_fork_state(payload: *const u8, len: usi
 
 #[cfg(all(windows, target_arch = "x86_64"))]
 fn register_engine_fork_participant() -> bool {
-    kinakaze_runtime::register_fork_participant(kinakaze_runtime::ForkParticipant {
+    unsafe { kinakaze_runtime::register_fork_participant_without_inherited_handles(kinakaze_runtime::ForkParticipant {
         abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
         // The loader owns the process-wide TEB publications and ABI transition
         // block that provider participants depend on. POSIX child handlers run
@@ -1263,7 +1263,7 @@ fn register_engine_fork_participant() -> bool {
         snapshot: Some(snapshot_engine_fork_state),
         parent: None,
         child: Some(restore_engine_fork_state),
-    })
+    }) }
 }
 
 /// Enter one Linux process after the outer runtime has authenticated and adopted

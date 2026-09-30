@@ -5,7 +5,7 @@ use super::{
 };
 
 pub(super) fn register() -> Result<(), crate::LinkError> {
-    if kinakaze_runtime::register_fork_participant(kinakaze_runtime::ForkParticipant {
+    if unsafe { kinakaze_runtime::register_fork_participant_without_inherited_handles(kinakaze_runtime::ForkParticipant {
         abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
         // Engine ABI/TLS restoration (0) precedes private linker reconstruction.
         priority: 1,
@@ -14,7 +14,7 @@ pub(super) fn register() -> Result<(), crate::LinkError> {
         snapshot: Some(snapshot),
         parent: Some(parent),
         child: Some(restore),
-    }) {
+    }) } {
         Ok(())
     } else {
         Err(crate::LinkError::InvalidProvider(

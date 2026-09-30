@@ -467,7 +467,7 @@ unsafe extern "system" fn fork_child(input: *const u8, length: usize) -> i32 {
 }
 
 extern "C" fn register_fork_state() {
-    let _ = kinakaze_runtime::register_fork_participant(kinakaze_runtime::ForkParticipant {
+    let _ = unsafe { kinakaze_runtime::register_fork_participant_without_inherited_handles(kinakaze_runtime::ForkParticipant {
         abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
         // TLS owner restoration runs at 20; guest atfork callbacks run at 1000.
         priority: 25,
@@ -476,7 +476,7 @@ extern "C" fn register_fork_state() {
         snapshot: Some(fork_snapshot),
         parent: None,
         child: Some(fork_child),
-    });
+    }) };
 }
 
 #[used]

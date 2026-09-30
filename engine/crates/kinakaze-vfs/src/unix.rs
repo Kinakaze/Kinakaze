@@ -702,20 +702,31 @@ pub(crate) fn serialize_fork_state() -> Result<Vec<u8>, i32> {
         payload.extend_from_slice(&socket.socket_type.to_le_bytes());
         payload.extend_from_slice(&state.to_le_bytes());
         payload.extend_from_slice(&flags.to_le_bytes());
-        payload.extend_from_slice(&(socket.handle as u64).to_le_bytes());
+        payload
+            .extend_from_slice(&crate::native_transfer::encode(socket.handle as u64).to_le_bytes());
         payload.extend_from_slice(
-            &(socket.inode.as_ref().map_or(0, |pin| pin.0) as u64).to_le_bytes(),
+            &crate::native_transfer::encode(socket.inode.as_ref().map_or(0, |pin| pin.0) as u64)
+                .to_le_bytes(),
         );
         payload.extend_from_slice(&socket.network.to_le_bytes());
-        for word in socket
+        for (index, word) in socket
             .ancillary
             .as_ref()
             .map_or([0; 4], |state| state.inherited())
+            .into_iter()
+            .enumerate()
         {
+            let word = if index % 2 == 1 {
+                crate::native_transfer::encode(word)
+            } else {
+                word
+            };
             payload.extend_from_slice(&word.to_le_bytes());
         }
         payload.extend_from_slice(&socket.record.id().to_le_bytes());
-        payload.extend_from_slice(&(socket.record.pin.raw() as u64).to_le_bytes());
+        payload.extend_from_slice(
+            &crate::native_transfer::encode(socket.record.pin.raw() as u64).to_le_bytes(),
+        );
         payload.extend_from_slice(
             &socket
                 .listener
@@ -724,11 +735,13 @@ pub(crate) fn serialize_fork_state() -> Result<Vec<u8>, i32> {
                 .to_le_bytes(),
         );
         payload.extend_from_slice(
-            &socket
-                .listener
-                .as_ref()
-                .map_or(0, |listener| listener.pin.raw() as u64)
-                .to_le_bytes(),
+            &crate::native_transfer::encode(
+                socket
+                    .listener
+                    .as_ref()
+                    .map_or(0, |listener| listener.pin.raw() as u64),
+            )
+            .to_le_bytes(),
         );
         for address in [&socket.local, &socket.peer] {
             payload.extend_from_slice(&namespace_code(&address.namespace).to_le_bytes());
@@ -787,9 +800,15 @@ pub(crate) fn restore_fork_state(payload: &[u8]) -> bool {
             payload[cursor + 16..cursor + 24]
                 .try_into()
                 .unwrap_or_default(),
-        ) as usize;
-        let inode_raw =
-            u64::from_le_bytes(payload[cursor + 24..cursor + 32].try_into().unwrap()) as usize;
+        );
+        let inode_raw = u64::from_le_bytes(payload[cursor + 24..cursor + 32].try_into().unwrap());
+        let (Ok(handle), Ok(inode_raw)) = (
+            crate::native_transfer::decode(handle),
+            crate::native_transfer::decode(inode_raw),
+        ) else {
+            return false;
+        };
+        let (handle, inode_raw) = (handle as usize, inode_raw as usize);
         let network = u64::from_le_bytes(payload[cursor + 32..cursor + 40].try_into().unwrap());
         let Ok(network_pin) = crate::namespaces::pin_network(network) else {
             return false;
@@ -798,12 +817,24 @@ pub(crate) fn restore_fork_state(payload: &[u8]) -> bool {
         for (index, word) in inherited.iter_mut().enumerate() {
             let start = cursor + 40 + index * 8;
             *word = u64::from_le_bytes(payload[start..start + 8].try_into().unwrap());
+            if index % 2 == 1 {
+                let Ok(raw) = crate::native_transfer::decode(*word) else {
+                    return false;
+                };
+                *word = raw;
+            }
         }
         let record_id = u64::from_le_bytes(payload[cursor + 72..cursor + 80].try_into().unwrap());
         let record_pin = u64::from_le_bytes(payload[cursor + 80..cursor + 88].try_into().unwrap());
         let listener_id = u64::from_le_bytes(payload[cursor + 88..cursor + 96].try_into().unwrap());
         let listener_pin =
             u64::from_le_bytes(payload[cursor + 96..cursor + 104].try_into().unwrap());
+        let (Ok(record_pin), Ok(listener_pin)) = (
+            crate::native_transfer::decode(record_pin),
+            crate::native_transfer::decode(listener_pin),
+        ) else {
+            return false;
+        };
         cursor += 104;
         let mut addresses = Vec::with_capacity(2);
         for _ in 0..2 {

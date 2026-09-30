@@ -18,6 +18,7 @@ const REFILL_DELAY: Duration = Duration::from_millis(250);
 const PREPARATION_TIMEOUT: Duration = Duration::from_secs(30);
 
 pub(super) struct Pool {
+    pub native_forks: crate::native_fork::Pool,
     pub size: usize,
     pub failed: AtomicBool,
     demand: AtomicBool,
@@ -51,6 +52,7 @@ impl Pool {
             ));
         }
         Ok(Self {
+            native_forks: crate::native_fork::Pool::new(root.canonicalize()?, dist.canonicalize()?),
             size,
             root: root.canonicalize()?,
             dist: dist.canonicalize()?,

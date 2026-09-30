@@ -179,7 +179,7 @@ unsafe extern "system" fn child(buffer: *const u8, length: usize) -> i32 {
 }
 extern "C" fn initialize() {
     let registered =
-        kinakaze_runtime::register_fork_participant(kinakaze_runtime::ForkParticipant {
+        unsafe { kinakaze_runtime::register_fork_participant_without_inherited_handles(kinakaze_runtime::ForkParticipant {
             abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
             priority: 40,
             key: KEY,
@@ -187,7 +187,7 @@ extern "C" fn initialize() {
             snapshot: Some(snapshot),
             parent: None,
             child: Some(child),
-        });
+        }) };
     assert!(registered, "memory dump fork participant");
 }
 #[used]

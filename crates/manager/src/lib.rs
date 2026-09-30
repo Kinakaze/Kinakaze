@@ -522,7 +522,19 @@ impl StateManager {
             ProcessState::Active => {}
         }
         match request {
-            Request::ImageSnapshot { .. } | Request::Kernel(_) => Ok(Reply::Ok),
+            Request::NativeFork { transaction, spec } => {
+                if !spec.valid() {
+                    return Err(error(ErrorCode::InvalidRequest, "invalid native fork specification"));
+                }
+                let transaction = self.owned_transaction(pid, transaction)?;
+                if transaction.state != TransactionState::Prepared {
+                    return Err(error(ErrorCode::Conflict, "fork bootstrap already adopted"));
+                }
+                Ok(Reply::Ok)
+            }
+            Request::ImageSnapshot { .. } | Request::Kernel(_) => {
+                Ok(Reply::Ok)
+            }
             Request::MarkPrewarmReady => {
                 let process = self.processes.get_mut(&pid).unwrap();
                 if process.identity.parent_pid != 0
@@ -1432,6 +1444,19 @@ impl StateManager {
             ));
         }
         Ok(transaction)
+    }
+
+    /// None revokes an uncommitted native candidate; true releases a committed
+    /// candidate to normal process ownership; false retains the rollback guard.
+    pub fn native_fork_state(&self, transaction: u64, peer: PeerIdentity) -> Option<bool> {
+        if self.processes.values().any(|p| p.peer == peer && matches!(p.state, ProcessState::Active)) {
+            return Some(true);
+        }
+        match self.transactions.get(&transaction)?.state {
+            TransactionState::Prepared | TransactionState::Adopted | TransactionState::Ready => Some(false),
+            TransactionState::Committed => Some(true),
+            TransactionState::Aborted => None,
+        }
     }
 
     fn commit_fork(&mut self, pid: u32, id: u64) -> RpcResult<Reply> {

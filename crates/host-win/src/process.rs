@@ -59,6 +59,9 @@ pub struct ProcessHandle {
 }
 
 impl ProcessHandle {
+    pub(crate) fn raw(&self) -> windows_sys::Win32::Foundation::HANDLE {
+        self.handle.as_raw_handle()
+    }
     /// Duplicate a capability from this exact native process incarnation.
     pub fn duplicate_object(&self, source: u64) -> io::Result<OwnedHandle> {
         use windows_sys::Win32::{

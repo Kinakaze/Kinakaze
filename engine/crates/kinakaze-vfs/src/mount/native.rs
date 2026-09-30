@@ -268,7 +268,7 @@ pub(crate) fn serialize(keep: impl Fn(i32) -> bool) -> Result<Vec<u8>, i32> {
             d.policy.namespace,
             d.policy.id,
             d.policy.flags(),
-            d.writer.as_ref().map_or(0, |w| w.raw() as u64),
+            crate::native_transfer::encode(d.writer.as_ref().map_or(0, |w| w.raw() as u64)),
         ] {
             crate::state_codec::word(&mut bytes, value);
         }
@@ -284,7 +284,7 @@ pub(crate) fn restore(bytes: &[u8]) -> bool {
         while !input.0.is_empty() {
             let id = input.word()?;
             let policy = policy::get(input.word()?, input.word()?, input.word()?)?;
-            let raw = input.word()?;
+            let raw = crate::native_transfer::decode(input.word()?)?;
             let writer = if raw == 0 {
                 None
             } else {

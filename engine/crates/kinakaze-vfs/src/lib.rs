@@ -7,6 +7,8 @@ mod io_event;
 #[cfg(windows)]
 mod native_pin;
 #[cfg(windows)]
+mod native_transfer;
+#[cfg(windows)]
 pub use native_pin::pin_native_fd;
 #[cfg(windows)]
 pub mod positional;
@@ -634,6 +636,14 @@ mod fork_handoff {
     }
 
     unsafe extern "system" fn snapshot(buffer: *mut u8, capacity: usize) -> isize {
+        unsafe { snapshot_with_transport(buffer, capacity, false) }
+    }
+
+    unsafe extern "system" fn portable_snapshot(buffer: *mut u8, capacity: usize) -> isize {
+        unsafe { snapshot_with_transport(buffer, capacity, true) }
+    }
+
+    unsafe fn snapshot_with_transport(buffer: *mut u8, capacity: usize, portable: bool) -> isize {
         if super::fork_trace_enabled() && buffer.is_null() {
             super::trace_pipe_table("snapshot");
         }
@@ -644,8 +654,13 @@ mod fork_handoff {
                     Ok(snapshot) => snapshot,
                     Err(error) => return -(error as isize),
                 };
-                let payload =
-                    super::publish_proc_fd_snapshot().and_then(|()| super::serialize_fork_state());
+                let payload = super::publish_proc_fd_snapshot().and_then(|()| {
+                    if portable {
+                        super::serialize_portable_fork_state()
+                    } else {
+                        super::serialize_fork_state()
+                    }
+                });
                 let table = match super::table().read() {
                     Ok(table) => table,
                     Err(_) => return -(super::EIO as isize),
@@ -673,6 +688,22 @@ mod fork_handoff {
         // SAFETY: the runtime provided the queried writable capacity.
         unsafe { std::ptr::copy_nonoverlapping(payload.as_ptr(), buffer, payload.len()) };
         payload.len() as isize
+    }
+
+    unsafe extern "system" fn transfer(process: usize, payload: *mut u8, len: usize) -> i32 {
+        if process == 0 || payload.is_null() || len > isize::MAX as usize {
+            return super::EINVAL;
+        }
+        // The coordinator owns this suspended worker and holds the descriptor
+        // and mapping fences from checked snapshot through native transfer.
+        unsafe {
+            super::transfer_fork_state_handles(
+                std::slice::from_raw_parts_mut(payload, len),
+                std::os::windows::io::BorrowedHandle::borrow_raw(process as _),
+            )
+        }
+        .err()
+        .unwrap_or(0)
     }
 
     unsafe extern "system" fn child(payload: *const u8, len: usize) -> i32 {
@@ -725,15 +756,25 @@ mod fork_handoff {
             false
         };
         let priority = if is_libc { 50 } else { 100 };
-        let _ = kinakaze_runtime::register_fork_participant(kinakaze_runtime::ForkParticipant {
-            abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
-            priority,
-            key: KEY,
-            prepare: Some(prepare),
-            snapshot: Some(snapshot),
-            parent: Some(parent),
-            child: Some(child),
-        });
+        // Every VFS native capability is indexed by the portable serializer;
+        // unsupported console/IoRing state selects ordinary inheritance.
+        let _ = unsafe {
+            kinakaze_runtime::register_fork_participant_with_transport(
+                kinakaze_runtime::ForkParticipant {
+                    abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
+                    priority,
+                    key: KEY,
+                    prepare: Some(prepare),
+                    snapshot: Some(snapshot),
+                    parent: Some(parent),
+                    child: Some(child),
+                },
+                kinakaze_runtime::ForkTransport {
+                    snapshot: Some(portable_snapshot),
+                    transfer: Some(transfer),
+                },
+            )
+        };
     }
 
     /// Runs during C runtime initialization.
@@ -1108,13 +1149,14 @@ pub fn serialize_table() -> Result<Vec<u8>, i32> {
         }
         // Borrowed standard streams are re-created by the child's own
         // initialization, so re-installing them would leak a duplicate.
-        if entry.flags.contains(FdFlags::BORROWED) {
+        if entry.flags.contains(FdFlags::BORROWED) && !native_transfer::capturing() {
             continue;
         }
+        let (raw, flags) = native_transfer::descriptor(*entry)?;
         payload.extend_from_slice(&(fd as u32).to_le_bytes());
-        payload.extend_from_slice(&(entry.raw as u64).to_le_bytes());
+        payload.extend_from_slice(&raw.to_le_bytes());
         payload.extend_from_slice(&entry.kind.fork_code().to_le_bytes());
-        payload.extend_from_slice(&entry.flags.0.to_le_bytes());
+        payload.extend_from_slice(&flags.0.to_le_bytes());
         payload.extend_from_slice(&entry.offset.to_le_bytes());
         payload.extend_from_slice(&entry.description_id.to_le_bytes());
         count += 1;
@@ -1170,8 +1212,13 @@ pub fn restore_table(payload: &[u8]) -> Result<usize, ()> {
             u32::from_le_bytes([record[at], record[at + 1], record[at + 2], record[at + 3]])
         };
         let fd = read_u32(0) as usize;
-        let raw = u64::from_le_bytes(record[4..12].try_into().unwrap_or_default()) as usize;
+        let raw = u64::from_le_bytes(record[4..12].try_into().unwrap_or_default());
         let kind = FdKind::from_fork_code(read_u32(12));
+        let raw = if kind == FdKind::Socket {
+            raw
+        } else {
+            native_transfer::decode(raw).map_err(|_| ())?
+        } as usize;
         let flags = FdFlags(read_u32(16));
         let offset = u64::from_le_bytes(record[20..28].try_into().unwrap_or_default());
         let description_id = u64::from_le_bytes(record[28..36].try_into().unwrap_or_default());
@@ -1349,6 +1396,31 @@ fn fork_section_range(frame: &[u8], wanted: u32) -> Option<std::ops::Range<usize
     None
 }
 
+/// Capture VFS state for a worker created without this process's handle table.
+/// The fork coordinator must keep source descriptors and auxiliary pins alive
+/// until [`transfer_fork_state_handles`] finishes. Unsupported native objects
+/// return `EOPNOTSUPP`, allowing the coordinator to select its ordinary path.
+#[cfg(windows)]
+pub fn serialize_portable_fork_state() -> Result<Vec<u8>, i32> {
+    native_transfer::capture(serialize_fork_state)
+}
+
+/// Transfer a portable frame's native capabilities into an unpublished worker.
+/// The returned frame contains handles owned by the destination process.
+///
+/// # Safety
+/// Every source handle recorded in the frame must still refer to the captured
+/// object. The destination must remain stopped until transfer completes, and
+/// must restore the frame exactly once or terminate. After a successful call,
+/// terminate that destination before retrying the frame with another worker.
+#[cfg(windows)]
+pub unsafe fn transfer_fork_state_handles(
+    frame: &mut [u8],
+    process: std::os::windows::io::BorrowedHandle<'_>,
+) -> Result<(), i32> {
+    native_transfer::transfer(frame, process)
+}
+
 /// Complete VFS process state, excluding host objects whose API offers no fork
 /// or duplication contract (currently IoRing and ConPTY controller objects).
 #[cfg(windows)]
@@ -1398,6 +1470,9 @@ pub fn serialize_fork_state() -> Result<Vec<u8>, i32> {
 
 #[cfg(windows)]
 pub fn restore_fork_state(frame: &[u8]) -> bool {
+    let Ok(_handles) = native_transfer::restore_scope(frame) else {
+        return false;
+    };
     if frame.len() < 16
         || u64::from_le_bytes(frame[0..8].try_into().unwrap_or_default()) != FORK_STATE_MAGIC
     {
@@ -1470,6 +1545,7 @@ pub fn restore_fork_state(frame: &[u8]) -> bool {
             // structurally valid; libc itself does not need a second copy.
             EXEC_IMAGE_SECTION => true,
             EXEC_ARGUMENTS_SECTION => deserialize_environment(payload).is_some(),
+            native_transfer::SECTION => true, // validated before restoring any section
             _ => false,
         };
         if fork_trace_enabled() {
