@@ -1,0 +1,830 @@
+{
+  "passed": true,
+  "target_met": false,
+  "install_ms": 255750.9044,
+  "target_gap_ms": 75750.9044,
+  "source": "Frozen R8 plus native read-open implementation and data-open component fix",
+  "source_file_count": 1811,
+  "distribution": {
+    "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+    "init.exe": "487f250715d10d7e1ec9ef8dbda6edb7f0386cf48e3a6e5d2aae5f8eccb4807d",
+    "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+    "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+    "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+    "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+    "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+    "rootfs.manifest.json": "65c4c844188db2bd5da8d011fdc4c7577377a973da26f3e1250193d07a2bf6bc",
+    "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+    "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+    "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+    "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+    "worker.exe": "92d71a1d8e0053643f4392de0acc43dbd5375284bd607d3e2e566238b2605023",
+    "rootfs/lib/concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+    "rootfs/lib/kinakaze_alloc.so": "9fa0a0bdb5a5e4a6d9b246fdb968a549db8c9494b837db520b41d352d5d8912f",
+    "rootfs/lib/kinakaze_elf.so": "1012a73759330c355b79689698ff77dd3bd2dbe7c34db5e58f058e1d31d26692",
+    "rootfs/lib/kinakaze_guest_engine.so": "1cb5d843c4bd463e418bda666f9b43e0a13faeeca7e61f0ce9092b2d0e269a38",
+    "rootfs/lib/kinakaze_kernel.so": "cf35ed78050397ff1f5ec832630918a602ca4a4445b779f52ea2fdd54ee29948",
+    "rootfs/lib/kinakaze_tls.so": "9aabd03de109592fb0644ffe3bc74efd5b27b4a2ca8c2d00840eaa86798c46fb",
+    "rootfs/lib/kinakaze_vfs.so": "1aa67c882634d7cf96b33af854393ae2aa35458de70d0a2d96f6d09e7b40f782",
+    "rootfs/lib/ld-linux-x86-64.so.2": "43834a0ac520aee6c336f3d90b1cc648384c2e21cc106022c8e98ce0f8580b17",
+    "rootfs/lib/libasound.so.2": "3f3ce32e2f512ff419efc06464b856bf98cdfc5c6a7d8004a0f19f58ac0f775c",
+    "rootfs/lib/libc.so.6": "166465c82e720afb85c2e572d0e8f54fffdb78dbf2691b5c1e9635598aa0284e",
+    "rootfs/lib/libcuda.so.1": "fdbd31364da1b044b86b7428ca608e0469c2a4834b6cf2527b363eb3488b8887",
+    "rootfs/lib/libdisplay.so.1": "7743fdfba34972e2431efc0510c52dce0e36fbec3a49e893621305ff1a8a90dc",
+    "rootfs/lib/libdl.so.2": "a770f932b9b038a7e6c4c6365d2a785a765cc3249de6222bba03fa7a7473bc30",
+    "rootfs/lib/libEGL.so.1": "8686f367bab5f71a149af6593699de4bd0c4f503ac988602bdb13e9257935362",
+    "rootfs/lib/libGL.so.1": "cb6dc6222a17a4cb77532aeca975844ee31bcddfd71e4fc99340e43d1fe21327",
+    "rootfs/lib/libGLESv2.so.2": "ce815c8875a4cfd9139f616f6263370e09c2b057b2976020bb83a1dab811b846",
+    "rootfs/lib/libGLX.so.0": "359562c8083d8639a13ca6a9a9dffb63bbceb2d7a95b4a31d35bf0add210a082",
+    "rootfs/lib/libkinakaze-runtime.so.1": "3448271b6a30b581c2ab2202814256c1fb3158f1a605dfb377de8b2b7681c505",
+    "rootfs/lib/libm.so.6": "97f8a9f2859d4bbd4f253d3d824dc11a7e497650496467daa3b636859cdb8c87",
+    "rootfs/lib/libOpenGL.so.0": "89d2a9b3309e2402ba2b7f08fcaed50c566e9d60431a5b1c88fc87079da412b5",
+    "rootfs/lib/libpipewire-0.3.so.0": "6be2ce6e5f711ca8846f3dd54044f6752d7c2163d44abb51aa90683523188067",
+    "rootfs/lib/libpthread.so.0": "acd84eaff1b206cb69ccafbf2fc90aa2eff418de22c3b9d8cea28e59bd328694",
+    "rootfs/lib/libpulse.so.0": "4b453938c98801fb4ff82405680b27dcfd47f8af66a4b5a9eb44478c0632d179",
+    "rootfs/lib/libresolv.so.2": "8d0086fa5bcdaba1968dddefd45550732df32b7cf488e9ef9dbff67a29754987",
+    "rootfs/lib/librt.so.1": "d7cb9130b195106a1c516302d5a183f7b0fd78ffd12e132440cdd5193e7887c6",
+    "rootfs/lib/libvulkan.so.1": "4756d6d9137b9ac9e151bd1cc37aecf702558f83536b12eb626189510cbf2621",
+    "rootfs/lib/libX11-xcb.so.1": "8171bd3d3880a0e9865355f40ffd734cb8de5c4b76af6fc61347ac206b5cb35b",
+    "rootfs/lib/libX11.so.6": "7d0b3833362b611ca23d2572df4836fcb55b47d29db359544ab98e25267f873c",
+    "rootfs/lib/libxcb.so.1": "36a0d006d115ed461629e2bb5fadcaa84af0d16fc2e0d840204adcae49df4b10",
+    "rootfs/lib/libXcursor.so.1": "c5d50c3dceb71bb50b868f77cd6f170f4801f02a5ae74717ab900ee85e7c3532",
+    "rootfs/lib/libXext.so.6": "19912144f41d063ff104816cee9441bac5d77fde9549dd6df43b592ec373dedb",
+    "rootfs/lib/libXi.so.6": "7a6745d6459b8d9a348f0265b055f73072b61870613f07b6d5b708851a765628",
+    "rootfs/lib/libXinerama.so.1": "91821b4bb04c76323766be13990df952e9ba2fb1451acf7de896a0cf928c895a",
+    "rootfs/lib/libXrandr.so.2": "f3b0315dd8d6294692f6eb939aebd6bfede799148880b19a091894e6f0bacdf2",
+    "rootfs/lib/libXrender.so.1": "296c6f1056b890eb1f9f7a5d709b6b44d8cd37c99870bb881418d2eb719fb1a2",
+    "rootfs/lib/libXxf86vm.so.1": "8e78140eb25d71cdf359388f8d5a2a1911c3d002afeefc9910c097b283e628d7",
+    "rootfs/lib/msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+    "rootfs/lib/msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+    "rootfs/lib/msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+    "rootfs/lib/msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+    "rootfs/lib/msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+    "rootfs/lib/std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+    "rootfs/lib/vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+    "rootfs/lib/vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+    "rootfs/lib/vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+    "rootfs/lib/vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+    "rootfs/usr/share/doc/kinakaze-libc/copyright": "a16d883c5eddfa9fc7b8621d526ac2af038b10b06d4f792a918c501097119deb",
+    "rootfs/usr/share/doc/kinakaze-libm/copyright": "3fee3d0eadff95f51a6bc34d6f3818b8b8b71ea99732737233259b0dbb884631"
+  },
+  "installed_versions_equal_r8": true,
+  "dpkg_timings": {
+    "installed_packages": 357,
+    "unpack_seconds": 241.0,
+    "configure_seconds": 5.0,
+    "resolution_seconds": 1
+  },
+  "phases": [
+    {
+      "pid": 1,
+      "command": [
+        "/usr/bin/apt-get",
+        "-o",
+        "Dir::Etc::sourcelist=/var/tmp/node-install-benchmark/sources.list",
+        "-o",
+        "Dir::Etc::sourceparts=/var/tmp/node-install-benchmark/sourceparts",
+        "-o",
+        "Acquire::Retries=0",
+        "-o",
+        "Acquire::http::Proxy=DIRECT",
+        "-o",
+        "APT::Update::Error-Mode=any",
+        "update"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3854,
+      "request_to_exit_ms": 776.2984,
+      "activation_to_exit_ms": 775.913,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 171.875,
+        "kernel_ms": 109.375,
+        "total_cpu_ms": 281.25,
+        "cycles": 696686513,
+        "page_faults": 34149
+      },
+      "prepared_working_set_bytes": 13127680,
+      "cpu_metrics": {
+        "user_ms": 546.875,
+        "kernel_ms": 515.625,
+        "total_cpu_ms": 1062.5,
+        "processes": 13,
+        "active_processes": 2,
+        "page_faults": 140946,
+        "read_bytes": 18663582,
+        "write_bytes": 4747229,
+        "read_ops": 1140,
+        "write_ops": 991,
+        "other_ops": 25070,
+        "other_bytes": 1045142
+      },
+      "phase": "update",
+      "start_unix_ns": 1790792050538589800,
+      "end_unix_ns": 1790792051315115800
+    },
+    {
+      "pid": 2,
+      "command": [
+        "/usr/bin/apt-get",
+        "-o",
+        "Dir::Etc::sourcelist=/var/tmp/node-install-benchmark/sources.list",
+        "-o",
+        "Dir::Etc::sourceparts=/var/tmp/node-install-benchmark/sourceparts",
+        "-o",
+        "Acquire::Retries=0",
+        "-o",
+        "Acquire::http::Proxy=DIRECT",
+        "-o",
+        "APT::Update::Error-Mode=any",
+        "-y",
+        "--download-only",
+        "install",
+        "nodejs",
+        "npm"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3296,
+      "request_to_exit_ms": 2183.7233,
+      "activation_to_exit_ms": 2183.3937,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 281.25,
+        "kernel_ms": 750.0,
+        "total_cpu_ms": 1031.25,
+        "cycles": 2951456062,
+        "page_faults": 15771
+      },
+      "prepared_working_set_bytes": 13107200,
+      "cpu_metrics": {
+        "user_ms": 890.625,
+        "kernel_ms": 1609.375,
+        "total_cpu_ms": 2500.0,
+        "processes": 9,
+        "active_processes": 0,
+        "page_faults": 98596,
+        "read_bytes": 9476975,
+        "write_bytes": 26064543,
+        "read_ops": 3795,
+        "write_ops": 4249,
+        "other_ops": 124727,
+        "other_bytes": 11627364
+      },
+      "phase": "download",
+      "start_unix_ns": 1790792051316216500,
+      "end_unix_ns": 1790792053500206200
+    },
+    {
+      "pid": 5,
+      "command": [
+        "/usr/bin/apt-get",
+        "-o",
+        "Dir::Etc::sourcelist=/var/tmp/node-install-benchmark/sources.list",
+        "-o",
+        "Dir::Etc::sourceparts=/var/tmp/node-install-benchmark/sourceparts",
+        "-o",
+        "Acquire::Retries=0",
+        "-o",
+        "Acquire::http::Proxy=DIRECT",
+        "-o",
+        "APT::Update::Error-Mode=any",
+        "-s",
+        "--no-download",
+        "install",
+        "nodejs",
+        "npm"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.2607,
+      "request_to_exit_ms": 383.9274,
+      "activation_to_exit_ms": 383.6667,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 187.5,
+        "kernel_ms": 78.125,
+        "total_cpu_ms": 265.625,
+        "cycles": 885270727,
+        "page_faults": 18547
+      },
+      "prepared_working_set_bytes": 13099008,
+      "cpu_metrics": {
+        "user_ms": 234.375,
+        "kernel_ms": 234.375,
+        "total_cpu_ms": 468.75,
+        "processes": 5,
+        "active_processes": 0,
+        "page_faults": 54329,
+        "read_bytes": 7969369,
+        "write_bytes": 98044,
+        "read_ops": 732,
+        "write_ops": 1264,
+        "other_ops": 29170,
+        "other_bytes": 1121614
+      },
+      "phase": "plan",
+      "start_unix_ns": 1790792053500668500,
+      "end_unix_ns": 1790792053884759400
+    },
+    {
+      "pid": 12,
+      "command": [
+        "/usr/bin/apt-get",
+        "-o",
+        "Dir::Etc::sourcelist=/var/tmp/node-install-benchmark/sources.list",
+        "-o",
+        "Dir::Etc::sourceparts=/var/tmp/node-install-benchmark/sourceparts",
+        "-o",
+        "Acquire::Retries=0",
+        "-o",
+        "Acquire::http::Proxy=DIRECT",
+        "-o",
+        "APT::Update::Error-Mode=any",
+        "-y",
+        "--no-download",
+        "install",
+        "nodejs",
+        "npm"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.364,
+      "request_to_exit_ms": 255750.9044,
+      "activation_to_exit_ms": 255750.5404,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 343.75,
+        "kernel_ms": 1562.5,
+        "total_cpu_ms": 1906.25,
+        "cycles": 5916521893,
+        "page_faults": 69015
+      },
+      "prepared_working_set_bytes": 13172736,
+      "cpu_metrics": {
+        "user_ms": 113828.125,
+        "kernel_ms": 216750.0,
+        "total_cpu_ms": 330578.125,
+        "processes": 5391,
+        "active_processes": 0,
+        "page_faults": 43264931,
+        "read_bytes": 898293735,
+        "write_bytes": 412940148,
+        "read_ops": 577183,
+        "write_ops": 371025,
+        "other_ops": 12632561,
+        "other_bytes": 409942072
+      },
+      "phase": "install",
+      "start_unix_ns": 1790792053885117100,
+      "end_unix_ns": 1790792309636347600
+    },
+    {
+      "pid": 16,
+      "command": [
+        "/usr/bin/node",
+        "-e",
+        "const a=require('assert'),c=require('crypto'); a.equal(c.createHash('sha256').update('node').digest('hex'),'545ea538461003efdc8c81c244531b003f6f26cfccf6c0073b3239fdedf49446'); let sum=0;for(let i=0;i<100000;i++)sum+=i;a.equal(sum,4999950000);console.log(process.version)"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3322,
+      "request_to_exit_ms": 557.9993,
+      "activation_to_exit_ms": 557.6671,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 484.375,
+        "kernel_ms": 78.125,
+        "total_cpu_ms": 562.5,
+        "cycles": 1537320599,
+        "page_faults": 77134
+      },
+      "prepared_working_set_bytes": 13090816,
+      "cpu_metrics": {
+        "user_ms": 546.875,
+        "kernel_ms": 109.375,
+        "total_cpu_ms": 656.25,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 102859,
+        "read_bytes": 91740224,
+        "write_bytes": 53528,
+        "read_ops": 351,
+        "write_ops": 108,
+        "other_ops": 3352,
+        "other_bytes": 101372
+      },
+      "phase": "node-smoke",
+      "start_unix_ns": 1790792309636775700,
+      "end_unix_ns": 1790792310194953300
+    },
+    {
+      "pid": 19,
+      "command": [
+        "/usr/bin/npm",
+        "--version"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.4559,
+      "request_to_exit_ms": 1045.7896,
+      "activation_to_exit_ms": 1045.3337,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 15.625,
+        "kernel_ms": 0.0,
+        "total_cpu_ms": 15.625,
+        "cycles": 39893433,
+        "page_faults": 4209
+      },
+      "prepared_working_set_bytes": 13082624,
+      "cpu_metrics": {
+        "user_ms": 500.0,
+        "kernel_ms": 671.875,
+        "total_cpu_ms": 1171.875,
+        "processes": 2,
+        "active_processes": 0,
+        "page_faults": 75475,
+        "read_bytes": 3505911,
+        "write_bytes": 16096,
+        "read_ops": 1222,
+        "write_ops": 199,
+        "other_ops": 81417,
+        "other_bytes": 1403865
+      },
+      "phase": "npm-smoke",
+      "start_unix_ns": 1790792310195331300,
+      "end_unix_ns": 1790792311241269500
+    },
+    {
+      "pid": 3417,
+      "command": [
+        "/bin/sh",
+        "-c",
+        "/usr/bin/dpkg --audit > /var/tmp/node-install-benchmark/audit.txt"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.4012,
+      "request_to_exit_ms": 118.6874,
+      "activation_to_exit_ms": 118.2862,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 15.625,
+        "kernel_ms": 0.0,
+        "total_cpu_ms": 15.625,
+        "cycles": 57688860,
+        "page_faults": 5448
+      },
+      "prepared_working_set_bytes": 13152256,
+      "cpu_metrics": {
+        "user_ms": 62.5,
+        "kernel_ms": 171.875,
+        "total_cpu_ms": 234.375,
+        "processes": 5,
+        "active_processes": 0,
+        "page_faults": 26592,
+        "read_bytes": 795044,
+        "write_bytes": 15907,
+        "read_ops": 203,
+        "write_ops": 175,
+        "other_ops": 12120,
+        "other_bytes": 447938
+      },
+      "phase": "audit",
+      "start_unix_ns": 1790792311241744200,
+      "end_unix_ns": 1790792311360606000
+    },
+    {
+      "pid": 3418,
+      "command": [
+        "/bin/sh",
+        "-c",
+        "/usr/bin/dpkg --verify > /var/tmp/node-install-benchmark/verify.txt"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3576,
+      "request_to_exit_ms": 10697.6573,
+      "activation_to_exit_ms": 10697.2997,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 0.0,
+        "kernel_ms": 15.625,
+        "total_cpu_ms": 15.625,
+        "cycles": 128109822,
+        "page_faults": 5361
+      },
+      "prepared_working_set_bytes": 13152256,
+      "cpu_metrics": {
+        "user_ms": 2343.75,
+        "kernel_ms": 7296.875,
+        "total_cpu_ms": 9640.625,
+        "processes": 3,
+        "active_processes": 0,
+        "page_faults": 29990,
+        "read_bytes": 603918501,
+        "write_bytes": 17803,
+        "read_ops": 135122,
+        "write_ops": 193,
+        "other_ops": 1322004,
+        "other_bytes": 35561292
+      },
+      "phase": "verify",
+      "start_unix_ns": 1790792311361011400,
+      "end_unix_ns": 1790792322058823900
+    }
+  ],
+  "native_tests_passed": 213,
+  "native_tests_ignored": 3,
+  "native_child_fixture_executions": 2,
+  "guest_checks": 56,
+  "micro": {
+    "passed": true,
+    "distribution": {
+      "worker.exe": "92d71a1d8e0053643f4392de0acc43dbd5375284bd607d3e2e566238b2605023",
+      "init.exe": "487f250715d10d7e1ec9ef8dbda6edb7f0386cf48e3a6e5d2aae5f8eccb4807d",
+      "rootfs.manifest.json": "65c4c844188db2bd5da8d011fdc4c7577377a973da26f3e1250193d07a2bf6bc",
+      "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+      "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "rootfs\\lib\\kinakaze_alloc.so": "9fa0a0bdb5a5e4a6d9b246fdb968a549db8c9494b837db520b41d352d5d8912f",
+      "rootfs\\lib\\kinakaze_elf.so": "1012a73759330c355b79689698ff77dd3bd2dbe7c34db5e58f058e1d31d26692",
+      "rootfs\\lib\\kinakaze_guest_engine.so": "1cb5d843c4bd463e418bda666f9b43e0a13faeeca7e61f0ce9092b2d0e269a38",
+      "rootfs\\lib\\kinakaze_kernel.so": "cf35ed78050397ff1f5ec832630918a602ca4a4445b779f52ea2fdd54ee29948",
+      "rootfs\\lib\\kinakaze_tls.so": "9aabd03de109592fb0644ffe3bc74efd5b27b4a2ca8c2d00840eaa86798c46fb",
+      "rootfs\\lib\\kinakaze_vfs.so": "1aa67c882634d7cf96b33af854393ae2aa35458de70d0a2d96f6d09e7b40f782",
+      "rootfs\\lib\\ld-linux-x86-64.so.2": "43834a0ac520aee6c336f3d90b1cc648384c2e21cc106022c8e98ce0f8580b17",
+      "rootfs\\lib\\libasound.so.2": "3f3ce32e2f512ff419efc06464b856bf98cdfc5c6a7d8004a0f19f58ac0f775c",
+      "rootfs\\lib\\libc.so.6": "166465c82e720afb85c2e572d0e8f54fffdb78dbf2691b5c1e9635598aa0284e",
+      "rootfs\\lib\\libcuda.so.1": "fdbd31364da1b044b86b7428ca608e0469c2a4834b6cf2527b363eb3488b8887",
+      "rootfs\\lib\\libdisplay.so.1": "7743fdfba34972e2431efc0510c52dce0e36fbec3a49e893621305ff1a8a90dc",
+      "rootfs\\lib\\libdl.so.2": "a770f932b9b038a7e6c4c6365d2a785a765cc3249de6222bba03fa7a7473bc30",
+      "rootfs\\lib\\libEGL.so.1": "8686f367bab5f71a149af6593699de4bd0c4f503ac988602bdb13e9257935362",
+      "rootfs\\lib\\libGL.so.1": "cb6dc6222a17a4cb77532aeca975844ee31bcddfd71e4fc99340e43d1fe21327",
+      "rootfs\\lib\\libGLESv2.so.2": "ce815c8875a4cfd9139f616f6263370e09c2b057b2976020bb83a1dab811b846",
+      "rootfs\\lib\\libGLX.so.0": "359562c8083d8639a13ca6a9a9dffb63bbceb2d7a95b4a31d35bf0add210a082",
+      "rootfs\\lib\\libkinakaze-runtime.so.1": "3448271b6a30b581c2ab2202814256c1fb3158f1a605dfb377de8b2b7681c505",
+      "rootfs\\lib\\libm.so.6": "97f8a9f2859d4bbd4f253d3d824dc11a7e497650496467daa3b636859cdb8c87",
+      "rootfs\\lib\\libOpenGL.so.0": "89d2a9b3309e2402ba2b7f08fcaed50c566e9d60431a5b1c88fc87079da412b5",
+      "rootfs\\lib\\libpipewire-0.3.so.0": "6be2ce6e5f711ca8846f3dd54044f6752d7c2163d44abb51aa90683523188067",
+      "rootfs\\lib\\libpthread.so.0": "acd84eaff1b206cb69ccafbf2fc90aa2eff418de22c3b9d8cea28e59bd328694",
+      "rootfs\\lib\\libpulse.so.0": "4b453938c98801fb4ff82405680b27dcfd47f8af66a4b5a9eb44478c0632d179",
+      "rootfs\\lib\\libresolv.so.2": "8d0086fa5bcdaba1968dddefd45550732df32b7cf488e9ef9dbff67a29754987",
+      "rootfs\\lib\\librt.so.1": "d7cb9130b195106a1c516302d5a183f7b0fd78ffd12e132440cdd5193e7887c6",
+      "rootfs\\lib\\libvulkan.so.1": "4756d6d9137b9ac9e151bd1cc37aecf702558f83536b12eb626189510cbf2621",
+      "rootfs\\lib\\libX11-xcb.so.1": "8171bd3d3880a0e9865355f40ffd734cb8de5c4b76af6fc61347ac206b5cb35b",
+      "rootfs\\lib\\libX11.so.6": "7d0b3833362b611ca23d2572df4836fcb55b47d29db359544ab98e25267f873c",
+      "rootfs\\lib\\libxcb.so.1": "36a0d006d115ed461629e2bb5fadcaa84af0d16fc2e0d840204adcae49df4b10",
+      "rootfs\\lib\\libXcursor.so.1": "c5d50c3dceb71bb50b868f77cd6f170f4801f02a5ae74717ab900ee85e7c3532",
+      "rootfs\\lib\\libXext.so.6": "19912144f41d063ff104816cee9441bac5d77fde9549dd6df43b592ec373dedb",
+      "rootfs\\lib\\libXi.so.6": "7a6745d6459b8d9a348f0265b055f73072b61870613f07b6d5b708851a765628",
+      "rootfs\\lib\\libXinerama.so.1": "91821b4bb04c76323766be13990df952e9ba2fb1451acf7de896a0cf928c895a",
+      "rootfs\\lib\\libXrandr.so.2": "f3b0315dd8d6294692f6eb939aebd6bfede799148880b19a091894e6f0bacdf2",
+      "rootfs\\lib\\libXrender.so.1": "296c6f1056b890eb1f9f7a5d709b6b44d8cd37c99870bb881418d2eb719fb1a2",
+      "rootfs\\lib\\libXxf86vm.so.1": "8e78140eb25d71cdf359388f8d5a2a1911c3d002afeefc9910c097b283e628d7",
+      "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+      "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+    },
+    "rows": [
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3",
+          "/var/tmp/goal180-r9-read-open-comparison/probe.py",
+          "/var/tmp/goal180-r9-read-open-comparison"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.2709,
+        "request_to_exit_ms": 5686.3738,
+        "activation_to_exit_ms": 5686.1029,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 656.25,
+          "kernel_ms": 4937.5,
+          "total_cpu_ms": 5593.75,
+          "cycles": 16396215744,
+          "page_faults": 8242
+        },
+        "prepared_working_set_bytes": 13107200,
+        "cpu_metrics": {
+          "user_ms": 656.25,
+          "kernel_ms": 4968.75,
+          "total_cpu_ms": 5625.0,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 13557,
+          "read_bytes": 7700220,
+          "write_bytes": 13415,
+          "read_ops": 8367,
+          "write_ops": 624,
+          "other_ops": 819966,
+          "other_bytes": 16308881
+        },
+        "variant": "0-control",
+        "enabled": false,
+        "loops": {
+          "repeated": {
+            "iterations": 10000,
+            "ms": 1551.4573
+          },
+          "varied": {
+            "iterations": 8192,
+            "ms": 1367.3272
+          },
+          "varied_read": {
+            "iterations": 8192,
+            "ms": 2286.3717
+          }
+        }
+      },
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3",
+          "/var/tmp/goal180-r9-read-open-comparison/probe.py",
+          "/var/tmp/goal180-r9-read-open-comparison"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.3562,
+        "request_to_exit_ms": 2773.7651,
+        "activation_to_exit_ms": 2773.4089,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 734.375,
+          "kernel_ms": 2031.25,
+          "total_cpu_ms": 2765.625,
+          "cycles": 8010195933,
+          "page_faults": 8305
+        },
+        "prepared_working_set_bytes": 13152256,
+        "cpu_metrics": {
+          "user_ms": 750.0,
+          "kernel_ms": 2046.875,
+          "total_cpu_ms": 2796.875,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 13604,
+          "read_bytes": 7700214,
+          "write_bytes": 13406,
+          "read_ops": 8367,
+          "write_ops": 624,
+          "other_ops": 291344,
+          "other_bytes": 5367193
+        },
+        "variant": "1-enabled",
+        "enabled": true,
+        "loops": {
+          "repeated": {
+            "iterations": 10000,
+            "ms": 640.7782
+          },
+          "varied": {
+            "iterations": 8192,
+            "ms": 524.5795
+          },
+          "varied_read": {
+            "iterations": 8192,
+            "ms": 1125.2614
+          }
+        }
+      },
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3",
+          "/var/tmp/goal180-r9-read-open-comparison/probe.py",
+          "/var/tmp/goal180-r9-read-open-comparison"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.2955,
+        "request_to_exit_ms": 2729.2473,
+        "activation_to_exit_ms": 2728.9518,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 484.375,
+          "kernel_ms": 2234.375,
+          "total_cpu_ms": 2718.75,
+          "cycles": 7880997503,
+          "page_faults": 8296
+        },
+        "prepared_working_set_bytes": 13127680,
+        "cpu_metrics": {
+          "user_ms": 500.0,
+          "kernel_ms": 2265.625,
+          "total_cpu_ms": 2765.625,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 16867,
+          "read_bytes": 7700220,
+          "write_bytes": 13413,
+          "read_ops": 8367,
+          "write_ops": 624,
+          "other_ops": 291992,
+          "other_bytes": 5380781
+        },
+        "variant": "2-enabled",
+        "enabled": true,
+        "loops": {
+          "repeated": {
+            "iterations": 10000,
+            "ms": 593.2366
+          },
+          "varied": {
+            "iterations": 8192,
+            "ms": 542.6269
+          },
+          "varied_read": {
+            "iterations": 8192,
+            "ms": 1185.2757
+          }
+        }
+      },
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3",
+          "/var/tmp/goal180-r9-read-open-comparison/probe.py",
+          "/var/tmp/goal180-r9-read-open-comparison"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.4326,
+        "request_to_exit_ms": 6908.5805,
+        "activation_to_exit_ms": 6908.1479,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 843.75,
+          "kernel_ms": 6046.875,
+          "total_cpu_ms": 6890.625,
+          "cycles": 19957561830,
+          "page_faults": 8308
+        },
+        "prepared_working_set_bytes": 13119488,
+        "cpu_metrics": {
+          "user_ms": 859.375,
+          "kernel_ms": 6046.875,
+          "total_cpu_ms": 6906.25,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 13849,
+          "read_bytes": 7700220,
+          "write_bytes": 13412,
+          "read_ops": 8367,
+          "write_ops": 624,
+          "other_ops": 819476,
+          "other_bytes": 16293226
+        },
+        "variant": "3-control",
+        "enabled": false,
+        "loops": {
+          "repeated": {
+            "iterations": 10000,
+            "ms": 2176.2338
+          },
+          "varied": {
+            "iterations": 8192,
+            "ms": 1745.0729
+          },
+          "varied_read": {
+            "iterations": 8192,
+            "ms": 2477.7
+          }
+        }
+      }
+    ],
+    "caveat": "Host load uncontrolled; only the read-open switch differs between variants."
+  },
+  "host": {
+    "quiet_start": false,
+    "installation_samples": 128,
+    "installation_samples_with_foreign_activity": 105,
+    "recorder_cpu_seconds": 0.359375,
+    "sampling_seconds": 0.38613799995800946
+  },
+  "limitations": [
+    "Host load was uncontrolled in the switch comparison and complete installation.",
+    "R8 and R9 full installations do not isolate the code change from host conditions.",
+    "The native fast path initially handles absolute read-only regular files with DAC override.",
+    "Microbenchmark loop times exclude fixture creation; Job CPU includes the full guest command.",
+    "The first trailing-slash guest check failed both with and without the new fast path; corrected source passed all 56 checks."
+  ],
+  "evidence": [
+    {
+      "path": "artifacts/goal-install-180-20260930/r9-source.json",
+      "sha256": "97ad6a9164e62ebc6dc1fb5f07025d7484e336d8e171e85f86eadfb1ec7dc94d"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/r9-dist.json",
+      "sha256": "dcbbcc73a2c3af613ecd9242153ab233cdc2bf76992cbe5d08560cc9f23c18b7"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/r9-final-build.log",
+      "sha256": "b59edcd64e4f9f9abf4878fdd1b1771013c6d86afa63c240e21840f8db636814"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/r9-final-tests.json",
+      "sha256": "4feb7ac19dd67a43bf160c954bcd22c5637b16d5ebe9f0e9f25798ae8b7869d0"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/r9-final-guest/report.json",
+      "sha256": "5a828d77bd25740f582d18af5f55e60a11c38818011614f825d4ee601626b82f"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/r9-guest-untraced/report.json",
+      "sha256": "fe6c5da0ba01c8882da7ffcdb3989655596a3a5848ad0f87021e2536566eb2b9"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/r9-guest-untraced/ordinary/pool.stderr.log",
+      "sha256": "75768a00521d4e1661e132873277424fdecfa990a4cd471c0419f80c5aa9e968"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/r9-guest-control-check/report.json",
+      "sha256": "e04d50d9a14344a37937f7928e3e268b908629962d0ce48406f3833ab1ebee31"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/r9-guest-control-check/ordinary/pool.stderr.log",
+      "sha256": "eed773925f91413eae283f729606f7011d31b57644962daaf56de2ee7b30f4d4"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/r9-read-open-comparison/report.json",
+      "sha256": "61b1f90cc437b0b81cb7dea6c7c406ff6832eae6b293c383d693cad7661844b2"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/compare-r9-read-open.py",
+      "sha256": "dbddc6eb5c4685e51181dd032f053545ff8d613020d115eed072985db76b5145"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/install-r9/report.json",
+      "sha256": "3e833a17b79191859871e5b385962f2d436adba1618e8d1ed9c38e8c1594415c"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/r9-setup.log",
+      "sha256": "6f59dab7d71a3977fb881f36150ccc005d02742eb801d1307c4540abdf96b154"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/r9-environment.json",
+      "sha256": "648ce95d67bcaeb6617e3fd91fd7e7d86056293031cba86355f310483bde1bec"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/r9-load.jsonl",
+      "sha256": "9c08953a3d7596c40fae5b7ad6457e88ad648c5ae8bd9460b1a379d3dbc0b83e"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/run-r9-install.py",
+      "sha256": "58dbdc9956ca3ad4e2262a19319882a0df63673e59d29d48b4096b4691185475"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/run-r9-final-guest.py",
+      "sha256": "6ee4cd0b9eb466ecf60140f2e8ac691b4536c03b1c6023dc02318b9d96baa83d"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/run-r9-final-tests.py",
+      "sha256": "a896a9f2b0423b18fe679287275ba079661f5790128ba5ab2aeb448dfada43dd"
+    }
+  ]
+}
