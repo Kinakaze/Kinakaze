@@ -258,12 +258,12 @@ fixture.install_handler.argtypes = [C.c_void_p, C.c_int]
 
 def signal_waiter(restart, address):
     assert fixture.install_handler(address, restart) == 0
-    started = time.monotonic()
-    wait(address, seconds=.5, result=-errno.ETIMEDOUT if restart else -errno.EINTR)
+    # Timed legacy FUTEX_WAIT uses restart-block semantics: a caught user
+    # handler yields EINTR even with SA_RESTART. Untimed and modern restart
+    # cases are covered separately by FutexSignalRestartProbe.
+    wait(address, seconds=.5, result=-errno.EINTR)
     assert fixture.handler_calls() >= 1
     assert fixture.handler_nested_wake() == 0
-    if restart:
-        assert .4 <= time.monotonic() - started < 1.5
 
 
 for restart in (0, 1):
