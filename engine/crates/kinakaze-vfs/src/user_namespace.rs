@@ -518,16 +518,32 @@ pub fn groups(pid: u32, value: Option<&[u8]>) -> Result<Vec<u8>, i32> {
     })
 }
 pub fn visible(value: u32, group: bool) -> u32 {
-    current_map()
+    translate_current(value, group, true)
         .ok()
-        .and_then(|m| m.up(value, group))
+        .flatten()
         .unwrap_or(65534)
 }
 pub(crate) fn current_map() -> Result<Mapping, i32> {
     map_to_initial(current()?.id())
 }
 pub fn kernel(value: u32, group: bool) -> Result<u32, i32> {
-    current_map()?.down(value, group).ok_or(EOVERFLOW)
+    translate_current(value, group, false)?.ok_or(EOVERFLOW)
+}
+fn translate_current(value: u32, group: bool, reverse: bool) -> Result<Option<u32>, i32> {
+    let namespace = current()?.id();
+    if namespace == 1 {
+        // The initial namespace is validated on open and its identity extents
+        // cannot be rewritten. Avoid copying and decoding both maps for every
+        // getuid/stat/chown, while retaining the unmapped all-ones sentinel.
+        // Read the current identity each time so setns/unshare takes effect.
+        return Ok((value != u32::MAX).then_some(value));
+    }
+    let mapping = map_to_initial(namespace)?;
+    Ok(if reverse {
+        mapping.up(value, group)
+    } else {
+        mapping.down(value, group)
+    })
 }
 pub(crate) fn serialize() -> Result<Vec<u8>, i32> {
     let id = current()?.id();
@@ -568,8 +584,14 @@ pub fn is_initial() -> bool {
 }
 pub fn groups_allowed() -> bool {
     current()
-        .and_then(|store| State::decode(&store.read()?.1))
-        .is_ok_and(|s| !s.denied_groups)
+        .and_then(|store| {
+            if store.id() == 1 {
+                Ok(true) // groups() rejects changes to the initial namespace.
+            } else {
+                State::decode(&store.read()?.1).map(|state| !state.denied_groups)
+            }
+        })
+        .unwrap_or(false)
 }
 pub fn open_id(id: u64) -> Result<i32, i32> {
     let store = if id == 1 {
@@ -613,3 +635,6 @@ pub unsafe fn ioctl(fd: i32, request: u64, argument: *mut u32) -> Result<i32, i3
         _ => Err(crate::ENOTTY),
     }
 }
+
+#[cfg(test)]
+mod tests;
