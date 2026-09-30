@@ -373,3 +373,28 @@ page faults. Verification took 18.863 s. The starting sparse host observation
 found no compilers or other runtimes; a later sample observed five. This result
 does not improve this chat's best validated complete installation of 302.849 s.
 The **180-second target remains active and unachieved**.
+
+Round nine retained the same inode-keyed native mutex capability alongside an
+idle private reader. Every read still acquires the inode transaction and queries
+verity state; no mutable result is cached. A shared wait helper preserves
+recursive acquisition, interruptible contention and abandoned-owner handling.
+New native tests check fresh named openers, recursive guard release and an
+owner that exits without unlocking. The integrated graph passed **115 native
+tests**, with one existing ignored diagnostic, and all seven guest probes.
+
+Three alternating same-binary off/on trials passed all assertions. Read-only
+10,000-operation medians fell from **72.341 to 44.054 ms** (39.10%). Unchanged
+metadata, fork and account paths varied, including slower account lookups with
+the hint enabled; this does not imply a 39% installation improvement.
+
+The independent fresh-root installation passed all 357 packages and all normal
+Node/npm/audit/file checks in **369.063 s**, with 353/10 s unpack/configure,
+353.938 s job CPU, 5,256 processes and 41,579,297 page faults. Verification took
+20.828 s. Sparse host observations recorded substantial compiler activity after
+the initially quiet sample, preventing exclusive timing attribution. The best
+validated installation from this chat remains **302.849 s**, and the target is
+still unachieved. Sources, native/guest checks, comparisons and full results are
+under `r9-retained-mutex-sources.*`, `native-r9-retained-mutex.json`,
+`guest-r9-retained-mutex/`, `read-mutex-paired-r9/` and
+`node-r9-retained-mutex/`. Detailed cache behavior is documented in
+`vfs-read-cache-performance-2026-10-01.md`.
