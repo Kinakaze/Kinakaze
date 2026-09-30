@@ -265,7 +265,7 @@ isolated comparison against r4.
 
 Evidence is `install-r6/report.json`, `r6-source.json`, `r6-dist.json` and
 `r6-environment.json`. The immutable r5 source is `source-integrated-r5`; the
-current r6 source is `source-integrated`. A same-distribution follow-up uses
+preserved r6 source is `source-integrated-r6`. A same-distribution follow-up uses
 a fresh root and requires 20 consecutive seconds without observed competing
 compiler/worker CPU activity before starting any guest command. Waiting is
 outside all measured installation phases.
@@ -279,3 +279,26 @@ measurement conditions without establishing an idle-host result. The remaining
 gap to 180 seconds is about 114 seconds; waiting for less competition alone
 did not achieve the target. Evidence is `install-r6-quiet/report.json` and
 `r6-quiet-environment.json`, using the unchanged `r6-dist.json` distribution.
+
+
+## Further integration with current loader and descriptor changes
+
+The r7 source includes the available loader metadata, descriptor queries and
+process identity improvements. Its immutable Release distribution passed 205
+distinct native checks, with three existing diagnostics ignored, and 33 guest
+checks across ordinary, transferred and pooled fork modes. An initial test
+filter matched no catalog tests; the corrected follow-up ran all eight catalog
+checks plus 24 process-table tests. These are included in the 205 total.
+
+The fresh complete installation took **290.438 seconds**. All 357 packages,
+Node/npm, empty audit and full file verification passed. Verification took
+16.830 seconds. Installation Job CPU was 344.484 seconds (118.203 user and
+226.281 kernel), with 5,391 processes and 43,128,158 page faults. The observer
+used 0.438 CPU seconds. It did not obtain a quiet start; 144 of 145 installation
+samples observed competing activity. No compilation was started by this chat
+during the timed transaction. This integrated observation does not isolate
+any one change's benefit, and the 180-second target remains unmet.
+
+The measured r7 distribution predates native exec preparation. Its evidence is
+`install-r7/report.json`, `r7-source.json`, `r7-dist.json`, `r7-environment.json`,
+`r7-tests.json`, `r7-additional-tests.json` and `r7-guest-probes/report.json`.

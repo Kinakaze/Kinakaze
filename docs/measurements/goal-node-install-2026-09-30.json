@@ -302,6 +302,87 @@
         "r6-dist.json": "85e3bcbb1638bed882d5c833807a34932792150bb8590869ade649c53d9eef84",
         "r6-quiet-environment.json": "eea4c75640c48cf206bc5fc81fce219991e576530fbc23684f0a8df673f207a8"
       }
+    },
+    {
+      "name": "r7",
+      "passed": true,
+      "installed_packages": 357,
+      "phases": [
+        {
+          "phase": "update",
+          "status": "passed",
+          "milliseconds": 779.4504
+        },
+        {
+          "phase": "download",
+          "status": "passed",
+          "milliseconds": 1969.85
+        },
+        {
+          "phase": "plan",
+          "status": "passed",
+          "milliseconds": 441.7765
+        },
+        {
+          "phase": "install",
+          "status": "passed",
+          "milliseconds": 290437.8351
+        },
+        {
+          "phase": "node-smoke",
+          "status": "passed",
+          "milliseconds": 633.0578
+        },
+        {
+          "phase": "npm-smoke",
+          "status": "passed",
+          "milliseconds": 1288.8513
+        },
+        {
+          "phase": "audit",
+          "status": "passed",
+          "milliseconds": 148.6237
+        },
+        {
+          "phase": "verify",
+          "status": "passed",
+          "milliseconds": 16830.1496
+        }
+      ],
+      "installation_job": {
+        "user_ms": 118203.125,
+        "kernel_ms": 226281.25,
+        "total_cpu_ms": 344484.375,
+        "processes": 5391,
+        "active_processes": 0,
+        "page_faults": 43128158,
+        "read_bytes": 897422451,
+        "write_bytes": 412638681,
+        "read_ops": 573229,
+        "write_ops": 367083,
+        "other_ops": 12561516,
+        "other_bytes": 406683240
+      },
+      "quiet_start": false,
+      "runtime_flags": {
+        "KINAKAZE_FORK_TRANSFER": "1",
+        "KINAKAZE_FORK_POOL": "1"
+      },
+      "installation_load_samples": 145,
+      "samples_with_foreign_cpu_activity": 144,
+      "observer_cpu_seconds": 0.4375,
+      "native_checks_passed": 205,
+      "existing_checks_ignored": 3,
+      "guest_checks_passed": 33,
+      "evidence_sha256": {
+        "install-r7/report.json": "372baea71bc834b3a1546cfcd4095c3e2a46e624f868c89fd36cb5036a5d57b5",
+        "r7-source.json": "ac5d0fd9b18c648bc56bc2396b06a5457bbd76587ec6cf730459ede07c2cfdb5",
+        "r7-dist.json": "9d83470eb8d0a647aec971ad8ebe37057177ff4a142677f22997cedf22821af7",
+        "r7-environment.json": "436843be99d20a1c913c807b14e32e52e22a885eb31fd1927b67074f973ae010",
+        "r7-tests.json": "830245a826bc51a858c62fd79f5d23d53c31e3a242cef54577477792c0bab25a",
+        "r7-additional-tests.json": "4dab679fcb56e4e48f4f6604b0577a4859b4f7381da76f943e89887adf7a92a7",
+        "r7-guest-probes/report.json": "3cd9550946f3cd04ad08cab32035fdb228da085fc47c9ce917e3e4b34c4e41f9"
+      }
     }
   ]
 }
