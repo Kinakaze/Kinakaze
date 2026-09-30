@@ -60,7 +60,6 @@ OBJECT_LAYOUTS = {
 # exported by libpthread. Retain that observed compatibility surface while
 # forwarding into the same runtime implementation and storage as libc.
 PTHREAD_LIBC_FORWARDERS = {
-    "pthread_mutexattr_setpshared",
     "__res_state", "fork", "pause", "sigwait", "tcdrain",
     "pthread_rwlockattr_init", "pthread_rwlockattr_destroy", "pthread_attr_setscope",
     "__h_errno_location", "__libc_current_sigrtmax", "__libc_current_sigrtmin",
@@ -81,6 +80,7 @@ LIBC_PTHREAD_FORWARDERS = {"pthread_attr_getschedpolicy", "pthread_attr_getsched
                           "pthread_barrier_init", "pthread_barrier_wait", "pthread_barrier_destroy",
                           "pthread_sigmask", "pthread_mutex_clocklock", "pthread_cond_clockwait",
                           "pthread_mutexattr_setrobust", "pthread_mutexattr_getrobust", "pthread_mutex_consistent",
+                          "pthread_mutexattr_setpshared", "pthread_mutexattr_getpshared",
                           "pthread_mutexattr_setrobust_np", "pthread_mutexattr_getrobust_np", "pthread_mutex_consistent_np",
                           "pthread_mutexattr_setprotocol", "pthread_mutexattr_getprotocol",
                           "pthread_attr_setaffinity_np", "pthread_attr_getaffinity_np",
@@ -110,8 +110,19 @@ PTHREAD_ROBUST_VERSIONS.update({
 })
 
 
+# Linux x86_64 shared mutex accessors survive regeneration without import evidence.
+PTHREAD_SHARED_VERSIONS = {
+    (soname, name): versions
+    for soname, versions in (("libpthread.so.0", {"GLIBC_2.2.5"}),
+                             ("libc.so.6", {"GLIBC_2.2.5", "GLIBC_2.34"}))
+    for name in ("pthread_mutexattr_setpshared", "pthread_mutexattr_getpshared")
+}
+
+
 def symbol_versions(soname, name, observed):
-    versions = observed.get((soname, name), set()) | PTHREAD_ROBUST_VERSIONS.get((soname, name), set())
+    versions = (observed.get((soname, name), set())
+                | PTHREAD_ROBUST_VERSIONS.get((soname, name), set())
+                | PTHREAD_SHARED_VERSIONS.get((soname, name), set()))
     return sorted(versions, key=lambda value: [int(piece) if piece.isdigit() else piece
                                              for piece in re.split(r"(\d+)", value)])
 
@@ -462,13 +473,15 @@ def module_outputs(module, native_owners):
     """Emit ordinary linker exports and the data-size query C ABI."""
     definition = [f'LIBRARY "{module["soname"]}"', 'EXPORTS']
     objects = []
+    local_targets = set()
     for symbol in module['exports']:
         target = symbol['runtime_export']
         owner = native_owners.get(target, module['soname'])
         binding = target if owner == module['soname'] else f'{owner}.{target}'
         suffix = ' DATA' if symbol['kind'] == 'object' else ''
-        if owner == module['soname']:
+        if owner == module['soname'] and target not in local_targets:
             definition.append(f'  {target}{suffix}')
+            local_targets.add(target)
         names = [symbol['name'], *(f'{symbol["name"]}@{version}' for version in symbol['versions'])]
         for name in names:
             private = ' PRIVATE' if name != target or owner != module['soname'] else ''

@@ -54,6 +54,7 @@ mod directory;
 pub use directory::{NativeDirectoryEntry, read_directory_bytes, read_native_directory_fd};
 #[cfg(test)]
 mod install_tests;
+mod native_read;
 mod permissions;
 pub use allocation::fallocate;
 pub(crate) mod cwd;
@@ -941,6 +942,19 @@ pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32>
     } else {
         flags
     };
+    // These components must be interpreted after links, before absolute_linux
+    // removes them. The walker itself acquires O_PATH directory references;
+    // those internal opens must not recursively enter the data-open walker.
+    if flags & O_PATH == 0
+        && (path.ends_with('/')
+            || path
+                .split('/')
+                .filter(|part| !part.is_empty())
+                .enumerate()
+                .any(|(index, part)| part == ".." || part == "." && index != 0))
+    {
+        return confined::open(dirfd, path, flags, mode, 0);
+    }
     let parent = if dirfd != AT_FDCWD && !path.starts_with('/') {
         Some(get(dirfd)?)
     } else {
@@ -1098,6 +1112,11 @@ pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32>
     let fallback = synthetic_configuration(&absolute);
     if fallback.is_none()
         && let Some(fd) = confined::open_path_child(dirfd, parent, path, &absolute, flags)?
+    {
+        return Ok(fd);
+    }
+    if fallback.is_none()
+        && let Some(fd) = native_read::try_open_at(dirfd, path, &absolute, flags)?
     {
         return Ok(fd);
     }

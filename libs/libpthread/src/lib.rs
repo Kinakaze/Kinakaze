@@ -9,6 +9,8 @@ mod robust;
 #[cfg(all(windows, target_arch = "x86_64"))]
 pub mod sched;
 #[cfg(all(windows, target_arch = "x86_64"))]
+mod shared;
+#[cfg(all(windows, target_arch = "x86_64"))]
 mod stack;
 #[cfg(all(windows, target_arch = "x86_64"))]
 pub use sched::{SchedParam, pthread_getschedparam, pthread_setschedparam, pthread_setschedprio};
@@ -587,6 +589,7 @@ pub fn retire_raw_thread() {
 #[cfg(all(windows, target_arch = "x86_64"))]
 fn retire_pthread_metadata(result: Option<usize>) {
     let id = pthread_self();
+    shared::retire_thread();
     parking::retire_thread();
     sched::unregister(id);
     HELD_RWLOCKS.with_borrow_mut(Vec::clear);
@@ -1742,10 +1745,22 @@ pub unsafe extern "sysv64" fn pthread_mutex_init(
     } else {
         unsafe { (*attr).kind }
     };
-    if flags & !(robust::ATTR_ROBUST | PTHREAD_MUTEX_KIND_MASK) != 0 {
+    if flags & !(robust::ATTR_ROBUST | shared::ATTR_PSHARED | PTHREAD_MUTEX_KIND_MASK) != 0 {
         return EINVAL;
     }
     let kind = flags & PTHREAD_MUTEX_KIND_MASK;
+    if flags & shared::ATTR_PSHARED != 0 {
+        let result = unsafe { shared::init(mutex, flags) };
+        if result == 0 {
+            let mut records = mutex_records()
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner);
+            if records.remove(&(mutex as usize)).is_some() {
+                TYPED_MUTEXES.fetch_sub(1, Ordering::AcqRel);
+            }
+        }
+        return result;
+    }
     if flags & robust::ATTR_ROBUST != 0 {
         let kind = if kind == PTHREAD_MUTEX_ADAPTIVE_NP {
             PTHREAD_MUTEX_NORMAL
@@ -1785,7 +1800,14 @@ pub unsafe extern "sysv64" fn pthread_mutex_init(
         kind
     };
     // SRWLOCK_INIT is all zeroes.
-    unsafe { mutex.write(0) };
+    unsafe {
+        mutex.write(0);
+        mutex
+            .cast::<u8>()
+            .add(PTHREAD_MUTEX_KIND_OFFSET)
+            .cast::<i32>()
+            .write(kind);
+    }
 
     let Ok(mut records) = mutex_records().lock() else {
         return EINVAL;
@@ -1814,6 +1836,9 @@ pub unsafe extern "sysv64" fn pthread_mutex_init(
 pub extern "sysv64" fn pthread_mutex_destroy(mutex: *mut usize) -> i32 {
     if mutex.is_null() {
         return EINVAL;
+    }
+    if unsafe { shared::is_mutex(mutex) } {
+        return unsafe { shared::destroy(mutex) };
     }
     if unsafe { robust::is_mutex(mutex) } {
         return unsafe { robust::destroy(mutex) };
@@ -1845,6 +1870,9 @@ pub extern "sysv64" fn pthread_mutex_destroy(mutex: *mut usize) -> i32 {
 pub unsafe extern "sysv64" fn pthread_mutex_lock(mutex: *mut usize) -> i32 {
     if mutex.is_null() {
         return EINVAL;
+    }
+    if unsafe { shared::is_mutex(mutex) } {
+        return unsafe { shared::acquire(mutex, None, false) };
     }
     if unsafe { robust::is_mutex(mutex) } {
         return unsafe { robust::acquire(mutex, None, false) };
@@ -1917,6 +1945,9 @@ pub unsafe extern "sysv64" fn pthread_mutex_clocklock(
     if mutex.is_null() || deadline.is_null() {
         return EINVAL;
     }
+    if unsafe { shared::is_mutex(mutex) } {
+        return unsafe { shared::acquire(mutex, Some((&*deadline, clock_id)), false) };
+    }
     if unsafe { robust::is_mutex(mutex) } {
         return unsafe { robust::acquire(mutex, Some((&*deadline, clock_id)), false) };
     }
@@ -1971,6 +2002,9 @@ pub unsafe extern "sysv64" fn pthread_mutex_trylock(mutex: *mut usize) -> i32 {
     if mutex.is_null() {
         return EINVAL;
     }
+    if unsafe { shared::is_mutex(mutex) } {
+        return unsafe { shared::acquire(mutex, None, true) };
+    }
     if unsafe { robust::is_mutex(mutex) } {
         return unsafe { robust::acquire(mutex, None, true) };
     }
@@ -2001,6 +2035,9 @@ pub unsafe extern "sysv64" fn pthread_mutex_trylock(mutex: *mut usize) -> i32 {
 pub unsafe extern "sysv64" fn pthread_mutex_unlock(mutex: *mut usize) -> i32 {
     if mutex.is_null() {
         return EINVAL;
+    }
+    if unsafe { shared::is_mutex(mutex) } {
+        return unsafe { shared::unlock(mutex) };
     }
     if unsafe { robust::is_mutex(mutex) } {
         return unsafe { robust::unlock(mutex) };
@@ -2071,6 +2108,41 @@ pub unsafe extern "sysv64" fn pthread_mutexattr_getprotocol(
 
 #[cfg(all(windows, target_arch = "x86_64"))]
 #[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn pthread_mutexattr_setpshared(
+    attr: *mut PthreadMutexAttr,
+    pshared: i32,
+) -> i32 {
+    if attr.is_null() || !matches!(pshared, 0 | 1) {
+        return EINVAL;
+    }
+    unsafe {
+        (*attr).kind = ((*attr).kind & !shared::ATTR_PSHARED)
+            | if pshared == 1 {
+                shared::ATTR_PSHARED
+            } else {
+                0
+            };
+    }
+    0
+}
+
+#[cfg(all(windows, target_arch = "x86_64"))]
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn pthread_mutexattr_getpshared(
+    attr: *const PthreadMutexAttr,
+    pshared: *mut i32,
+) -> i32 {
+    if attr.is_null() || pshared.is_null() {
+        return EINVAL;
+    }
+    unsafe {
+        *pshared = i32::from((*attr).kind & shared::ATTR_PSHARED != 0);
+    }
+    0
+}
+
+#[cfg(all(windows, target_arch = "x86_64"))]
+#[unsafe(no_mangle)]
 /// Selects robust owner-death recovery for a private mutex.
 pub unsafe extern "sysv64" fn pthread_mutexattr_setrobust(
     attr: *mut PthreadMutexAttr,
@@ -2108,7 +2180,13 @@ pub unsafe extern "sysv64" fn pthread_mutexattr_getrobust(
 #[cfg(all(windows, target_arch = "x86_64"))]
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn pthread_mutex_consistent(mutex: *mut usize) -> i32 {
-    if mutex.is_null() || !unsafe { robust::is_mutex(mutex) } {
+    if mutex.is_null() {
+        return EINVAL;
+    }
+    if unsafe { shared::is_mutex(mutex) } {
+        return unsafe { shared::consistent(mutex) };
+    }
+    if !unsafe { robust::is_mutex(mutex) } {
         return EINVAL;
     }
     unsafe { robust::consistent(mutex) }
@@ -2288,7 +2366,7 @@ pub unsafe extern "sysv64" fn pthread_cond_wait(cond: *mut usize, mutex: *mut us
     if cond.is_null() || mutex.is_null() {
         return EINVAL;
     }
-    if parking::enabled() || unsafe { robust::is_mutex(mutex) } {
+    if parking::enabled() || unsafe { shared::is_mutex(mutex) || robust::is_mutex(mutex) } {
         return unsafe { parking::condition(cond, mutex, None) };
     }
     cancel_condition_wait(cond);
@@ -2396,7 +2474,7 @@ unsafe fn cond_wait_deadline(
     clock_id: i32,
     deadline: Timespec,
 ) -> i32 {
-    if parking::enabled() || unsafe { robust::is_mutex(mutex) } {
+    if parking::enabled() || unsafe { shared::is_mutex(mutex) || robust::is_mutex(mutex) } {
         return unsafe { parking::condition(cond, mutex, Some((deadline, clock_id))) };
     }
     cancel_condition_wait(cond);
@@ -3733,6 +3811,7 @@ unsafe extern "system" fn fork_child(payload: *const u8, len: usize) -> i32 {
 
     let _ = SELF_ID.try_with(|slot| slot.set(self_id));
     let _ = CREATED_PTHREAD.try_with(|slot| slot.set(false));
+    shared::reset_after_fork();
     parking::reset_after_fork();
     cleanup::restore_snapshot(cleanup_state);
     stack::restore_snapshot(stack_state);
@@ -4368,33 +4447,33 @@ mod tests {
     #[test]
     fn recursive_mutex_relocks_on_owning_thread() {
         let mut attr = mutexattr_of(PTHREAD_MUTEX_RECURSIVE);
-        let mut mutex: usize = 0;
+        let mut mutex = [0usize; 5];
         assert_eq!(
-            unsafe { pthread_mutex_init(&raw mut mutex, &raw const attr) },
+            unsafe { pthread_mutex_init(mutex.as_mut_ptr(), &raw const attr) },
             0
         );
 
         // Three nested acquisitions by the owner, none of which may block.
-        assert_eq!(unsafe { pthread_mutex_lock(&raw mut mutex) }, 0);
-        assert_eq!(unsafe { pthread_mutex_lock(&raw mut mutex) }, 0);
-        assert_eq!(unsafe { pthread_mutex_trylock(&raw mut mutex) }, 0);
+        assert_eq!(unsafe { pthread_mutex_lock(mutex.as_mut_ptr()) }, 0);
+        assert_eq!(unsafe { pthread_mutex_lock(mutex.as_mut_ptr()) }, 0);
+        assert_eq!(unsafe { pthread_mutex_trylock(mutex.as_mut_ptr()) }, 0);
 
         // Still held after the first two releases, so another thread stays out.
-        assert_eq!(unsafe { pthread_mutex_unlock(&raw mut mutex) }, 0);
-        assert_eq!(unsafe { pthread_mutex_unlock(&raw mut mutex) }, 0);
-        let shared = Shared::of(&raw mut mutex);
+        assert_eq!(unsafe { pthread_mutex_unlock(mutex.as_mut_ptr()) }, 0);
+        assert_eq!(unsafe { pthread_mutex_unlock(mutex.as_mut_ptr()) }, 0);
+        let shared = Shared::of(mutex.as_mut_ptr());
         let contender = std::thread::spawn(move || unsafe { pthread_mutex_trylock(shared.ptr()) });
         assert_eq!(contender.join().expect("contender finished"), EBUSY);
 
         // The last release hands it over.
-        assert_eq!(unsafe { pthread_mutex_unlock(&raw mut mutex) }, 0);
+        assert_eq!(unsafe { pthread_mutex_unlock(mutex.as_mut_ptr()) }, 0);
         let taker = std::thread::spawn(move || {
             assert_eq!(unsafe { pthread_mutex_trylock(shared.ptr()) }, 0);
             assert_eq!(unsafe { pthread_mutex_unlock(shared.ptr()) }, 0);
         });
         taker.join().expect("taker finished");
 
-        assert_eq!(pthread_mutex_destroy(&raw mut mutex), 0);
+        assert_eq!(pthread_mutex_destroy(mutex.as_mut_ptr()), 0);
         assert_eq!(pthread_mutexattr_destroy(&raw mut attr), 0);
     }
 
@@ -4416,40 +4495,40 @@ mod tests {
     #[test]
     fn errorcheck_mutex_reports_deadlock_instead_of_hanging() {
         let mut attr = mutexattr_of(PTHREAD_MUTEX_ERRORCHECK);
-        let mut mutex: usize = 0;
+        let mut mutex = [0usize; 5];
         assert_eq!(
-            unsafe { pthread_mutex_init(&raw mut mutex, &raw const attr) },
+            unsafe { pthread_mutex_init(mutex.as_mut_ptr(), &raw const attr) },
             0
         );
 
-        assert_eq!(unsafe { pthread_mutex_lock(&raw mut mutex) }, 0);
+        assert_eq!(unsafe { pthread_mutex_lock(mutex.as_mut_ptr()) }, 0);
         // The relock that would hang a NORMAL mutex is diagnosed instead.
-        assert_eq!(unsafe { pthread_mutex_lock(&raw mut mutex) }, EDEADLK);
+        assert_eq!(unsafe { pthread_mutex_lock(mutex.as_mut_ptr()) }, EDEADLK);
         // trylock cannot deadlock, so it reports contention rather than EDEADLK.
-        assert_eq!(unsafe { pthread_mutex_trylock(&raw mut mutex) }, EBUSY);
+        assert_eq!(unsafe { pthread_mutex_trylock(mutex.as_mut_ptr()) }, EBUSY);
 
         // Releasing from a thread that does not own it is refused.
-        let shared = Shared::of(&raw mut mutex);
+        let shared = Shared::of(mutex.as_mut_ptr());
         let stranger = std::thread::spawn(move || unsafe { pthread_mutex_unlock(shared.ptr()) });
         assert_eq!(stranger.join().expect("stranger finished"), EPERM);
 
-        assert_eq!(unsafe { pthread_mutex_unlock(&raw mut mutex) }, 0);
+        assert_eq!(unsafe { pthread_mutex_unlock(mutex.as_mut_ptr()) }, 0);
         // Now unowned, so a second release is an error too.
-        assert_eq!(unsafe { pthread_mutex_unlock(&raw mut mutex) }, EPERM);
+        assert_eq!(unsafe { pthread_mutex_unlock(mutex.as_mut_ptr()) }, EPERM);
 
-        assert_eq!(pthread_mutex_destroy(&raw mut mutex), 0);
+        assert_eq!(pthread_mutex_destroy(mutex.as_mut_ptr()), 0);
         assert_eq!(pthread_mutexattr_destroy(&raw mut attr), 0);
     }
 
     #[test]
     fn mutex_timedlock_times_out_and_then_succeeds() {
-        let mut mutex: usize = 0;
+        let mut mutex = [0usize; 5];
         assert_eq!(
-            unsafe { pthread_mutex_init(&raw mut mutex, core::ptr::null()) },
+            unsafe { pthread_mutex_init(mutex.as_mut_ptr(), core::ptr::null()) },
             0
         );
-        assert_eq!(unsafe { pthread_mutex_lock(&raw mut mutex) }, 0);
-        let shared = Shared::of(&raw mut mutex);
+        assert_eq!(unsafe { pthread_mutex_lock(mutex.as_mut_ptr()) }, 0);
+        let shared = Shared::of(mutex.as_mut_ptr());
 
         // A live deadline against a held mutex must expire, not hang.
         let waiter = std::thread::spawn(move || {
@@ -4472,28 +4551,28 @@ mod tests {
         });
         assert_eq!(expired.join().expect("probe finished"), ETIMEDOUT);
 
-        assert_eq!(unsafe { pthread_mutex_unlock(&raw mut mutex) }, 0);
+        assert_eq!(unsafe { pthread_mutex_unlock(mutex.as_mut_ptr()) }, 0);
 
         // Once free, the same call acquires it well inside the deadline.
         let deadline = deadline_in(Duration::from_secs(5));
         assert_eq!(
-            unsafe { pthread_mutex_timedlock(&raw mut mutex, &raw const deadline) },
+            unsafe { pthread_mutex_timedlock(mutex.as_mut_ptr(), &raw const deadline) },
             0
         );
-        assert_eq!(unsafe { pthread_mutex_unlock(&raw mut mutex) }, 0);
-        assert_eq!(pthread_mutex_destroy(&raw mut mutex), 0);
+        assert_eq!(unsafe { pthread_mutex_unlock(mutex.as_mut_ptr()) }, 0);
+        assert_eq!(pthread_mutex_destroy(mutex.as_mut_ptr()), 0);
     }
 
     #[test]
     fn mutex_clocklock_uses_selected_clock_and_validates_only_when_waiting() {
         for clock_id in [CLOCK_REALTIME, CLOCK_MONOTONIC] {
-            let mut mutex = 0usize;
+            let mut mutex = [0usize; 5];
             assert_eq!(
-                unsafe { pthread_mutex_init(&raw mut mutex, core::ptr::null()) },
+                unsafe { pthread_mutex_init(mutex.as_mut_ptr(), core::ptr::null()) },
                 0
             );
-            assert_eq!(unsafe { pthread_mutex_lock(&raw mut mutex) }, 0);
-            let shared = Shared::of(&raw mut mutex);
+            assert_eq!(unsafe { pthread_mutex_lock(mutex.as_mut_ptr()) }, 0);
+            let shared = Shared::of(mutex.as_mut_ptr());
             let waiter = std::thread::spawn(move || {
                 let now = if clock_id == CLOCK_MONOTONIC {
                     monotonic_now().unwrap()
@@ -4520,7 +4599,7 @@ mod tests {
                 tv_nsec: 1_000_000_000,
             };
             assert_eq!(
-                unsafe { pthread_mutex_clocklock(&raw mut mutex, clock_id, &invalid) },
+                unsafe { pthread_mutex_clocklock(mutex.as_mut_ptr(), clock_id, &invalid) },
                 EINVAL
             );
             let past = Timespec {
@@ -4528,20 +4607,20 @@ mod tests {
                 tv_nsec: 0,
             };
             assert_eq!(
-                unsafe { pthread_mutex_clocklock(&raw mut mutex, clock_id, &past) },
+                unsafe { pthread_mutex_clocklock(mutex.as_mut_ptr(), clock_id, &past) },
                 ETIMEDOUT
             );
-            assert_eq!(unsafe { pthread_mutex_unlock(&raw mut mutex) }, 0);
+            assert_eq!(unsafe { pthread_mutex_unlock(mutex.as_mut_ptr()) }, 0);
             assert_eq!(
-                unsafe { pthread_mutex_clocklock(&raw mut mutex, -1, &invalid) },
+                unsafe { pthread_mutex_clocklock(mutex.as_mut_ptr(), -1, &invalid) },
                 EINVAL
             );
             assert_eq!(
-                unsafe { pthread_mutex_clocklock(&raw mut mutex, clock_id, &invalid) },
+                unsafe { pthread_mutex_clocklock(mutex.as_mut_ptr(), clock_id, &invalid) },
                 0
             );
-            assert_eq!(unsafe { pthread_mutex_unlock(&raw mut mutex) }, 0);
-            assert_eq!(pthread_mutex_destroy(&raw mut mutex), 0);
+            assert_eq!(unsafe { pthread_mutex_unlock(mutex.as_mut_ptr()) }, 0);
+            assert_eq!(pthread_mutex_destroy(mutex.as_mut_ptr()), 0);
         }
     }
 
@@ -4558,10 +4637,10 @@ mod tests {
 
     #[test]
     fn cond_timedwait_times_out_holding_the_mutex() {
-        let mut mutex: usize = 0;
+        let mut mutex = [0usize; 5];
         let mut cond: usize = 0;
         assert_eq!(
-            unsafe { pthread_mutex_init(&raw mut mutex, core::ptr::null()) },
+            unsafe { pthread_mutex_init(mutex.as_mut_ptr(), core::ptr::null()) },
             0
         );
         assert_eq!(
@@ -4569,23 +4648,23 @@ mod tests {
             0
         );
 
-        assert_eq!(unsafe { pthread_mutex_lock(&raw mut mutex) }, 0);
+        assert_eq!(unsafe { pthread_mutex_lock(mutex.as_mut_ptr()) }, 0);
         let deadline = deadline_in(Duration::from_millis(50));
         assert_eq!(
             wait_past_spurious_wakeups(|| unsafe {
                 let result =
-                    pthread_cond_timedwait(&raw mut cond, &raw mut mutex, &raw const deadline);
-                assert_eq!(pthread_mutex_trylock(&raw mut mutex), EBUSY);
+                    pthread_cond_timedwait(&raw mut cond, mutex.as_mut_ptr(), &raw const deadline);
+                assert_eq!(pthread_mutex_trylock(mutex.as_mut_ptr()), EBUSY);
                 result
             }),
             ETIMEDOUT
         );
         // The mutex comes back held on the timeout path, so this release is the
         // one that frees it.
-        assert_eq!(unsafe { pthread_mutex_unlock(&raw mut mutex) }, 0);
+        assert_eq!(unsafe { pthread_mutex_unlock(mutex.as_mut_ptr()) }, 0);
 
         assert_eq!(pthread_cond_destroy(&raw mut cond), 0);
-        assert_eq!(pthread_mutex_destroy(&raw mut mutex), 0);
+        assert_eq!(pthread_mutex_destroy(mutex.as_mut_ptr()), 0);
     }
 
     #[test]
@@ -4916,52 +4995,55 @@ mod tests {
     fn pthread_mutex_normal_vs_errorcheck_vs_recursive_contracts() {
         // Recursive mutex: multiple nested locks
         let rec_attr = mutexattr_of(PTHREAD_MUTEX_RECURSIVE);
-        let mut rec_mutex: usize = 0;
+        let mut rec_mutex = [0usize; 5];
         assert_eq!(
-            unsafe { pthread_mutex_init(&raw mut rec_mutex, &raw const rec_attr) },
+            unsafe { pthread_mutex_init(rec_mutex.as_mut_ptr(), &raw const rec_attr) },
             0
         );
-        assert_eq!(unsafe { pthread_mutex_lock(&raw mut rec_mutex) }, 0);
-        assert_eq!(unsafe { pthread_mutex_lock(&raw mut rec_mutex) }, 0);
-        assert_eq!(unsafe { pthread_mutex_lock(&raw mut rec_mutex) }, 0);
+        assert_eq!(unsafe { pthread_mutex_lock(rec_mutex.as_mut_ptr()) }, 0);
+        assert_eq!(unsafe { pthread_mutex_lock(rec_mutex.as_mut_ptr()) }, 0);
+        assert_eq!(unsafe { pthread_mutex_lock(rec_mutex.as_mut_ptr()) }, 0);
 
         // Another thread cannot acquire while held
-        let shared_rec = Shared::of(&raw mut rec_mutex);
+        let shared_rec = Shared::of(rec_mutex.as_mut_ptr());
         let racer = std::thread::spawn(move || unsafe { pthread_mutex_trylock(shared_rec.ptr()) });
         assert_eq!(racer.join().unwrap(), EBUSY);
 
         // 3 unlocks required
-        assert_eq!(unsafe { pthread_mutex_unlock(&raw mut rec_mutex) }, 0);
-        assert_eq!(unsafe { pthread_mutex_unlock(&raw mut rec_mutex) }, 0);
-        assert_eq!(unsafe { pthread_mutex_unlock(&raw mut rec_mutex) }, 0);
-        assert_eq!(pthread_mutex_destroy(&raw mut rec_mutex), 0);
+        assert_eq!(unsafe { pthread_mutex_unlock(rec_mutex.as_mut_ptr()) }, 0);
+        assert_eq!(unsafe { pthread_mutex_unlock(rec_mutex.as_mut_ptr()) }, 0);
+        assert_eq!(unsafe { pthread_mutex_unlock(rec_mutex.as_mut_ptr()) }, 0);
+        assert_eq!(pthread_mutex_destroy(rec_mutex.as_mut_ptr()), 0);
 
         // Errorcheck mutex: self-lock is EDEADLK, unowned unlock is EPERM
         let err_attr = mutexattr_of(PTHREAD_MUTEX_ERRORCHECK);
-        let mut err_mutex: usize = 0;
+        let mut err_mutex = [0usize; 5];
         assert_eq!(
-            unsafe { pthread_mutex_init(&raw mut err_mutex, &raw const err_attr) },
+            unsafe { pthread_mutex_init(err_mutex.as_mut_ptr(), &raw const err_attr) },
             0
         );
-        assert_eq!(unsafe { pthread_mutex_lock(&raw mut err_mutex) }, 0);
-        assert_eq!(unsafe { pthread_mutex_lock(&raw mut err_mutex) }, EDEADLK);
+        assert_eq!(unsafe { pthread_mutex_lock(err_mutex.as_mut_ptr()) }, 0);
+        assert_eq!(
+            unsafe { pthread_mutex_lock(err_mutex.as_mut_ptr()) },
+            EDEADLK
+        );
 
-        let shared_err = Shared::of(&raw mut err_mutex);
+        let shared_err = Shared::of(err_mutex.as_mut_ptr());
         let unlocker =
             std::thread::spawn(move || unsafe { pthread_mutex_unlock(shared_err.ptr()) });
         assert_eq!(unlocker.join().unwrap(), EPERM);
 
-        assert_eq!(unsafe { pthread_mutex_unlock(&raw mut err_mutex) }, 0);
-        assert_eq!(pthread_mutex_destroy(&raw mut err_mutex), 0);
+        assert_eq!(unsafe { pthread_mutex_unlock(err_mutex.as_mut_ptr()) }, 0);
+        assert_eq!(pthread_mutex_destroy(err_mutex.as_mut_ptr()), 0);
     }
 
     #[test]
     fn pthread_cond_broadcast_multi_waiter_wakeup() {
         const WAITERS: usize = 8;
-        let mut mutex: usize = 0;
+        let mut mutex = [0usize; 5];
         let mut cond: usize = 0;
         assert_eq!(
-            unsafe { pthread_mutex_init(&raw mut mutex, core::ptr::null()) },
+            unsafe { pthread_mutex_init(mutex.as_mut_ptr(), core::ptr::null()) },
             0
         );
         assert_eq!(
@@ -4969,7 +5051,7 @@ mod tests {
             0
         );
 
-        let shared_mutex = Shared::of(&raw mut mutex);
+        let shared_mutex = Shared::of(mutex.as_mut_ptr());
         let shared_cond = Shared::of(&raw mut cond);
         let waiting_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let predicate = Arc::new(std::sync::atomic::AtomicBool::new(false));
@@ -5001,10 +5083,10 @@ mod tests {
 
         // Set predicate and broadcast
         unsafe {
-            pthread_mutex_lock(&raw mut mutex);
+            pthread_mutex_lock(mutex.as_mut_ptr());
             predicate.store(true, std::sync::atomic::Ordering::SeqCst);
             assert_eq!(pthread_cond_broadcast(&raw mut cond), 0);
-            pthread_mutex_unlock(&raw mut mutex);
+            pthread_mutex_unlock(mutex.as_mut_ptr());
         }
 
         for handle in handles {
@@ -5016,7 +5098,7 @@ mod tests {
             WAITERS
         );
         assert_eq!(pthread_cond_destroy(&raw mut cond), 0);
-        assert_eq!(pthread_mutex_destroy(&raw mut mutex), 0);
+        assert_eq!(pthread_mutex_destroy(mutex.as_mut_ptr()), 0);
     }
 
     #[test]
@@ -5237,7 +5319,7 @@ mod tests {
     fn cond_timedwait_with_monotonic_and_realtime_deadlines() {
         let mut cond: usize = 0;
         let mut realtime_cond: usize = 0;
-        let mut mutex: usize = 0;
+        let mut mutex = [0usize; 5];
         let mut cond_attr = PthreadCondAttr {
             clock_id: CLOCK_REALTIME,
         };
@@ -5256,12 +5338,12 @@ mod tests {
             0
         );
         assert_eq!(
-            unsafe { pthread_mutex_init(&raw mut mutex, std::ptr::null()) },
+            unsafe { pthread_mutex_init(mutex.as_mut_ptr(), std::ptr::null()) },
             0
         );
 
         // 1. CLOCK_MONOTONIC deadline (< 1,000,000,000 seconds uptime base)
-        assert_eq!(unsafe { pthread_mutex_lock(&raw mut mutex) }, 0);
+        assert_eq!(unsafe { pthread_mutex_lock(mutex.as_mut_ptr()) }, 0);
         // Form the deadline from libc's clock implementation, independently
         // of libpthread's conversion. Using monotonic_now on both sides hid
         // the QPC/unbiased-epoch mismatch and JVM's resulting busy loop.
@@ -5273,7 +5355,7 @@ mod tests {
         };
         let start = std::time::Instant::now();
         let ret = wait_past_spurious_wakeups(|| unsafe {
-            pthread_cond_timedwait(&raw mut cond, &raw mut mutex, &raw const mono_ts)
+            pthread_cond_timedwait(&raw mut cond, mutex.as_mut_ptr(), &raw const mono_ts)
         });
         let elapsed = start.elapsed();
         assert_eq!(
@@ -5285,10 +5367,10 @@ mod tests {
             "monotonic wait must block ~50ms, elapsed was {:?}",
             elapsed
         );
-        assert_eq!(unsafe { pthread_mutex_unlock(&raw mut mutex) }, 0);
+        assert_eq!(unsafe { pthread_mutex_unlock(mutex.as_mut_ptr()) }, 0);
 
         // 2. CLOCK_REALTIME deadline (>= 1,000,000,000 seconds Unix epoch base)
-        assert_eq!(unsafe { pthread_mutex_lock(&raw mut mutex) }, 0);
+        assert_eq!(unsafe { pthread_mutex_lock(mutex.as_mut_ptr()) }, 0);
         let now_real = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
         let target_real = now_real + Duration::from_millis(50);
         let real_ts = Timespec {
@@ -5297,7 +5379,11 @@ mod tests {
         };
         let start = std::time::Instant::now();
         let ret = wait_past_spurious_wakeups(|| unsafe {
-            pthread_cond_timedwait(&raw mut realtime_cond, &raw mut mutex, &raw const real_ts)
+            pthread_cond_timedwait(
+                &raw mut realtime_cond,
+                mutex.as_mut_ptr(),
+                &raw const real_ts,
+            )
         });
         let elapsed = start.elapsed();
         assert_eq!(
@@ -5309,11 +5395,11 @@ mod tests {
             "realtime wait must block ~50ms, elapsed was {:?}",
             elapsed
         );
-        assert_eq!(unsafe { pthread_mutex_unlock(&raw mut mutex) }, 0);
+        assert_eq!(unsafe { pthread_mutex_unlock(mutex.as_mut_ptr()) }, 0);
 
         // 3. Early wakeup on CLOCK_MONOTONIC wait
         let cond_shared = Shared::of(&raw mut cond);
-        let mutex_shared = Shared::of(&raw mut mutex);
+        let mutex_shared = Shared::of(mutex.as_mut_ptr());
         let handle = std::thread::spawn(move || {
             std::thread::sleep(Duration::from_millis(20));
             assert_eq!(unsafe { pthread_mutex_lock(mutex_shared.ptr()) }, 0);
@@ -5321,15 +5407,16 @@ mod tests {
             assert_eq!(unsafe { pthread_mutex_unlock(mutex_shared.ptr()) }, 0);
         });
 
-        assert_eq!(unsafe { pthread_mutex_lock(&raw mut mutex) }, 0);
+        assert_eq!(unsafe { pthread_mutex_lock(mutex.as_mut_ptr()) }, 0);
         let mono_deadline = monotonic_now().unwrap() + Duration::from_secs(1);
         let mono_ts = Timespec {
             tv_sec: mono_deadline.as_secs() as i64,
             tv_nsec: mono_deadline.subsec_nanos() as i64,
         };
         let start = std::time::Instant::now();
-        let ret =
-            unsafe { pthread_cond_timedwait(&raw mut cond, &raw mut mutex, &raw const mono_ts) };
+        let ret = unsafe {
+            pthread_cond_timedwait(&raw mut cond, mutex.as_mut_ptr(), &raw const mono_ts)
+        };
         let elapsed = start.elapsed();
         assert_eq!(ret, 0, "signalled condvar must return 0");
         assert!(
@@ -5337,12 +5424,12 @@ mod tests {
             "signalled condvar must wake up early, elapsed was {:?}",
             elapsed
         );
-        assert_eq!(unsafe { pthread_mutex_unlock(&raw mut mutex) }, 0);
+        assert_eq!(unsafe { pthread_mutex_unlock(mutex.as_mut_ptr()) }, 0);
         handle.join().unwrap();
 
         assert_eq!(pthread_cond_destroy(&raw mut cond), 0);
         assert_eq!(pthread_cond_destroy(&raw mut realtime_cond), 0);
-        assert_eq!(pthread_mutex_destroy(&raw mut mutex), 0);
+        assert_eq!(pthread_mutex_destroy(mutex.as_mut_ptr()), 0);
     }
 
     #[test]
@@ -5380,9 +5467,9 @@ mod tests {
     #[test]
     fn pthread_cond_clockwait_timeout_and_signal() {
         let mut cond = 0usize;
-        let mut mutex = 0usize;
+        let mut mutex = [0usize; 5];
         assert_eq!(
-            unsafe { pthread_mutex_init(&raw mut mutex, core::ptr::null()) },
+            unsafe { pthread_mutex_init(mutex.as_mut_ptr(), core::ptr::null()) },
             0
         );
         assert_eq!(
@@ -5390,7 +5477,7 @@ mod tests {
             0
         );
 
-        assert_eq!(unsafe { pthread_mutex_lock(&raw mut mutex) }, 0);
+        assert_eq!(unsafe { pthread_mutex_lock(mutex.as_mut_ptr()) }, 0);
         let now = monotonic_now().unwrap();
         let deadline = now + Duration::from_millis(50);
         let ts = Timespec {
@@ -5400,16 +5487,16 @@ mod tests {
         let res = wait_past_spurious_wakeups(|| unsafe {
             pthread_cond_clockwait(
                 &raw mut cond,
-                &raw mut mutex,
+                mutex.as_mut_ptr(),
                 CLOCK_MONOTONIC,
                 &raw const ts,
             )
         });
         assert_eq!(res, ETIMEDOUT);
-        assert_eq!(unsafe { pthread_mutex_unlock(&raw mut mutex) }, 0);
+        assert_eq!(unsafe { pthread_mutex_unlock(mutex.as_mut_ptr()) }, 0);
 
         assert_eq!(pthread_cond_destroy(&raw mut cond), 0);
-        assert_eq!(pthread_mutex_destroy(&raw mut mutex), 0);
+        assert_eq!(pthread_mutex_destroy(mutex.as_mut_ptr()), 0);
     }
 
     #[test]

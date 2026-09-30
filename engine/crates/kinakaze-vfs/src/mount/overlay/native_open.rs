@@ -54,6 +54,19 @@ impl Drop for Name {
 }
 
 pub(super) fn open(path: &Path, access: u32) -> Result<Object, i32> {
+    open_with_options(path, access, 0x0020_4000)
+}
+
+/// Ordinary read access, without backup privileges or directory semantics.
+pub(crate) fn read_file(path: &Path) -> Result<Object, i32> {
+    open_with_options(
+        path,
+        windows_sys::Win32::Foundation::GENERIC_READ,
+        0x0020_0040, // FILE_OPEN_REPARSE_POINT | FILE_NON_DIRECTORY_FILE.
+    )
+}
+
+fn open_with_options(path: &Path, access: u32, options: u32) -> Result<Object, i32> {
     let wide = crate::path::wide_path(path)?;
     let mut name = Name(unsafe { std::mem::zeroed() });
     let status = unsafe {
@@ -91,8 +104,8 @@ pub(super) fn open(path: &Path, access: u32) -> Result<Object, i32> {
             ptr::null(),
             0,
             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-            1,           // FILE_OPEN: this speculative lookup never creates an inode.
-            0x0020_4000, // FILE_OPEN_REPARSE_POINT | FILE_OPEN_FOR_BACKUP_INTENT.
+            1, // FILE_OPEN: this speculative lookup never creates an inode.
+            options,
             ptr::null(),
             0,
         )
