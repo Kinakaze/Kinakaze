@@ -1,0 +1,148 @@
+{
+  "source_base": "1153b905ed998e8a4522fed23979ab38097ada8c",
+  "source_hashes": {
+    "engine/crates/kinakaze-runtime/src/lib.rs": "0fa968e4e33e77823a4a3483bfcac7644e1592ee347b2ebaeb2002f9be4180d5",
+    "engine/crates/kinakaze-runtime/src/job/namespaces.rs": "16a8962262c7579562586062a356e92a0780b0ba1389e76852b8fb3abd36bf30",
+    "engine/crates/kinakaze-runtime/src/job/liveness.rs": "1825954f014b4e8759af50d93b86da8d09cdb7b8938dd6cfc9ec130c68543558",
+    "libs/libc/src/userdb.rs": "d537cee3d5410951f0ba74f8aeecccce2322b19158f8f57480f9197a989b94cd"
+  },
+  "distribution_hashes": {
+    "worker.exe": "ef70ffdaa565eb5d3ef7be2476362fde9b1913c97b91c28608f8f843d0c54400",
+    "init.exe": "49a8913b9e5a286c0ef2056df661428617ca7f3085a2fa61b820e4714ef0bdfa",
+    "rootfs.manifest.json": "14905978ccf97543bdc6cda4155879fd87c57243a972137beecd83adf7d2e60f",
+    "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+    "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+    "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+    "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+    "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+    "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+    "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+    "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+    "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+    "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+    "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+    "rootfs\\lib\\kinakaze_alloc.so": "6aa34332a0eb60297cf706b019360bfae1c277f95995ba01b17395317f097771",
+    "rootfs\\lib\\kinakaze_elf.so": "6640b177f98d59c75d4e627c915f19dd6b8d8affa55eefaa41516e9a51211bcc",
+    "rootfs\\lib\\kinakaze_guest_engine.so": "17b0b82a0e0eb9cd2ce5b2257fea781dd8f1f6114178879b5bf37d5e4f828ff1",
+    "rootfs\\lib\\kinakaze_kernel.so": "917d498fc8aa488f9e04aee2710f56902dede505bec04140c3924fb6af0d7296",
+    "rootfs\\lib\\kinakaze_tls.so": "d9e8e2c6057d32787b3000b0a15f9aa309db593405abef8a145273e6de87ccab",
+    "rootfs\\lib\\kinakaze_vfs.so": "defcac064f9c216043bc4bfa88ef75dbec8a4dcbfa15208e5116763114cd8240",
+    "rootfs\\lib\\ld-linux-x86-64.so.2": "cbc49ffb3173e2506587f514e802387c070d9d9e1a4f5d9be450314e4db2fccf",
+    "rootfs\\lib\\libasound.so.2": "e70c5b90a0ef486413751aac96362f09feac98be2613625c0cb7b0a3964ceff2",
+    "rootfs\\lib\\libc.so.6": "d0c391d96065d30d3f31f35b209aab1a6fc91ab59fb3cd1f241f6bffd78365f4",
+    "rootfs\\lib\\libcuda.so.1": "27a27a220a4e3111318c43b82c4bc0330136eb2f6b46f735a8a04ca31b1b117a",
+    "rootfs\\lib\\libdisplay.so.1": "9f999fdb84bc28a0e947e430a66bafbc025aa0ca6be859eae2c8d3cacf7c632c",
+    "rootfs\\lib\\libdl.so.2": "aad3290b3aa69a8b27e7e0404cfe60c48bf28e1e39145cd575b7f12f2fd7383e",
+    "rootfs\\lib\\libEGL.so.1": "a31ad7c8f6d18315366781d3bad8dbc0a74968e10f1208c1e8405c0e9840cd83",
+    "rootfs\\lib\\libGL.so.1": "93e43b1932736d52742c99217e5e2ef3c86ad363e4fe15e416b8cccdd92ee4b9",
+    "rootfs\\lib\\libGLESv2.so.2": "6198b219f6d1d4ec9d12f9699b1894460a160523cc4083b7ca699bedaf817f27",
+    "rootfs\\lib\\libGLX.so.0": "36bc2b1127d247da56b9c77ab3d74f8be43230c742c27718f101e044b5ec36c3",
+    "rootfs\\lib\\libkinakaze-runtime.so.1": "9500c3919160904fbe4e336859654730dd7f51facbc4a2aa674bd03f4ea931f9",
+    "rootfs\\lib\\libm.so.6": "eab2a3e4d5a9091ae34929a829eb5dc571e23fdc4f2ac121b02763fbfba502b6",
+    "rootfs\\lib\\libOpenGL.so.0": "47c46e4e2a242e4cfe984b6ae098f2050f3addf83430a17abc4375b76352497f",
+    "rootfs\\lib\\libpipewire-0.3.so.0": "b5d5a2a4557485a66d4fc70ad0e960c8c4b0424b6486217a37c4ab7096f2f0a0",
+    "rootfs\\lib\\libpthread.so.0": "54b569e9e4fd124b63f3b0abe489fe30124399c4cbc10191a19cea7299854a44",
+    "rootfs\\lib\\libpulse.so.0": "7a29dbb3ba3d41bdbcda639f3523b879632a45e2ab5129651654d9307c8e739b",
+    "rootfs\\lib\\libresolv.so.2": "43b20ecf93bc6473e54312974020e785e514b3d58e9b1dfe8306920e6fc7e9e7",
+    "rootfs\\lib\\librt.so.1": "bad9ebe9c20b1dc5ebb8eeb11430ad6befca2d77049cc6bc71292c087ab996a5",
+    "rootfs\\lib\\libvulkan.so.1": "547b3488794cd4960a83f93b3f892e202a3c290d31495a601df8da44f2480578",
+    "rootfs\\lib\\libX11-xcb.so.1": "64731dd7eb4c2e1fa2b5a88a8c3d55f709e087cf106e90cd42cf546174855215",
+    "rootfs\\lib\\libX11.so.6": "7ca8b66d17a3e0a921961494db68054fd12464a4ecccc17b48825ceabca23c75",
+    "rootfs\\lib\\libxcb.so.1": "e917d70015b4333191ac62e4da3ac796763beafd55eca112821aff8408fc36c7",
+    "rootfs\\lib\\libXcursor.so.1": "2b49b89329834373c28c291bc569e30e811a8d67bb85daede4821b80968bf27d",
+    "rootfs\\lib\\libXext.so.6": "b7c19e495bedb25a43fdfe3b241803f5943379cd5f2df389ed9bbcac434ea5bb",
+    "rootfs\\lib\\libXi.so.6": "abf3bbbe25a2f2326c3f8743bad952bd30f26bdfc47b5e8c081f7e2b382f02c6",
+    "rootfs\\lib\\libXinerama.so.1": "02b7635bdff6bad628b00616a646a53684528c77fa8ce0dffeddd6d3679a0bb2",
+    "rootfs\\lib\\libXrandr.so.2": "a3f3c8dbe914342425f2b1cab5a22cbec0482db47729b024bdeb0b9220585bff",
+    "rootfs\\lib\\libXrender.so.1": "7cfb115b2191be8ba4b0f0b28352bf2970894663f9d21ce2fc10a66dc208ead3",
+    "rootfs\\lib\\libXxf86vm.so.1": "cf8989dcd683cf8cc82f9375f0f5ca7ca1c52cb8f1f8638d5ef3b395c03507db",
+    "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+    "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+    "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+    "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+    "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+    "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+    "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+    "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+    "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+    "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+  },
+  "native_passed": 38,
+  "packaged_guests_passed": 13,
+  "export_generator_tests_passed": 23,
+  "native_modules_checked": 29,
+  "guest_exports_checked": 5969,
+  "idle": {
+    "cpu_ms": 0.0,
+    "active_processes": 7,
+    "stats": {
+      "Stats": {
+        "processes": 2,
+        "clients": 3,
+        "objects": 0,
+        "transactions": 0
+      }
+    },
+    "members": [
+      {
+        "pid": 33636,
+        "parent": 35136,
+        "name": "init.exe",
+        "role": "other",
+        "first_argument": "--pipe"
+      },
+      {
+        "pid": 32996,
+        "parent": 33636,
+        "name": "worker.exe",
+        "role": "native-exec",
+        "first_argument": "--kinakaze-exec-pool"
+      },
+      {
+        "pid": 28412,
+        "parent": 33636,
+        "name": "worker.exe",
+        "role": "native-exec",
+        "first_argument": "--kinakaze-exec-pool"
+      },
+      {
+        "pid": 38288,
+        "parent": 33636,
+        "name": "worker.exe",
+        "role": "command-pool",
+        "first_argument": "guest-pool"
+      },
+      {
+        "pid": 38596,
+        "parent": 33636,
+        "name": "worker.exe",
+        "role": "native-fork",
+        "first_argument": "--kinakaze-fork"
+      },
+      {
+        "pid": 38304,
+        "parent": 33636,
+        "name": "worker.exe",
+        "role": "native-fork",
+        "first_argument": "--kinakaze-fork"
+      },
+      {
+        "pid": 36828,
+        "parent": 33636,
+        "name": "worker.exe",
+        "role": "command-pool",
+        "first_argument": "guest-pool"
+      }
+    ]
+  },
+  "full_install_pending": true,
+  "evidence": {
+    "artifacts/apt-180-20260930/root-liveness-native-tests.log": "19d540759fd7c691629306d2dff32b48ade03aa44df42d566d9d127c0870c601",
+    "artifacts/apt-180-20260930/root-liveness-guests/results.json": "2bc0738b04f797f084f0b3d79b17048a2a192214cbb4bf6f15ef99ed5b3dc8d0",
+    "artifacts/apt-180-20260930/root-liveness-capability.json": "5e84904d7d11dc061b4c7485478d2711f4e57f98a13128b793c260f1c7963e6d",
+    "artifacts/apt-180-20260930/root-robust-exports-upstream-tests.log": "9ef32bd1d84c97cf30105d1aa4b6a5fe67bcad70a6733ef1ef5d2afeffadfed9",
+    "artifacts/apt-180-20260930/root-liveness-upstream-exports.log": "0f83b4b15793c72a51158acd9d547f0f4e873469840750e5a11766834d71d2a9",
+    "artifacts/apt-180-20260930/root-liveness-final-build.jsonl": "4d001351daf443da84d885cf9a98c40449a58067fcc3fcef3453ebdac609d7cd",
+    "artifacts/apt-180-20260930/root-liveness-final-build.log": "f2747244e716d8a262251c13be48a6253e537937d78c0ed096524c6c73de8809"
+  }
+}

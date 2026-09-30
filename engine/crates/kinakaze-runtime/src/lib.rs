@@ -2480,6 +2480,7 @@ pub unsafe extern "sysv64" fn kinakaze_process_vfork_complete(exec_succeeded: i3
 #[cfg(windows)]
 pub mod job {
     pub(crate) mod fork_handoff;
+    mod liveness;
     pub mod namespaces;
     pub mod notifications;
     use core::sync::atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering};
@@ -3561,6 +3562,7 @@ pub mod job {
     /// `base` must address the mapped section and the caller must hold the
     /// table mutex.
     unsafe fn sweep(base: *mut u8) {
+        let mut removed = false;
         for index in 0..CAPACITY {
             // SAFETY: the index is in range and the section is mapped.
             let entry = unsafe { slot(base, index) };
@@ -3579,16 +3581,14 @@ pub mod job {
                 // moment nobody can ever collect it.
                 // SAFETY: the slot is inside the section.
                 let ppid = unsafe { load32(entry, SLOT_PPID) };
-                let parent_alive = unsafe { find(base, ppid) }
-                    .map(|parent| unsafe { load32(parent, SLOT_PID) })
-                    .is_some_and(alive);
+                let parent_alive = unsafe { find(base, ppid) }.is_some_and(|parent| unsafe {
+                    live_owner(load32(parent, SLOT_PID), load64(parent, SLOT_TOKEN))
+                });
                 if parent_alive {
                     continue;
                 }
             } else {
-                let live = alive(host_pid);
-                let observed_token = live.then(|| start_token(host_pid)).unwrap_or(0);
-                if live && token == observed_token {
+                if live_owner(host_pid, token) {
                     continue;
                 }
                 unsafe { namespaces::exiting(base, entry) };
@@ -3597,9 +3597,9 @@ pub mod job {
                 // retain an explicit integrity-error report rather than
                 // guessing an exit code or silently recycling its pid.
                 let ppid = unsafe { load32(entry, SLOT_PPID) };
-                let parent_alive = unsafe { find(base, ppid) }
-                    .map(|parent| unsafe { load32(parent, SLOT_PID) })
-                    .is_some_and(alive);
+                let parent_alive = unsafe { find(base, ppid) }.is_some_and(|parent| unsafe {
+                    live_owner(load32(parent, SLOT_PID), load64(parent, SLOT_TOKEN))
+                });
                 if parent_alive {
                     unsafe {
                         store32(entry, SLOT_REPORT_SIGNAL, 0);
@@ -3618,6 +3618,8 @@ pub mod job {
                     continue;
                 }
                 if super::fork_trace_enabled() {
+                    let live = alive(host_pid);
+                    let observed_token = live.then(|| start_token(host_pid)).unwrap_or(0);
                     eprintln!(
                         "kinakaze job: sweep removing host={} pid={} live={} token={:#x} observed={:#x} flags={:#x}",
                         host_pid,
@@ -3631,8 +3633,11 @@ pub mod job {
             }
             // SAFETY: the slot is inside the section and the mutex is held.
             unsafe { clear_slot(base, entry) };
+            removed = true;
         }
-        unsafe { rebuild_indexes(base) };
+        if removed {
+            unsafe { rebuild_indexes(base) };
+        }
     }
 
     /// Installs or updates `host_pid`'s entry and returns its guest identity.
@@ -3835,41 +3840,7 @@ pub mod job {
     /// Check lifetime and identity using the same kernel object, so a recycled
     /// PID cannot match the previous owner between two separate OpenProcess calls.
     fn live_owner(host_pid: u32, token: u64) -> bool {
-        let local = host_pid == current_host_pid();
-        let handle = unsafe {
-            if local {
-                GetCurrentProcess()
-            } else {
-                OpenProcess(
-                    PROCESS_SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION,
-                    0,
-                    host_pid,
-                )
-            }
-        };
-        if handle.is_null() {
-            return false;
-        }
-        let mut created: FILETIME = unsafe { core::mem::zeroed() };
-        let mut ignored: FILETIME = unsafe { core::mem::zeroed() };
-        let matches = unsafe {
-            (local
-                || WaitForSingleObject(handle, 0) == windows_sys::Win32::Foundation::WAIT_TIMEOUT)
-                && GetProcessTimes(
-                    handle,
-                    &mut created,
-                    &mut ignored,
-                    &mut ignored,
-                    &mut ignored,
-                ) != 0
-                && token
-                    == ((u64::from(created.dwHighDateTime) << 32)
-                        | u64::from(created.dwLowDateTime))
-        };
-        if !local {
-            unsafe { CloseHandle(handle) };
-        }
-        matches
+        liveness::live_owner(host_pid, token)
     }
 
     /// Most lookups only observe one live identity. Validate its ancestry as
@@ -5433,6 +5404,70 @@ pub mod job {
                 let _ = self.0.kill();
                 let _ = self.0.wait();
             }
+        }
+
+        #[test]
+        fn retained_owner_rejects_wrong_tokens_and_observes_exit_259() {
+            use std::io::Write;
+            let mut helper = LiveProcess::spawn();
+            let pid = helper.pid();
+            let token = start_token(pid);
+            assert_ne!(token, 0);
+            for _ in 0..16 {
+                assert!(live_owner(pid, token));
+                assert!(!live_owner(pid, token ^ 1));
+            }
+            helper
+                .0
+                .stdin
+                .as_mut()
+                .unwrap()
+                .write_all(b"exit 259\r\n")
+                .unwrap();
+            assert_eq!(helper.0.wait().unwrap().code(), Some(259));
+            assert!(!live_owner(pid, token));
+            assert!(!live_owner(pid, token));
+            let replacement = LiveProcess::spawn();
+            assert!(live_owner(
+                replacement.pid(),
+                start_token(replacement.pid())
+            ));
+        }
+
+        #[test]
+        fn cached_own_identity_never_accepts_another_creation_token() {
+            let pid = current_host_pid();
+            let token = start_token(pid);
+            for _ in 0..16 {
+                assert!(live_owner(pid, token));
+                assert!(!live_owner(pid, token ^ 1));
+                assert!(!live_owner(pid, 0));
+            }
+        }
+
+        #[test]
+        fn live_owner_remains_available_after_its_tls_cache_is_destroyed() {
+            struct FinalLookup(u32, u64);
+            impl Drop for FinalLookup {
+                fn drop(&mut self) {
+                    assert!(live_owner(self.0, self.1));
+                }
+            }
+            thread_local! {
+                static FINAL_LOOKUP: std::cell::RefCell<Option<FinalLookup>> = const {
+                    std::cell::RefCell::new(None)
+                };
+            }
+            let helper = LiveProcess::spawn();
+            let pid = helper.pid();
+            let token = start_token(pid);
+            std::thread::spawn(move || {
+                // Native TLS destructors run in reverse initialization order.
+                FINAL_LOOKUP.with(|cell| *cell.borrow_mut() = Some(FinalLookup(pid, token)));
+                assert!(live_owner(pid, token));
+            })
+            .join()
+            .unwrap();
         }
 
         #[test]
