@@ -54,6 +54,12 @@ complete file verification. It used 287.578 s job CPU, 5,255 processes and
 present in the measured integrated binary; the isolated commit is validated
 separately so these times do not assert exclusive change attribution.
 
+The isolated commit graph also built all 29 native distribution modules and
+passed 30 focused kernel tests with no ignored tests. Its five packaged probes
+passed: NativeLookupProbe, ConcurrentVforkProbe, SparseForkStackProbe,
+WriteWatchStackProbe and AllocationGrowthProbe. This separately checks that the
+committed implementation does not depend on other uncommitted workspace changes.
+
 Reproduce the same-binary descendant comparison after building a distribution
 and preparing an installed Debian root:
 
@@ -68,3 +74,4 @@ Evidence retained in `artifacts/apt-180-20260930/`:
 - `nested-watch-paired-r8/report.json` and `profile-r8-descendant-watch/report.json`.
 - `node-r8-descendant-watch/report.json` and `node-r8-host.jsonl`.
 - `remote-write-watch-probe.json`, covering three remote allocation forms.
+- `native-commit-watch.json` and `guest-commit-watch/results.json`.
