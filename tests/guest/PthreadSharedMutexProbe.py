@@ -25,4 +25,15 @@ for kind in range(4):
     assert result == 0, ('stalled', kind, result)
 result = probe.probe_shared_alias(f'/tmp/pthread-mutex-alias-{os.getpid()}'.encode())
 assert result == 0, ('alias', result)
+loader = C.CDLL('libdl.so.2')
+loader.dlvsym.argtypes = [C.c_void_p, C.c_char_p, C.c_char_p]
+loader.dlvsym.restype = C.c_void_p
+for soname, versions in (('libpthread.so.0', ('GLIBC_2.2.5',)),
+                         ('libc.so.6', ('GLIBC_2.2.5', 'GLIBC_2.34'))):
+    library = C.CDLL(soname)
+    for name in ('pthread_mutexattr_getpshared', 'pthread_mutexattr_setpshared'):
+        expected = C.cast(getattr(library, name), C.c_void_p).value
+        for version in versions:
+            assert loader.dlvsym(library._handle, name.encode(), version.encode()) == expected
+        assert loader.dlvsym(library._handle, name.encode(), b'GLIBC_999.0') is None
 print('PTHREAD_SHARED_MUTEX_OK', flush=True)

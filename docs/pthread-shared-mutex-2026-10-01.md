@@ -13,7 +13,7 @@ native 线程所有权和放弃检测使用 [Windows mutex](https://learn.micros
 - 独立 authoring worktree 的完整 `cargo build --workspace --release --locked` 通过，再按 Cargo JSON staging 全套 38 个二进制和 DLL，使用一致的 Rust ABI。
 - 同一份冻结 native 测试在停车/共享缓存开关同时为 0、1 时均为 55 passed、2 个性能测试 ignored。
 - 真实 Debian Python/C guest 的两种模式均通过：8 组类型/robust 组合的父子互斥与计数、两种时钟超时、40 组线程/进程死亡与修复/毒化、4 组 STALLED 死亡，以及共享文件两个不同映射地址与重新初始化。
-- cleanup、robust condition cancellation、event timed/signal/fork、私有 robust 既有 guest 回归共 8 行全部通过。native export 工具 22 项测试通过。
+- cleanup、robust condition cancellation、event timed/signal/fork、私有 robust 既有 guest 回归共 8 行全部通过。native export 工具在最终整合版本中 24 项测试通过。
 
 配对性能测试使用同一冻结 native executable，每组 100,000 次无竞争 lock/unlock，预热一对，再交替执行 5 对。
 
@@ -25,3 +25,5 @@ native 线程所有权和放弃检测使用 [Windows mutex](https://learn.micros
 该微基准约 9.08 倍；不代表应用整体吞吐或竞争锁的改善。初次测量与编译同时运行产生较大漂移，采用编译结束后的配对结果。原始数据、二进制/源码 SHA-256 和 guest 结果见 [测量记录](measurements/pthread-shared-mutex-2026-10-01.json)。复现：使用 `tools/stage-native-test-artifacts.py` 冻结 Cargo test JSON，再运行 `tools/benchmark-pthread-shared.py --native <frozen> --output <report>`；guest runner 选择 `--probe shared`。
 
 本次完成进程共享 pthread mutex。跨进程条件变量、PI 调度继承和原始 futex 锁字互操作仍属于后续目标。
+
+与 main 同时更新的 VFS exclusive-create 优化及 robust 别名生成规则已合并。合并后再次完整 release 构建并 staging 全套 DLL，10 行 pthread guest 回归及独立 robust aliases guest 验证全部通过；共享 getter/setter 的 GLIBC_2.2.5、libc GLIBC_2.34 和未知版本拒绝也由真实 guest dlvsym 验证。导出生成器在没有 import inventory 的情况下保留这些版本，参照 [glibc 的符号版本表](https://github.com/bminor/glibc/blob/glibc-2.36/nptl/Versions)。

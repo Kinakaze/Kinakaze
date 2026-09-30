@@ -1137,7 +1137,13 @@ pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32>
     if flags & O_PATH != 0 && overlay_path.is_none() && fallback.is_none() {
         return confined::open_native_path(&resolved, flags, native_description);
     }
-    if flags & O_NOFOLLOW != 0 && flags & O_PATH == 0 {
+    // Exclusive creation rejects every existing leaf atomically, including a
+    // symlink. A separate no-follow probe both repeats pathname metadata I/O
+    // for each new payload and incorrectly selects ELOOP instead of EEXIST.
+    if flags & O_NOFOLLOW != 0
+        && flags & O_PATH == 0
+        && flags & (O_CREAT | O_EXCL) != (O_CREAT | O_EXCL)
+    {
         let final_is_symlink = emulated_symlink_target(&resolved)?.is_some()
             || std::fs::symlink_metadata(&resolved)
                 .map(|metadata| metadata.file_type().is_symlink())

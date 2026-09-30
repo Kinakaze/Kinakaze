@@ -81,6 +81,7 @@ LIBC_PTHREAD_FORWARDERS = {"pthread_attr_getschedpolicy", "pthread_attr_getsched
                           "pthread_sigmask", "pthread_mutex_clocklock", "pthread_cond_clockwait",
                           "pthread_mutexattr_setrobust", "pthread_mutexattr_getrobust", "pthread_mutex_consistent",
                           "pthread_mutexattr_setpshared", "pthread_mutexattr_getpshared",
+                          "pthread_mutexattr_setrobust_np", "pthread_mutexattr_getrobust_np", "pthread_mutex_consistent_np",
                           "pthread_mutexattr_setprotocol", "pthread_mutexattr_getprotocol",
                           "pthread_attr_setaffinity_np", "pthread_attr_getaffinity_np",
                           "pthread_setschedparam", "pthread_getschedparam", "pthread_setschedprio",
@@ -88,6 +89,42 @@ LIBC_PTHREAD_FORWARDERS = {"pthread_attr_getschedpolicy", "pthread_attr_getsched
                           "pthread_spin_trylock", "pthread_spin_unlock"}
 LIBC_RT_FORWARDERS = {"timer_create", "timer_delete", "timer_settime", "timer_gettime", "timer_getoverrun"}
 LIBC_LIBM_FORWARDERS = {"copysign", "__isinf", "__isnan", "__isnanf", "isinf", "isnan", "isinff", "isnanf"}
+
+PTHREAD_ROBUST_ALIASES = {
+    "pthread_mutex_consistent_np": "pthread_mutex_consistent",
+    "pthread_mutexattr_getrobust_np": "pthread_mutexattr_getrobust",
+    "pthread_mutexattr_setrobust_np": "pthread_mutexattr_setrobust",
+}
+
+# Preserve the reviewed aliases even when the import inventory has no caller
+# of an old spelling. These exact versions are declared in glibc's nptl/Versions:
+# https://github.com/bminor/glibc/blob/glibc-2.36/nptl/Versions
+PTHREAD_ROBUST_VERSIONS = {
+    (soname, name): {"GLIBC_2.4"}
+    for soname in ("libc.so.6", "libpthread.so.0")
+    for name in PTHREAD_ROBUST_ALIASES
+}
+PTHREAD_ROBUST_VERSIONS.update({
+    ("libpthread.so.0", "pthread_mutexattr_getrobust"): {"GLIBC_2.12"},
+    ("libc.so.6", "pthread_mutexattr_getrobust"): {"GLIBC_2.34"},
+})
+
+
+# Linux x86_64 shared mutex accessors survive regeneration without import evidence.
+PTHREAD_SHARED_VERSIONS = {
+    (soname, name): versions
+    for soname, versions in (("libpthread.so.0", {"GLIBC_2.2.5"}),
+                             ("libc.so.6", {"GLIBC_2.2.5", "GLIBC_2.34"}))
+    for name in ("pthread_mutexattr_setpshared", "pthread_mutexattr_getpshared")
+}
+
+
+def symbol_versions(soname, name, observed):
+    versions = (observed.get((soname, name), set())
+                | PTHREAD_ROBUST_VERSIONS.get((soname, name), set())
+                | PTHREAD_SHARED_VERSIONS.get((soname, name), set()))
+    return sorted(versions, key=lambda value: [int(piece) if piece.isdigit() else piece
+                                             for piece in re.split(r"(\d+)", value)])
 
 # These entries belong to the one process linker. Alias both public ABIs to
 # the compiled functions; a Rust call wrapper loses RTLD_NEXT's return address.
@@ -125,6 +162,10 @@ def add_compatibility_exports(exports):
         if original not in exports["libm"]:
             raise ValueError(f"Compatibility export libm:{alias} has no libm implementation {original}")
         exports["libm"][alias] = dict(exports["libm"][original], name=alias)
+    for alias, original in PTHREAD_ROBUST_ALIASES.items():
+        if original not in exports["libpthread"]:
+            raise ValueError(f"Compatibility export libpthread:{alias} has no implementation {original}")
+        exports["libpthread"][alias] = dict(exports["libpthread"][original], name=alias)
     for destination, source, names in (("libpthread", "libc", PTHREAD_LIBC_FORWARDERS),
                                        ("libc", "libpthread", LIBC_PTHREAD_FORWARDERS),
                                        ("libc", "libm", LIBC_LIBM_FORWARDERS),
@@ -528,9 +569,7 @@ def main():
             if not belongs(frontend, name):
                 continue
             symbol = dict(raw)
-            versions = sorted(observed.get((metadata['soname'], name), set()),
-                              key=lambda value: [int(piece) if piece.isdigit() else piece
-                                                 for piece in re.split(r"(\d+)", value)])
+            versions = symbol_versions(metadata['soname'], name, observed)
             symbol.update(versions=versions, default_version=versions[-1] if versions else None)
             symbols.append(symbol)
         if not symbols:
