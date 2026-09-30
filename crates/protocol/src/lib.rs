@@ -88,6 +88,10 @@ pub enum Request {
         source: u64,
         length: u64,
     },
+    /// Reuse init's validated native distribution, including immutable file pins.
+    NativeCatalog {
+        directory: String,
+    },
     NativeFork {
         transaction: u64,
         spec: native_fork::Spec,
@@ -228,6 +232,9 @@ pub enum Reply {
     /// Read/execute-only section capability transferred into the requesting peer.
     ImageSnapshot {
         section: Option<(u64, [u8; 32])>,
+    },
+    NativeCatalog {
+        snapshot: Option<(u64, Vec<u64>)>,
     },
     NativeFork {
         worker: Option<native_fork::Worker>,

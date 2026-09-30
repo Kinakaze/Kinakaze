@@ -7,6 +7,8 @@ use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
+mod snapshot;
+pub use snapshot::CatalogSnapshot;
 
 #[cfg(test)]
 #[path = "native_tests.rs"]
@@ -415,7 +417,10 @@ pub(crate) fn discover(directory: &Path) -> Result<ModuleSet> {
         images: catalog
             .images
             .iter()
-            .map(|image| Arc::clone(&image.file))
+            .filter_map(|image| match &image.file {
+                NativeBytes::File(file) => Some(Arc::clone(file)),
+                NativeBytes::Snapshot { .. } => None,
+            })
             .collect(),
     };
     for discovered in catalog.modules {
@@ -445,12 +450,29 @@ pub struct DiscoveredModule {
 
 struct NativeImage {
     path: PathBuf,
-    file: Arc<ReadOnlyFile>,
+    file: NativeBytes,
     // Offsets into the pinned immutable file, never borrowed pointers or owned
     // copies of Rust export names. Discovery validates the PE once; binding
     // consumes this guest-only index instead of rescanning every export.
     exports: Vec<IndexedExport>,
     has_layout: bool,
+}
+
+enum NativeBytes {
+    File(Arc<ReadOnlyFile>),
+    Snapshot {
+        view: Arc<kinakaze_v2_host_win::ReadOnlySectionView>,
+        pin: usize,
+    },
+}
+impl std::ops::Deref for NativeBytes {
+    type Target = [u8];
+    fn deref(&self) -> &[u8] {
+        match self {
+            Self::File(file) => file.as_slice(),
+            Self::Snapshot { view, .. } => view.as_slice(),
+        }
+    }
 }
 
 struct IndexedExport {
@@ -553,7 +575,7 @@ impl ModuleCatalog {
             };
             let image = Arc::new(NativeImage {
                 path: path.clone(),
-                file: Arc::new(bytes),
+                file: NativeBytes::File(Arc::new(bytes)),
                 exports,
                 has_layout,
             });
@@ -605,9 +627,13 @@ impl ModuleCatalog {
 }
 
 impl DiscoveredModule {
-    /// Canonical identity of the inspected, lifetime-pinned source file.
+    /// Canonical identity of the inspected source, still protected by the
+    /// catalog's file pin. Reuse that capability instead of reopening the path.
     pub fn canonical_path(&self) -> Result<PathBuf> {
-        Ok(self.image.file.canonical_path()?)
+        Ok(match &self.image.file {
+            NativeBytes::File(file) => file.canonical_path()?,
+            NativeBytes::Snapshot { view, pin } => view.pin_path(*pin)?,
+        })
     }
 
     /// Validate complete guest declarations on demand. Transfer the optional

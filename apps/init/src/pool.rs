@@ -25,6 +25,7 @@ pub(super) struct Pool {
     demand: AtomicBool,
     root: PathBuf,
     dist: PathBuf,
+    catalog: Mutex<crate::native_catalog::Cache>,
     consumed: Mutex<Vec<PeerIdentity>>,
     run_priority: u32,
 }
@@ -58,11 +59,23 @@ impl Pool {
             size,
             root: root.canonicalize()?,
             dist: dist.canonicalize()?,
+            catalog: Mutex::new(crate::native_catalog::Cache::default()),
             failed: AtomicBool::new(false),
             demand: AtomicBool::new(false),
             consumed: Mutex::new(Vec::new()),
             run_priority: kinakaze_v2_host_win::inherited_process_priority()?,
         })
+    }
+
+    pub fn native_catalog(
+        &self,
+        peer: PeerIdentity,
+        directory: &str,
+    ) -> io::Result<Option<(usize, kinakaze_v2_host_win::RemoteTransfer)>> {
+        self.catalog
+            .lock()
+            .map_err(|_| io::Error::other("native catalog lock poisoned"))?
+            .get(&self.dist, peer, directory)
     }
 
     // Called under the manager mutex before waking the guest. This event cannot

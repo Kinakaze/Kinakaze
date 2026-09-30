@@ -1,0 +1,630 @@
+{
+  "count": 128,
+  "diagnostics": false,
+  "order": [
+    0,
+    1,
+    1,
+    0
+  ],
+  "rows": [
+    {
+      "index": 0,
+      "shared_catalog": 0,
+      "guest": {
+        "c_fork_ms": 2045.4522,
+        "fork_exec_ms": 4468.4903,
+        "spawn_ms": 3992.3588
+      },
+      "job": {
+        "user_ms": 7578.125,
+        "kernel_ms": 11484.375,
+        "total_cpu_ms": 19062.5,
+        "processes": 515,
+        "active_processes": 2,
+        "page_faults": 3301458,
+        "read_bytes": 19663055,
+        "write_bytes": 2626186,
+        "read_ops": 30150,
+        "write_ops": 28030,
+        "other_ops": 670036,
+        "other_bytes": 27238310
+      },
+      "report": "F:\\crysoacu2\\artifacts\\apt-180-20260930\\root-catalog-bench-0-0\\report.json"
+    },
+    {
+      "index": 1,
+      "shared_catalog": 1,
+      "guest": {
+        "c_fork_ms": 1638.9843,
+        "fork_exec_ms": 3560.9253,
+        "spawn_ms": 3489.0266
+      },
+      "job": {
+        "user_ms": 6843.75,
+        "kernel_ms": 10312.5,
+        "total_cpu_ms": 17156.25,
+        "processes": 515,
+        "active_processes": 2,
+        "page_faults": 3120856,
+        "read_bytes": 19837641,
+        "write_bytes": 2800770,
+        "read_ops": 31176,
+        "write_ops": 29056,
+        "other_ops": 545833,
+        "other_bytes": 24205762
+      },
+      "report": "F:\\crysoacu2\\artifacts\\apt-180-20260930\\root-catalog-bench-1-1\\report.json"
+    },
+    {
+      "index": 2,
+      "shared_catalog": 1,
+      "guest": {
+        "c_fork_ms": 1748.0324,
+        "fork_exec_ms": 3612.6139,
+        "spawn_ms": 3509.6095
+      },
+      "job": {
+        "user_ms": 7375.0,
+        "kernel_ms": 11218.75,
+        "total_cpu_ms": 18593.75,
+        "processes": 515,
+        "active_processes": 2,
+        "page_faults": 3119918,
+        "read_bytes": 19845039,
+        "write_bytes": 2808170,
+        "read_ops": 31176,
+        "write_ops": 29056,
+        "other_ops": 545705,
+        "other_bytes": 24199286
+      },
+      "report": "F:\\crysoacu2\\artifacts\\apt-180-20260930\\root-catalog-bench-2-1\\report.json"
+    },
+    {
+      "index": 3,
+      "shared_catalog": 0,
+      "guest": {
+        "c_fork_ms": 2125.2621,
+        "fork_exec_ms": 4471.3034,
+        "spawn_ms": 3942.3053
+      },
+      "job": {
+        "user_ms": 8187.5,
+        "kernel_ms": 11046.875,
+        "total_cpu_ms": 19234.375,
+        "processes": 515,
+        "active_processes": 2,
+        "page_faults": 3300262,
+        "read_bytes": 19659300,
+        "write_bytes": 2622430,
+        "read_ops": 30150,
+        "write_ops": 28030,
+        "other_ops": 669542,
+        "other_bytes": 27234965
+      },
+      "report": "F:\\crysoacu2\\artifacts\\apt-180-20260930\\root-catalog-bench-3-0\\report.json"
+    }
+  ],
+  "hashes": {
+    "worker.exe": "ef70ffdaa565eb5d3ef7be2476362fde9b1913c97b91c28608f8f843d0c54400",
+    "init.exe": "49a8913b9e5a286c0ef2056df661428617ca7f3085a2fa61b820e4714ef0bdfa",
+    "rootfs.manifest.json": "14905978ccf97543bdc6cda4155879fd87c57243a972137beecd83adf7d2e60f",
+    "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+    "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+    "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+    "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+    "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+    "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+    "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+    "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+    "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+    "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+    "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+    "rootfs\\lib\\kinakaze_alloc.so": "8b3dee16709db71f6a3c7ff5ca87175e27910c0f117f8e9058003b305374112a",
+    "rootfs\\lib\\kinakaze_elf.so": "6640b177f98d59c75d4e627c915f19dd6b8d8affa55eefaa41516e9a51211bcc",
+    "rootfs\\lib\\kinakaze_guest_engine.so": "da09149297c38b1aa9e4def60bcc8c6fe11eace637e0fc8e08d3e38600de694b",
+    "rootfs\\lib\\kinakaze_kernel.so": "14f4f8b0271d614bae595eb2cc273b78da9cc7ea43a152f7c37c768c5c781985",
+    "rootfs\\lib\\kinakaze_tls.so": "9c83d0169c107a078d4e497eabdec871f4ad3f4f3eecc319e4c7b33c827cc1e5",
+    "rootfs\\lib\\kinakaze_vfs.so": "8332cc72b9ba6189bbcc338f43d49a0b21f2e66c47b06dfc04d1262b390d7ead",
+    "rootfs\\lib\\ld-linux-x86-64.so.2": "8012341a5f464e3239d33172feb8fd9635890c9780d2b67f29fcc42146c67224",
+    "rootfs\\lib\\libasound.so.2": "6192391346f411845b5f976d3cb1b9785ef66d70ac316248930ce4323beab057",
+    "rootfs\\lib\\libc.so.6": "9b8c14aca975101ae152423e804c037f7d92ae312df3c1c86664528167309402",
+    "rootfs\\lib\\libcuda.so.1": "c5de19b992624ec9f4a18649d561481f2ea14d7e258f18d1d15ab45c0e02ea87",
+    "rootfs\\lib\\libdisplay.so.1": "fbd69ee0f1316edd05af107c8480b7db730918a43014af9220f1813730fab39a",
+    "rootfs\\lib\\libdl.so.2": "aad3290b3aa69a8b27e7e0404cfe60c48bf28e1e39145cd575b7f12f2fd7383e",
+    "rootfs\\lib\\libEGL.so.1": "a31ad7c8f6d18315366781d3bad8dbc0a74968e10f1208c1e8405c0e9840cd83",
+    "rootfs\\lib\\libGL.so.1": "e71d84f97fc2fb949edee59bb261fa333e41fd8c789547f0f13e4e24ada8e9c5",
+    "rootfs\\lib\\libGLESv2.so.2": "6198b219f6d1d4ec9d12f9699b1894460a160523cc4083b7ca699bedaf817f27",
+    "rootfs\\lib\\libGLX.so.0": "36bc2b1127d247da56b9c77ab3d74f8be43230c742c27718f101e044b5ec36c3",
+    "rootfs\\lib\\libkinakaze-runtime.so.1": "03a5c51df23a9ff9208ab0244b8d582fe954f473cea10334a1ed9d4a011c517d",
+    "rootfs\\lib\\libm.so.6": "e8a2af8760b4cd2f4177ff522ef00411e619b6eb896bb2347d9b6988fba77c6b",
+    "rootfs\\lib\\libOpenGL.so.0": "47c46e4e2a242e4cfe984b6ae098f2050f3addf83430a17abc4375b76352497f",
+    "rootfs\\lib\\libpipewire-0.3.so.0": "a56254f5b494021a142ccea97b37bd81ca691fc2252bb07e20cb422def3b22b0",
+    "rootfs\\lib\\libpthread.so.0": "6cd05d94792837d9281f726e05eb65e0c70b4ca77410dc625fc70f3deee2ee90",
+    "rootfs\\lib\\libpulse.so.0": "5f79915158c54bc47f64e86ea07141db5474b3172e85caa70e7b0a9148a66d2b",
+    "rootfs\\lib\\libresolv.so.2": "3c0a33b4f79853c2a32997dc444f19a4ee01b1b560287d02bd024c7742453c03",
+    "rootfs\\lib\\librt.so.1": "c5dea46156be077698e6b6f6b694b3c72040393eba81e67e72bc225114e90985",
+    "rootfs\\lib\\libvulkan.so.1": "0a9c22038ee7e201e3a33fa337482eb4ba7f24f5b434b8ba81bee8af5b573ec6",
+    "rootfs\\lib\\libX11-xcb.so.1": "64731dd7eb4c2e1fa2b5a88a8c3d55f709e087cf106e90cd42cf546174855215",
+    "rootfs\\lib\\libX11.so.6": "a791dd0ec6fddd3dd5ece0ecd666967709b7fd1de147e0955802d1a9df4268a7",
+    "rootfs\\lib\\libxcb.so.1": "f80f911af0cd0a0d955d7e12306f8e6a3a587eb154846cf7609f999eb7cf1baf",
+    "rootfs\\lib\\libXcursor.so.1": "2b49b89329834373c28c291bc569e30e811a8d67bb85daede4821b80968bf27d",
+    "rootfs\\lib\\libXext.so.6": "5e287be7b1749dfcff80af09e708a906e31a3d8f82b1a9b47d03b65461d27dd8",
+    "rootfs\\lib\\libXi.so.6": "63e4c1293f76ad873d431f19cb27c52dce4437e02ebb71a52cc4f9bfb0b1fca5",
+    "rootfs\\lib\\libXinerama.so.1": "02b7635bdff6bad628b00616a646a53684528c77fa8ce0dffeddd6d3679a0bb2",
+    "rootfs\\lib\\libXrandr.so.2": "90d8b6c2200328f155dec88a1b403eba7c0a83ecb0fba28ffe4e2289a8188dbf",
+    "rootfs\\lib\\libXrender.so.1": "7cfb115b2191be8ba4b0f0b28352bf2970894663f9d21ce2fc10a66dc208ead3",
+    "rootfs\\lib\\libXxf86vm.so.1": "cf8989dcd683cf8cc82f9375f0f5ca7ca1c52cb8f1f8638d5ef3b395c03507db",
+    "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+    "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+    "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+    "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+    "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+    "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+    "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+    "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+    "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+    "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+  },
+  "medians": {
+    "0": {
+      "c_fork_ms": 2085.35715,
+      "fork_exec_ms": 4469.89685,
+      "spawn_ms": 3967.33205
+    },
+    "1": {
+      "c_fork_ms": 1693.50835,
+      "fork_exec_ms": 3586.7695999999996,
+      "spawn_ms": 3499.31805
+    }
+  },
+  "candidate_base": "ff2b5b68b80b1b5e3157c2e0b40fdc07fbbd978e",
+  "source_files_sha256": {
+    "Cargo.lock": "c4407089764302ac0eabe386e89cb8cc07e271ae72ebd96491f81e91995a05d3",
+    "apps/init/src/main.rs": "9c4aed9d313fa9f51825707abfe352ed9a374e355de11ba149ada455705381be",
+    "apps/init/src/native_catalog.rs": "5f2ae5e9dec53bd51159c145bb7831163d348defd3f80ed61581c084cb33e9eb",
+    "apps/init/src/pool.rs": "7ed879b459550b216569ec4c091cd38c94142874b974f7aba4f67c301b1d5f84",
+    "crates/bridge/src/native.rs": "0602d2aa81c0a00d7427930902a610c8babf3239d2353aeaad6a1e3d1027f670",
+    "crates/bridge/src/native/snapshot.rs": "ce2dd4bce98ab7dbe4b32dc0dc0db6d4162c89b7cb265a24057928b9cdf043a7",
+    "crates/bridge/src/native_catalog_tests.rs": "d2365e2d86c3ce5e15a1025f45a276722c2fc25c5a0c2572493cefe4132a2e8e",
+    "crates/loader/Cargo.toml": "ccebe11dc52e7dbed7f603c58027e3ab63094fc400914364d8723726ea43164c",
+    "crates/loader/src/providers.rs": "e9f6412448871df7cc3c73f5ba3f2fc5f8e5a429d2895d22784d06d97a3ed064",
+    "crates/manager/src/lib.rs": "8183e7e9850773b7b4eb19cc02379803af6325264ed790d182284c930075e852",
+    "crates/manager/tests/image_snapshot.rs": "5dcdcefa6e436c125721fc0f6ad224e60bd63800cd16ee9cb6b063dffc9fbdec",
+    "crates/protocol/src/lib.rs": "09f1a1b03042698ecaa03556e134ab4c1b01f52a45fa0e150076b7c2639709fd",
+    "tools/benchmark-native-catalog.py": "08c4617f79a627ad201c56b2995ce63f3fc419c65ad35da053da309562d26b10"
+  },
+  "validation": {
+    "native_passed": 137,
+    "native_ignored_fixtures": 2,
+    "guest_shared_passed": 10,
+    "guest_ordinary_passed": 3
+  },
+  "diagnostic": {
+    "off": {
+      "fork-restore-facades": {
+        "count": 32,
+        "median_us": 28.0,
+        "mean_us": 27.46875,
+        "sum_us": 879
+      },
+      "fork-restore-objects": {
+        "count": 32,
+        "median_us": 105.5,
+        "mean_us": 104.96875,
+        "sum_us": 3359
+      },
+      "fork-restore-registry": {
+        "count": 32,
+        "median_us": 8356.0,
+        "mean_us": 8128.09375,
+        "sum_us": 260099
+      },
+      "participant_3130304d45535943": {
+        "count": 32,
+        "median_us": 0.0,
+        "mean_us": 0.03125,
+        "sum_us": 1
+      },
+      "participant_31303053534e5943": {
+        "count": 32,
+        "median_us": 0.0,
+        "mean_us": 0,
+        "sum_us": 0
+      },
+      "participant_3130464d48535943": {
+        "count": 32,
+        "median_us": 6.0,
+        "mean_us": 6.09375,
+        "sum_us": 195
+      },
+      "participant_31304e474f52504b": {
+        "count": 32,
+        "median_us": 0.0,
+        "mean_us": 0.03125,
+        "sum_us": 1
+      },
+      "participant_3130535341505943": {
+        "count": 32,
+        "median_us": 0.0,
+        "mean_us": 0,
+        "sum_us": 0
+      },
+      "participant_3130544958455943": {
+        "count": 32,
+        "median_us": 1.0,
+        "mean_us": 1.15625,
+        "sum_us": 37
+      },
+      "participant_323046434f4c5943": {
+        "count": 32,
+        "median_us": 1.0,
+        "mean_us": 1.0625,
+        "sum_us": 34
+      },
+      "participant_344f494454535943": {
+        "count": 32,
+        "median_us": 8.0,
+        "mean_us": 7.90625,
+        "sum_us": 253
+      },
+      "participant_435259454e564631": {
+        "count": 32,
+        "median_us": 1.0,
+        "mean_us": 0.75,
+        "sum_us": 24
+      },
+      "participant_4352594552523031": {
+        "count": 32,
+        "median_us": 0.0,
+        "mean_us": 0,
+        "sum_us": 0
+      },
+      "participant_4352595234384631": {
+        "count": 32,
+        "median_us": 1.0,
+        "mean_us": 0.8125,
+        "sum_us": 26
+      },
+      "participant_435259545a463031": {
+        "count": 32,
+        "median_us": 0.0,
+        "mean_us": 0,
+        "sum_us": 0
+      },
+      "participant_4352595543484633": {
+        "count": 32,
+        "median_us": 2.0,
+        "mean_us": 2.25,
+        "sum_us": 72
+      },
+      "participant_454e474142493031": {
+        "count": 32,
+        "median_us": 263.0,
+        "mean_us": 261.125,
+        "sum_us": 8356
+      },
+      "participant_4b44554d50563031": {
+        "count": 32,
+        "median_us": 4.0,
+        "mean_us": 4.03125,
+        "sum_us": 129
+      },
+      "participant_4b464f524b414431": {
+        "count": 32,
+        "median_us": 5.0,
+        "mean_us": 5.28125,
+        "sum_us": 169
+      },
+      "participant_4c44535441544531": {
+        "count": 32,
+        "median_us": 9213.5,
+        "mean_us": 9141.40625,
+        "sum_us": 292525
+      },
+      "participant_4c4457504342494c": {
+        "count": 32,
+        "median_us": 4.5,
+        "mean_us": 4.34375,
+        "sum_us": 139
+      },
+      "participant_4c49424346555431": {
+        "count": 32,
+        "median_us": 2.0,
+        "mean_us": 2.1875,
+        "sum_us": 70
+      },
+      "participant_4c49424349445333": {
+        "count": 32,
+        "median_us": 936.5,
+        "mean_us": 936.9375,
+        "sum_us": 29982
+      },
+      "participant_4c4942434d4d4150": {
+        "count": 32,
+        "median_us": 128.5,
+        "mean_us": 126.40625,
+        "sum_us": 4045
+      },
+      "participant_53aba31325414432": {
+        "count": 32,
+        "median_us": 20.0,
+        "mean_us": 19.75,
+        "sum_us": 632
+      },
+      "participant_563250524f564232": {
+        "count": 32,
+        "median_us": 1.0,
+        "mean_us": 1,
+        "sum_us": 32
+      },
+      "participant_5646535f46445332": {
+        "count": 32,
+        "median_us": 2066.5,
+        "mean_us": 2103.4375,
+        "sum_us": 67310
+      },
+      "participant_abb75c63484f4f4b": {
+        "count": 32,
+        "median_us": 9.0,
+        "mean_us": 8.8125,
+        "sum_us": 282
+      },
+      "participant_fffffffffffffffc": {
+        "count": 32,
+        "median_us": 4.0,
+        "mean_us": 3.46875,
+        "sum_us": 111
+      },
+      "participant_fffffffffffffffe": {
+        "count": 32,
+        "median_us": 5.0,
+        "mean_us": 4.90625,
+        "sum_us": 157
+      },
+      "transaction_commit": {
+        "count": 32,
+        "median_us": 83.5,
+        "mean_us": 84.3125,
+        "sum_us": 2698
+      },
+      "transaction_parent": {
+        "count": 32,
+        "median_us": 8.0,
+        "mean_us": 8.125,
+        "sum_us": 260
+      },
+      "transaction_staging": {
+        "count": 32,
+        "median_us": 491.0,
+        "mean_us": 753.1875,
+        "sum_us": 24102
+      },
+      "transaction_total": {
+        "count": 32,
+        "median_us": 20607.5,
+        "mean_us": 21826.25,
+        "sum_us": 698440
+      }
+    },
+    "on": {
+      "fork-restore-facades": {
+        "count": 32,
+        "median_us": 21.0,
+        "mean_us": 24.15625,
+        "sum_us": 773
+      },
+      "fork-restore-objects": {
+        "count": 32,
+        "median_us": 89.0,
+        "mean_us": 98.8125,
+        "sum_us": 3162
+      },
+      "fork-restore-registry": {
+        "count": 32,
+        "median_us": 3396.5,
+        "mean_us": 3565.625,
+        "sum_us": 114100
+      },
+      "participant_3130304d45535943": {
+        "count": 32,
+        "median_us": 0.0,
+        "mean_us": 0,
+        "sum_us": 0
+      },
+      "participant_31303053534e5943": {
+        "count": 32,
+        "median_us": 0.0,
+        "mean_us": 0,
+        "sum_us": 0
+      },
+      "participant_3130464d48535943": {
+        "count": 32,
+        "median_us": 5.0,
+        "mean_us": 5.40625,
+        "sum_us": 173
+      },
+      "participant_31304e474f52504b": {
+        "count": 32,
+        "median_us": 0.0,
+        "mean_us": 0,
+        "sum_us": 0
+      },
+      "participant_3130535341505943": {
+        "count": 32,
+        "median_us": 0.0,
+        "mean_us": 0,
+        "sum_us": 0
+      },
+      "participant_3130544958455943": {
+        "count": 32,
+        "median_us": 1.0,
+        "mean_us": 1.15625,
+        "sum_us": 37
+      },
+      "participant_323046434f4c5943": {
+        "count": 32,
+        "median_us": 1.0,
+        "mean_us": 0.96875,
+        "sum_us": 31
+      },
+      "participant_344f494454535943": {
+        "count": 32,
+        "median_us": 6.0,
+        "mean_us": 6.75,
+        "sum_us": 216
+      },
+      "participant_435259454e564631": {
+        "count": 32,
+        "median_us": 1.0,
+        "mean_us": 0.65625,
+        "sum_us": 21
+      },
+      "participant_4352594552523031": {
+        "count": 32,
+        "median_us": 0.0,
+        "mean_us": 0,
+        "sum_us": 0
+      },
+      "participant_4352595234384631": {
+        "count": 32,
+        "median_us": 1.0,
+        "mean_us": 0.5625,
+        "sum_us": 18
+      },
+      "participant_435259545a463031": {
+        "count": 32,
+        "median_us": 0.0,
+        "mean_us": 0,
+        "sum_us": 0
+      },
+      "participant_4352595543484633": {
+        "count": 32,
+        "median_us": 2.0,
+        "mean_us": 2.125,
+        "sum_us": 68
+      },
+      "participant_454e474142493031": {
+        "count": 32,
+        "median_us": 223.0,
+        "mean_us": 243.5,
+        "sum_us": 7792
+      },
+      "participant_4b44554d50563031": {
+        "count": 32,
+        "median_us": 4.0,
+        "mean_us": 4.125,
+        "sum_us": 132
+      },
+      "participant_4b464f524b414431": {
+        "count": 32,
+        "median_us": 5.0,
+        "mean_us": 5.3125,
+        "sum_us": 170
+      },
+      "participant_4c44535441544531": {
+        "count": 32,
+        "median_us": 4348.5,
+        "mean_us": 4446.5625,
+        "sum_us": 142290
+      },
+      "participant_4c4457504342494c": {
+        "count": 32,
+        "median_us": 4.0,
+        "mean_us": 5.1875,
+        "sum_us": 166
+      },
+      "participant_4c49424346555431": {
+        "count": 32,
+        "median_us": 2.0,
+        "mean_us": 2.125,
+        "sum_us": 68
+      },
+      "participant_4c49424349445333": {
+        "count": 32,
+        "median_us": 887.5,
+        "mean_us": 1063.40625,
+        "sum_us": 34029
+      },
+      "participant_4c4942434d4d4150": {
+        "count": 32,
+        "median_us": 117.5,
+        "mean_us": 125.9375,
+        "sum_us": 4030
+      },
+      "participant_53aba32b4d414432": {
+        "count": 32,
+        "median_us": 16.0,
+        "mean_us": 17.8125,
+        "sum_us": 570
+      },
+      "participant_563250524f564232": {
+        "count": 32,
+        "median_us": 1.0,
+        "mean_us": 0.75,
+        "sum_us": 24
+      },
+      "participant_5646535f46445332": {
+        "count": 32,
+        "median_us": 1812.0,
+        "mean_us": 1910.5625,
+        "sum_us": 61138
+      },
+      "participant_abb75c2d484f4f4b": {
+        "count": 32,
+        "median_us": 8.0,
+        "mean_us": 8.15625,
+        "sum_us": 261
+      },
+      "participant_fffffffffffffffc": {
+        "count": 32,
+        "median_us": 3.0,
+        "mean_us": 3.1875,
+        "sum_us": 102
+      },
+      "participant_fffffffffffffffe": {
+        "count": 32,
+        "median_us": 4.0,
+        "mean_us": 4.75,
+        "sum_us": 152
+      },
+      "transaction_commit": {
+        "count": 32,
+        "median_us": 81.5,
+        "mean_us": 87.53125,
+        "sum_us": 2801
+      },
+      "transaction_parent": {
+        "count": 32,
+        "median_us": 7.0,
+        "mean_us": 7.09375,
+        "sum_us": 227
+      },
+      "transaction_staging": {
+        "count": 32,
+        "median_us": 457.5,
+        "mean_us": 578.03125,
+        "sum_us": 18497
+      },
+      "transaction_total": {
+        "count": 32,
+        "median_us": 14552.5,
+        "mean_us": 15658.8125,
+        "sum_us": 501082
+      }
+    }
+  },
+  "evidence_sha256": {
+    "root-catalog-native-results.json": "51f565ed5d56971b8de5a048930040f28d6eb5cb3687c972eb2f60fa22edb982",
+    "root-catalog-guests/results.json": "e0bddfbe9f35f641f26d6dd28b58270f07791eaa2770886a15b8a441cb246139",
+    "root-catalog-guests-off/results.json": "63846dac947e784b88272512eac80079bce771e15dcf2b8b3eb0cc96673946c2",
+    "root-catalog-native-verified.json": "4cb46b2cf50e655b1ce366f651e959f92a425196f7331966fa475d14e3292340",
+    "root-catalog-build.jsonl": "5b94aceca12ff462a54b08c2e91643104f64e7f0c089cf8832b1e4a2339cd82f",
+    "root-catalog-native-build.jsonl": "6cb4387d6256c2f54f9c5c111c1156b85503595519d9b6888e4230dd593d18ae"
+  },
+  "limitations": "Short alternating workloads establish an observed improvement for their tested paths, not predicted complete-install savings. Diagnostic spans were collected separately. Frozen sources predate the later main VFS metadata integration.",
+  "diagnostic_catalog_requests": {
+    "miss": 1,
+    "hit": 49
+  }
+}
