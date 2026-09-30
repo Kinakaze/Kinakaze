@@ -3306,13 +3306,13 @@ pub unsafe fn platform_read_pinned_once(
     {
         return Err(EBADF);
     }
-    if entry.kind == FdKind::File {
+    if entry.kind == FdKind::File && !entry.flags.contains(FdFlags::VERITY_WRITABLE) {
         let bytes = if len == 0 {
             &mut []
         } else {
             unsafe { std::slice::from_raw_parts_mut(buffer, len) }
         };
-        return fs::verity::verified_read(entry.raw as _, entry.offset, bytes)?.ok_or(EIO);
+        return fs::verity::verified_read_entry(&entry, bytes)?.ok_or(EIO);
     }
     unsafe { platform::transfer_once(&entry, buffer, len, true) }
 }
@@ -4585,14 +4585,20 @@ mod platform {
                 {
                     return Err(super::EBADF);
                 }
+                // This exact data-write open already excluded/recovered verity
+                // before publication. Its native write rights prevent enable
+                // for the lifetime of every pin/dup/fork alias, including after
+                // chmod or unlink. Reads need no new metadata open or EA query.
+                if entry.flags.contains(FdFlags::VERITY_WRITABLE) {
+                    return unsafe { overlapped_transfer(entry, buffer, len, Direction::Read) };
+                }
                 let bytes = if len == 0 {
                     &mut []
                 } else {
                     unsafe { std::slice::from_raw_parts_mut(buffer, len) }
                 };
                 loop {
-                    match super::fs::verity::verified_read(entry.raw as HANDLE, entry.offset, bytes)
-                    {
+                    match super::fs::verity::verified_read_entry(entry, bytes) {
                         Err(super::EINTR) => match super::signal::deliver_pending() {
                             super::signal::Delivery::Restart => continue,
                             _ => return Err(super::EINTR),

@@ -629,11 +629,12 @@ pub(crate) struct Resolved {
     // Valid only as an observation during this operation. A create must still
     // ask NTFS atomically whether the leaf now exists.
     native_missing: bool,
+    native_stat: Option<Stat>,
 }
 #[cfg(test)]
 thread_local! { static RESOLUTION_WALKS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) }; }
 pub(crate) fn canonical_guest(path: &str, follow: bool) -> Result<String, i32> {
-    let resolved = resolve_inner(path, follow, false, true, None)?.ok_or(EIO)?;
+    let resolved = resolve_inner(path, follow, false, true, None, false)?.ok_or(EIO)?;
     visible_guest(resolved.guest)
 }
 
@@ -656,7 +657,7 @@ pub(crate) fn resolve(
     follow: bool,
     allow_missing: bool,
 ) -> Result<Option<Resolved>, i32> {
-    resolve_inner(path, follow, allow_missing, false, None)
+    resolve_inner(path, follow, allow_missing, false, None, false)
 }
 #[track_caller]
 fn resolve_inner(
@@ -665,6 +666,7 @@ fn resolve_inner(
     allow_missing: bool,
     force: bool,
     virtual_crossing: Option<&mut bool>,
+    observe_stat: bool,
 ) -> Result<Option<Resolved>, i32> {
     let _profile = super::profile::resolution(path);
     let overlay_root = crate::path::overlay_root();
@@ -703,14 +705,18 @@ fn resolve_inner(
     if overlay_root.is_none()
         && tree.is_none()
         && let Some(namespace_root) = namespace_root.as_deref()
-        && let Some(lookup) =
-            super::native_lookup::resolve(&root, namespace_root, &absolute, follow)?
+        && let Some(lookup) = (if observe_stat {
+            super::native_lookup::resolve_stat
+        } else {
+            super::native_lookup::resolve
+        })(&root, namespace_root, &absolute, follow)?
     {
         return Ok(Some(Resolved {
             path: lookup.path,
             guest: lookup.guest,
             location: None,
             native_missing: lookup.missing,
+            native_stat: lookup.stat,
         }));
     }
     let mut pending: VecDeque<String> = absolute
@@ -924,6 +930,7 @@ fn resolve_inner(
             location,
             guest,
             native_missing: false,
+            native_stat: None,
         });
         if final_component {
             break;
@@ -1136,7 +1143,14 @@ pub(crate) fn open_path(path: &str, flags: i32) -> Result<OpenPath, i32> {
     let follow = flags & fs::O_NOFOLLOW == 0 && !exclusive;
     let create = !is_path && flags & fs::O_CREAT != 0;
     let mut virtual_crossing = false;
-    let resolved = resolve_inner(path, follow, create, false, Some(&mut virtual_crossing))?;
+    let resolved = resolve_inner(
+        path,
+        follow,
+        create,
+        false,
+        Some(&mut virtual_crossing),
+        false,
+    )?;
     if virtual_crossing {
         return Ok(OpenPath::Virtual);
     }
@@ -1478,6 +1492,7 @@ fn prepare_mode(
 
 pub(crate) enum StatResolution {
     Overlay(Stat),
+    Observed(Stat),
     Native { path: PathBuf, missing: bool },
     Virtual,
 }
@@ -1486,13 +1501,16 @@ pub(crate) enum StatResolution {
 /// only "not overlay" made stat repeat every ancestor's inode/EA lookup.
 pub(crate) fn stat_resolution(path: &str, follow: bool) -> Result<Option<StatResolution>, i32> {
     let mut crossing = false;
-    let resolved = resolve_inner(path, follow, false, false, Some(&mut crossing))?;
+    let resolved = resolve_inner(path, follow, false, false, Some(&mut crossing), true)?;
     if crossing {
         return Ok(Some(StatResolution::Virtual));
     }
     let Some(resolved) = resolved else {
         return Ok(None);
     };
+    if let Some(stat) = resolved.native_stat {
+        return Ok(Some(StatResolution::Observed(stat)));
+    }
     let Some(location) = resolved.location else {
         return Ok(Some(StatResolution::Native {
             path: resolved.path,
@@ -2009,7 +2027,7 @@ pub(crate) fn reopen_object(
 }
 
 pub struct MetadataHandle {
-    handle: Object,
+    handle: crate::ofd::MetadataObject,
     overlay: bool,
     _writer: Option<Writer>,
     _native_writer: Option<Arc<Object>>,
@@ -2034,7 +2052,15 @@ pub fn metadata_handle(
     write: bool,
     allow_path: bool,
 ) -> Result<Option<MetadataHandle>, i32> {
-    metadata_handle_with_access(fd, write, allow_path, 0)
+    metadata_handle_with_access(fd, write, allow_path, 0, None)
+}
+
+pub(crate) fn chmod_handle(
+    fd: i32,
+    allow_path: bool,
+    generation: u32,
+) -> Result<Option<MetadataHandle>, i32> {
+    metadata_handle_with_access(fd, true, allow_path, 0, Some(generation))
 }
 
 pub(crate) fn ownership_handle(fd: i32, allow_path: bool) -> Result<Option<MetadataHandle>, i32> {
@@ -2043,6 +2069,7 @@ pub(crate) fn ownership_handle(fd: i32, allow_path: bool) -> Result<Option<Metad
         true,
         allow_path,
         windows_sys::Win32::Storage::FileSystem::READ_CONTROL,
+        None,
     )
 }
 
@@ -2051,19 +2078,26 @@ fn metadata_handle_with_access(
     write: bool,
     allow_path: bool,
     extra_access: u32,
+    generation: Option<u32>,
 ) -> Result<Option<MetadataHandle>, i32> {
     use std::os::windows::io::AsRawHandle;
     let mut description = None;
     let mut native = None;
     let pinned = crate::native_pin::pin_native_fd(fd, |entry| {
+        if generation.is_some_and(|generation| generation != entry.generation) {
+            return Err(crate::EBADF);
+        }
         description = reference(entry)?;
         native = crate::mount::native::reference(entry)?;
         if !allow_path && entry.flags.contains(crate::FdFlags::PATH_ONLY) {
             return Err(crate::EBADF);
         }
+        if description.is_none() {
+            crate::ofd::prepare_metadata(entry)?;
+        }
         Ok(())
     });
-    let (_, pinned) = match pinned {
+    let (entry, pinned) = match pinned {
         Ok(value) => value,
         Err(crate::EOPNOTSUPP) => return Ok(None),
         Err(e) => return Err(e),
@@ -2085,7 +2119,7 @@ fn metadata_handle_with_access(
             } else {
                 0
             };
-        let object = Object::reopen(pinned.as_raw_handle(), access)?;
+        let object = crate::ofd::metadata_object(entry, pinned.as_raw_handle(), access)?;
         return Ok(Some(MetadataHandle {
             overlay: false,
             handle: object,
@@ -2105,7 +2139,7 @@ fn metadata_handle_with_access(
     let object = Object::reopen(object.raw(), access)?;
     Ok(Some(MetadataHandle {
         overlay: true,
-        handle: object,
+        handle: crate::ofd::MetadataObject::uncached(object),
         _writer: refreshed.writer,
         _native_writer: None,
     }))

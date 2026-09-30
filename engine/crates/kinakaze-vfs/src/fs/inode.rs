@@ -20,11 +20,16 @@ pub(crate) fn read_object(object: &Object) -> Result<Record, i32> {
     ea::read_decoded(object, EA_NAME, Record::decode).map(Option::unwrap_or_default)
 }
 
-/// The caller keeps the borrowed inode live. An independent open owns each
-/// native query, so cancellation cannot cancel another fd's data operation.
+/// The caller keeps the borrowed inode live. Named queries retire only their
+/// own request; a restricted handle retains the independent metadata open.
 pub(crate) fn read(handle: HANDLE) -> Result<Record, i32> {
-    let object = Object::reopen(handle, FILE_READ_ATTRIBUTES | FILE_READ_EA)?;
-    read_object(&object)
+    match ea::read_shared_decoded(handle, EA_NAME, Record::decode) {
+        Err(crate::EACCES) => {
+            let object = Object::reopen(handle, FILE_READ_ATTRIBUTES | FILE_READ_EA)?;
+            read_object(&object)
+        }
+        result => result.map(Option::unwrap_or_default),
+    }
 }
 
 pub(crate) fn read_path(path: &Path) -> Result<Record, i32> {

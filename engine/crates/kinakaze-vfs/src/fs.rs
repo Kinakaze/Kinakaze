@@ -65,6 +65,7 @@ pub(crate) mod object;
 mod proc_fd_tests;
 mod readahead;
 mod reparse;
+mod shared_io;
 #[cfg(test)]
 mod stat_missing_tests;
 mod writeback;
@@ -2042,6 +2043,15 @@ pub(crate) fn set_mode_object(
     mode: u32,
     change: impl FnOnce(&mut inode::Record) -> Result<(), i32>,
 ) -> Result<(), i32> {
+    set_mode_object_checked(object, mode, |_, _| Ok(()), change)
+}
+
+fn set_mode_object_checked(
+    object: &object::Object,
+    mode: u32,
+    check: impl FnOnce(&inode::Record, u32) -> Result<(), i32>,
+    change: impl FnOnce(&mut inode::Record) -> Result<(), i32>,
+) -> Result<(), i32> {
     use windows_sys::Win32::Storage::FileSystem::{
         FILE_BASIC_INFO, FileBasicInfo, GetFileInformationByHandleEx,
     };
@@ -2083,6 +2093,7 @@ pub(crate) fn set_mode_object(
     // FILE_WRITE_EA is valid even on a native read-only inode. Do not briefly
     // grant host data-write access merely to change Linux metadata.
     inode::update_locked(object, |record| {
+        check(record, basic.FileAttributes)?;
         let kind = if mode & S_IFMT == 0 {
             record.mode.unwrap_or(0) & S_IFMT
         } else {
@@ -2178,24 +2189,56 @@ pub fn chmod_descriptor(fd: i32, mode: u32, allow_path: bool) -> Result<(), i32>
         }
         return crate::tty::set_pty_mode(fd, mode & 0o7777);
     }
-    let stat = fstat(fd)?;
-    if stat.st_mode & S_IFMT == S_IFLNK {
-        return Err(crate::EOPNOTSUPP);
-    }
     let caller = crate::credentials::filesystem().uid;
-    if caller != 0 && caller != stat.st_uid {
-        return Err(crate::EPERM);
+    let inline_check = caller == 0 && crate::mount::overlay::reference(entry)?.is_none();
+    if !inline_check {
+        let stat = fstat(fd)?;
+        if stat.st_mode & S_IFMT == S_IFLNK {
+            return Err(crate::EOPNOTSUPP);
+        }
+        if caller != 0 && caller != stat.st_uid {
+            return Err(crate::EPERM);
+        }
     }
-    if let Some(handle) = crate::mount::overlay::metadata_handle(fd, true, allow_path)? {
-        return set_mode_object(handle.object(), mode, |_| Ok(()));
+    let apply = |object: &object::Object| {
+        set_mode_object_checked(
+            object,
+            mode,
+            |record, attributes| {
+                // Root has no ownership restriction. Check the pinned inode's
+                // link type in the update transaction instead of performing a
+                // complete logical-size fstat immediately before this read.
+                if inline_check
+                    && (record.symlink.is_some()
+                        || record.mode.is_some_and(|mode| mode & S_IFMT == S_IFLNK)
+                        || attributes & FILE_ATTRIBUTE_REPARSE_POINT != 0
+                            && native_symlink_target_handle(object.raw())?.is_some())
+                {
+                    return Err(crate::EOPNOTSUPP);
+                }
+                Ok(())
+            },
+            |_| Ok(()),
+        )
+    };
+    if let Some(handle) = crate::mount::overlay::chmod_handle(fd, allow_path, entry.generation)? {
+        return apply(handle.object());
     }
-    let (object, _) = object::Object::from_fd_checked(fd, |entry| {
-        if !allow_path && entry.flags.contains(FdFlags::PATH_ONLY) {
+    let (object, _) = object::Object::from_fd_checked(fd, |current| {
+        // The captured mode/ownership policy must not be applied to a recycled
+        // descriptor slot. The ordinary metadata path enforces this too.
+        if current.generation != entry.generation
+            || !allow_path && current.flags.contains(FdFlags::PATH_ONLY)
+        {
             return Err(crate::EBADF);
         }
         Ok(())
     })?;
-    set_mode_handle(object.raw(), mode)
+    let query = object::Object::reopen(
+        object.raw(),
+        FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | FILE_READ_EA | FILE_WRITE_EA,
+    )?;
+    apply(&query)
 }
 
 /// Creates a filesystem FIFO inode without opening either data endpoint.
@@ -2282,14 +2325,65 @@ pub(crate) fn stat_handle(handle: HANDLE, symlink: bool) -> Result<Stat, i32> {
     stat_with_query(handle, &query, symlink)
 }
 
+fn stat_native_fd(fd: i32, expected: crate::FdEntry) -> Result<Stat, i32> {
+    use std::os::windows::io::AsRawHandle;
+    let (entry, pin) = crate::native_pin::pin_native_fd(fd, |entry| {
+        if entry.generation != expected.generation {
+            return Err(EBADF);
+        }
+        crate::ofd::prepare_metadata(entry)
+    })?;
+    let query = crate::ofd::metadata_object(
+        entry,
+        pin.as_raw_handle(),
+        FILE_READ_ATTRIBUTES | FILE_READ_EA,
+    )?;
+    if crate::ofd::metadata_cache_enabled() && entry.flags.contains(FdFlags::VERITY_WRITABLE) {
+        // The retained data-write capability excludes verity enable's native
+        // deny-write open throughout this query. Native EOF is authoritative;
+        // still read live inode metadata on every call.
+        stat_metadata_with_query(pin.as_raw_handle(), &query, false)
+    } else {
+        stat_with_query(pin.as_raw_handle(), &query, false)
+    }
+}
+
 // `query` is a private asynchronous metadata open of the same inode as
 // `handle`. Reuse it for both EAs, keeping the ACL rights of the original open.
 fn stat_with_query(handle: HANDLE, query: &object::Object, symlink: bool) -> Result<Stat, i32> {
-    let mut stat = stat_metadata_with_query(handle, query, symlink)?;
-    if stat.st_mode & S_IFMT == S_IFREG {
-        stat.st_size = verity::authoritative_size_object(query)? as i64;
+    // Query EOF and both records under the same inode transaction. Native EOF
+    // from this information query is authoritative only when verity is absent;
+    // re-querying it in a second helper added an I/O request to every stat.
+    let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
+    if unsafe { GetFileInformationByHandle(query.raw(), &mut info) } == 0 {
+        return Err(errno_from_win32(unsafe { GetLastError() }));
     }
-    Ok(stat)
+    if info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY != 0 {
+        // Native directories cannot acquire a hidden fs-verity data tail.
+        return stat_from_native_record(handle, &info, inode::read_object(query)?, symlink)
+            .map(|(stat, _)| stat);
+    }
+    let key = crate::xattr::InodeKey::from_information(&info);
+    let _lock = key.acquire()?;
+    // The identity above is stable under the retained handle. EOF must be
+    // refreshed after taking the transaction lock so a hidden-tail append
+    // cannot make the absence query expose a stale native length.
+    if unsafe { GetFileInformationByHandle(query.raw(), &mut info) } == 0 {
+        return Err(errno_from_win32(unsafe { GetLastError() }));
+    }
+    ea::read_pair_decoded(query, inode::EA_NAME, verity::EA_NAME, |inode, verity| {
+        let record = inode
+            .map(inode::Record::decode)
+            .transpose()?
+            .unwrap_or_default();
+        let mut stat = stat_from_native_record(handle, &info, record, symlink)?.0;
+        if stat.st_mode & S_IFMT == S_IFREG {
+            if let Some(bytes) = verity {
+                stat.st_size = verity::recorded_size(bytes)? as i64;
+            }
+        }
+        Ok(stat)
+    })
 }
 
 // Ownership checks need inode type/mode/owner, not a logical data length.
@@ -2315,8 +2409,17 @@ fn stat_metadata_and_record(
         // SAFETY: GetLastError has no preconditions.
         return Err(errno_from_win32(unsafe { GetLastError() }));
     }
-    let readonly = info.dwFileAttributes & FILE_ATTRIBUTE_READONLY != 0;
     let record = inode::read_object(query)?;
+    stat_from_native_record(handle, &info, record, symlink)
+}
+
+fn stat_from_native_record(
+    handle: HANDLE,
+    info: &BY_HANDLE_FILE_INFORMATION,
+    record: inode::Record,
+    symlink: bool,
+) -> Result<(Stat, inode::Record), i32> {
+    let readonly = info.dwFileAttributes & FILE_ATTRIBUTE_READONLY != 0;
     let mode = record
         .mode
         .or_else(|| permissions_from_acl(handle, readonly));
@@ -2328,7 +2431,7 @@ fn stat_metadata_and_record(
         None => None,
     };
     let symlink = symlink || target.is_some();
-    let mut stat = stat_from_info(&info, symlink, mode);
+    let mut stat = stat_from_info(info, symlink, mode);
     stat.st_uid = record.uid.unwrap_or(0);
     stat.st_gid = record.gid.unwrap_or(0);
     if let Some(target) = target {
@@ -2675,7 +2778,19 @@ fn stat_path_resolved(
     if missing {
         return Err(ENOENT);
     }
-    let wide_path = wide(&resolved)?;
+    let query = open_stat_query(&resolved, follow_symlinks)?;
+    stat_with_query(query.raw(), &query, false)
+}
+
+/// Complete a regular native lookup and its metadata observation through
+/// one private open. The caller checks for a link before accepting it.
+pub(crate) fn stat_native_query(path: &Path) -> Result<Stat, i32> {
+    let query = open_stat_query(path, false)?;
+    stat_with_query(query.raw(), &query, false)
+}
+
+fn open_stat_query(path: &Path, follow_symlinks: bool) -> Result<object::Object, i32> {
+    let wide_path = wide(path)?;
     let mut attributes = FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED;
     if !follow_symlinks {
         attributes |= FILE_FLAG_OPEN_REPARSE_POINT;
@@ -2717,8 +2832,7 @@ fn stat_path_resolved(
 
     // Type and target size come from this inode, not a preceding path query
     // that another thread could replace before CreateFileW succeeds.
-    let query = object::Object::owned(handle)?;
-    stat_with_query(query.raw(), &query, false)
+    object::Object::owned(handle)
 }
 
 /// `stat`: follows symlinks.
@@ -2737,7 +2851,10 @@ pub fn stat(path: &str) -> Result<Stat, i32> {
         return stat;
     }
     match crate::mount::overlay::stat_resolution(path, true)? {
-        Some(crate::mount::overlay::StatResolution::Overlay(stat)) => return Ok(stat),
+        Some(
+            crate::mount::overlay::StatResolution::Overlay(stat)
+            | crate::mount::overlay::StatResolution::Observed(stat),
+        ) => return Ok(stat),
         Some(crate::mount::overlay::StatResolution::Virtual) => {
             return confined::stat(path, true);
         }
@@ -2771,7 +2888,10 @@ pub fn lstat(path: &str) -> Result<Stat, i32> {
         return stat_path(path, false);
     }
     match crate::mount::overlay::stat_resolution(path, false)? {
-        Some(crate::mount::overlay::StatResolution::Overlay(stat)) => return Ok(stat),
+        Some(
+            crate::mount::overlay::StatResolution::Overlay(stat)
+            | crate::mount::overlay::StatResolution::Observed(stat),
+        ) => return Ok(stat),
         Some(crate::mount::overlay::StatResolution::Virtual) => {
             return confined::stat(path, false);
         }
@@ -2803,6 +2923,7 @@ pub fn fstat(fd: i32) -> Result<Stat, i32> {
         return Ok(stat);
     }
     match entry.kind {
+        FdKind::File | FdKind::Directory => stat_native_fd(fd, entry),
         FdKind::FsContext | FdKind::MountTree => crate::mount::api::stat(fd),
         FdKind::ProcMounts => {
             crate::procfs::pinned(|| stat_procfs(&crate::procfs::mount_watch::path(fd)?, true))

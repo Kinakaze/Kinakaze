@@ -19,14 +19,14 @@ use windows_sys::Win32::Storage::FileSystem::{
     GetFileSizeEx,
 };
 
-mod read_cache;
-pub(crate) use read_cache::ReadCache;
 pub(crate) mod merkle;
 pub use merkle::Descriptor;
+mod read_cache;
+pub(crate) use read_cache::ReadCache;
 mod transaction;
 pub use transaction::{Publication, Transaction, TransactionId, TransactionState, publication};
 
-const EA_NAME: &[u8] = b"KINAKAZE.LINUX.VERITY";
+pub(super) const EA_NAME: &[u8] = b"KINAKAZE.LINUX.VERITY";
 const MAGIC: &[u8; 8] = b"CYVERIT2";
 const PREPARING: u8 = 1;
 const ENABLED: u8 = 2;
@@ -141,12 +141,30 @@ fn read_record(object: &Object) -> Result<Option<Record>, i32> {
     }
 }
 
-fn native_size(object: &Object) -> Result<u64, i32> {
+/// Decode a record returned in a compound metadata query. PREPARING and BUILT
+/// retain the descriptor's logical EOF just as in authoritative_size_object.
+pub(super) fn recorded_size(bytes: &[u8]) -> Result<u64, i32> {
+    Record::decode(bytes).map(|record| record.descriptor.data_size())
+}
+
+fn native_size_handle(handle: HANDLE) -> Result<u64, i32> {
     let mut size = 0i64;
-    if unsafe { GetFileSizeEx(object.raw(), &mut size) } == 0 {
+    if unsafe { GetFileSizeEx(handle, &mut size) } == 0 {
         return Err(crate::errno_from_win32(unsafe { GetLastError() }));
     }
     u64::try_from(size).map_err(|_| EIO)
+}
+
+fn read_record_handle(handle: HANDLE) -> Result<Option<Record>, i32> {
+    match ea::read_shared_decoded(handle, EA_NAME, Record::decode) {
+        Err(crate::EACCES) => read_record(&Object::reopen(handle, QUERY_ACCESS)?),
+        Err(EOPNOTSUPP) => Ok(None),
+        result => result,
+    }
+}
+
+fn native_size(object: &Object) -> Result<u64, i32> {
+    native_size_handle(object.raw())
 }
 
 fn exact_read(object: &Object, offset: u64, bytes: &mut [u8]) -> Result<(), i32> {
@@ -217,8 +235,7 @@ fn recover_with(
 /// an interrupted enable is not represented as a successful verity file.
 /// The caller keeps `handle` live through this call.
 pub fn descriptor(handle: HANDLE) -> Result<Option<Descriptor>, i32> {
-    let object = Object::reopen(handle, QUERY_ACCESS)?;
-    Ok(read_record(&object)?
+    Ok(read_record_handle(handle)?
         .filter(|record| record.state == ENABLED)
         .map(|record| record.descriptor))
 }
@@ -226,13 +243,19 @@ pub fn descriptor(handle: HANDLE) -> Result<Option<Descriptor>, i32> {
 /// Includes PREPARING: unpublished tree bytes must never change guest st_size.
 /// The caller keeps `handle` live through this call.
 pub fn logical_size(handle: HANDLE) -> Result<Option<u64>, i32> {
-    let object = Object::reopen(handle, QUERY_ACCESS)?;
-    Ok(read_record(&object)?.map(|record| record.descriptor.data_size()))
+    Ok(read_record_handle(handle)?.map(|record| record.descriptor.data_size()))
 }
 
 /// Atomic logical-size query for a regular file, including ordinary files that
 /// may begin an enable transaction concurrently with this query.
 pub fn authoritative_size(handle: HANDLE) -> Result<u64, i32> {
+    if Object::granted_access(handle)? & QUERY_ACCESS == QUERY_ACCESS {
+        let _lock = crate::xattr::InodeLock::acquire(handle)?;
+        return match read_record_handle(handle)? {
+            Some(record) => Ok(record.descriptor.data_size()),
+            None => native_size_handle(handle),
+        };
+    }
     let object = Object::reopen(handle, QUERY_ACCESS)?;
     authoritative_size_object(&object)
 }
@@ -430,6 +453,57 @@ pub fn verified_read(handle: HANDLE, offset: u64, bytes: &mut [u8]) -> Result<Op
     }
     let object = Object::reopen(handle, GENERIC_READ | QUERY_ACCESS)?;
     read_object(&object, offset, bytes)
+}
+
+/// The fd-table pin keeps this asynchronous open alive. Named EA requests and
+/// positional data requests retire/cancel only their own I/O, so ordinary reads
+/// can keep the same inode lock without acquiring another native file object.
+/// Synchronous or restricted external handles retain the private-open path.
+pub(crate) fn verified_read_entry(
+    entry: &crate::FdEntry,
+    bytes: &mut [u8],
+) -> Result<Option<usize>, i32> {
+    let handle = entry.raw as HANDLE;
+    if !entry.flags.contains(FdFlags::OVERLAPPED) || !entry.flags.contains(FdFlags::SEEKABLE) {
+        return verified_read(handle, entry.offset, bytes);
+    }
+    let access = Object::granted_access(handle)?;
+    if access & FILE_READ_DATA == 0 {
+        return Err(EBADF);
+    }
+    if access & QUERY_ACCESS == QUERY_ACCESS {
+        let guard = crate::xattr::InodeLock::acquire(handle)?;
+        let record = read_record_handle(handle)?;
+        if !record
+            .as_ref()
+            .is_some_and(|record| record.state == ENABLED)
+        {
+            let length = match record {
+                Some(record) => bytes.len().min(
+                    record
+                        .descriptor
+                        .data_size()
+                        .saturating_sub(entry.offset)
+                        .min(usize::MAX as u64) as usize,
+                ),
+                // The inode lock prevents a first hidden-tail append until
+                // this read finishes. Native EOF already bounds ordinary data.
+                None => bytes.len(),
+            };
+            if length == 0 {
+                return Ok(Some(0));
+            }
+            // The existing overlapped transfer owns a separate event and uses
+            // CancelIoEx with its exact OVERLAPPED, never the whole file object.
+            return unsafe {
+                crate::platform::transfer_once(entry, bytes.as_mut_ptr(), length, true)
+            }
+            .map(Some);
+        }
+        drop(guard);
+    }
+    let object = Object::reopen(handle, GENERIC_READ | QUERY_ACCESS)?;
+    read_object(&object, entry.offset, bytes)
 }
 
 /// Internal copy-up reads have the same integrity boundary as guest reads, but

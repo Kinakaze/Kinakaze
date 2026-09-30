@@ -45,6 +45,7 @@ struct Description {
     object: Mutex<Option<Arc<Store>>>,
     directory: Mutex<Option<Arc<Vec<crate::fs::NativeDirectoryEntry>>>>,
     reader: OnceLock<Arc<crate::fs::verity::ReadCache>>,
+    metadata: Mutex<Vec<(u32, crate::fs::object::Object)>>,
     native_pin: Mutex<Option<Arc<crate::fs::object::Object>>>,
 }
 fn descriptions() -> &'static Mutex<HashMap<u64, Arc<Description>>> {
@@ -76,6 +77,7 @@ fn local(id: u64) -> Result<Arc<Description>, i32> {
                 object: Mutex::new(None),
                 directory: Mutex::new(None),
                 reader: OnceLock::new(),
+                metadata: Mutex::new(Vec::new()),
                 native_pin: Mutex::new(None),
             })
         })
@@ -252,12 +254,22 @@ pub(crate) fn closed(id: u64) -> Option<Retired> {
         })
 }
 
+pub(crate) fn metadata_cache_enabled() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED
+        .get_or_init(|| !std::env::var_os("KINAKAZE_FD_METADATA").is_some_and(|value| value == "0"))
+}
+
 pub(crate) fn native_pin_cache_enabled() -> bool {
     static ENABLED: OnceLock<bool> = OnceLock::new();
     *ENABLED
         .get_or_init(|| !std::env::var_os("KINAKAZE_NATIVE_PIN").is_some_and(|value| value == "0"))
 }
 
+/// Called under the descriptor-table guard after validating a native inode.
+/// Retain one duplicate per description rather than duplicating/closing on
+/// every read, write or metadata call. Only Arc cloning remains on reuse.
+/// Overlay descriptions keep their per-operation pins across copy-up.
 pub(crate) fn native_pin(entry: FdEntry) -> Result<Arc<crate::fs::object::Object>, i32> {
     let description = local(entry.description_id)?;
     let mut pin = description.native_pin.lock().map_err(|_| EIO)?;
@@ -269,13 +281,99 @@ pub(crate) fn native_pin(entry: FdEntry) -> Result<Arc<crate::fs::object::Object
     Ok(pin.as_ref().unwrap().clone())
 }
 
+/// Call while validating the descriptor under the table guard. No native I/O
+/// occurs here, and final close can atomically detach this registry entry.
+pub(crate) fn prepare_metadata(entry: FdEntry) -> Result<(), i32> {
+    if metadata_cache_enabled() {
+        drop(local(entry.description_id)?);
+    }
+    Ok(())
+}
+
+/// One exclusively checked-out asynchronous metadata open. Concurrent queries
+/// use distinct native file objects; cancellation cannot reach another query
+/// or the guest's data I/O. Keep at most two idle opens per live description.
+pub(crate) struct MetadataObject {
+    object: Option<crate::fs::object::Object>,
+    access: u32,
+    owner: Option<Arc<Description>>,
+}
+impl std::ops::Deref for MetadataObject {
+    type Target = crate::fs::object::Object;
+    fn deref(&self) -> &Self::Target {
+        self.object.as_ref().unwrap()
+    }
+}
+impl MetadataObject {
+    pub(crate) fn uncached(object: crate::fs::object::Object) -> Self {
+        Self {
+            object: Some(object),
+            access: 0,
+            owner: None,
+        }
+    }
+}
+impl Drop for MetadataObject {
+    fn drop(&mut self) {
+        if let Some(owner) = &self.owner
+            && let Ok(mut idle) = owner.metadata.lock()
+        {
+            // A stronger returned open makes idle subsets redundant. Rights
+            // are native capabilities; ownership, type and mode stay uncached.
+            idle.retain(|(access, _)| access & self.access != *access);
+            if idle.len() == 2 {
+                idle.remove(0);
+            }
+            idle.push((self.access, self.object.take().unwrap()));
+        }
+    }
+}
+
+/// `source` is pinned independently of the table and belongs to `entry`.
+/// Do not insert a Description here: close may already have removed the last
+/// alias. An existing Arc retires a late query without reviving a dead OFD.
+pub(crate) fn metadata_object(
+    entry: FdEntry,
+    source: windows_sys::Win32::Foundation::HANDLE,
+    access: u32,
+) -> Result<MetadataObject, i32> {
+    let owner = if metadata_cache_enabled() {
+        descriptions()
+            .lock()
+            .map_err(|_| EIO)?
+            .get(&entry.description_id)
+            .cloned()
+    } else {
+        None
+    };
+    let cached = match &owner {
+        Some(owner) => {
+            let mut idle = owner.metadata.lock().map_err(|_| EIO)?;
+            idle.iter()
+                .position(|(granted, _)| granted & access == access)
+                .map(|index| idle.swap_remove(index))
+        }
+        None => None,
+    };
+    let (access, object) = match cached {
+        Some(value) => value,
+        None => (access, crate::fs::object::Object::reopen(source, access)?),
+    };
+    Ok(MetadataObject {
+        object: Some(object),
+        access,
+        owner,
+    })
+}
+/// Capture under the descriptor-table guard. Final close removes the registry
+/// entry; an in-flight pin keeps only its own original inode alive. Fresh
+/// fork/exec processes rebuild this private capability lazily.
 pub(crate) fn read_cache(id: u64) -> Result<Arc<crate::fs::verity::ReadCache>, i32> {
     Ok(local(id)?
         .reader
         .get_or_init(|| Arc::new(Default::default()))
         .clone())
 }
-
 /// Pin a descriptor-backed section once per open description. The descriptor
 /// table lock held by the caller prevents raw-handle reuse while opening it.
 /// Dup shares this pin; final close releases it; fork restore rebuilds it lazily.
@@ -396,8 +494,9 @@ pub(crate) fn restore(bytes: &[u8]) -> bool {
                     shared: Mutex::new(Some(store)),
                     object: Mutex::new(None),
                     directory: Mutex::new(None),
-                reader: OnceLock::new(),
-                native_pin: Mutex::new(None),
+                    reader: OnceLock::new(),
+                    metadata: Mutex::new(Vec::new()),
+                    native_pin: Mutex::new(None),
                 }),
             );
         }

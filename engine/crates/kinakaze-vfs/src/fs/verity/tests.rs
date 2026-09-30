@@ -103,6 +103,86 @@ fn persisted_tree_masks_tail_and_survives_hardlink_unlink() {
 }
 
 #[test]
+fn reused_read_capability_observes_enable_corruption_and_original_inode() {
+    let f = Fixture::new();
+    let data: Vec<u8> = (0..9137).map(|i| (i * 37) as u8).collect();
+    let path = f.file("cached-reader", &data);
+    let fd = Fd::read(&path);
+    let (entry, pin) = crate::pin_native_fd(fd.0, |_| Ok(())).unwrap();
+    let mut bytes = vec![0xcc; data.len() + 8192];
+    let read = |bytes: &mut [u8]| unsafe { pin.read_once(entry, bytes.as_mut_ptr(), bytes.len()) };
+    assert_eq!(read(&mut bytes).unwrap(), data.len());
+    assert_eq!(&bytes[..data.len()], data);
+    // A retained reader must re-query persistent state on every operation.
+    enable(fd.0, 1, 4096, b"cached").unwrap();
+    bytes.fill(0xcc);
+    assert_eq!(read(&mut bytes).unwrap(), data.len());
+    assert_eq!(&bytes[..data.len()], data);
+    assert!(bytes[data.len()..].iter().all(|&byte| byte == 0xcc));
+    let host_writer = Object::open(&path, GENERIC_READ | GENERIC_WRITE | QUERY_ACCESS).unwrap();
+    exact_write(&host_writer, 0, &[data[0] ^ 1]).unwrap();
+    bytes.fill(0xcc);
+    assert_eq!(read(&mut bytes), Err(EIO));
+    assert!(bytes.iter().all(|&byte| byte == 0xcc));
+    exact_write(&host_writer, 0, &data[..1]).unwrap();
+    drop(host_writer);
+    crate::fs::unlink(&crate::path::to_guest_path(&path)).unwrap();
+    std::fs::write(&path, b"replacement").unwrap();
+    crate::close(fd.0).unwrap();
+    std::mem::forget(fd);
+    let replacement = Fd::read(&path);
+    let mut newer = [0; 11];
+    assert_eq!(crate::read(replacement.0, &mut newer).unwrap(), 11);
+    assert_eq!(&newer, b"replacement");
+    assert_eq!(read(&mut bytes).unwrap(), data.len());
+    assert_eq!(&bytes[..data.len()], data);
+}
+
+#[test]
+fn cached_reader_owns_each_concurrent_positioned_request() {
+    let f = Fixture::new();
+    let data: Vec<u8> = (0..8192).map(|i| (i * 53) as u8).collect();
+    let path = f.file("parallel-reader", &data);
+    let fd = Fd::read(&path);
+    let (entry, pin) = crate::pin_native_fd(fd.0, |_| Ok(())).unwrap();
+    let barrier = std::sync::Barrier::new(8);
+    std::thread::scope(|scope| {
+        for worker in 0..8 {
+            let (pin, data, barrier) = (&pin, &data, &barrier);
+            scope.spawn(move || {
+                crate::interrupt::current();
+                barrier.wait();
+                for iteration in 0..64 {
+                    let offset = (worker * 257 + iteration * 71) % (data.len() - 512);
+                    let positioned = crate::FdEntry {
+                        offset: offset as u64,
+                        ..entry
+                    };
+                    let mut bytes = [0; 512];
+                    let read =
+                        unsafe { pin.read_once(positioned, bytes.as_mut_ptr(), bytes.len()) }
+                            .unwrap();
+                    assert_eq!(read, bytes.len());
+                    assert_eq!(&bytes, &data[offset..offset + 512]);
+                }
+            });
+        }
+    });
+    assert_eq!(crate::fs::lseek(fd.0, 0, crate::fs::SEEK_CUR).unwrap(), 0);
+}
+
+#[test]
+fn read_cache_does_not_escalate_imported_write_only_access() {
+    let f = Fixture::new();
+    let path = f.file("write-only-cache", b"private");
+    let writer = Object::open(&path, GENERIC_WRITE | QUERY_ACCESS).unwrap();
+    let reader = ReadCache::default();
+    for _ in 0..2 {
+        assert_eq!(reader.read(writer.raw(), 0, &mut [0; 7]), Err(EBADF));
+    }
+}
+
+#[test]
 fn native_existing_writer_blocks_enable_without_changing_file() {
     let f = Fixture::new();
     let path = f.file("busy", b"original");
@@ -212,6 +292,10 @@ fn abandoned_preparing_tail_is_masked_and_recovered_before_write() {
     let mut bytes = [0xcc; 64];
     assert_eq!(verified_read(pin.raw(), 0, &mut bytes).unwrap(), Some(16));
     assert_eq!(&bytes[..16], b"original payload");
+    bytes.fill(0xcc);
+    assert_eq!(crate::read(fd.0, &mut bytes), Ok(16));
+    assert_eq!(&bytes[..16], b"original payload");
+    assert_eq!(&bytes[16..], &[0xcc; 48]);
     ensure_writable(pin.raw()).unwrap();
     assert_eq!(std::fs::metadata(&path).unwrap().len(), 16);
     assert_eq!(logical_size(pin.raw()).unwrap(), None);
@@ -484,81 +568,28 @@ fn native_readonly_mapping_same_eof_probe() {
 }
 
 #[test]
-fn reused_read_capability_observes_enable_corruption_and_original_inode() {
-    let f = Fixture::new();
-    let data: Vec<u8> = (0..9137).map(|i| (i * 37) as u8).collect();
-    let path = f.file("cached-reader", &data);
+fn shared_reader_observes_enable_and_rejects_later_corruption() {
+    let fixture = Fixture::new();
+    let data = vec![0x5a; 12_345];
+    let path = fixture.file("shared-reader", &data);
     let fd = Fd::read(&path);
-    let (entry, pin) = crate::pin_native_fd(fd.0, |_| Ok(())).unwrap();
-    let mut bytes = vec![0xcc; data.len() + 8192];
-    let read = |bytes: &mut [u8]| unsafe { pin.read_once(entry, bytes.as_mut_ptr(), bytes.len()) };
-    assert_eq!(read(&mut bytes).unwrap(), data.len());
-    assert_eq!(&bytes[..data.len()], data);
-    // A retained reader must re-query persistent state on every operation.
-    enable(fd.0, 1, 4096, b"cached").unwrap();
-    bytes.fill(0xcc);
-    assert_eq!(read(&mut bytes).unwrap(), data.len());
-    assert_eq!(&bytes[..data.len()], data);
-    assert!(bytes[data.len()..].iter().all(|&byte| byte == 0xcc));
-    let host_writer = Object::open(&path, GENERIC_READ | GENERIC_WRITE | QUERY_ACCESS).unwrap();
-    exact_write(&host_writer, 0, &[data[0] ^ 1]).unwrap();
-    bytes.fill(0xcc);
-    assert_eq!(read(&mut bytes), Err(EIO));
-    assert!(bytes.iter().all(|&byte| byte == 0xcc));
-    exact_write(&host_writer, 0, &data[..1]).unwrap();
-    drop(host_writer);
-    crate::fs::unlink(&crate::path::to_guest_path(&path)).unwrap();
-    std::fs::write(&path, b"replacement").unwrap();
-    crate::close(fd.0).unwrap();
-    std::mem::forget(fd);
-    let replacement = Fd::read(&path);
-    let mut newer = [0; 11];
-    assert_eq!(crate::read(replacement.0, &mut newer).unwrap(), 11);
-    assert_eq!(&newer, b"replacement");
-    assert_eq!(read(&mut bytes).unwrap(), data.len());
-    assert_eq!(&bytes[..data.len()], data);
-}
+    let mut entry = crate::get(fd.0).unwrap();
+    assert!(entry.flags.contains(FdFlags::OVERLAPPED));
+    entry.offset = 7;
+    let mut bytes = [0xcc; 32];
+    assert_eq!(verified_read_entry(&entry, &mut bytes), Ok(Some(32)));
+    assert_eq!(bytes, [0x5a; 32]);
+    assert_eq!(crate::get(fd.0).unwrap().offset, 0);
 
-#[test]
-fn cached_reader_owns_each_concurrent_positioned_request() {
-    let f = Fixture::new();
-    let data: Vec<u8> = (0..8192).map(|i| (i * 53) as u8).collect();
-    let path = f.file("parallel-reader", &data);
-    let fd = Fd::read(&path);
-    let (entry, pin) = crate::pin_native_fd(fd.0, |_| Ok(())).unwrap();
-    let barrier = std::sync::Barrier::new(8);
-    std::thread::scope(|scope| {
-        for worker in 0..8 {
-            let (pin, data, barrier) = (&pin, &data, &barrier);
-            scope.spawn(move || {
-                crate::interrupt::current();
-                barrier.wait();
-                for iteration in 0..64 {
-                    let offset = (worker * 257 + iteration * 71) % (data.len() - 512);
-                    let positioned = crate::FdEntry {
-                        offset: offset as u64,
-                        ..entry
-                    };
-                    let mut bytes = [0; 512];
-                    let read =
-                        unsafe { pin.read_once(positioned, bytes.as_mut_ptr(), bytes.len()) }
-                            .unwrap();
-                    assert_eq!(read, bytes.len());
-                    assert_eq!(&bytes, &data[offset..offset + 512]);
-                }
-            });
-        }
-    });
-    assert_eq!(crate::fs::lseek(fd.0, 0, crate::fs::SEEK_CUR).unwrap(), 0);
-}
-
-#[test]
-fn read_cache_does_not_escalate_imported_write_only_access() {
-    let f = Fixture::new();
-    let path = f.file("write-only-cache", b"private");
-    let writer = Object::open(&path, GENERIC_WRITE | QUERY_ACCESS).unwrap();
-    let reader = ReadCache::default();
-    for _ in 0..2 {
-        assert_eq!(reader.read(writer.raw(), 0, &mut [0; 7]), Err(EBADF));
-    }
+    // Reuse exactly the same open: metadata absence must never be cached.
+    enable(fd.0, 1, 4096, b"").unwrap();
+    assert_eq!(verified_read_entry(&entry, &mut bytes), Ok(Some(32)));
+    entry.offset = data.len() as u64;
+    assert_eq!(verified_read_entry(&entry, &mut bytes), Ok(Some(0)));
+    let writer = Object::open(&path, GENERIC_READ | GENERIC_WRITE | QUERY_ACCESS).unwrap();
+    exact_write(&writer, 9, &[0xff]).unwrap();
+    entry.offset = 7;
+    bytes.fill(0xcc);
+    assert_eq!(verified_read_entry(&entry, &mut bytes), Err(EIO));
+    assert_eq!(bytes, [0xcc; 32]);
 }

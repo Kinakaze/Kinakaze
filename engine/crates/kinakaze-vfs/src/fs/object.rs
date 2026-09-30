@@ -564,6 +564,13 @@ impl Object {
             )
         };
         if status < 0 {
+            if disposition == 2 && options & 0x40 != 0 && status as u32 == 0xc000_00ba {
+                // FILE_CREATE with FILE_NON_DIRECTORY_FILE can report
+                // STATUS_FILE_IS_A_DIRECTORY before the ordinary collision.
+                // An existing directory still satisfies O_CREAT|O_EXCL's
+                // existence failure; no pathname recheck is needed.
+                return Err(crate::EEXIST);
+            }
             if !ea.is_empty() && matches!(status as u32, 0xc000_004f | 0xc000_00bb) {
                 return Err(crate::EOPNOTSUPP);
             }

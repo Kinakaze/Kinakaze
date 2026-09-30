@@ -143,3 +143,102 @@ fn repeated_install_metadata_still_clears_capabilities_and_checks_permissions() 
     drop(attrs);
     crate::close(fd).unwrap();
 }
+
+#[test]
+fn writable_stat_reads_live_inode_metadata_and_survives_unlink() {
+    let f = Fixture::new();
+    let path = f.guest("live-stat");
+    let fd = open(&path, O_CREAT | O_EXCL | O_RDWR, 0o640).unwrap();
+    assert!(
+        crate::get(fd)
+            .unwrap()
+            .flags
+            .contains(FdFlags::VERITY_WRITABLE)
+    );
+    crate::write(fd, b"payload").unwrap();
+    let original = fstat(fd).unwrap();
+    let reader = open(&path, O_RDONLY, 0).unwrap();
+    assert_eq!(fstat(reader).unwrap().st_size, 7);
+    for (mode, uid) in [(0o600, 123), (0o644, 456)] {
+        chmod_descriptor(fd, mode, false).unwrap();
+        fchown(
+            fd,
+            false,
+            &Ownership {
+                uid,
+                gid: uid + 1,
+                caller: 0,
+                group_member: true,
+            },
+        )
+        .unwrap();
+        for stat in [fstat(fd).unwrap(), fstat(reader).unwrap()] {
+            assert_eq!(
+                (
+                    stat.st_mode & 0o7777,
+                    stat.st_uid,
+                    stat.st_gid,
+                    stat.st_size
+                ),
+                (mode, uid, uid + 1, 7)
+            );
+            assert_eq!(stat.st_ino, original.st_ino);
+        }
+    }
+    unlink(&path).unwrap();
+    assert_eq!(fstat(fd).unwrap().st_size, 7);
+    assert_eq!(fstat(reader).unwrap().st_size, 7);
+    crate::close(reader).unwrap();
+    crate::close(fd).unwrap();
+}
+
+#[test]
+fn descriptor_chmod_keeps_the_pinned_inode_and_rejects_link_and_stale_slots() {
+    let f = Fixture::new();
+    let path = f.guest("chmod-pinned");
+    let fd = open(&path, O_CREAT | O_EXCL | O_RDWR, 0o640).unwrap();
+    crate::write(fd, b"original").unwrap();
+    fchown(
+        fd,
+        false,
+        &Ownership {
+            uid: 123,
+            gid: 456,
+            caller: 0,
+            group_member: true,
+        },
+    )
+    .unwrap();
+    let original = fstat(fd).unwrap();
+    unlink(&path).unwrap();
+    let replacement = open(&path, O_CREAT | O_EXCL | O_RDWR, 0o644).unwrap();
+    let entry = crate::get(fd).unwrap();
+    assert!(matches!(
+        crate::mount::overlay::chmod_handle(fd, false, entry.generation.wrapping_add(1)),
+        Err(EBADF)
+    ));
+    chmod_descriptor(fd, 0o600, false).unwrap();
+    let changed = fstat(fd).unwrap();
+    assert_eq!(
+        (
+            changed.st_ino,
+            changed.st_mode & 0o7777,
+            changed.st_uid,
+            changed.st_gid,
+            changed.st_size
+        ),
+        (original.st_ino, 0o600, 123, 456, 8)
+    );
+    assert_eq!(fstat(replacement).unwrap().st_mode & 0o7777, 0o644);
+    crate::close(replacement).unwrap();
+    crate::close(fd).unwrap();
+
+    let link = f.0.join("chmod-link");
+    crate::create_emulated_symlink(&link, "chmod-pinned").unwrap();
+    let fd = open(&f.guest("chmod-link"), O_PATH | O_NOFOLLOW, 0).unwrap();
+    assert_eq!(chmod_descriptor(fd, 0o600, false), Err(EBADF));
+    assert_eq!(chmod_descriptor(fd, 0o600, true), Err(crate::EOPNOTSUPP));
+    assert_eq!(read_link_fd(fd).unwrap(), "chmod-pinned");
+    assert_eq!(stat(&path).unwrap().st_mode & 0o7777, 0o644);
+    crate::close(fd).unwrap();
+}
