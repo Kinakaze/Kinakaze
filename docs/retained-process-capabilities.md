@@ -31,3 +31,22 @@ Raw build, regression and frozen distribution records are under
 `artifacts/apt-180-20260930/root-liveness-*`. The
 [source and validation manifest](measurements/retained-process-capabilities-2026-10-01.json)
 records hashes for review.
+
+## Complete installation observation
+
+The frozen release from `449d3c3` completed all 357 packages in **261.899 s**.
+Download took 2.137 s separately; the complete installed-file verification
+took 18.615 s. Node, npm and dpkg audit passed. Installed versions exactly
+matched the preceding 220.020-second run, and all 59 distribution hashes
+were rechecked unchanged.
+
+This run did not improve the best observed installation. Its Job used
+344.578 CPU seconds (117.922 user, 226.656 kernel), created 5,275 processes,
+and recorded 41,812,203 page faults. The bounded pre-run check failed to find
+20 continuous quiet seconds within two minutes. During installation, 108
+of 261 host samples contained a compiler; median host CPU was 53.6%.
+The observer consumed 0.844 CPU seconds. These observations cannot isolate
+the performance effect of retained capabilities or exclusive creation.
+The 180-second target remains unmet; the best complete observation remains
+220.020 seconds. Future comparisons also need to track competing runtime
+workers, since compiler absence alone does not establish a quiet host.
