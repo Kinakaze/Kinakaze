@@ -107,6 +107,22 @@ pub(super) fn try_open_at(
 }
 
 fn open(root: &Path, namespace: &str, absolute: &str) -> Result<Option<Object>, i32> {
+    open_regular(
+        root,
+        namespace,
+        absolute,
+        windows_sys::Win32::Foundation::GENERIC_READ,
+    )
+}
+
+/// The returned private handle owns the inode classified by its live attributes
+/// and guest metadata; no later path lookup selects the data object.
+pub(super) fn open_regular(
+    root: &Path,
+    namespace: &str,
+    absolute: &str,
+    access: u32,
+) -> Result<Option<Object>, i32> {
     if !eligible(absolute, 0) {
         return Ok(None);
     }
@@ -125,7 +141,7 @@ fn open(root: &Path, namespace: &str, absolute: &str) -> Result<Option<Object>, 
     }
     // OBJ_DONT_REPARSE rejects junctions in all ancestors atomically. A hosted
     // link is a regular file, so it cannot be traversed as a native directory.
-    let object = match crate::mount::overlay::native_open::read_file(&native) {
+    let object = match crate::mount::overlay::native_open::open_file(&native, access) {
         Ok(object) => object,
         Err(_) => return Ok(None),
     };
