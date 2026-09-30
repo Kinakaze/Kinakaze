@@ -5,6 +5,7 @@ mod desktop;
 mod desktop_client;
 mod image_cache;
 mod kernel;
+mod native_exec;
 mod native_fork;
 mod pool;
 mod tray;
@@ -50,6 +51,10 @@ impl Service {
                 .pool
                 .as_ref()
                 .map(|pool| pool.native_forks.lock_creation());
+            let _exec_creation = self
+                .pool
+                .as_ref()
+                .map(|pool| pool.native_execs.lock_creation());
             let first = !self.stopping.swap(true, Ordering::AcqRel);
             self.changed.notify_all();
             first
@@ -317,9 +322,27 @@ fn serve(mut pipe: PipeConnection, service: Arc<Service>, _slot: ConnectionSlot)
             };
             let mut catalog_transfer = None;
             let mut native_fork_delivery = None;
+            let mut native_exec_delivery = None;
             let result = match (&wire.request, result) {
+                (Request::NativeExec, Ok(_)) => {
+                    let taken = service
+                        .pool
+                        .as_ref()
+                        .map(|p| p.native_execs.take(peer))
+                        .transpose();
+                    let worker = taken.ok().flatten().flatten().map(|(worker, transfer)| {
+                        native_exec_delivery = Some(worker.pid);
+                        catalog_transfer = Some(transfer);
+                        worker
+                    });
+                    Ok(kinakaze_v2_protocol::Reply::NativeExec { worker })
+                }
                 (Request::NativeFork { transaction, spec }, Ok(_)) => {
-                    let taken = service.pool.as_ref().map(|p| p.native_forks.take(peer, *transaction, spec)).transpose();
+                    let taken = service
+                        .pool
+                        .as_ref()
+                        .map(|p| p.native_forks.take(peer, *transaction, spec))
+                        .transpose();
                     match taken {
                         Ok(value) => {
                             let worker = value.flatten().map(|(worker, transfer)| {
@@ -364,6 +387,12 @@ fn serve(mut pipe: PipeConnection, service: Arc<Service>, _slot: ConnectionSlot)
                 && let Some(pool) = &service.pool
             {
                 pool.native_forks.cancel_delivery(peer, transaction);
+            }
+            if sent.is_err()
+                && let Some(candidate) = native_exec_delivery
+                && let Some(pool) = &service.pool
+            {
+                pool.native_execs.cancel_delivery(peer, candidate);
             }
             sent?;
             if let Some(transfer) = catalog_transfer {
@@ -579,6 +608,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     if service.pool.is_some() {
         pool::start(Arc::clone(&service))?;
         native_fork::start(Arc::clone(&service))?;
+        native_exec::start(Arc::clone(&service))?;
     }
     let _session_file = session_file
         .map(|path| {

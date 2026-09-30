@@ -77,6 +77,7 @@ fn run() -> Result<()> {
                 | "guest-prewarm"
                 | "guest-pool"
                 | "--kinakaze-exec"
+                | "--kinakaze-exec-pool"
                 | "--kinakaze-fork"
         )
     ) {

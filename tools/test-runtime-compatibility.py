@@ -18,6 +18,7 @@ PROBES += ('OracleAbiProbe', 'SparseForkStackProbe', 'WriteWatchStackProbe', 'Na
 PROBES += ('FutexVectorProbe', 'FutexRequeueProbe')
 PROBES += ('PthreadEventParkingProbe',)
 PROBES += ('ForkNativeTransferProbe', 'ForkPrewarmPoolProbe', 'ForkNativeFallbackProbe')
+PROBES += ('ExecPrewarmPoolProbe',)
 EXECUTABLES = ('AllocatorInterpositionProbe', 'AllocatorIfuncProbe')
 
 
