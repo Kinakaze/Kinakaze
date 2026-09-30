@@ -211,6 +211,7 @@ struct PendingSocketFork {
     write_pipe: usize,
     acknowledged: usize,
     entries: Vec<(i32, usize)>,
+    _pins: Vec<RightsSocket>,
 }
 
 struct ForkSocketAcknowledgement(usize);
@@ -291,17 +292,40 @@ fn read_pipe_all(handle: usize, mut bytes: &mut [u8]) -> bool {
 /// Prepares an inheritable control pipe for the process-specific Winsock
 /// duplication records produced once the fork coordinator knows the child PID.
 pub(crate) fn prepare_process_fork() -> Result<(), i32> {
-    prepare_socket_transfer(crate::fork_socket_entries()?)
+    prepare_socket_transfer(crate::fork_socket_entries()?, Vec::new())
 }
 
 /// Prepares socket duplication for an `execve` replacement. Descriptors marked
 /// close-on-exec are intentionally absent from both the reconstructed table and
 /// the Winsock transfer.
 pub(crate) fn prepare_process_exec() -> Result<(), i32> {
-    prepare_socket_transfer(crate::exec_socket_entries()?)
+    prepare_socket_transfer(crate::exec_socket_entries()?, Vec::new())
 }
 
-fn prepare_socket_transfer(entries: Vec<(i32, usize)>) -> Result<(), i32> {
+/// Hold provider references while a portable exec waits for its destination.
+/// Duplicate under the descriptor lock; DuplicateHandle is not a Winsock
+/// ownership contract and must never be used for these entries.
+pub(crate) fn prepare_process_exec_pinned() -> Result<(), i32> {
+    let table = crate::table().read().map_err(|_| EIO)?;
+    let mut entries = Vec::new();
+    let mut pins = Vec::new();
+    for (fd, slot) in table.slots.enumerated() {
+        let Some(entry) = slot else { continue };
+        if entry.kind != crate::FdKind::Socket
+            || entry.flags.contains(crate::FdFlags::CLOSE_ON_EXEC)
+        {
+            continue;
+        }
+        let pin = import_rights(&export_rights(entry.raw, std::process::id())?)?;
+        crate::platform::try_set_inheritable(pin.0, false)?;
+        entries.push((fd as i32, pin.0));
+        pins.push(pin);
+    }
+    drop(table);
+    prepare_socket_transfer(entries, pins)
+}
+
+fn prepare_socket_transfer(entries: Vec<(i32, usize)>, pins: Vec<RightsSocket>) -> Result<(), i32> {
     let mut pending = pending_socket_fork().lock().map_err(|_| EIO)?;
     if let Some(stale) = pending.take() {
         close_pipe(stale.read_pipe);
@@ -335,6 +359,7 @@ fn prepare_socket_transfer(entries: Vec<(i32, usize)>) -> Result<(), i32> {
         write_pipe: write_pipe as usize,
         acknowledged: acknowledged as usize,
         entries,
+        _pins: pins,
     });
     Ok(())
 }
