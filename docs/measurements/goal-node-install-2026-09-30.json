@@ -1,0 +1,232 @@
+{
+  "schema": 1,
+  "target_install_milliseconds": 180000,
+  "target_met": false,
+  "scope": "Complete 357-package Node.js/npm install, maintainer scripts and durability retained.",
+  "limitation": "Different integrated builds with competing host work; these are not paired causal comparisons.",
+  "artifact_directory": "artifacts/goal-install-180-20260930",
+  "measurements": [
+    {
+      "name": "r3",
+      "passed": true,
+      "installed_packages": 357,
+      "phases": [
+        {
+          "phase": "update",
+          "status": "passed",
+          "milliseconds": 852.8115
+        },
+        {
+          "phase": "download",
+          "status": "passed",
+          "milliseconds": 2525.1896
+        },
+        {
+          "phase": "plan",
+          "status": "passed",
+          "milliseconds": 418.0848
+        },
+        {
+          "phase": "install",
+          "status": "passed",
+          "milliseconds": 323576.0113
+        },
+        {
+          "phase": "node-smoke",
+          "status": "passed",
+          "milliseconds": 687.622
+        },
+        {
+          "phase": "npm-smoke",
+          "status": "passed",
+          "milliseconds": 1501.0463
+        },
+        {
+          "phase": "audit",
+          "status": "passed",
+          "milliseconds": 183.2436
+        },
+        {
+          "phase": "verify",
+          "status": "passed",
+          "milliseconds": 16812.6852
+        }
+      ],
+      "installation_job": {
+        "user_ms": 110437.5,
+        "kernel_ms": 198328.125,
+        "total_cpu_ms": 308765.625,
+        "processes": 5371,
+        "active_processes": 0,
+        "page_faults": 44628585,
+        "read_bytes": 892261408,
+        "write_bytes": 407429937,
+        "read_ops": 566492,
+        "write_ops": 360285,
+        "other_ops": 12535887,
+        "other_bytes": 414594368
+      },
+      "quiet_start": false,
+      "runtime_flags": {},
+      "installation_load_samples": 161,
+      "samples_with_foreign_cpu_activity": 91,
+      "observer_cpu_seconds": 0.3125,
+      "evidence_sha256": {
+        "install-r3/report.json": "d2d8f194ee9d4c9a43df415ed57851894d78a34bb4c1b972aaac4d6432fe86dc",
+        "r3-source.json": "d832ab85f1d4c146b6bbb5b2c797856498026d890d4b052ad0ad8afe204dff8e",
+        "r3-fixed-dist.json": "fb62ce1a52404b1a9cbf9c65ab40a0737d61f7addb1a522bb23132e959fb2bb1",
+        "r3-environment.json": "d7b73b7c5c125442e8aab4ae2278408f4895f1d6e6c898d8c2ab78cbc3824d62"
+      }
+    },
+    {
+      "name": "r4",
+      "passed": true,
+      "installed_packages": 357,
+      "phases": [
+        {
+          "phase": "update",
+          "status": "passed",
+          "milliseconds": 769.9069
+        },
+        {
+          "phase": "download",
+          "status": "passed",
+          "milliseconds": 1869.7007
+        },
+        {
+          "phase": "plan",
+          "status": "passed",
+          "milliseconds": 405.5294
+        },
+        {
+          "phase": "install",
+          "status": "passed",
+          "milliseconds": 292529.7568
+        },
+        {
+          "phase": "node-smoke",
+          "status": "passed",
+          "milliseconds": 823.1135
+        },
+        {
+          "phase": "npm-smoke",
+          "status": "passed",
+          "milliseconds": 2195.4483
+        },
+        {
+          "phase": "audit",
+          "status": "passed",
+          "milliseconds": 229.6707
+        },
+        {
+          "phase": "verify",
+          "status": "passed",
+          "milliseconds": 19640.0532
+        }
+      ],
+      "installation_job": {
+        "user_ms": 119390.625,
+        "kernel_ms": 226078.125,
+        "total_cpu_ms": 345468.75,
+        "processes": 5391,
+        "active_processes": 0,
+        "page_faults": 43159005,
+        "read_bytes": 897470395,
+        "write_bytes": 412686627,
+        "read_ops": 573308,
+        "write_ops": 367083,
+        "other_ops": 12563074,
+        "other_bytes": 406726072
+      },
+      "quiet_start": false,
+      "runtime_flags": {
+        "KINAKAZE_FORK_TRANSFER": "1",
+        "KINAKAZE_FORK_POOL": "1"
+      },
+      "installation_load_samples": 146,
+      "samples_with_foreign_cpu_activity": 145,
+      "observer_cpu_seconds": 0.34375,
+      "evidence_sha256": {
+        "install-r4/report.json": "923af269829f2bb0a762a00025451e0a1d17138b2e754079feda7841abdebf2d",
+        "r4-source.json": "43d48b5947ab2f47755919a788c062fbfe5559e2c096654940f537eef454ff15",
+        "r4-dist.json": "7d70826e84e02545eaa1bb42774d6895acaee04ca08cc3e9c35bc87f6a549ec0",
+        "r4-environment.json": "8d368ec72f27362012371d65c9760dd15386cd63cc82bf9755cbff1c97d2c31d"
+      }
+    },
+    {
+      "name": "r6",
+      "passed": true,
+      "installed_packages": 357,
+      "phases": [
+        {
+          "phase": "update",
+          "status": "passed",
+          "milliseconds": 798.2612
+        },
+        {
+          "phase": "download",
+          "status": "passed",
+          "milliseconds": 1966.9762
+        },
+        {
+          "phase": "plan",
+          "status": "passed",
+          "milliseconds": 407.9203
+        },
+        {
+          "phase": "install",
+          "status": "passed",
+          "milliseconds": 313328.1062
+        },
+        {
+          "phase": "node-smoke",
+          "status": "passed",
+          "milliseconds": 598.6869
+        },
+        {
+          "phase": "npm-smoke",
+          "status": "passed",
+          "milliseconds": 1209.8547
+        },
+        {
+          "phase": "audit",
+          "status": "passed",
+          "milliseconds": 138.5887
+        },
+        {
+          "phase": "verify",
+          "status": "passed",
+          "milliseconds": 15315.8723
+        }
+      ],
+      "installation_job": {
+        "user_ms": 130031.25,
+        "kernel_ms": 249312.5,
+        "total_cpu_ms": 379343.75,
+        "processes": 5392,
+        "active_processes": 0,
+        "page_faults": 43155353,
+        "read_bytes": 898475018,
+        "write_bytes": 412638537,
+        "read_ops": 573328,
+        "write_ops": 367085,
+        "other_ops": 12565595,
+        "other_bytes": 406765802
+      },
+      "quiet_start": false,
+      "runtime_flags": {
+        "KINAKAZE_FORK_TRANSFER": "1",
+        "KINAKAZE_FORK_POOL": "1"
+      },
+      "installation_load_samples": 156,
+      "samples_with_foreign_cpu_activity": 156,
+      "observer_cpu_seconds": 0.546875,
+      "evidence_sha256": {
+        "install-r6/report.json": "bb860e516d4a41770e14efef2876711bbb635235ed7486623c50becba2cb703e",
+        "r6-source.json": "fc30745b88e912e155597c2f5d8411f37020347202d04f7f2d438713bf93228c",
+        "r6-dist.json": "85e3bcbb1638bed882d5c833807a34932792150bb8590869ade649c53d9eef84",
+        "r6-environment.json": "ac12d26d7f3900b9c900bc9ffa7e5c0aed7199c2c2b6b667228f9502f062ee3c"
+      }
+    }
+  ]
+}
