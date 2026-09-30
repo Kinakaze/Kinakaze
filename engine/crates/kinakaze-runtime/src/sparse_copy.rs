@@ -36,33 +36,50 @@ unsafe fn zero(bytes: *const u8, length: usize) -> bool {
 
 /// `source` must remain readable and unchanged for `length` bytes throughout
 /// this call. `copy` writes the indicated relative range into fresh zero pages.
-/// Uses fixed-size runs to bound syscall amplification on sparse random data.
+/// Trim zero pages at run boundaries, coalescing short gaps so sparse random
+/// data cannot turn each populated page into a remote-memory syscall.
 pub(super) unsafe fn copy<E>(
     source: usize,
     length: usize,
     mut copy: impl FnMut(usize, usize) -> Result<(), E>,
 ) -> Result<(usize, usize), E> {
     const BLOCK: usize = 64 * 1024;
+    const PAGE: usize = 4096;
     let mut start = None;
+    let mut end = 0;
     let mut offset = 0;
     let mut copied = 0;
     let mut calls = 0;
     while offset < length {
         let len = BLOCK.min(length - offset);
-        if unsafe { zero((source + offset) as *const u8, len) } {
-            if let Some(begin) = start.take() {
-                copy(begin, offset - begin)?;
-                copied += offset - begin;
+        if !unsafe { zero((source + offset) as *const u8, len) } {
+            let mut first = 0;
+            while first + PAGE <= len && unsafe { zero((source + offset + first) as _, PAGE) } {
+                first += PAGE;
+            }
+            let mut last = len;
+            while last > first {
+                let page = (last - 1) / PAGE * PAGE;
+                if !unsafe { zero((source + offset + page) as _, last - page) } {
+                    break;
+                }
+                last = page;
+            }
+            let begin = offset + first;
+            if start.is_some() && begin - end >= 2 * BLOCK {
+                let previous = start.take().unwrap();
+                copy(previous, end - previous)?;
+                copied += end - previous;
                 calls += 1;
             }
-        } else if start.is_none() {
-            start = Some(offset);
+            start.get_or_insert(begin);
+            end = offset + last;
         }
         offset += len;
     }
     if let Some(begin) = start {
-        copy(begin, length - begin)?;
-        copied += length - begin;
+        copy(begin, end - begin)?;
+        copied += end - begin;
         calls += 1;
     }
     Ok((copied, calls))
@@ -133,5 +150,40 @@ mod tests {
             Err(7)
         );
         assert_eq!(calls, 1);
+    }
+
+    #[test]
+    fn sparse_edges_trim_pages_without_amplifying_scattered_writes() {
+        let mut source = vec![0u8; 4 * 1024 * 1024];
+        let mut target = vec![0u8; source.len()];
+        source[4096 + 7] = 0x31;
+        let last = source.len() - 4096 - 1;
+        source[last] = 0xe2;
+        let stats = unsafe {
+            copy(source.as_ptr() as usize, source.len(), |offset, len| {
+                target[offset..offset + len].copy_from_slice(&source[offset..offset + len]);
+                Ok::<_, ()>(())
+            })
+        }
+        .unwrap();
+        assert_eq!(source, target);
+        assert_eq!(stats, (8192, 2));
+
+        // One byte in every 64 KiB block still requires just one remote copy.
+        source.fill(0);
+        target.fill(0);
+        for index in (17..source.len()).step_by(64 * 1024) {
+            source[index] = 1;
+        }
+        let stats = unsafe {
+            copy(source.as_ptr() as usize, source.len(), |offset, len| {
+                target[offset..offset + len].copy_from_slice(&source[offset..offset + len]);
+                Ok::<_, ()>(())
+            })
+        }
+        .unwrap();
+        assert_eq!(source, target);
+        assert_eq!(stats.1, 1);
+        assert_eq!(stats.0, source.len() - 60 * 1024);
     }
 }
