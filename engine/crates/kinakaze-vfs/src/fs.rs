@@ -1229,7 +1229,15 @@ pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32>
         }
     };
 
-    let is_dir_target = !is_tmpfile && resolved.is_dir();
+    // An exclusive regular-file create decides existence atomically below.
+    // A pathname directory probe adds an open for every new payload and can
+    // turn an existing directory's required EEXIST into EISDIR before create.
+    let exclusive_native_file = disposition == CREATE_NEW
+        && !is_tmpfile
+        && flags & O_DIRECTORY == 0
+        && !is_path
+        && overlay_path.is_none();
+    let is_dir_target = !is_tmpfile && !exclusive_native_file && resolved.is_dir();
     if is_dir_target && flags & O_PATH == 0 && flags & O_ACCMODE != O_RDONLY {
         return Err(EISDIR);
     }
@@ -1246,11 +1254,7 @@ pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32>
         attributes |= windows_sys::Win32::Storage::FileSystem::FILE_FLAG_DELETE_ON_CLOSE;
     }
 
-    let atomic_creation = disposition == CREATE_NEW
-        && !is_tmpfile
-        && !directory
-        && !is_path
-        && overlay_path.is_none();
+    let atomic_creation = exclusive_native_file;
     // An exclusive native create can install mode/ownership as its initial EA.
     // This avoids opening and locking the just-created inode repeatedly, and
     // other openers cannot observe a file with partially initialized metadata.

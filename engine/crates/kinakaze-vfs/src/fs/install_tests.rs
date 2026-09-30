@@ -33,9 +33,19 @@ fn exclusive_install_create_rejects_existing_special_inodes() {
     assert_eq!(stat(&file).unwrap().st_mode & 0o7777, 0o640);
     create_fifo(&f.guest("fifo"), 0o600).unwrap();
     crate::create_emulated_symlink(&f.0.join("link"), "missing").unwrap();
-    for name in ["payload", "fifo", "link"] {
-        assert_eq!(open(&f.guest(name), flags, 0o600), Err(crate::EEXIST));
+    std::fs::create_dir(f.0.join("directory")).unwrap();
+    for access in [O_RDONLY, O_WRONLY, O_RDWR] {
+        for name in ["payload", "fifo", "link", "directory"] {
+            assert_eq!(
+                open(&f.guest(name), O_CREAT | O_EXCL | access, 0o600),
+                Err(crate::EEXIST),
+                "exclusive create: {name}, access={access}"
+            );
+        }
     }
+    let directory = open(&f.guest("directory"), O_DIRECTORY | O_RDONLY, 0).unwrap();
+    assert_eq!(crate::get(directory).unwrap().kind, FdKind::Directory);
+    crate::close(directory).unwrap();
     assert_eq!(std::fs::read(f.0.join("payload")).unwrap(), b"payload");
     assert!(!f.0.join("missing").exists());
 }
