@@ -57,6 +57,10 @@ class ExportTests(unittest.TestCase):
             self.assertEqual(exports['libc'][name], exports['librt'][name])
         for name in generate.LIBC_LIBM_FORWARDERS:
             self.assertEqual(exports['libc'][name], exports['libm'][name])
+        for alias, original in generate.PTHREAD_ROBUST_ALIASES.items():
+            for provider in ('libc', 'libpthread'):
+                self.assertEqual(exports[provider][alias]['runtime_export'],
+                                 exports['libpthread'][original]['runtime_export'])
         for alias, original in {'llrint': 'lrint', 'llrintf': 'lrintf', 'drem': 'remainder', 'gamma': 'lgamma', '__atan2_finite': 'atan2', '__exp_finite': 'exp', '__fpclassifyf': 'fpclassifyf'}.items():
             self.assertEqual(exports['libm'][alias]['runtime_export'], exports['libm'][original]['runtime_export'])
             self.assertEqual(exports['libm'][alias]['name'], alias)
@@ -66,6 +70,19 @@ class ExportTests(unittest.TestCase):
             self.assertEqual(exports['libc'][alias]['name'], alias)
         with self.assertRaisesRegex(ValueError, 'no libc implementation'):
             generate.add_compatibility_exports({'libc': {}, 'libpthread': {}})
+
+    def test_robust_versions_survive_an_empty_import_inventory(self):
+        for soname in ('libc.so.6', 'libpthread.so.0'):
+            for name in generate.PTHREAD_ROBUST_ALIASES:
+                self.assertEqual(generate.symbol_versions(soname, name, {}), ['GLIBC_2.4'])
+        self.assertEqual(generate.symbol_versions('libpthread.so.0', 'pthread_mutexattr_getrobust', {}),
+                         ['GLIBC_2.12'])
+        self.assertEqual(generate.symbol_versions('libc.so.6', 'pthread_mutexattr_getrobust', {}),
+                         ['GLIBC_2.34'])
+        self.assertEqual(generate.symbol_versions('libc.so.6', 'pthread_mutex_consistent_np', {
+            ('libc.so.6', 'pthread_mutex_consistent_np'): {'GLIBC_2.4', 'GLIBC_2.34'}}),
+            ['GLIBC_2.4', 'GLIBC_2.34'])
+        self.assertEqual(generate.symbol_versions('libc.so.6', 'unrelated', {}), [])
 
     def test_extension_preserves_prior_versions_and_deduplicates_evidence(self):
         old = {"path": "old.so", "sha256": "old-hash"}

@@ -2989,6 +2989,8 @@ EXPORTS
   "pthread_mutex_clocklock@GLIBC_2.34"=libpthread.so.0.pthread_mutex_clocklock PRIVATE
   "pthread_mutex_consistent"=libpthread.so.0.pthread_mutex_consistent PRIVATE
   "pthread_mutex_consistent@GLIBC_2.34"=libpthread.so.0.pthread_mutex_consistent PRIVATE
+  "pthread_mutex_consistent_np"=libpthread.so.0.pthread_mutex_consistent PRIVATE
+  "pthread_mutex_consistent_np@GLIBC_2.4"=libpthread.so.0.pthread_mutex_consistent PRIVATE
   kinakaze_abi_pthread_mutex_destroy
   "pthread_mutex_destroy"=kinakaze_abi_pthread_mutex_destroy PRIVATE
   "pthread_mutex_destroy@GLIBC_2.2.5"=kinakaze_abi_pthread_mutex_destroy PRIVATE
@@ -3011,6 +3013,9 @@ EXPORTS
   "pthread_mutexattr_destroy@GLIBC_2.34"=kinakaze_abi_pthread_mutexattr_destroy PRIVATE
   "pthread_mutexattr_getprotocol"=libpthread.so.0.pthread_mutexattr_getprotocol PRIVATE
   "pthread_mutexattr_getrobust"=libpthread.so.0.pthread_mutexattr_getrobust PRIVATE
+  "pthread_mutexattr_getrobust@GLIBC_2.34"=libpthread.so.0.pthread_mutexattr_getrobust PRIVATE
+  "pthread_mutexattr_getrobust_np"=libpthread.so.0.pthread_mutexattr_getrobust PRIVATE
+  "pthread_mutexattr_getrobust_np@GLIBC_2.4"=libpthread.so.0.pthread_mutexattr_getrobust PRIVATE
   kinakaze_abi_pthread_mutexattr_gettype
   "pthread_mutexattr_gettype"=kinakaze_abi_pthread_mutexattr_gettype PRIVATE
   "pthread_mutexattr_gettype@GLIBC_2.34"=kinakaze_abi_pthread_mutexattr_gettype PRIVATE
@@ -3024,6 +3029,8 @@ EXPORTS
   "pthread_mutexattr_setpshared@GLIBC_2.34"=kinakaze_abi_pthread_mutexattr_setpshared PRIVATE
   "pthread_mutexattr_setrobust"=libpthread.so.0.pthread_mutexattr_setrobust PRIVATE
   "pthread_mutexattr_setrobust@GLIBC_2.34"=libpthread.so.0.pthread_mutexattr_setrobust PRIVATE
+  "pthread_mutexattr_setrobust_np"=libpthread.so.0.pthread_mutexattr_setrobust PRIVATE
+  "pthread_mutexattr_setrobust_np@GLIBC_2.4"=libpthread.so.0.pthread_mutexattr_setrobust PRIVATE
   kinakaze_abi_pthread_mutexattr_settype
   "pthread_mutexattr_settype"=kinakaze_abi_pthread_mutexattr_settype PRIVATE
   "pthread_mutexattr_settype@GLIBC_2.34"=kinakaze_abi_pthread_mutexattr_settype PRIVATE
@@ -4515,10 +4522,3 @@ EXPORTS
   kinakaze_abi_xprt_unregister
   "xprt_unregister"=kinakaze_abi_xprt_unregister PRIVATE
   "xprt_unregister@GLIBC_2.2.5"=kinakaze_abi_xprt_unregister PRIVATE
-  "pthread_mutex_consistent_np"=libpthread.so.0.pthread_mutex_consistent PRIVATE
-  "pthread_mutex_consistent_np@GLIBC_2.4"=libpthread.so.0.pthread_mutex_consistent PRIVATE
-  "pthread_mutexattr_getrobust_np"=libpthread.so.0.pthread_mutexattr_getrobust PRIVATE
-  "pthread_mutexattr_getrobust_np@GLIBC_2.4"=libpthread.so.0.pthread_mutexattr_getrobust PRIVATE
-  "pthread_mutexattr_setrobust_np"=libpthread.so.0.pthread_mutexattr_setrobust PRIVATE
-  "pthread_mutexattr_setrobust_np@GLIBC_2.4"=libpthread.so.0.pthread_mutexattr_setrobust PRIVATE
-  "pthread_mutexattr_getrobust@GLIBC_2.34"=libpthread.so.0.pthread_mutexattr_getrobust PRIVATE
