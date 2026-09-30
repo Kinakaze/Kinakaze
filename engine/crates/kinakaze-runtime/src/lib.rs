@@ -30,6 +30,8 @@ pub mod memory_protection;
 mod process_creation;
 #[cfg(all(windows, target_arch = "x86_64"))]
 mod sparse_copy;
+#[cfg(all(windows, target_arch = "x86_64"))]
+mod write_watch;
 #[cfg(windows)]
 pub use process_creation::child_creation_flags;
 pub mod services;
@@ -1087,12 +1089,15 @@ pub fn register_fork_mapping(mapping: ForkMapping) -> bool {
     if !mapping.valid_storage_contract() {
         return false;
     }
+    let Some(_transaction) = begin_fork_mapping_transaction() else {
+        return false;
+    };
     let behavior_u32 = match mapping.behavior {
         ForkMappingBehavior::Copy => 1,
         ForkMappingBehavior::Zero => 2,
         ForkMappingBehavior::Omit => 3,
     };
-    kinakaze_alloc::register_shared_mapping(kinakaze_alloc::SharedForkMapping {
+    let registered = kinakaze_alloc::register_shared_mapping(kinakaze_alloc::SharedForkMapping {
         base: mapping.base,
         len: mapping.len,
         behavior: behavior_u32,
@@ -1101,7 +1106,37 @@ pub fn register_fork_mapping(mapping: ForkMapping) -> bool {
         backing_offset: mapping.backing_offset,
         view_protection: mapping.view_protection,
         domain: mapping.domain as u32,
-    })
+    });
+    #[cfg(all(windows, target_arch = "x86_64"))]
+    if registered {
+        write_watch::invalidate(mapping.base, mapping.len);
+    }
+    registered
+}
+
+/// Registers a fresh zero-filled allocation with cumulative Windows write-watch
+/// history. The provenance is a private copy hint, never part of the VMA ABI.
+///
+/// # Safety
+/// The caller must hold a mapping transaction across VirtualAlloc and this
+/// registration. The whole mapping must be a fresh MEM_WRITE_WATCH private
+/// allocation, with page-aligned base/length. Nobody may reset its write-watch
+/// history. Release/replacement must go through the ordinary mapping helpers.
+#[cfg(all(windows, target_arch = "x86_64"))]
+pub unsafe fn register_zero_write_watch_mapping(mapping: ForkMapping) -> bool {
+    let Some(_transaction) = begin_fork_mapping_transaction() else {
+        return false;
+    };
+    if mapping.storage != ForkMappingStorage::Ordinary
+        || mapping.behavior != ForkMappingBehavior::Copy
+        || mapping.base % 4096 != 0
+        || mapping.len % 4096 != 0
+        || !register_fork_mapping(mapping)
+    {
+        return false;
+    }
+    write_watch::register(mapping);
+    true
 }
 
 /// Guard that makes a host VM mutation atomic with respect to `fork`.
@@ -1138,6 +1173,11 @@ pub fn begin_fork_mapping_transaction() -> Option<ForkMappingTransaction> {
 
 /// Removes a mapping immediately before its reservation is released.
 pub fn unregister_fork_mapping(base: usize) {
+    let Some(_transaction) = begin_fork_mapping_transaction() else {
+        return;
+    };
+    #[cfg(all(windows, target_arch = "x86_64"))]
+    write_watch::remove(base);
     kinakaze_alloc::unregister_shared_mapping(base);
 }
 
@@ -1487,6 +1527,26 @@ fn restore_handoff_state() -> Result<(), ForkError> {
 /// state, so allocator-backed temporary state is unsafe until those callbacks
 /// have run.
 fn restore_handoff_frame(frame: &[u8]) -> Result<(), ForkError> {
+    if fork_timings_enabled() {
+        // Kernel DLL statics belong to this fresh process, independently of
+        // the arena being adopted by the participant callbacks. This mutex
+        // needs no allocator and serializes the optional diagnostic storage.
+        static TIMINGS: Mutex<[(u64, u128); 128]> = Mutex::new([(0, 0); 128]);
+        let mut timings = TIMINGS.lock().unwrap_or_else(|error| error.into_inner());
+        restore_handoff_frame_inner(frame, &mut *timings)
+    } else {
+        restore_handoff_frame_inner(frame, &mut [])
+    }
+}
+
+// Restoration can resume on a pthread's captured native stack. Keep optional
+// profiling storage off the native stack; an eagerly allocated 4-KiB
+// array can cross its current committed stack boundary before TLS/allocator
+// participants have finished restoring. No allocation is allowed here.
+#[inline(never)]
+fn restore_handoff_frame_inner(frame: &[u8], timings: &mut [(u64, u128)]) -> Result<(), ForkError> {
+    let profiling = !timings.is_empty();
+    let mut timed = 0;
     if frame.len() < 16 || u64::from_le_bytes(frame[0..8].try_into().unwrap()) != HANDOFF_MAGIC {
         return Err(ForkError {
             stage: ForkStage::HandoffRestore,
@@ -1504,6 +1564,7 @@ fn restore_handoff_frame(frame: &[u8]) -> Result<(), ForkError> {
     CHILD_ACTIVITY_EVENT.store(0, Ordering::Release);
     let count = u32::from_le_bytes(frame[8..12].try_into().unwrap()) as usize;
     let mut cursor = 16usize;
+    let mut copied_mappings = false;
     for _ in 0..count {
         const RECORD_HEADER: usize = 56;
         let header_end = cursor.checked_add(RECORD_HEADER).ok_or(ForkError {
@@ -1533,6 +1594,7 @@ fn restore_handoff_frame(frame: &[u8]) -> Result<(), ForkError> {
             stage: ForkStage::HandoffRestore,
             os_code: 0,
         })?;
+        let started = profiling.then(std::time::Instant::now);
         if key == VFORK_HANDOFF_KEY {
             #[cfg(windows)]
             if !windows::restore_vfork_state(payload) {
@@ -1552,6 +1614,7 @@ fn restore_handoff_frame(frame: &[u8]) -> Result<(), ForkError> {
             }
         } else if key == MAPPING_HANDOFF_KEY {
             restore_mapping_registry(payload)?;
+            copied_mappings = true;
         } else {
             let hooks = ForkParticipant {
                 abi: FORK_PARTICIPANT_ABI,
@@ -1586,7 +1649,32 @@ fn restore_handoff_frame(frame: &[u8]) -> Result<(), ForkError> {
                 }
             }
         }
+        if let Some(started) = started
+            && timed < timings.len()
+        {
+            timings[timed] = (key, started.elapsed().as_micros());
+            timed += 1;
+        }
         cursor = end.next_multiple_of(8);
+    }
+    #[cfg(all(windows, target_arch = "x86_64"))]
+    if copied_mappings {
+        // Only after every participant has adopted allocator/TLS state. The
+        // parent's native writes are part of this child's cumulative history;
+        // section fallbacks fail the private write-watch validation harmlessly.
+        // This arena-backed table is the authoritative VM partition. The
+        // process-local registry above carries module/handle-slot bookkeeping.
+        let copied = kinakaze_alloc::collect_shared_mappings();
+        unsafe { write_watch::adopt_fork_destinations(&copied) };
+    }
+    #[cfg(windows)]
+    if profiling {
+        // Record only after every participant has adopted its private state.
+        // Formatting/logging must not run inside allocator restoration.
+        fork_timing_line(format_args!(
+            "kinakaze: fork restore participants_us={:x?}",
+            &timings[..timed]
+        ));
     }
     Ok(())
 }
@@ -6544,6 +6632,7 @@ mod windows {
         copy_calls: usize,
         committed_regions: usize,
         cow_shared_bytes: usize,
+        write_watch_skipped_bytes: usize,
     }
 
     #[derive(Clone, Copy, Default)]
@@ -6949,6 +7038,7 @@ mod windows {
         // property of the current Linux address space, not a fixed runtime
         // constant; long-lived Go and JVM processes routinely exceed 64.
         let mut section_backings = plan_fork_section_backings(&guest_mappings)?;
+        let mut write_watch = super::write_watch::prepare(&guest_mappings);
         // Validate all retained owners before dereferencing any slot in the
         // allocation-free clone phase. A section cannot be reconstructed from
         // an unregistered parent HANDLE value even if that value is still live.
@@ -7010,6 +7100,7 @@ mod windows {
                 &guest_mappings,
                 &reservation_groups,
                 &mut section_backings,
+                &mut write_watch,
                 &retained_handles,
                 guest_arena_guard.is_some(),
             )
@@ -7087,7 +7178,7 @@ mod windows {
                     unsafe { CloseHandle(child.thread) };
                     if fork_trace_enabled() || profile_fork {
                         super::fork_timing_line(format_args!(
-                            "kinakaze: fork timings prepare={}us freeze={}us create={}us ready={}us suspend={}us image={}us arena={}us mappings={}us stack={}us resume={}us thaw={}us total={}us arena_used={} arena_mapped={} guest_mappings={} guest_reserved={} copied_bytes={} section_bytes={} copy_calls={} committed_regions={} guest_mm_copied_bytes={} host_private_copied_bytes={} cow_shared_bytes={}",
+                            "kinakaze: fork timings prepare={}us freeze={}us create={}us ready={}us suspend={}us image={}us arena={}us mappings={}us stack={}us resume={}us thaw={}us total={}us arena_used={} arena_mapped={} guest_mappings={} guest_reserved={} copied_bytes={} section_bytes={} copy_calls={} committed_regions={} guest_mm_copied_bytes={} host_private_copied_bytes={} cow_shared_bytes={} write_watch_skipped_bytes={}",
                             prepare_us,
                             freeze_us,
                             child.timings.create_process_us,
@@ -7111,6 +7202,7 @@ mod windows {
                             child.timings.mapping_stats.guest_mm_copied_bytes,
                             child.timings.mapping_stats.host_private_copied_bytes,
                             child.timings.mapping_stats.cow_shared_bytes,
+                            child.timings.mapping_stats.write_watch_skipped_bytes,
                         ));
                     }
                     if let Some((stats, elapsed_us)) = free_statistics {
@@ -7278,6 +7370,7 @@ mod windows {
         guest_mappings: &[ForkMapping],
         reservation_groups: &[ForkReservation],
         section_backings: &mut [ForkSectionBacking],
+        write_watch: &mut [super::write_watch::Plan],
         retained_handles: &[super::handle_slots::ChildSlot],
         repair_guest_heap: bool,
     ) -> Result<ForkCopyTimings, ForkError> {
@@ -7299,6 +7392,7 @@ mod windows {
                 guest_mappings,
                 reservation_groups,
                 section_backings,
+                write_watch,
             )?
         };
         if repair_guest_heap {
@@ -7736,17 +7830,33 @@ mod windows {
             if !group.ordinary_only {
                 continue;
             }
-            let reserved = unsafe {
+            let watch_flags = super::write_watch::allocation_flags();
+            let mut reserved = unsafe {
                 VirtualAlloc2(
                     process,
                     group.base as *const c_void,
                     group.len,
-                    MEM_RESERVE | MEM_REPLACE_PLACEHOLDER,
+                    MEM_RESERVE | MEM_REPLACE_PLACEHOLDER | watch_flags,
                     PAGE_NOACCESS,
                     ptr::null_mut(),
                     0,
                 )
             };
+            if reserved.is_null() && watch_flags != 0 {
+                // Failed optional allocation leaves the exact placeholder
+                // unchanged; preserve the established private-copy fallback.
+                reserved = unsafe {
+                    VirtualAlloc2(
+                        process,
+                        group.base as _,
+                        group.len,
+                        MEM_RESERVE | MEM_REPLACE_PLACEHOLDER,
+                        PAGE_NOACCESS,
+                        ptr::null_mut(),
+                        0,
+                    )
+                };
+            }
             if reserved as usize != group.base {
                 let os_code = unsafe { GetLastError() };
                 if fork_mapping_trace_enabled() {
@@ -7778,6 +7888,25 @@ mod windows {
         address: usize,
         length: usize,
     ) -> Result<(), ForkError> {
+        let watch_flags = super::write_watch::allocation_flags();
+        if watch_flags != 0 && address % 65536 == 0 && length % 65536 == 0 {
+            let watched = unsafe {
+                VirtualAlloc2(
+                    process,
+                    address as _,
+                    length,
+                    MEM_RESERVE | MEM_REPLACE_PLACEHOLDER | watch_flags,
+                    PAGE_NOACCESS,
+                    ptr::null_mut(),
+                    0,
+                )
+            };
+            if watched as usize == address {
+                return Ok(());
+            }
+            // An unsupported private reservation leaves the placeholder intact.
+            // Page-granular fragments retain their SEC_RESERVE view below.
+        }
         let section = unsafe {
             CreateFileMappingW(
                 INVALID_HANDLE_VALUE,
@@ -8095,6 +8224,7 @@ mod windows {
         registered: &[ForkMapping],
         reservation_groups: &[ForkReservation],
         sections: &mut [ForkSectionBacking],
+        write_watch: &mut [super::write_watch::Plan],
     ) -> Result<ForkMappingCopyStats, ForkError> {
         let mut stats = ForkMappingCopyStats::default();
         // A section backing may have been split into several independently
@@ -8155,6 +8285,16 @@ mod windows {
         let installation_order = MappingInstallationOrder::new(registered)?;
         for mapping_index in installation_order {
             let mapping = &registered[mapping_index];
+            let watched = write_watch
+                .iter_mut()
+                .find(|plan| plan.base == mapping.base)
+                .and_then(|plan| {
+                    if unsafe { plan.capture() } {
+                        Some(plan)
+                    } else {
+                        None
+                    }
+                });
             debug_assert_ne!(mapping.behavior, ForkMappingBehavior::Omit);
             if fork_trace_enabled() {
                 eprintln!(
@@ -8396,6 +8536,21 @@ mod windows {
                         let (copied, calls) = if fresh_snapshot {
                             stats.cow_shared_bytes += region_len;
                             (0, 0)
+                        } else if let Some(plan) = watched.as_ref() {
+                            let result =
+                                plan.copy(cursor, region_len, |address, count| unsafe {
+                                    copy_protected_mapping(
+                                        process,
+                                        address,
+                                        count,
+                                        local.Protect,
+                                        std::ptr::null_mut(),
+                                        false,
+                                    )
+                                    .map(|_| ())
+                                })?;
+                            stats.write_watch_skipped_bytes += region_len - result.0;
+                            result
                         } else if mapping.storage.is_cow() {
                             let copy = |offset, length| unsafe {
                                 copy_protected_mapping(

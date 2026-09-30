@@ -14,7 +14,7 @@ PROBES = ('ConcurrentVforkProbe', 'RawAllocationProbe', 'SignalJumpProbe', 'XVis
           'PythonRuntimeProbe', 'LineReadProbe', 'UnixPerformanceProbe',
           'UnixRightsProbe', 'UnixCredentialsProbe', 'AllocationGrowthProbe',
           'UnixPeekProbe', 'AlsaSequencerProbe', 'StartupInterfacesProbe', 'Power80Probe', 'PipeWireLoopProbe', 'AllocationRecycleProbe', 'UnixReadinessProbe', 'PipeWireClientProbe', 'AllocationBatchProbe', 'AllocationColdProbe', 'AllocationThreadRecycleProbe')
-PROBES += ('OracleAbiProbe', 'SparseForkStackProbe', 'NativeLookupProbe', 'UtmpLocksProbe')
+PROBES += ('OracleAbiProbe', 'SparseForkStackProbe', 'WriteWatchStackProbe', 'NativeLookupProbe', 'UtmpLocksProbe')
 EXECUTABLES = ('AllocatorInterpositionProbe', 'AllocatorIfuncProbe')
 
 

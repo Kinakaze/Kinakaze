@@ -145,6 +145,7 @@ fn allocate_aligned(len: usize) -> Result<usize, LinkError> {
     use windows_sys::Win32::System::Memory::{
         MEM_COMMIT, MEM_RESERVE, PAGE_READWRITE, VirtualAlloc,
     };
+    use windows_sys::Win32::System::SystemServices::MEM_WRITE_WATCH;
     let _transaction = kinakaze_runtime::begin_fork_mapping_transaction().ok_or(
         LinkError::MappingRegistrationFailed {
             object: "<initial stack>".to_owned(),
@@ -154,14 +155,27 @@ fn allocate_aligned(len: usize) -> Result<usize, LinkError> {
     // VirtualAlloc is page-aligned, which is far stronger than the 16 bytes the
     // ABI needs.
     // SAFETY: requests a fresh private commit; a null base lets the OS choose.
-    let block = unsafe {
+    let mut block = unsafe {
         VirtualAlloc(
             std::ptr::null(),
             len,
-            MEM_RESERVE | MEM_COMMIT,
+            MEM_RESERVE | MEM_COMMIT | MEM_WRITE_WATCH,
             PAGE_READWRITE,
         )
     };
+    let watched = !block.is_null();
+    if !watched {
+        // Write-watch is an optional copy hint. Unsupported allocation modes
+        // retain the existing full-scan path and the same guest stack contract.
+        block = unsafe {
+            VirtualAlloc(
+                std::ptr::null(),
+                len,
+                MEM_RESERVE | MEM_COMMIT,
+                PAGE_READWRITE,
+            )
+        };
+    }
     if block.is_null() {
         return Err(LinkError::MappingFailed {
             object: "<initial stack>".to_owned(),
@@ -171,7 +185,7 @@ fn allocate_aligned(len: usize) -> Result<usize, LinkError> {
     // A raw syscall runs on a separate host transition stack. Consequently the
     // fork coordinator's active-stack snapshot cannot discover this guest
     // stack; it is a guest mapping just like a PT_LOAD segment or mmap region.
-    if !kinakaze_runtime::register_fork_mapping(kinakaze_runtime::ForkMapping {
+    let mapping = kinakaze_runtime::ForkMapping {
         base: block as usize,
         len,
         behavior: kinakaze_runtime::ForkMappingBehavior::Copy,
@@ -180,7 +194,14 @@ fn allocate_aligned(len: usize) -> Result<usize, LinkError> {
         backing_offset: 0,
         view_protection: 0,
         domain: kinakaze_runtime::ForkMappingDomain::GuestMm,
-    }) {
+    };
+    let registered = if watched {
+        // Fresh private zero allocation above; write-watch is never reset.
+        unsafe { kinakaze_runtime::register_zero_write_watch_mapping(mapping) }
+    } else {
+        kinakaze_runtime::register_fork_mapping(mapping)
+    };
+    if !registered {
         unsafe {
             windows_sys::Win32::System::Memory::VirtualFree(
                 block,
