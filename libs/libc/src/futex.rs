@@ -825,7 +825,6 @@ impl Drop for Waiter {
     }
 }
 
-#[cfg(test)]
 pub(crate) fn wait(
     expected: i32,
     duration: Option<Duration>,
