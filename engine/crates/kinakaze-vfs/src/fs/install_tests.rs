@@ -25,7 +25,7 @@ impl Drop for Fixture {
 #[test]
 fn exclusive_install_create_rejects_existing_special_inodes() {
     let f = Fixture::new();
-    let flags = O_CREAT | O_EXCL | O_WRONLY;
+    let flags = O_CREAT | O_EXCL | O_WRONLY | O_NOFOLLOW;
     let file = f.guest("payload");
     let fd = open(&file, flags, 0o640).unwrap();
     crate::write(fd, b"payload").unwrap();
@@ -35,12 +35,14 @@ fn exclusive_install_create_rejects_existing_special_inodes() {
     crate::create_emulated_symlink(&f.0.join("link"), "missing").unwrap();
     std::fs::create_dir(f.0.join("directory")).unwrap();
     for access in [O_RDONLY, O_WRONLY, O_RDWR] {
-        for name in ["payload", "fifo", "link", "directory"] {
-            assert_eq!(
-                open(&f.guest(name), O_CREAT | O_EXCL | access, 0o600),
-                Err(crate::EEXIST),
-                "exclusive create: {name}, access={access}"
-            );
+        for nofollow in [0, O_NOFOLLOW] {
+            for name in ["payload", "fifo", "link", "directory"] {
+                assert_eq!(
+                    open(&f.guest(name), O_CREAT | O_EXCL | access | nofollow, 0o600),
+                    Err(crate::EEXIST),
+                    "exclusive create: {name}, access={access}, nofollow={nofollow}"
+                );
+            }
         }
     }
     let directory = open(&f.guest("directory"), O_DIRECTORY | O_RDONLY, 0).unwrap();
@@ -48,6 +50,10 @@ fn exclusive_install_create_rejects_existing_special_inodes() {
     crate::close(directory).unwrap();
     assert_eq!(std::fs::read(f.0.join("payload")).unwrap(), b"payload");
     assert!(!f.0.join("missing").exists());
+    assert_eq!(
+        open(&f.guest("link"), O_WRONLY | O_NOFOLLOW, 0),
+        Err(crate::ELOOP)
+    );
 }
 
 #[test]
