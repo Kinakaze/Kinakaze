@@ -1022,6 +1022,9 @@ pub unsafe extern "sysv64" fn kinakaze_abi_chmod(path: *const c_char, mode: u32)
         if kinakaze_vfs::tmpfs::chmod(path, mode)? {
             return Ok(());
         }
+        if !path.starts_with("/dev/") && !path.starts_with("dev/") {
+            return fs::set_mode(path, mode);
+        }
         let resolved = kinakaze_vfs::mount::overlay::prepare_write(path, true, false)?;
         // Builtin device nodes may have no host inode. Real entries under
         // /dev (including named shared memory) must retain their actual mode.
@@ -1092,8 +1095,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_fchmodat(
         if kinakaze_vfs::tmpfs::chmod(&target, mode)? {
             return Ok(());
         }
-        let resolved = kinakaze_vfs::mount::overlay::prepare_write(&target, true, false)?;
-        apply_mode(&resolved, mode)
+        fs::set_mode(&target, mode)
     }))
 }
 
@@ -3750,6 +3752,16 @@ mod tests {
             0
         );
         assert_eq!(readonly.st_mode & 0o7777, 0o444);
+
+        let slash = std::ffi::CString::new(format!("{}/", as_c.to_str().unwrap())).unwrap();
+        // A trailing slash requires a directory and must not change this inode.
+        assert_eq!(unsafe { kinakaze_abi_chmod(slash.as_ptr(), 0o777) }, -1);
+        assert_eq!(crate::kinakaze_errno(), kinakaze_vfs::ENOTDIR);
+        assert_eq!(
+            unsafe { kinakaze_abi_fchmodat(AT_FDCWD, slash.as_ptr(), 0o777, 0) },
+            -1
+        );
+        assert_eq!(crate::kinakaze_errno(), kinakaze_vfs::ENOTDIR);
 
         // Restoring it clears the attribute again.
         // SAFETY: the path is null-terminated.

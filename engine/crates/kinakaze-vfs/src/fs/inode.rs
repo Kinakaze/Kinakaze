@@ -16,7 +16,7 @@ pub(crate) use kinakaze_v2_abi::inode::Record;
 
 /// Query an independently opened metadata handle; no shared data I/O can be
 /// cancelled by this query. Callers with a borrowed descriptor use `read`.
-pub(super) fn read_object(object: &Object) -> Result<Record, i32> {
+pub(crate) fn read_object(object: &Object) -> Result<Record, i32> {
     ea::read_decoded(object, EA_NAME, Record::decode).map(Option::unwrap_or_default)
 }
 

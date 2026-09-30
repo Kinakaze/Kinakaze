@@ -1964,6 +1964,13 @@ pub fn chown(path: &str, follow: bool, owner: &Ownership) -> Result<(), i32> {
     let translated =
         owner.translated(crate::mount::overlay::ownership_mapping(path, follow)?.as_ref())?;
     let owner = &translated;
+    if let Some(opened) = crate::mount::overlay::prepare_native_metadata(
+        path,
+        follow,
+        FILE_READ_ATTRIBUTES | FILE_READ_EA | FILE_WRITE_EA | READ_CONTROL,
+    )? {
+        return set_ownership_object(opened.object(), owner);
+    }
     let prepared = crate::mount::overlay::prepare_write(path, follow, false)?;
     let object = object::Object::open(
         &prepared,
@@ -2087,6 +2094,9 @@ pub(crate) fn set_mode_object(
 }
 
 pub fn set_mode(path: &str, mode: u32) -> Result<(), i32> {
+    if path.ends_with('/') && stat(path)?.st_mode & S_IFMT != S_IFDIR {
+        return Err(crate::ENOTDIR);
+    }
     if crate::tmpfs::chmod(path, mode)? {
         return Ok(());
     }
@@ -2101,6 +2111,13 @@ pub fn set_mode(path: &str, mode: u32) -> Result<(), i32> {
             return Err(crate::EPERM);
         }
         return crate::tty::set_terminal_mode(number, mode & 0o7777);
+    }
+    if let Some(opened) = crate::mount::overlay::prepare_native_metadata(
+        path,
+        true,
+        FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | FILE_READ_EA | FILE_WRITE_EA,
+    )? {
+        return set_mode_object(opened.object(), mode, |_| Ok(()));
     }
     let resolved = crate::mount::overlay::prepare_write(path, true, false)?;
     set_mode_host_path(&resolved, mode)

@@ -30,6 +30,7 @@ mod lookup;
 mod metacopy;
 mod mounted;
 mod native_lookup;
+mod native_metadata;
 mod options;
 mod profile;
 pub use directory::DirectoryRecord;
@@ -45,6 +46,7 @@ pub use mounted::{
 pub use mounted::{descriptor_filesystem, filesystem_path, is_overlay_path};
 pub use mounted::{directory_records, read_directory_bytes};
 pub use mounted::{encode_handle, encode_handle_fd, open_handle};
+pub use native_metadata::{NativeMetadata, prepare as prepare_native_metadata};
 pub use options::{Options, parse_options};
 pub const USER_XATTR_FLAG: u64 = mounted::USER_XATTR;
 pub(crate) use mounted::*;

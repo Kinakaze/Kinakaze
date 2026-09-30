@@ -7611,6 +7611,17 @@ unsafe fn write_times(handle: *mut c_void, access: Stamp, modification: Stamp) -
 /// `FILE_FLAG_BACKUP_SEMANTICS` is what makes a directory openable at all, and
 /// directories are a case `utimensat` is routinely used on.
 fn open_for_times(path: &str, follow: bool) -> Result<TimeHandle, i32> {
+    if let Some(opened) =
+        kinakaze_vfs::mount::overlay::prepare_native_metadata(path, follow, FILE_WRITE_ATTRIBUTES)?
+    {
+        use std::os::windows::io::AsRawHandle;
+        return Ok(TimeHandle {
+            raw: opened.as_raw_handle(),
+            _write_path: None,
+            metadata: None,
+            native_path: Some(opened),
+        });
+    }
     let resolved = kinakaze_vfs::mount::overlay::prepare_write(path, follow, false)?;
     let encoded = kinakaze_vfs::path::wide_path(&resolved)?;
     let mut flags = FILE_FLAG_BACKUP_SEMANTICS;
@@ -7637,6 +7648,7 @@ fn open_for_times(path: &str, follow: bool) -> Result<TimeHandle, i32> {
         raw: handle,
         _write_path: Some(resolved),
         metadata: None,
+        native_path: None,
     })
 }
 
@@ -7646,12 +7658,13 @@ struct TimeHandle {
     // Keep overlay write ownership alive until the timestamp handle closes.
     _write_path: Option<kinakaze_vfs::mount::overlay::WritePath>,
     metadata: Option<kinakaze_vfs::mount::overlay::MetadataHandle>,
+    native_path: Option<kinakaze_vfs::mount::overlay::NativeMetadata>,
 }
 
 impl Drop for TimeHandle {
     fn drop(&mut self) {
         // SAFETY: this type owns the handle it was given.
-        if self.metadata.is_none() {
+        if self.metadata.is_none() && self.native_path.is_none() {
             unsafe { CloseHandle(self.raw) };
         }
     }
@@ -7674,6 +7687,7 @@ fn open_descriptor_for_times(fd: c_int, allow_path: bool) -> Result<TimeHandle, 
             raw: handle.as_raw_handle(),
             _write_path: None,
             metadata: Some(handle),
+            native_path: None,
         });
     }
     // A synthetic /proc file has no host file to stamp. Reporting success would
@@ -7704,6 +7718,7 @@ fn open_descriptor_for_times(fd: c_int, allow_path: bool) -> Result<TimeHandle, 
         raw: handle,
         _write_path: None,
         metadata: None,
+        native_path: None,
     })
 }
 
