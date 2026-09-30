@@ -825,13 +825,23 @@ impl Drop for Waiter {
     }
 }
 
+#[cfg(test)]
 pub(crate) fn wait(
     expected: i32,
     duration: Option<Duration>,
     bitset: u32,
     load: impl Fn() -> Result<(Key, i32), i32>,
 ) -> Result<(), i32> {
-    let started = Instant::now();
+    wait_started(expected, duration, Instant::now(), bitset, load)
+}
+
+pub(crate) fn wait_started(
+    expected: i32,
+    duration: Option<Duration>,
+    started: Instant,
+    bitset: u32,
+    load: impl Fn() -> Result<(Key, i32), i32>,
+) -> Result<(), i32> {
     let interrupt = interrupt::current();
     if interrupt.is_null() {
         return Err(EIO);

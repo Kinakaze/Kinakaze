@@ -15,6 +15,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::set_errno;
 mod futex_requeue;
+mod futex_scalar;
 #[cfg(test)]
 mod futex_requeue_race_tests;
 mod futex_vector;
@@ -2979,10 +2980,6 @@ fn futex_wait(
     realtime: bool,
     bitset: u32,
 ) -> i64 {
-    use kinakaze_vfs::{EINTR, EIO, interrupt, signal};
-    use windows_sys::Win32::Foundation::{WAIT_OBJECT_0, WAIT_TIMEOUT};
-    use windows_sys::Win32::System::Threading::INFINITE;
-
     let address = address.into();
     if let Err(error) = futex_word(address.word) {
         return error;
@@ -2994,15 +2991,30 @@ fn futex_wait(
         Ok(duration) => duration,
         Err(error) => return error,
     };
+    futex_wait_prepared(address, expected, duration, std::time::Instant::now(), bitset)
+}
+
+/// A copied timeout has one budget, including key resolution and every restart.
+/// Modern futex waits validate/copy it before touching the futex address.
+fn futex_wait_prepared(
+    address: FutexAddress,
+    expected: i32,
+    duration: Option<std::time::Duration>,
+    started: std::time::Instant,
+    bitset: u32,
+) -> i64 {
+    use kinakaze_vfs::{EINTR, EIO, interrupt, signal};
+    use windows_sys::Win32::Foundation::{WAIT_OBJECT_0, WAIT_TIMEOUT};
+    use windows_sys::Win32::System::Threading::INFINITE;
+
     if address.shared.is_some() {
-        return crate::futex::wait(expected, duration, bitset, || {
+        return crate::futex::wait_started(expected, duration, started, bitset, || {
             let key = crate::fdio::futex_key(address.word as usize)?;
             let word = futex_word(address.word).map_err(|error| -error as i32)?;
             Ok((key, word.load(Ordering::SeqCst)))
         })
         .map_or_else(|error| -i64::from(error), |()| 0);
     }
-    let started = std::time::Instant::now();
     // Reuse the thread's event for both futex wake and signals. The queue is
     // authoritative about which happened; no kernel event is allocated per
     // futex wait. Create it before publication so a wake cannot be lost.
@@ -3591,41 +3603,14 @@ unsafe fn dispatch_syscall(number: i64, arguments: [u64; 6]) -> i64 {
                 futex_wake(address, argument3 as u32, argument2 as u32)
             }
         }
-        455 => {
-            let flags = argument4 as u32;
-            if flags & !0x83 != 0
-                || flags & 3 != 2
-                || argument2 > u64::from(u32::MAX)
-                || argument3 > u64::from(u32::MAX)
-            {
-                return -i64::from(EINVAL);
-            }
-            let clock = i64::from(argument6 as i32);
-            let realtime = argument5 != 0 && clock == CLOCK_REALTIME;
-            if argument5 != 0 {
-                if !matches!(clock, CLOCK_REALTIME | CLOCK_MONOTONIC) {
-                    return -i64::from(EINVAL);
-                }
-                if let Err(error) = futex_timeout(argument5 as _, true, realtime) {
-                    return error;
-                }
-            }
-            if argument3 == 0 {
-                return -i64::from(EINVAL);
-            }
-            let address = match FutexAddress::resolve(argument1 as _, flags & 0x80 != 0) {
-                Ok(address) => address,
-                Err(error) => return error,
-            };
-            futex_wait(
-                address,
-                argument2 as i32,
-                argument5 as _,
-                true,
-                realtime,
-                argument3 as u32,
-            )
-        }
+        455 => futex_scalar::wait(
+            argument1 as usize,
+            argument2,
+            argument3,
+            argument4 as u32,
+            argument5 as _,
+            argument6 as i32,
+        ),
         305 => {
             if argument1 as i32 != 0 {
                 -i64::from(EINVAL)
