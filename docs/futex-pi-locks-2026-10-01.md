@@ -83,8 +83,16 @@ fork 后 leader TID、不同 VA 的文件别名及 raw exit_group 后的死亡�
 
 ## 继续工作
 
-WAIT_REQUEUE_PI/CMP_REQUEUE_PI、pshared pthread PI/robust 属性、Linux 实时
+WAIT_REQUEUE_PI/CMP_REQUEUE_PI、pthread PI 属性、Linux 实时
 策略、跨 PID namespace 层级的所有者视图，以及更多分配失败、非合作式退出
 和内存权限竞争路径仍需完成。死亡 PI 等待行由 PI 操作/退出清理维护，普通
 wake/requeue 不代替这项清理。原有 futex/VFS/io 的性能与所有 syscall 的
 JIT、SIMD、模板生成及逐路径审查继续推进；本阶段没有宣称这些目标全部完成。
+
+## 与最新 main 集成
+
+以上原生/客体固定图验证对应 63bc6f9 的源树（基础 1153b90）。随后合并
+22df00b 的最新 main，得到 721624a，并通过 release 生产编译检查（14.07 秒）。
+本次合并同时包含独立完成的普通/robust 共享 pthread mutex 后端，见
+[共享 mutex 阶段记录](pthread-shared-mutex-2026-10-01.md)；pthread PI 属性
+仍未接入。此处的生产检查不替代对合并后新源树重新执行整套运行测试。

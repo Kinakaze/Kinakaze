@@ -1205,5 +1205,15 @@
     "Linux FIFO/RR scheduling and cross-namespace ancestor owner views pending.",
     "Benchmarks compare the same implementation under the switch, not prior ENOSYS results.",
     "Native benchmark uses default test domain without unrelated queue population; broad syscall/path performance completion is not claimed."
-  ]
+  ],
+  "integration": {
+    "head": "721624a36ad47fe80ef9a74c904483d1b01d9c19",
+    "merged_main": "22df00b",
+    "check": "cargo check -p kinakaze-v2-libc --release",
+    "passed": true,
+    "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-merged-production-check.log",
+    "sha256": "5ba357415defa9256c33cc2b1c0513ce16fab5d66dc8f738a5a55299f24611ff",
+    "runtime_tests": "Frozen 63bc6f9 source tree; no merged-tree full runtime rerun claimed.",
+    "pthread_shared_backend": "Independent main implementation is present; pthread PI attributes remain pending."
+  }
 }
