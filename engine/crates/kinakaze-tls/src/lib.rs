@@ -187,6 +187,21 @@ pub fn run_thread_destructors() {
     }
 }
 
+/// Raw SYS_exit bypasses guest cleanup. Empty both queued and currently-running
+/// callback records so later native TLS teardown cannot invoke guest destructors.
+pub fn abandon_thread_destructors() {
+    let active = DESTROYING_CXX
+        .try_with(Cell::get)
+        .unwrap_or(ptr::null_mut());
+    if !active.is_null() {
+        // Only the current thread publishes this pointer; callbacks retain no
+        // mutable borrow of the record vector while guest code runs.
+        unsafe { (*active).0.clear() };
+    }
+    let _ = CXX_DESTRUCTORS.try_with(|records| records.borrow_mut().0.clear());
+    let _ = with_pthread_values(|values| values.0.clear());
+}
+
 static MODULES: OnceLock<RwLock<Vec<ModuleTemplate>>> = OnceLock::new();
 static PTHREAD_KEYS: OnceLock<RwLock<Vec<KeyEntry>>> = OnceLock::new();
 static STATIC_TLS_TEB_SLOT: AtomicU32 = AtomicU32::new(u32::MAX);
@@ -1355,15 +1370,19 @@ fn register_fork_handoff() {
         return;
     }
     let key = 0x544c_535f_484f_4f4bu64 ^ (module as usize as u64).rotate_left(17);
-    let _ = unsafe { kinakaze_runtime::register_fork_participant_without_inherited_handles(kinakaze_runtime::ForkParticipant {
-        abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
-        priority: 20,
-        key,
-        prepare: None,
-        snapshot: Some(fork_snapshot),
-        parent: None,
-        child: Some(fork_child),
-    }) };
+    let _ = unsafe {
+        kinakaze_runtime::register_fork_participant_without_inherited_handles(
+            kinakaze_runtime::ForkParticipant {
+                abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
+                priority: 20,
+                key,
+                prepare: None,
+                snapshot: Some(fork_snapshot),
+                parent: None,
+                child: Some(fork_child),
+            },
+        )
+    };
 }
 
 #[cfg(windows)]
@@ -1409,6 +1428,44 @@ mod tests {
             String::from_utf8_lossy(&output.stderr)
         );
         false
+    }
+
+    #[test]
+    #[cfg(target_arch = "x86_64")]
+    fn raw_exit_abandons_only_current_tls_callbacks_including_active_runner() {
+        if !isolated_case("raw_exit_abandons_only_current_tls_callbacks_including_active_runner") {
+            return;
+        }
+        static CALLS: AtomicUsize = AtomicUsize::new(0);
+        unsafe extern "sysv64" fn count(value: *mut c_void) {
+            CALLS.fetch_add(value as usize, Ordering::SeqCst);
+        }
+        unsafe extern "sysv64" fn abandon(_: *mut c_void) {
+            CALLS.fetch_add(1, Ordering::SeqCst);
+            abandon_thread_destructors();
+        }
+        let key = pthread_key_create(Some(count)).unwrap();
+        pthread_setspecific(key, 2usize as *mut c_void).unwrap();
+        cxa_thread_atexit(Some(count), 2usize as *mut c_void, ptr::null_mut()).unwrap();
+        std::thread::spawn(move || {
+            pthread_setspecific(key, 1usize as *mut c_void).unwrap();
+            cxa_thread_atexit(Some(count), 1usize as *mut c_void, ptr::null_mut()).unwrap();
+            abandon_thread_destructors();
+            assert!(pthread_getspecific(key).unwrap().is_null());
+        })
+        .join()
+        .unwrap();
+        assert_eq!(CALLS.load(Ordering::SeqCst), 0);
+        assert_eq!(pthread_getspecific(key).unwrap() as usize, 2);
+        run_thread_destructors();
+        assert_eq!(CALLS.load(Ordering::SeqCst), 4);
+
+        pthread_setspecific(key, 8usize as *mut c_void).unwrap();
+        cxa_thread_atexit(Some(count), 8usize as *mut c_void, ptr::null_mut()).unwrap();
+        cxa_thread_atexit(Some(abandon), ptr::null_mut(), ptr::null_mut()).unwrap();
+        run_thread_destructors();
+        assert_eq!(CALLS.load(Ordering::SeqCst), 5);
+        pthread_key_delete(key).unwrap();
     }
 
     #[test]

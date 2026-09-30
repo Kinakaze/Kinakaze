@@ -11,6 +11,8 @@ repository.workspace = true
 kinakaze-v2-abi.workspace = true
 kinakaze-v2-bridge.workspace = true
 kinakaze-v2-host-win.workspace = true
+kinakaze-v2-protocol.workspace = true
+serde_json.workspace = true
 guest-link = { package = "kinakaze-link", path = "../../libs/ld-linux-x86-64" }
 guest-process = { package = "kinakaze-kernel", path = "../../engine/crates/kinakaze-runtime" }
 

@@ -5,6 +5,7 @@ mod desktop;
 mod desktop_client;
 mod image_cache;
 mod kernel;
+mod native_catalog;
 mod native_exec;
 mod native_fork;
 mod pool;
@@ -366,6 +367,27 @@ fn serve(mut pipe: PipeConnection, service: Arc<Service>, _slot: ConnectionSlot)
                         images.get(peer.host_pid, peer.birth, *source, *length)
                     });
                     Ok(kinakaze_v2_protocol::Reply::ImageSnapshot { section })
+                }
+                (Request::NativeCatalog { directory }, Ok(_)) => {
+                    let transferred = service
+                        .pool
+                        .as_ref()
+                        .map(|pool| pool.native_catalog(peer, directory))
+                        .transpose();
+                    match transferred {
+                        Ok(value) => {
+                            let snapshot = value.flatten().map(|(length, transfer)| {
+                                let handles = transfer.handles().to_vec();
+                                catalog_transfer = Some(transfer);
+                                (length as u64, handles)
+                            });
+                            Ok(kinakaze_v2_protocol::Reply::NativeCatalog { snapshot })
+                        }
+                        Err(_) => Err(RpcError::new(
+                            ErrorCode::Internal,
+                            "native catalog sharing failed",
+                        )),
+                    }
                 }
                 (_, result) => result,
             };

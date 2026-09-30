@@ -93,6 +93,106 @@ fn runtime() -> Vec<u8> {
     ])
 }
 
+fn snapshot_view(snapshot: &CatalogSnapshot) -> kinakaze_v2_host_win::ReadOnlySectionView {
+    let process = kinakaze_v2_host_win::ProcessHandle::open(std::process::id()).unwrap();
+    let mut transfer = kinakaze_v2_host_win::RemoteTransfer::new(process);
+    snapshot.transfer(&mut transfer).unwrap();
+    let handles = transfer.handles().to_vec();
+    transfer.commit();
+    unsafe {
+        kinakaze_v2_host_win::ReadOnlySectionView::adopt(
+            &handles,
+            snapshot.length(),
+            2 * 1024 * 1024,
+        )
+    }
+    .unwrap()
+}
+
+#[test]
+fn shared_catalog_retains_validation_pins_and_deferred_export_versions() {
+    let directory = Directory::new();
+    directory.write("libruntime.so", &runtime());
+    directory.write(
+        "libindexed.so",
+        &fixture(&[
+            ("_Rinternal", false),
+            ("kinakaze_module_object_v1", false),
+            ("lookup", false),
+            ("lookup@VERSION_1", false),
+        ]),
+    );
+    directory.write("libshared.so", &fixture(&[("_Rinternal", false)]));
+    let path = directory.0.canonicalize().unwrap();
+    let catalog = ModuleCatalog::discover(&path).unwrap();
+    for module in &catalog.modules {
+        assert_eq!(
+            module.canonical_path().unwrap(),
+            path.join(&module.soname).canonicalize().unwrap()
+        );
+    }
+    let snapshot = CatalogSnapshot::new(&path, catalog).unwrap();
+    assert_eq!(snapshot.image_count(), 3);
+    let view = snapshot_view(&snapshot);
+    let mut shared = unsafe { ModuleCatalog::from_snapshot(&path, view) }.unwrap();
+    assert_eq!(shared.shared_libraries, ["libshared.so"]);
+    assert_eq!(shared.modules.len(), 2);
+    for module in &shared.modules {
+        assert_eq!(
+            module.canonical_path().unwrap(),
+            path.join(&module.soname).canonicalize().unwrap()
+        );
+    }
+    let module = shared.modules.remove(
+        shared
+            .modules
+            .iter()
+            .position(|module| module.soname == "libindexed.so")
+            .unwrap(),
+    );
+    drop(shared);
+    drop(snapshot);
+    let (metadata, owner) = module.materialize().unwrap();
+    assert!(owner.is_none());
+    assert_eq!(metadata.exports[0].name, "lookup");
+    assert_eq!(metadata.exports[0].versions, ["VERSION_1"]);
+    for name in ["libruntime.so", "libindexed.so", "libshared.so"] {
+        assert!(
+            fs::OpenOptions::new()
+                .write(true)
+                .open(path.join(name))
+                .is_err()
+        );
+        assert!(fs::remove_file(path.join(name)).is_err());
+    }
+    drop(module);
+    for name in ["libruntime.so", "libindexed.so", "libshared.so"] {
+        assert!(
+            fs::OpenOptions::new()
+                .write(true)
+                .open(path.join(name))
+                .is_ok()
+        );
+    }
+}
+
+#[test]
+fn shared_catalog_rejects_wrong_directory_and_releases_received_pins() {
+    let directory = Directory::new();
+    directory.write("libruntime.so", &runtime());
+    let path = directory.0.canonicalize().unwrap();
+    let snapshot = CatalogSnapshot::new(&path, ModuleCatalog::discover(&path).unwrap()).unwrap();
+    let view = snapshot_view(&snapshot);
+    assert!(unsafe { ModuleCatalog::from_snapshot(&path.join("other"), view) }.is_err());
+    drop(snapshot);
+    assert!(
+        fs::OpenOptions::new()
+            .write(true)
+            .open(path.join("libruntime.so"))
+            .is_ok()
+    );
+}
+
 #[test]
 fn discovery_retains_only_markers_but_validates_discarded_exports() {
     let bytes = fixture(&[

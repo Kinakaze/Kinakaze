@@ -517,6 +517,7 @@ impl StateManager {
                 if !matches!(
                     request,
                     Request::RegisterModule { .. }
+                        | Request::NativeCatalog { .. }
                         | Request::MarkReady
                         | Request::AwaitActivation
                         | Request::Kernel(
@@ -543,9 +544,10 @@ impl StateManager {
                 }
                 Ok(Reply::Ok)
             }
-            Request::NativeExec | Request::ImageSnapshot { .. } | Request::Kernel(_) => {
-                Ok(Reply::Ok)
-            }
+            Request::NativeExec
+            | Request::ImageSnapshot { .. }
+            | Request::NativeCatalog { .. }
+            | Request::Kernel(_) => Ok(Reply::Ok),
             Request::MarkPrewarmReady => {
                 let process = self.processes.get_mut(&pid).unwrap();
                 if process.identity.parent_pid != 0
@@ -1736,6 +1738,7 @@ impl StateManager {
         match request {
             Request::Identity => Ok(Reply::Identity(process.identity)),
             Request::ImageSnapshot { .. }
+            | Request::NativeCatalog { .. }
             | Request::Kernel(
                 kinakaze_v2_protocol::kernel::KernelCommand::Retain { .. }
                 | kinakaze_v2_protocol::kernel::KernelCommand::Lease { .. },
