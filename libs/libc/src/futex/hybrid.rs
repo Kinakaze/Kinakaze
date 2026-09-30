@@ -26,7 +26,7 @@ thread_local! {
 
 pub(super) fn park_name(domain: u64, host: u32, thread: u32, born: u64) -> Vec<u16> {
     wide(&format!(
-        r"Local\kinakaze.futex.park.v1.{domain:016x}.{host:08x}.{thread:08x}.{born:016x}"
+        r"Local\kinakaze.futex.park.v2.{domain:016x}.{host:08x}.{thread:08x}.{born:016x}"
     ))
 }
 
@@ -80,10 +80,10 @@ pub(super) fn reset_after_fork() {
 }
 
 pub(crate) struct Transaction {
-    shared: &'static Shared,
+    pub(super) shared: &'static Shared,
     _guard: Guard<'static>,
-    records: Vec<Record>,
-    dirty: bool,
+    pub(super) records: Vec<Record>,
+    pub(super) dirty: bool,
 }
 
 impl Transaction {
@@ -92,6 +92,10 @@ impl Transaction {
     pub(crate) fn begin() -> Result<Self, i32> {
         let shared = shared()?;
         let guard = shared.acquire()?;
+        Self::from_guard(shared, guard)
+    }
+
+    pub(super) fn from_guard(shared: &'static Shared, guard: Guard<'static>) -> Result<Self, i32> {
         let records = shared.load()?;
         Ok(Self {
             shared,
@@ -111,16 +115,7 @@ impl Transaction {
     pub(crate) fn append_private(&mut self, key: Key, identity: ParkIdentity, bitset: u32) -> u64 {
         // Local records use zero to mean "not migrated". A newly created
         // domain (or a wrapped counter) must never publish that sentinel.
-        let token = loop {
-            let token = self
-                .shared
-                .header()
-                .next_token
-                .fetch_add(1, Ordering::Relaxed);
-            if token != 0 {
-                break token;
-            }
-        };
+        let token = self.shared.token();
         self.records.push(Record {
             key,
             token,
@@ -144,17 +139,22 @@ impl Transaction {
         self.shared.select(&mut self.records, key, count, bitset)
     }
 
-    pub(crate) fn transfer(&mut self, source: Key, target: Key, count: u32) -> u32 {
+    pub(crate) fn transfer(&mut self, source: Key, target: Key, count: u32) -> Result<u32, i32> {
         let mut moved = 0;
         let mut transfers = Vec::new();
         if !optimized() {
             let mut index = 0;
             while index < self.records.len() && moved < count {
-                if self.records[index].key != source {
+                if self.records[index].metadata() || self.records[index].key != source {
                     index += 1;
                     continue;
                 }
-                let record = self.records.remove(index);
+                let record = self.records[index];
+                if record.pi_wait() {
+                    self.records.extend(transfers);
+                    return Err(kinakaze_vfs::EINVAL);
+                }
+                self.records.remove(index);
                 self.dirty = true;
                 if record.dead() {
                     continue;
@@ -166,10 +166,15 @@ impl Transaction {
                 moved += 1;
             }
             self.records.extend(transfers);
-            return moved;
+            return Ok(moved);
         }
+        let mut error = None;
         self.records.retain(|&record| {
-            if moved >= count || record.key != source {
+            if error.is_some() || moved >= count || record.metadata() || record.key != source {
+                return true;
+            }
+            if record.pi_wait() {
+                error = Some(kinakaze_vfs::EINVAL);
                 return true;
             }
             if record.dead() {
@@ -185,20 +190,23 @@ impl Transaction {
         });
         self.dirty |= moved != 0;
         self.records.extend(transfers);
-        moved
+        error.map_or(Ok(moved), Err)
     }
 
     /// true: removed a still-queued token; false: a wake already selected it.
     pub(crate) fn cancel(&mut self, token: u64) -> bool {
         let length = self.records.len();
-        self.records.retain(|record| record.token != token);
+        self.records
+            .retain(|record| record.metadata() || record.token != token);
         let removed = self.records.len() != length;
         self.dirty |= removed;
         removed
     }
 
     pub(crate) fn contains(&self, token: u64) -> bool {
-        self.records.iter().any(|record| record.token == token)
+        self.records
+            .iter()
+            .any(|record| !record.metadata() && record.token == token)
     }
 
     pub(crate) fn commit(&mut self) {

@@ -1,0 +1,1219 @@
+{
+  "schema": 1,
+  "date": "2026-10-01",
+  "scope": "Raw futex PI locking primitives; full futex and all syscall path goal remains active.",
+  "baseline": "1153b905ed998e8a4522fed23979ab38097ada8c",
+  "source_sha256": {
+    "libs/libc/src/fsextra.rs": "84b5d5597018856d9c23bedf4651af7b9e614253100b5b80d91652a0076fdcdb",
+    "libs/libc/src/futex.rs": "f0a1c799cef9a96d9f81598b48b554c75ec8aae33c8dfcd8c95dcdcb3f1992c7",
+    "libs/libc/src/futex/atomic_word.rs": "486bf4795e33cae26df90852fe26011b3263ae5eca8768ea233c1f74f0f9057e",
+    "libs/libc/src/futex/pi.rs": "4c9d007d4ce99ef1c81c232eda9353b85ae29c37704cf2af2e5b829d37b18aa4",
+    "libs/libc/src/futex/pi/tests.rs": "63ecb4887f3b87302878923d5d30673c633942eafdc60cd84d942766d13f0171",
+    "libs/libc/src/futex/hybrid.rs": "721eb821a5e2c51cdd257e4ccd233adc6e4ca9354907c8337837d5aa418e6a49",
+    "libs/libc/src/futex/wait_group.rs": "e28dade301014cb1497dae420dc15c37bee1fbdb4050d16bee83abe02bbe2e51",
+    "libs/libc/src/sysadmin.rs": "33f7d13b5d1682981bde53c9ef4bd15a38503980e9d45bbb1e8b9e8910ccf42a",
+    "libs/libc/src/sysadmin/futex_pi.rs": "3ed2f0713fe579bf3feadd3715e632e139b5d7c11dc3921ada44faf6aaabfe90",
+    "libs/libc/src/sysadmin/futex_pi/tests.rs": "368ab6622c7177c516c51e768b16628a0eaa806b453d43a5a5a05a47fdd55210",
+    "libs/libc/src/sysadmin/futex_requeue.rs": "bc60d355c9253c02f64af258cb7c007eeeee98a9faf3e7e9a48503967d27b28d",
+    "libs/libc/src/sysadmin/robust.rs": "34ce9541ef5e71fe5bda73d9d616098dcb53be49b74b5470c00ac923d80481d4",
+    "libs/libpthread/src/lib.rs": "2ce2b0d833bfbfff343908a4cef6d41cf40e2ecdb1f15ea3ae3be8e489e32827",
+    "libs/libpthread/src/sched.rs": "668f0c2a9f057968cfc6492823364762facaaf5e82f7262432d316e647f3a49a",
+    "tests/guest/FutexPiProbe.py": "9ee98c299b1427045e35c8e96d66fcb05ae6e4fa74443b534533f77cff870e3f",
+    "tools/test-futex-vector-guest.py": "5609c5f2eb09f8afdec9c05fd3533643b2683dbb5490b94f6e3f6d25c1c95eed"
+  },
+  "native": {
+    "passed": true,
+    "artifacts_unchanged": true,
+    "rows": [
+      {
+        "optimized": false,
+        "name": "kinakaze_libc",
+        "exit_code": 0,
+        "results": [
+          [
+            "ok",
+            "619",
+            "0",
+            "17"
+          ]
+        ],
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-native-kinakaze_libc-0.log",
+        "sha256": "c45c51df1fb6be67588469c2e5f9ab88154c9fd852739386917afb927c04310c"
+      },
+      {
+        "optimized": false,
+        "name": "kinakaze_libpthread",
+        "exit_code": 0,
+        "results": [
+          [
+            "ok",
+            "51",
+            "0",
+            "1"
+          ]
+        ],
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-native-kinakaze_libpthread-0.log",
+        "sha256": "021e23cf90c1d02228777cb10d58c916af195b9b78a2dea1513aa93c55dad022"
+      },
+      {
+        "optimized": true,
+        "name": "kinakaze_libc",
+        "exit_code": 0,
+        "results": [
+          [
+            "ok",
+            "619",
+            "0",
+            "17"
+          ]
+        ],
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-native-kinakaze_libc-1.log",
+        "sha256": "e23d7e867cfe8378701a9184a75ade353a39777328ddda1c2f138efecbc03e02"
+      },
+      {
+        "optimized": true,
+        "name": "kinakaze_libpthread",
+        "exit_code": 0,
+        "results": [
+          [
+            "ok",
+            "51",
+            "0",
+            "1"
+          ]
+        ],
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-native-kinakaze_libpthread-1.log",
+        "sha256": "61505dd3f44e7060b732d2f42b3c35a905a46c7efaf6109c8ec8d8755736a9f3"
+      }
+    ],
+    "manifest": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-native-release\\manifest.json"
+  },
+  "native_build": {
+    "path": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-native-release-build.jsonl",
+    "sha256": "15163ea260ef98dc37275b9c330868873af2b491342a0304b777b85bdc08491e",
+    "manifest_sha256": "74549e8edcf7c4cd343379d85a3e65153024744e022a94e616db92022ba532ad"
+  },
+  "guest_build": {
+    "path": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-guest-build.jsonl",
+    "sha256": "994f31eed0f17c0a0edd4877adeec6d3910d7e9f1f8d565106e294c4268d37bb",
+    "staging_report": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-guest-staging.json",
+    "staging_sha256": "65ff1aaf14370ca1f8d1f4342eae38297927f4598e8829b88a5a139fb5374c74",
+    "images": 38,
+    "artifacts_unchanged": true
+  },
+  "guest": [
+    {
+      "probe": "pi",
+      "report": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\guest-pi-pi\\report.json",
+      "sha256": "ea1ea24df5d18729fa8a08561f0a377c311bb0a8ff9124d777ebfd6adc1759b6",
+      "rows": [
+        {
+          "optimized": false,
+          "status": "passed",
+          "exit_code": 0,
+          "request_to_exit_ms": 505.7126
+        },
+        {
+          "optimized": true,
+          "status": "passed",
+          "exit_code": 0,
+          "request_to_exit_ms": 345.836
+        }
+      ],
+      "distribution_sha256": {
+        "worker.exe": "76fa9f21215bc6f5278042008647b981df42fd0c38dd90a0a234903bf2bccef5",
+        "init.exe": "7389bbcfb9de4fb9690ac941eff49e5e9fa48f032058cefddede36a32e98d83d",
+        "rootfs.manifest.json": "efb5c990576e555db5ef532aaaac415b98bab802f3cebac145919a73a9f430c6",
+        "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+        "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "rootfs\\lib\\kinakaze_alloc.so": "fd24ad9ac0d84a4b5636e5f6f73a506751fc0634f6c70f429f476389e8c84f6c",
+        "rootfs\\lib\\kinakaze_elf.so": "615c38c64c16ff6fb2e306eec18d81bc160a9a0f7c58aaeca3467463a285368b",
+        "rootfs\\lib\\kinakaze_guest_engine.so": "5bbf663181fd2f72341c544a5cc88d6bbfbca3e28dba57e5b68264f4ebfe8f82",
+        "rootfs\\lib\\kinakaze_kernel.so": "a0dfa42ed35584850e51666526f955c728547c84ac7dded738e2864bbac96120",
+        "rootfs\\lib\\kinakaze_tls.so": "3b5c15973e29cccaadb9f2183f1c2d4e8ff7b18e1d1ccd76827178bdb1aaa86c",
+        "rootfs\\lib\\kinakaze_vfs.so": "2f7f4f0237a98d2ad4d175802ab666b1c37bdc5291426a76cba565307a67beff",
+        "rootfs\\lib\\ld-linux-x86-64.so.2": "73ed9d626932b033439c1938f8679946da6f8ce27a5bf596be0225efa9913a3c",
+        "rootfs\\lib\\libasound.so.2": "a206af15da40f1673c8ef168afcf75af1d0cd0b7abf17954e8d8b3a259ef63bd",
+        "rootfs\\lib\\libc.so.6": "5d4440bd1b1ecf2a7ad1f891719cc2fc9a1b39325e6704e8a11fc85047be4b66",
+        "rootfs\\lib\\libcuda.so.1": "355bd520f3b01404fa86c90e21e36a04bdf4a692f7193e38a20c625a8d283dc0",
+        "rootfs\\lib\\libdisplay.so.1": "eeb44ba2a6ecffb7cd930a24c6832a6eb90dc8ce7664c2ddf904e34239b42b28",
+        "rootfs\\lib\\libdl.so.2": "033496e6f656c1d5595aaf318c1353b4bc2e1122a6b115f6fba70103780426db",
+        "rootfs\\lib\\libEGL.so.1": "6790f65fd457ab2aaa07796371e0e56afe470b4ab83b77375752395eb762df6b",
+        "rootfs\\lib\\libGL.so.1": "47fa43fa3b3a005d87212b29d5f7867bc63ff97a4d96735906ad77906dd66c88",
+        "rootfs\\lib\\libGLESv2.so.2": "bcc63433cfcdcc0cf0138005a912f1af537239a0863c3af5d5f13b01733a717c",
+        "rootfs\\lib\\libGLX.so.0": "41961f3d28819a70839a98a059cd4856289f33f7d236ffc96c9c9dc8933d330c",
+        "rootfs\\lib\\libkinakaze-runtime.so.1": "d33b5e8e4533a5fe153d627f82649f5784a4a3c58bd757dae027e26281f0a384",
+        "rootfs\\lib\\libm.so.6": "269ed2db6f29b4b62be91b730ddafcff220e3db9a4489554fe019ef47c64ef2a",
+        "rootfs\\lib\\libOpenGL.so.0": "4eb29c1b30b55081ab0cb65f7af57b5bf095c7bc062189ae492f112a034e9d2d",
+        "rootfs\\lib\\libpipewire-0.3.so.0": "3a8b46d3826138aa25e1fd58f4093adff2e3d10a0770a63c8f569b533aeafef1",
+        "rootfs\\lib\\libpthread.so.0": "d2a6f63e6365cb0891a7d798f30b724717407c2f04a12abd7a677cfbf34c4bb7",
+        "rootfs\\lib\\libpulse.so.0": "e0cbf9581d6ddfba3904c1f627f92497da7e2cee7b9faa6160e74579eb50608f",
+        "rootfs\\lib\\libresolv.so.2": "7dc7f44326be4d326714633be987c114b461a830ffb04c023d00a5c038081c8e",
+        "rootfs\\lib\\librt.so.1": "40e25baddc7f5c0ffaff64b60a236ddf0e212de70a0ec5800a6dfd61a7f8d3ba",
+        "rootfs\\lib\\libvulkan.so.1": "5aa681762308cfb4243f32ec3554b726aebdc10756fd52e6ce2686def1c30e87",
+        "rootfs\\lib\\libX11-xcb.so.1": "7ff5c20dd6f70416da797d7165f5ba18a9a7a7aeeb307ccb6977dd7e654f8b7f",
+        "rootfs\\lib\\libX11.so.6": "10c6d39f0f4a5404fe5b607735b5dc9b2680d1f62b32987d967472ec375f15ae",
+        "rootfs\\lib\\libxcb.so.1": "86e5d7b0ab00d594b47bd662532d357e387f3d5f2a06f183c116fe3e362b1fe1",
+        "rootfs\\lib\\libXcursor.so.1": "f4423fcf428a54fbd04b287a564a47d150dcd27cd27eb6ecaf2aaa6a0d099171",
+        "rootfs\\lib\\libXext.so.6": "4d9b0264cb71ca409b9b7cc06a016bd07f27fa0c2d4a142e6951277f48bd080a",
+        "rootfs\\lib\\libXi.so.6": "44b3108c1af2951fa627974cc9353b697bfb2e6a563823a9e7ec582c85364caf",
+        "rootfs\\lib\\libXinerama.so.1": "314e9af18ef019c2e144bdfaea1c569955c516ad4ff5f49dae0ead15781f541f",
+        "rootfs\\lib\\libXrandr.so.2": "3e77b93f8d323f152ff065370fe3143855e8d55a3a8a63622862eff181a1b3b3",
+        "rootfs\\lib\\libXrender.so.1": "e43877091db3df90133db382cc3b87ec7a9be224d0eb54f938884880ec4b76bc",
+        "rootfs\\lib\\libXxf86vm.so.1": "f78d8cc49c4a3233059689a5d7c129205d351f16479d7973c5d71e9500bb20ff",
+        "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+      }
+    },
+    {
+      "probe": "timeout",
+      "report": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\guest-pi-timeout\\report.json",
+      "sha256": "10be07c5e9ca0ee1a2cf5ced0daba7bb646ccac7ee6caa701fc085755f2796c3",
+      "rows": [
+        {
+          "optimized": false,
+          "status": "passed",
+          "exit_code": 0,
+          "request_to_exit_ms": 91.5531
+        },
+        {
+          "optimized": true,
+          "status": "passed",
+          "exit_code": 0,
+          "request_to_exit_ms": 88.9165
+        }
+      ],
+      "distribution_sha256": {
+        "worker.exe": "76fa9f21215bc6f5278042008647b981df42fd0c38dd90a0a234903bf2bccef5",
+        "init.exe": "7389bbcfb9de4fb9690ac941eff49e5e9fa48f032058cefddede36a32e98d83d",
+        "rootfs.manifest.json": "efb5c990576e555db5ef532aaaac415b98bab802f3cebac145919a73a9f430c6",
+        "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+        "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "rootfs\\lib\\kinakaze_alloc.so": "fd24ad9ac0d84a4b5636e5f6f73a506751fc0634f6c70f429f476389e8c84f6c",
+        "rootfs\\lib\\kinakaze_elf.so": "615c38c64c16ff6fb2e306eec18d81bc160a9a0f7c58aaeca3467463a285368b",
+        "rootfs\\lib\\kinakaze_guest_engine.so": "5bbf663181fd2f72341c544a5cc88d6bbfbca3e28dba57e5b68264f4ebfe8f82",
+        "rootfs\\lib\\kinakaze_kernel.so": "a0dfa42ed35584850e51666526f955c728547c84ac7dded738e2864bbac96120",
+        "rootfs\\lib\\kinakaze_tls.so": "3b5c15973e29cccaadb9f2183f1c2d4e8ff7b18e1d1ccd76827178bdb1aaa86c",
+        "rootfs\\lib\\kinakaze_vfs.so": "2f7f4f0237a98d2ad4d175802ab666b1c37bdc5291426a76cba565307a67beff",
+        "rootfs\\lib\\ld-linux-x86-64.so.2": "73ed9d626932b033439c1938f8679946da6f8ce27a5bf596be0225efa9913a3c",
+        "rootfs\\lib\\libasound.so.2": "a206af15da40f1673c8ef168afcf75af1d0cd0b7abf17954e8d8b3a259ef63bd",
+        "rootfs\\lib\\libc.so.6": "5d4440bd1b1ecf2a7ad1f891719cc2fc9a1b39325e6704e8a11fc85047be4b66",
+        "rootfs\\lib\\libcuda.so.1": "355bd520f3b01404fa86c90e21e36a04bdf4a692f7193e38a20c625a8d283dc0",
+        "rootfs\\lib\\libdisplay.so.1": "eeb44ba2a6ecffb7cd930a24c6832a6eb90dc8ce7664c2ddf904e34239b42b28",
+        "rootfs\\lib\\libdl.so.2": "033496e6f656c1d5595aaf318c1353b4bc2e1122a6b115f6fba70103780426db",
+        "rootfs\\lib\\libEGL.so.1": "6790f65fd457ab2aaa07796371e0e56afe470b4ab83b77375752395eb762df6b",
+        "rootfs\\lib\\libGL.so.1": "47fa43fa3b3a005d87212b29d5f7867bc63ff97a4d96735906ad77906dd66c88",
+        "rootfs\\lib\\libGLESv2.so.2": "bcc63433cfcdcc0cf0138005a912f1af537239a0863c3af5d5f13b01733a717c",
+        "rootfs\\lib\\libGLX.so.0": "41961f3d28819a70839a98a059cd4856289f33f7d236ffc96c9c9dc8933d330c",
+        "rootfs\\lib\\libkinakaze-runtime.so.1": "d33b5e8e4533a5fe153d627f82649f5784a4a3c58bd757dae027e26281f0a384",
+        "rootfs\\lib\\libm.so.6": "269ed2db6f29b4b62be91b730ddafcff220e3db9a4489554fe019ef47c64ef2a",
+        "rootfs\\lib\\libOpenGL.so.0": "4eb29c1b30b55081ab0cb65f7af57b5bf095c7bc062189ae492f112a034e9d2d",
+        "rootfs\\lib\\libpipewire-0.3.so.0": "3a8b46d3826138aa25e1fd58f4093adff2e3d10a0770a63c8f569b533aeafef1",
+        "rootfs\\lib\\libpthread.so.0": "d2a6f63e6365cb0891a7d798f30b724717407c2f04a12abd7a677cfbf34c4bb7",
+        "rootfs\\lib\\libpulse.so.0": "e0cbf9581d6ddfba3904c1f627f92497da7e2cee7b9faa6160e74579eb50608f",
+        "rootfs\\lib\\libresolv.so.2": "7dc7f44326be4d326714633be987c114b461a830ffb04c023d00a5c038081c8e",
+        "rootfs\\lib\\librt.so.1": "40e25baddc7f5c0ffaff64b60a236ddf0e212de70a0ec5800a6dfd61a7f8d3ba",
+        "rootfs\\lib\\libvulkan.so.1": "5aa681762308cfb4243f32ec3554b726aebdc10756fd52e6ce2686def1c30e87",
+        "rootfs\\lib\\libX11-xcb.so.1": "7ff5c20dd6f70416da797d7165f5ba18a9a7a7aeeb307ccb6977dd7e654f8b7f",
+        "rootfs\\lib\\libX11.so.6": "10c6d39f0f4a5404fe5b607735b5dc9b2680d1f62b32987d967472ec375f15ae",
+        "rootfs\\lib\\libxcb.so.1": "86e5d7b0ab00d594b47bd662532d357e387f3d5f2a06f183c116fe3e362b1fe1",
+        "rootfs\\lib\\libXcursor.so.1": "f4423fcf428a54fbd04b287a564a47d150dcd27cd27eb6ecaf2aaa6a0d099171",
+        "rootfs\\lib\\libXext.so.6": "4d9b0264cb71ca409b9b7cc06a016bd07f27fa0c2d4a142e6951277f48bd080a",
+        "rootfs\\lib\\libXi.so.6": "44b3108c1af2951fa627974cc9353b697bfb2e6a563823a9e7ec582c85364caf",
+        "rootfs\\lib\\libXinerama.so.1": "314e9af18ef019c2e144bdfaea1c569955c516ad4ff5f49dae0ead15781f541f",
+        "rootfs\\lib\\libXrandr.so.2": "3e77b93f8d323f152ff065370fe3143855e8d55a3a8a63622862eff181a1b3b3",
+        "rootfs\\lib\\libXrender.so.1": "e43877091db3df90133db382cc3b87ec7a9be224d0eb54f938884880ec4b76bc",
+        "rootfs\\lib\\libXxf86vm.so.1": "f78d8cc49c4a3233059689a5d7c129205d351f16479d7973c5d71e9500bb20ff",
+        "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+      }
+    },
+    {
+      "probe": "signal",
+      "report": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\guest-pi-signal\\report.json",
+      "sha256": "e37ab139f78716ce1df09889dbf5dffd16f1d2a786c5c9a3c60be916ea1bb1b4",
+      "rows": [
+        {
+          "optimized": false,
+          "status": "passed",
+          "exit_code": 0,
+          "request_to_exit_ms": 162.9143
+        },
+        {
+          "optimized": true,
+          "status": "passed",
+          "exit_code": 0,
+          "request_to_exit_ms": 160.3912
+        }
+      ],
+      "distribution_sha256": {
+        "worker.exe": "76fa9f21215bc6f5278042008647b981df42fd0c38dd90a0a234903bf2bccef5",
+        "init.exe": "7389bbcfb9de4fb9690ac941eff49e5e9fa48f032058cefddede36a32e98d83d",
+        "rootfs.manifest.json": "efb5c990576e555db5ef532aaaac415b98bab802f3cebac145919a73a9f430c6",
+        "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+        "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "rootfs\\lib\\kinakaze_alloc.so": "fd24ad9ac0d84a4b5636e5f6f73a506751fc0634f6c70f429f476389e8c84f6c",
+        "rootfs\\lib\\kinakaze_elf.so": "615c38c64c16ff6fb2e306eec18d81bc160a9a0f7c58aaeca3467463a285368b",
+        "rootfs\\lib\\kinakaze_guest_engine.so": "5bbf663181fd2f72341c544a5cc88d6bbfbca3e28dba57e5b68264f4ebfe8f82",
+        "rootfs\\lib\\kinakaze_kernel.so": "a0dfa42ed35584850e51666526f955c728547c84ac7dded738e2864bbac96120",
+        "rootfs\\lib\\kinakaze_tls.so": "3b5c15973e29cccaadb9f2183f1c2d4e8ff7b18e1d1ccd76827178bdb1aaa86c",
+        "rootfs\\lib\\kinakaze_vfs.so": "2f7f4f0237a98d2ad4d175802ab666b1c37bdc5291426a76cba565307a67beff",
+        "rootfs\\lib\\ld-linux-x86-64.so.2": "73ed9d626932b033439c1938f8679946da6f8ce27a5bf596be0225efa9913a3c",
+        "rootfs\\lib\\libasound.so.2": "a206af15da40f1673c8ef168afcf75af1d0cd0b7abf17954e8d8b3a259ef63bd",
+        "rootfs\\lib\\libc.so.6": "5d4440bd1b1ecf2a7ad1f891719cc2fc9a1b39325e6704e8a11fc85047be4b66",
+        "rootfs\\lib\\libcuda.so.1": "355bd520f3b01404fa86c90e21e36a04bdf4a692f7193e38a20c625a8d283dc0",
+        "rootfs\\lib\\libdisplay.so.1": "eeb44ba2a6ecffb7cd930a24c6832a6eb90dc8ce7664c2ddf904e34239b42b28",
+        "rootfs\\lib\\libdl.so.2": "033496e6f656c1d5595aaf318c1353b4bc2e1122a6b115f6fba70103780426db",
+        "rootfs\\lib\\libEGL.so.1": "6790f65fd457ab2aaa07796371e0e56afe470b4ab83b77375752395eb762df6b",
+        "rootfs\\lib\\libGL.so.1": "47fa43fa3b3a005d87212b29d5f7867bc63ff97a4d96735906ad77906dd66c88",
+        "rootfs\\lib\\libGLESv2.so.2": "bcc63433cfcdcc0cf0138005a912f1af537239a0863c3af5d5f13b01733a717c",
+        "rootfs\\lib\\libGLX.so.0": "41961f3d28819a70839a98a059cd4856289f33f7d236ffc96c9c9dc8933d330c",
+        "rootfs\\lib\\libkinakaze-runtime.so.1": "d33b5e8e4533a5fe153d627f82649f5784a4a3c58bd757dae027e26281f0a384",
+        "rootfs\\lib\\libm.so.6": "269ed2db6f29b4b62be91b730ddafcff220e3db9a4489554fe019ef47c64ef2a",
+        "rootfs\\lib\\libOpenGL.so.0": "4eb29c1b30b55081ab0cb65f7af57b5bf095c7bc062189ae492f112a034e9d2d",
+        "rootfs\\lib\\libpipewire-0.3.so.0": "3a8b46d3826138aa25e1fd58f4093adff2e3d10a0770a63c8f569b533aeafef1",
+        "rootfs\\lib\\libpthread.so.0": "d2a6f63e6365cb0891a7d798f30b724717407c2f04a12abd7a677cfbf34c4bb7",
+        "rootfs\\lib\\libpulse.so.0": "e0cbf9581d6ddfba3904c1f627f92497da7e2cee7b9faa6160e74579eb50608f",
+        "rootfs\\lib\\libresolv.so.2": "7dc7f44326be4d326714633be987c114b461a830ffb04c023d00a5c038081c8e",
+        "rootfs\\lib\\librt.so.1": "40e25baddc7f5c0ffaff64b60a236ddf0e212de70a0ec5800a6dfd61a7f8d3ba",
+        "rootfs\\lib\\libvulkan.so.1": "5aa681762308cfb4243f32ec3554b726aebdc10756fd52e6ce2686def1c30e87",
+        "rootfs\\lib\\libX11-xcb.so.1": "7ff5c20dd6f70416da797d7165f5ba18a9a7a7aeeb307ccb6977dd7e654f8b7f",
+        "rootfs\\lib\\libX11.so.6": "10c6d39f0f4a5404fe5b607735b5dc9b2680d1f62b32987d967472ec375f15ae",
+        "rootfs\\lib\\libxcb.so.1": "86e5d7b0ab00d594b47bd662532d357e387f3d5f2a06f183c116fe3e362b1fe1",
+        "rootfs\\lib\\libXcursor.so.1": "f4423fcf428a54fbd04b287a564a47d150dcd27cd27eb6ecaf2aaa6a0d099171",
+        "rootfs\\lib\\libXext.so.6": "4d9b0264cb71ca409b9b7cc06a016bd07f27fa0c2d4a142e6951277f48bd080a",
+        "rootfs\\lib\\libXi.so.6": "44b3108c1af2951fa627974cc9353b697bfb2e6a563823a9e7ec582c85364caf",
+        "rootfs\\lib\\libXinerama.so.1": "314e9af18ef019c2e144bdfaea1c569955c516ad4ff5f49dae0ead15781f541f",
+        "rootfs\\lib\\libXrandr.so.2": "3e77b93f8d323f152ff065370fe3143855e8d55a3a8a63622862eff181a1b3b3",
+        "rootfs\\lib\\libXrender.so.1": "e43877091db3df90133db382cc3b87ec7a9be224d0eb54f938884880ec4b76bc",
+        "rootfs\\lib\\libXxf86vm.so.1": "f78d8cc49c4a3233059689a5d7c129205d351f16479d7973c5d71e9500bb20ff",
+        "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+      }
+    },
+    {
+      "probe": "scalar",
+      "report": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\guest-pi-scalar\\report.json",
+      "sha256": "e8d32bb5c01ac9cd2d94cf1d3d38fe99c3333ce9acbaa3cfc951d196c6df1b76",
+      "rows": [
+        {
+          "optimized": false,
+          "status": "passed",
+          "exit_code": 0,
+          "request_to_exit_ms": 258.7385
+        },
+        {
+          "optimized": true,
+          "status": "passed",
+          "exit_code": 0,
+          "request_to_exit_ms": 256.635
+        }
+      ],
+      "distribution_sha256": {
+        "worker.exe": "76fa9f21215bc6f5278042008647b981df42fd0c38dd90a0a234903bf2bccef5",
+        "init.exe": "7389bbcfb9de4fb9690ac941eff49e5e9fa48f032058cefddede36a32e98d83d",
+        "rootfs.manifest.json": "efb5c990576e555db5ef532aaaac415b98bab802f3cebac145919a73a9f430c6",
+        "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+        "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "rootfs\\lib\\kinakaze_alloc.so": "fd24ad9ac0d84a4b5636e5f6f73a506751fc0634f6c70f429f476389e8c84f6c",
+        "rootfs\\lib\\kinakaze_elf.so": "615c38c64c16ff6fb2e306eec18d81bc160a9a0f7c58aaeca3467463a285368b",
+        "rootfs\\lib\\kinakaze_guest_engine.so": "5bbf663181fd2f72341c544a5cc88d6bbfbca3e28dba57e5b68264f4ebfe8f82",
+        "rootfs\\lib\\kinakaze_kernel.so": "a0dfa42ed35584850e51666526f955c728547c84ac7dded738e2864bbac96120",
+        "rootfs\\lib\\kinakaze_tls.so": "3b5c15973e29cccaadb9f2183f1c2d4e8ff7b18e1d1ccd76827178bdb1aaa86c",
+        "rootfs\\lib\\kinakaze_vfs.so": "2f7f4f0237a98d2ad4d175802ab666b1c37bdc5291426a76cba565307a67beff",
+        "rootfs\\lib\\ld-linux-x86-64.so.2": "73ed9d626932b033439c1938f8679946da6f8ce27a5bf596be0225efa9913a3c",
+        "rootfs\\lib\\libasound.so.2": "a206af15da40f1673c8ef168afcf75af1d0cd0b7abf17954e8d8b3a259ef63bd",
+        "rootfs\\lib\\libc.so.6": "5d4440bd1b1ecf2a7ad1f891719cc2fc9a1b39325e6704e8a11fc85047be4b66",
+        "rootfs\\lib\\libcuda.so.1": "355bd520f3b01404fa86c90e21e36a04bdf4a692f7193e38a20c625a8d283dc0",
+        "rootfs\\lib\\libdisplay.so.1": "eeb44ba2a6ecffb7cd930a24c6832a6eb90dc8ce7664c2ddf904e34239b42b28",
+        "rootfs\\lib\\libdl.so.2": "033496e6f656c1d5595aaf318c1353b4bc2e1122a6b115f6fba70103780426db",
+        "rootfs\\lib\\libEGL.so.1": "6790f65fd457ab2aaa07796371e0e56afe470b4ab83b77375752395eb762df6b",
+        "rootfs\\lib\\libGL.so.1": "47fa43fa3b3a005d87212b29d5f7867bc63ff97a4d96735906ad77906dd66c88",
+        "rootfs\\lib\\libGLESv2.so.2": "bcc63433cfcdcc0cf0138005a912f1af537239a0863c3af5d5f13b01733a717c",
+        "rootfs\\lib\\libGLX.so.0": "41961f3d28819a70839a98a059cd4856289f33f7d236ffc96c9c9dc8933d330c",
+        "rootfs\\lib\\libkinakaze-runtime.so.1": "d33b5e8e4533a5fe153d627f82649f5784a4a3c58bd757dae027e26281f0a384",
+        "rootfs\\lib\\libm.so.6": "269ed2db6f29b4b62be91b730ddafcff220e3db9a4489554fe019ef47c64ef2a",
+        "rootfs\\lib\\libOpenGL.so.0": "4eb29c1b30b55081ab0cb65f7af57b5bf095c7bc062189ae492f112a034e9d2d",
+        "rootfs\\lib\\libpipewire-0.3.so.0": "3a8b46d3826138aa25e1fd58f4093adff2e3d10a0770a63c8f569b533aeafef1",
+        "rootfs\\lib\\libpthread.so.0": "d2a6f63e6365cb0891a7d798f30b724717407c2f04a12abd7a677cfbf34c4bb7",
+        "rootfs\\lib\\libpulse.so.0": "e0cbf9581d6ddfba3904c1f627f92497da7e2cee7b9faa6160e74579eb50608f",
+        "rootfs\\lib\\libresolv.so.2": "7dc7f44326be4d326714633be987c114b461a830ffb04c023d00a5c038081c8e",
+        "rootfs\\lib\\librt.so.1": "40e25baddc7f5c0ffaff64b60a236ddf0e212de70a0ec5800a6dfd61a7f8d3ba",
+        "rootfs\\lib\\libvulkan.so.1": "5aa681762308cfb4243f32ec3554b726aebdc10756fd52e6ce2686def1c30e87",
+        "rootfs\\lib\\libX11-xcb.so.1": "7ff5c20dd6f70416da797d7165f5ba18a9a7a7aeeb307ccb6977dd7e654f8b7f",
+        "rootfs\\lib\\libX11.so.6": "10c6d39f0f4a5404fe5b607735b5dc9b2680d1f62b32987d967472ec375f15ae",
+        "rootfs\\lib\\libxcb.so.1": "86e5d7b0ab00d594b47bd662532d357e387f3d5f2a06f183c116fe3e362b1fe1",
+        "rootfs\\lib\\libXcursor.so.1": "f4423fcf428a54fbd04b287a564a47d150dcd27cd27eb6ecaf2aaa6a0d099171",
+        "rootfs\\lib\\libXext.so.6": "4d9b0264cb71ca409b9b7cc06a016bd07f27fa0c2d4a142e6951277f48bd080a",
+        "rootfs\\lib\\libXi.so.6": "44b3108c1af2951fa627974cc9353b697bfb2e6a563823a9e7ec582c85364caf",
+        "rootfs\\lib\\libXinerama.so.1": "314e9af18ef019c2e144bdfaea1c569955c516ad4ff5f49dae0ead15781f541f",
+        "rootfs\\lib\\libXrandr.so.2": "3e77b93f8d323f152ff065370fe3143855e8d55a3a8a63622862eff181a1b3b3",
+        "rootfs\\lib\\libXrender.so.1": "e43877091db3df90133db382cc3b87ec7a9be224d0eb54f938884880ec4b76bc",
+        "rootfs\\lib\\libXxf86vm.so.1": "f78d8cc49c4a3233059689a5d7c129205d351f16479d7973c5d71e9500bb20ff",
+        "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+      }
+    },
+    {
+      "probe": "vector",
+      "report": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\guest-pi-vector\\report.json",
+      "sha256": "d541fa7ee69b9d619398d4a14ddf5916c31074bf889f4c2e8173f3f0ff71daad",
+      "rows": [
+        {
+          "optimized": false,
+          "status": "passed",
+          "exit_code": 0,
+          "request_to_exit_ms": 159.1856
+        },
+        {
+          "optimized": true,
+          "status": "passed",
+          "exit_code": 0,
+          "request_to_exit_ms": 148.8268
+        }
+      ],
+      "distribution_sha256": {
+        "worker.exe": "76fa9f21215bc6f5278042008647b981df42fd0c38dd90a0a234903bf2bccef5",
+        "init.exe": "7389bbcfb9de4fb9690ac941eff49e5e9fa48f032058cefddede36a32e98d83d",
+        "rootfs.manifest.json": "efb5c990576e555db5ef532aaaac415b98bab802f3cebac145919a73a9f430c6",
+        "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+        "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "rootfs\\lib\\kinakaze_alloc.so": "fd24ad9ac0d84a4b5636e5f6f73a506751fc0634f6c70f429f476389e8c84f6c",
+        "rootfs\\lib\\kinakaze_elf.so": "615c38c64c16ff6fb2e306eec18d81bc160a9a0f7c58aaeca3467463a285368b",
+        "rootfs\\lib\\kinakaze_guest_engine.so": "5bbf663181fd2f72341c544a5cc88d6bbfbca3e28dba57e5b68264f4ebfe8f82",
+        "rootfs\\lib\\kinakaze_kernel.so": "a0dfa42ed35584850e51666526f955c728547c84ac7dded738e2864bbac96120",
+        "rootfs\\lib\\kinakaze_tls.so": "3b5c15973e29cccaadb9f2183f1c2d4e8ff7b18e1d1ccd76827178bdb1aaa86c",
+        "rootfs\\lib\\kinakaze_vfs.so": "2f7f4f0237a98d2ad4d175802ab666b1c37bdc5291426a76cba565307a67beff",
+        "rootfs\\lib\\ld-linux-x86-64.so.2": "73ed9d626932b033439c1938f8679946da6f8ce27a5bf596be0225efa9913a3c",
+        "rootfs\\lib\\libasound.so.2": "a206af15da40f1673c8ef168afcf75af1d0cd0b7abf17954e8d8b3a259ef63bd",
+        "rootfs\\lib\\libc.so.6": "5d4440bd1b1ecf2a7ad1f891719cc2fc9a1b39325e6704e8a11fc85047be4b66",
+        "rootfs\\lib\\libcuda.so.1": "355bd520f3b01404fa86c90e21e36a04bdf4a692f7193e38a20c625a8d283dc0",
+        "rootfs\\lib\\libdisplay.so.1": "eeb44ba2a6ecffb7cd930a24c6832a6eb90dc8ce7664c2ddf904e34239b42b28",
+        "rootfs\\lib\\libdl.so.2": "033496e6f656c1d5595aaf318c1353b4bc2e1122a6b115f6fba70103780426db",
+        "rootfs\\lib\\libEGL.so.1": "6790f65fd457ab2aaa07796371e0e56afe470b4ab83b77375752395eb762df6b",
+        "rootfs\\lib\\libGL.so.1": "47fa43fa3b3a005d87212b29d5f7867bc63ff97a4d96735906ad77906dd66c88",
+        "rootfs\\lib\\libGLESv2.so.2": "bcc63433cfcdcc0cf0138005a912f1af537239a0863c3af5d5f13b01733a717c",
+        "rootfs\\lib\\libGLX.so.0": "41961f3d28819a70839a98a059cd4856289f33f7d236ffc96c9c9dc8933d330c",
+        "rootfs\\lib\\libkinakaze-runtime.so.1": "d33b5e8e4533a5fe153d627f82649f5784a4a3c58bd757dae027e26281f0a384",
+        "rootfs\\lib\\libm.so.6": "269ed2db6f29b4b62be91b730ddafcff220e3db9a4489554fe019ef47c64ef2a",
+        "rootfs\\lib\\libOpenGL.so.0": "4eb29c1b30b55081ab0cb65f7af57b5bf095c7bc062189ae492f112a034e9d2d",
+        "rootfs\\lib\\libpipewire-0.3.so.0": "3a8b46d3826138aa25e1fd58f4093adff2e3d10a0770a63c8f569b533aeafef1",
+        "rootfs\\lib\\libpthread.so.0": "d2a6f63e6365cb0891a7d798f30b724717407c2f04a12abd7a677cfbf34c4bb7",
+        "rootfs\\lib\\libpulse.so.0": "e0cbf9581d6ddfba3904c1f627f92497da7e2cee7b9faa6160e74579eb50608f",
+        "rootfs\\lib\\libresolv.so.2": "7dc7f44326be4d326714633be987c114b461a830ffb04c023d00a5c038081c8e",
+        "rootfs\\lib\\librt.so.1": "40e25baddc7f5c0ffaff64b60a236ddf0e212de70a0ec5800a6dfd61a7f8d3ba",
+        "rootfs\\lib\\libvulkan.so.1": "5aa681762308cfb4243f32ec3554b726aebdc10756fd52e6ce2686def1c30e87",
+        "rootfs\\lib\\libX11-xcb.so.1": "7ff5c20dd6f70416da797d7165f5ba18a9a7a7aeeb307ccb6977dd7e654f8b7f",
+        "rootfs\\lib\\libX11.so.6": "10c6d39f0f4a5404fe5b607735b5dc9b2680d1f62b32987d967472ec375f15ae",
+        "rootfs\\lib\\libxcb.so.1": "86e5d7b0ab00d594b47bd662532d357e387f3d5f2a06f183c116fe3e362b1fe1",
+        "rootfs\\lib\\libXcursor.so.1": "f4423fcf428a54fbd04b287a564a47d150dcd27cd27eb6ecaf2aaa6a0d099171",
+        "rootfs\\lib\\libXext.so.6": "4d9b0264cb71ca409b9b7cc06a016bd07f27fa0c2d4a142e6951277f48bd080a",
+        "rootfs\\lib\\libXi.so.6": "44b3108c1af2951fa627974cc9353b697bfb2e6a563823a9e7ec582c85364caf",
+        "rootfs\\lib\\libXinerama.so.1": "314e9af18ef019c2e144bdfaea1c569955c516ad4ff5f49dae0ead15781f541f",
+        "rootfs\\lib\\libXrandr.so.2": "3e77b93f8d323f152ff065370fe3143855e8d55a3a8a63622862eff181a1b3b3",
+        "rootfs\\lib\\libXrender.so.1": "e43877091db3df90133db382cc3b87ec7a9be224d0eb54f938884880ec4b76bc",
+        "rootfs\\lib\\libXxf86vm.so.1": "f78d8cc49c4a3233059689a5d7c129205d351f16479d7973c5d71e9500bb20ff",
+        "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+      }
+    },
+    {
+      "probe": "requeue",
+      "report": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\guest-pi-requeue\\report.json",
+      "sha256": "5139513b38df0a86cc786f2a8b5ec4a3e7843dcb1596d7f1f60992da62e18148",
+      "rows": [
+        {
+          "optimized": false,
+          "status": "passed",
+          "exit_code": 0,
+          "request_to_exit_ms": 370.3056
+        },
+        {
+          "optimized": true,
+          "status": "passed",
+          "exit_code": 0,
+          "request_to_exit_ms": 346.348
+        }
+      ],
+      "distribution_sha256": {
+        "worker.exe": "76fa9f21215bc6f5278042008647b981df42fd0c38dd90a0a234903bf2bccef5",
+        "init.exe": "7389bbcfb9de4fb9690ac941eff49e5e9fa48f032058cefddede36a32e98d83d",
+        "rootfs.manifest.json": "efb5c990576e555db5ef532aaaac415b98bab802f3cebac145919a73a9f430c6",
+        "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+        "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "rootfs\\lib\\kinakaze_alloc.so": "fd24ad9ac0d84a4b5636e5f6f73a506751fc0634f6c70f429f476389e8c84f6c",
+        "rootfs\\lib\\kinakaze_elf.so": "615c38c64c16ff6fb2e306eec18d81bc160a9a0f7c58aaeca3467463a285368b",
+        "rootfs\\lib\\kinakaze_guest_engine.so": "5bbf663181fd2f72341c544a5cc88d6bbfbca3e28dba57e5b68264f4ebfe8f82",
+        "rootfs\\lib\\kinakaze_kernel.so": "a0dfa42ed35584850e51666526f955c728547c84ac7dded738e2864bbac96120",
+        "rootfs\\lib\\kinakaze_tls.so": "3b5c15973e29cccaadb9f2183f1c2d4e8ff7b18e1d1ccd76827178bdb1aaa86c",
+        "rootfs\\lib\\kinakaze_vfs.so": "2f7f4f0237a98d2ad4d175802ab666b1c37bdc5291426a76cba565307a67beff",
+        "rootfs\\lib\\ld-linux-x86-64.so.2": "73ed9d626932b033439c1938f8679946da6f8ce27a5bf596be0225efa9913a3c",
+        "rootfs\\lib\\libasound.so.2": "a206af15da40f1673c8ef168afcf75af1d0cd0b7abf17954e8d8b3a259ef63bd",
+        "rootfs\\lib\\libc.so.6": "5d4440bd1b1ecf2a7ad1f891719cc2fc9a1b39325e6704e8a11fc85047be4b66",
+        "rootfs\\lib\\libcuda.so.1": "355bd520f3b01404fa86c90e21e36a04bdf4a692f7193e38a20c625a8d283dc0",
+        "rootfs\\lib\\libdisplay.so.1": "eeb44ba2a6ecffb7cd930a24c6832a6eb90dc8ce7664c2ddf904e34239b42b28",
+        "rootfs\\lib\\libdl.so.2": "033496e6f656c1d5595aaf318c1353b4bc2e1122a6b115f6fba70103780426db",
+        "rootfs\\lib\\libEGL.so.1": "6790f65fd457ab2aaa07796371e0e56afe470b4ab83b77375752395eb762df6b",
+        "rootfs\\lib\\libGL.so.1": "47fa43fa3b3a005d87212b29d5f7867bc63ff97a4d96735906ad77906dd66c88",
+        "rootfs\\lib\\libGLESv2.so.2": "bcc63433cfcdcc0cf0138005a912f1af537239a0863c3af5d5f13b01733a717c",
+        "rootfs\\lib\\libGLX.so.0": "41961f3d28819a70839a98a059cd4856289f33f7d236ffc96c9c9dc8933d330c",
+        "rootfs\\lib\\libkinakaze-runtime.so.1": "d33b5e8e4533a5fe153d627f82649f5784a4a3c58bd757dae027e26281f0a384",
+        "rootfs\\lib\\libm.so.6": "269ed2db6f29b4b62be91b730ddafcff220e3db9a4489554fe019ef47c64ef2a",
+        "rootfs\\lib\\libOpenGL.so.0": "4eb29c1b30b55081ab0cb65f7af57b5bf095c7bc062189ae492f112a034e9d2d",
+        "rootfs\\lib\\libpipewire-0.3.so.0": "3a8b46d3826138aa25e1fd58f4093adff2e3d10a0770a63c8f569b533aeafef1",
+        "rootfs\\lib\\libpthread.so.0": "d2a6f63e6365cb0891a7d798f30b724717407c2f04a12abd7a677cfbf34c4bb7",
+        "rootfs\\lib\\libpulse.so.0": "e0cbf9581d6ddfba3904c1f627f92497da7e2cee7b9faa6160e74579eb50608f",
+        "rootfs\\lib\\libresolv.so.2": "7dc7f44326be4d326714633be987c114b461a830ffb04c023d00a5c038081c8e",
+        "rootfs\\lib\\librt.so.1": "40e25baddc7f5c0ffaff64b60a236ddf0e212de70a0ec5800a6dfd61a7f8d3ba",
+        "rootfs\\lib\\libvulkan.so.1": "5aa681762308cfb4243f32ec3554b726aebdc10756fd52e6ce2686def1c30e87",
+        "rootfs\\lib\\libX11-xcb.so.1": "7ff5c20dd6f70416da797d7165f5ba18a9a7a7aeeb307ccb6977dd7e654f8b7f",
+        "rootfs\\lib\\libX11.so.6": "10c6d39f0f4a5404fe5b607735b5dc9b2680d1f62b32987d967472ec375f15ae",
+        "rootfs\\lib\\libxcb.so.1": "86e5d7b0ab00d594b47bd662532d357e387f3d5f2a06f183c116fe3e362b1fe1",
+        "rootfs\\lib\\libXcursor.so.1": "f4423fcf428a54fbd04b287a564a47d150dcd27cd27eb6ecaf2aaa6a0d099171",
+        "rootfs\\lib\\libXext.so.6": "4d9b0264cb71ca409b9b7cc06a016bd07f27fa0c2d4a142e6951277f48bd080a",
+        "rootfs\\lib\\libXi.so.6": "44b3108c1af2951fa627974cc9353b697bfb2e6a563823a9e7ec582c85364caf",
+        "rootfs\\lib\\libXinerama.so.1": "314e9af18ef019c2e144bdfaea1c569955c516ad4ff5f49dae0ead15781f541f",
+        "rootfs\\lib\\libXrandr.so.2": "3e77b93f8d323f152ff065370fe3143855e8d55a3a8a63622862eff181a1b3b3",
+        "rootfs\\lib\\libXrender.so.1": "e43877091db3df90133db382cc3b87ec7a9be224d0eb54f938884880ec4b76bc",
+        "rootfs\\lib\\libXxf86vm.so.1": "f78d8cc49c4a3233059689a5d7c129205d351f16479d7973c5d71e9500bb20ff",
+        "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+      }
+    }
+  ],
+  "benchmark": {
+    "passed": true,
+    "artifacts_unchanged": true,
+    "comparison": "Same implementation, optimization switch only; no prior ENOSYS backend speed comparison.",
+    "domain": "Native default test domain, process-incarnation keys; no unrelated native queue population added.",
+    "rows": [
+      {
+        "sample": -1,
+        "warmup": true,
+        "optimized": true,
+        "metrics": [
+          {
+            "command": 6,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5311700
+          },
+          {
+            "command": 8,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5215300
+          },
+          {
+            "command": 13,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5266000
+          },
+          {
+            "command": 6,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 3567300
+          },
+          {
+            "command": 8,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 3490900
+          },
+          {
+            "command": 13,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 3788900
+          }
+        ],
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-benchmark--1-1.log",
+        "sha256": "090a84b9dd1834ad4fe1641bfb761c39f67831802530f7c7119f0d5cc09a737d"
+      },
+      {
+        "sample": -1,
+        "warmup": true,
+        "optimized": false,
+        "metrics": [
+          {
+            "command": 6,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5922900
+          },
+          {
+            "command": 8,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 6137000
+          },
+          {
+            "command": 13,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 6001200
+          },
+          {
+            "command": 6,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 4350900
+          },
+          {
+            "command": 8,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 4366500
+          },
+          {
+            "command": 13,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 4409000
+          }
+        ],
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-benchmark--1-0.log",
+        "sha256": "466a33d15c6053d0c62dff68abd298dffe3c922f41802afa2ccb40f08a44ddd3"
+      },
+      {
+        "sample": 0,
+        "warmup": false,
+        "optimized": false,
+        "metrics": [
+          {
+            "command": 6,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 6326100
+          },
+          {
+            "command": 8,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 6935400
+          },
+          {
+            "command": 13,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5927100
+          },
+          {
+            "command": 6,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 4852500
+          },
+          {
+            "command": 8,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 4265600
+          },
+          {
+            "command": 13,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 4318100
+          }
+        ],
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-benchmark-0-0.log",
+        "sha256": "63cf19c26070947cd9c9bf9e7349d457312d17701929247222f269d99a17fc06"
+      },
+      {
+        "sample": 0,
+        "warmup": false,
+        "optimized": true,
+        "metrics": [
+          {
+            "command": 6,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5265400
+          },
+          {
+            "command": 8,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5169000
+          },
+          {
+            "command": 13,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5219700
+          },
+          {
+            "command": 6,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 3766500
+          },
+          {
+            "command": 8,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 3664000
+          },
+          {
+            "command": 13,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 3654100
+          }
+        ],
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-benchmark-0-1.log",
+        "sha256": "6649757eb0b995f3aa7ee56650407b978f3121d3257f6f31d4a309d39a2880f2"
+      },
+      {
+        "sample": 1,
+        "warmup": false,
+        "optimized": true,
+        "metrics": [
+          {
+            "command": 6,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5256600
+          },
+          {
+            "command": 8,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5222500
+          },
+          {
+            "command": 13,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5342800
+          },
+          {
+            "command": 6,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 3685000
+          },
+          {
+            "command": 8,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 3757400
+          },
+          {
+            "command": 13,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 4558000
+          }
+        ],
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-benchmark-1-1.log",
+        "sha256": "c922155d835a33de758142b36a30bde3fc0dc3475753aa725eea623dfef17593"
+      },
+      {
+        "sample": 1,
+        "warmup": false,
+        "optimized": false,
+        "metrics": [
+          {
+            "command": 6,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 6005800
+          },
+          {
+            "command": 8,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 7508700
+          },
+          {
+            "command": 13,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 7219700
+          },
+          {
+            "command": 6,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 4495500
+          },
+          {
+            "command": 8,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 4381300
+          },
+          {
+            "command": 13,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 4335200
+          }
+        ],
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-benchmark-1-0.log",
+        "sha256": "cb7c35a9a363536e6fb76fab16763e28b6a3c3e09b28f7e5352778984d7af015"
+      },
+      {
+        "sample": 2,
+        "warmup": false,
+        "optimized": false,
+        "metrics": [
+          {
+            "command": 6,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5935900
+          },
+          {
+            "command": 8,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5890000
+          },
+          {
+            "command": 13,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5977100
+          },
+          {
+            "command": 6,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 4299800
+          },
+          {
+            "command": 8,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 4364500
+          },
+          {
+            "command": 13,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 4535200
+          }
+        ],
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-benchmark-2-0.log",
+        "sha256": "043fb5a492d3cf4e9df6bd7c6f04fb36cfe7f2b7a5e96f54ede6ac14cb9741f3"
+      },
+      {
+        "sample": 2,
+        "warmup": false,
+        "optimized": true,
+        "metrics": [
+          {
+            "command": 6,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5324300
+          },
+          {
+            "command": 8,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5585600
+          },
+          {
+            "command": 13,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5747300
+          },
+          {
+            "command": 6,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 3785200
+          },
+          {
+            "command": 8,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 3599100
+          },
+          {
+            "command": 13,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 3805000
+          }
+        ],
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-benchmark-2-1.log",
+        "sha256": "093a3122d188dd8d09a24a893c2339eab6530d07ad766de09300bbd11ca5de74"
+      },
+      {
+        "sample": 3,
+        "warmup": false,
+        "optimized": true,
+        "metrics": [
+          {
+            "command": 6,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5300500
+          },
+          {
+            "command": 8,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5129700
+          },
+          {
+            "command": 13,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5298800
+          },
+          {
+            "command": 6,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 3699600
+          },
+          {
+            "command": 8,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 3809800
+          },
+          {
+            "command": 13,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 3913000
+          }
+        ],
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-benchmark-3-1.log",
+        "sha256": "8e02f62e060e3c3533c3992144c1fa3cdc99b271779098cf68f7c87696a6de3f"
+      },
+      {
+        "sample": 3,
+        "warmup": false,
+        "optimized": false,
+        "metrics": [
+          {
+            "command": 6,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 6644400
+          },
+          {
+            "command": 8,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5829300
+          },
+          {
+            "command": 13,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 6131300
+          },
+          {
+            "command": 6,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 4336200
+          },
+          {
+            "command": 8,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 4428600
+          },
+          {
+            "command": 13,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 4401000
+          }
+        ],
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-benchmark-3-0.log",
+        "sha256": "827bc557d554a6d2a507f775296d4c45407688d94646b28c8b2f2601cba1146c"
+      },
+      {
+        "sample": 4,
+        "warmup": false,
+        "optimized": false,
+        "metrics": [
+          {
+            "command": 6,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5906500
+          },
+          {
+            "command": 8,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5990900
+          },
+          {
+            "command": 13,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5868000
+          },
+          {
+            "command": 6,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 4347000
+          },
+          {
+            "command": 8,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 4406400
+          },
+          {
+            "command": 13,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 4450300
+          }
+        ],
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-benchmark-4-0.log",
+        "sha256": "f7858329b335666a1b91f4a47ab1cdbe7340d65a5d8dfa9ce34aa382a8c9d78b"
+      },
+      {
+        "sample": 4,
+        "warmup": false,
+        "optimized": true,
+        "metrics": [
+          {
+            "command": 6,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5182400
+          },
+          {
+            "command": 8,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5258600
+          },
+          {
+            "command": 13,
+            "private": false,
+            "pairs": 2000,
+            "elapsed_ns": 5386200
+          },
+          {
+            "command": 6,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 3729100
+          },
+          {
+            "command": 8,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 3620900
+          },
+          {
+            "command": 13,
+            "private": true,
+            "pairs": 2000,
+            "elapsed_ns": 3672500
+          }
+        ],
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-benchmark-4-1.log",
+        "sha256": "e19700af192adb04c36ce3703639fe225ee02ca3e9400e8db5c3423d11369a92"
+      }
+    ],
+    "medians": [
+      {
+        "private": false,
+        "command": 6,
+        "pairs": 2000,
+        "control_ns": 6005800,
+        "candidate_ns": 5265400,
+        "control_over_candidate": 1.1406160975424469
+      },
+      {
+        "private": false,
+        "command": 8,
+        "pairs": 2000,
+        "control_ns": 5990900,
+        "candidate_ns": 5222500,
+        "control_over_candidate": 1.147132599329823
+      },
+      {
+        "private": false,
+        "command": 13,
+        "pairs": 2000,
+        "control_ns": 5977100,
+        "candidate_ns": 5342800,
+        "control_over_candidate": 1.1187205210750917
+      },
+      {
+        "private": true,
+        "command": 6,
+        "pairs": 2000,
+        "control_ns": 4347000,
+        "candidate_ns": 3729100,
+        "control_over_candidate": 1.1656968169263362
+      },
+      {
+        "private": true,
+        "command": 8,
+        "pairs": 2000,
+        "control_ns": 4381300,
+        "candidate_ns": 3664000,
+        "control_over_candidate": 1.195769650655022
+      },
+      {
+        "private": true,
+        "command": 13,
+        "pairs": 2000,
+        "control_ns": 4401000,
+        "candidate_ns": 3805000,
+        "control_over_candidate": 1.1566360052562419
+      }
+    ],
+    "manifest": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-native-release\\manifest.json"
+  },
+  "coverage": {
+    "dispatched": 304,
+    "explicit-refusal": 1,
+    "missing-dispatch": 70,
+    "syscalls": 375,
+    "required_path_reviews": 3750,
+    "verified_path_reviews": 0
+  },
+  "excluded": [
+    "pi-native-final-build.jsonl: E0382 in FIFO test ownership, fixed before release graph.",
+    "Earlier first/second/verified/bank graphs do not represent final source."
+  ],
+  "limitations": [
+    "PI requeue and pthread PI attributes pending.",
+    "Linux FIFO/RR scheduling and cross-namespace ancestor owner views pending.",
+    "Benchmarks compare the same implementation under the switch, not prior ENOSYS results.",
+    "Native benchmark uses default test domain without unrelated queue population; broad syscall/path performance completion is not claimed."
+  ],
+  "integration": {
+    "head": "721624a36ad47fe80ef9a74c904483d1b01d9c19",
+    "merged_main": "22df00b",
+    "check": "cargo check -p kinakaze-v2-libc --release",
+    "passed": true,
+    "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-merged-production-check.log",
+    "sha256": "5ba357415defa9256c33cc2b1c0513ce16fab5d66dc8f738a5a55299f24611ff",
+    "runtime_tests": "Frozen 63bc6f9 source tree; no merged-tree full runtime rerun claimed.",
+    "pthread_shared_backend": "Independent main implementation is present; pthread PI attributes remain pending."
+  }
+}

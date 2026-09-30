@@ -1,8 +1,11 @@
 # 全部 syscall 与 I/O 路径覆盖
 
-10 月 1 日阶段已补齐 raw 455、修正信号重启及旧式超时入口顺序。最新固定
-libc 产物在两配置各通过 605 项；真实 Debian 的 timeout、scalar、signal、
-vector、requeue 五类探针在两配置均通过。实现、验证及 raw 202/455 测量见
+10 月 1 日阶段已接入 raw 202 的 LOCK_PI、TRYLOCK_PI、UNLOCK_PI 与
+LOCK_PI2，补充共享所有权转移日志、原生捐赠、死亡接管及信号入口重启。
+最终固定图在两配置各通过 libc 619 项、pthread 51 项；真实 Debian 的
+pi、timeout、scalar、signal、vector、requeue 六类探针在两配置均通过。
+实现、边界与测量见 [PI 锁阶段记录](futex-pi-locks-2026-10-01.md)。
+旧式超时入口与 raw 202/455 的独立证据仍见
 [超时入口阶段记录](futex-timeout-entry-2026-10-01.md)。
 覆盖工具当前记录 304 项已分发、1 项明确拒绝、70 项缺少分发；375 个 syscall
 的 3,750 项完整路径审查仍保留待验证状态。

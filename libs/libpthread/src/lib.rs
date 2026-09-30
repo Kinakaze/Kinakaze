@@ -629,6 +629,16 @@ pub fn install_kernel_thread_exit(hook: extern "sysv64" fn()) {
     KERNEL_THREAD_EXIT.store(hook as usize, Ordering::Release);
 }
 
+/// PI donation keeps the scheduling base separate from an inherited native
+/// boost. libc supplies this callback without a reverse library dependency.
+#[cfg(all(windows, target_arch = "x86_64"))]
+static PRIORITY_BASE_HOOK: AtomicUsize = AtomicUsize::new(0);
+
+#[cfg(all(windows, target_arch = "x86_64"))]
+pub fn install_priority_base_hook(hook: extern "sysv64" fn(u32, i32) -> i32) {
+    PRIORITY_BASE_HOOK.store(hook as usize, Ordering::Release);
+}
+
 #[cfg(all(windows, target_arch = "x86_64"))]
 #[unsafe(no_mangle)]
 /// Ends only the calling pthread, publishing its full pointer result for join.

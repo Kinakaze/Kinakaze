@@ -74,7 +74,6 @@ EXPORTS
   kinakaze_engine_libm_atan
   "atan"=kinakaze_engine_libm_atan PRIVATE
   "atan@GLIBC_2.2.5"=kinakaze_engine_libm_atan PRIVATE
-  kinakaze_engine_libm_atan2
   "atan2"=kinakaze_engine_libm_atan2 PRIVATE
   "atan2@GLIBC_2.2.5"=kinakaze_engine_libm_atan2 PRIVATE
   kinakaze_engine_libm_atan2f
@@ -351,7 +350,6 @@ EXPORTS
   kinakaze_engine_libm_erff
   "erff"=kinakaze_engine_libm_erff PRIVATE
   "erff@GLIBC_2.2.5"=kinakaze_engine_libm_erff PRIVATE
-  kinakaze_engine_libm_exp
   "exp"=kinakaze_engine_libm_exp PRIVATE
   "exp@GLIBC_2.2.5"=kinakaze_engine_libm_exp PRIVATE
   "exp@GLIBC_2.29"=kinakaze_engine_libm_exp PRIVATE
@@ -468,9 +466,7 @@ EXPORTS
   kinakaze_engine_libm_fmodl
   "fmodl"=kinakaze_engine_libm_fmodl PRIVATE
   "fmodl@GLIBC_2.2.5"=kinakaze_engine_libm_fmodl PRIVATE
-  kinakaze_engine_libm_fpclassify
   "fpclassify"=kinakaze_engine_libm_fpclassify PRIVATE
-  kinakaze_engine_libm_fpclassifyf
   "fpclassifyf"=kinakaze_engine_libm_fpclassifyf PRIVATE
   kinakaze_engine_libm_frexp
   "frexp"=kinakaze_engine_libm_frexp PRIVATE
@@ -534,7 +530,6 @@ EXPORTS
   kinakaze_engine_libm_ldexpl
   "ldexpl"=kinakaze_engine_libm_ldexpl PRIVATE
   "ldexpl@GLIBC_2.2.5"=kinakaze_engine_libm_ldexpl PRIVATE
-  kinakaze_engine_libm_lgamma
   "lgamma"=kinakaze_engine_libm_lgamma PRIVATE
   "lgamma@GLIBC_2.23"=kinakaze_engine_libm_lgamma PRIVATE
   kinakaze_engine_libm_lgamma_r
@@ -596,10 +591,8 @@ EXPORTS
   kinakaze_engine_libm_logl
   "logl"=kinakaze_engine_libm_logl PRIVATE
   "logl@GLIBC_2.2.5"=kinakaze_engine_libm_logl PRIVATE
-  kinakaze_engine_libm_lrint
   "lrint"=kinakaze_engine_libm_lrint PRIVATE
   "lrint@GLIBC_2.2.5"=kinakaze_engine_libm_lrint PRIVATE
-  kinakaze_engine_libm_lrintf
   "lrintf"=kinakaze_engine_libm_lrintf PRIVATE
   "lrintf@GLIBC_2.2.5"=kinakaze_engine_libm_lrintf PRIVATE
   kinakaze_engine_libm_lround
@@ -652,7 +645,6 @@ EXPORTS
   kinakaze_engine_libm_powl
   "powl"=kinakaze_engine_libm_powl PRIVATE
   "powl@GLIBC_2.2.5"=kinakaze_engine_libm_powl PRIVATE
-  kinakaze_engine_libm_remainder
   "remainder"=kinakaze_engine_libm_remainder PRIVATE
   "remainder@GLIBC_2.2.5"=kinakaze_engine_libm_remainder PRIVATE
   kinakaze_engine_libm_remainderf
@@ -697,7 +689,6 @@ EXPORTS
   "signbit"=kinakaze_engine_libm_signbit PRIVATE
   kinakaze_engine_libm_signbitf
   "signbitf"=kinakaze_engine_libm_signbitf PRIVATE
-  kinakaze_engine_libm_signgam DATA
   "signgam"=kinakaze_engine_libm_signgam DATA PRIVATE
   "signgam@GLIBC_2.2.5"=kinakaze_engine_libm_signgam DATA PRIVATE
   kinakaze_engine_libm_significand

@@ -98,8 +98,13 @@ extern "sysv64" fn exit_hook() {
     exit_current();
 }
 
+pub(crate) fn install_exit_hook() {
+    libpthread::install_kernel_thread_exit(exit_hook);
+}
+
 pub(crate) fn exit_current() {
     let _ = TASK.try_with(|task| finish(task.0.replace(Registration::default())));
+    crate::futex::pi::exit_current();
 }
 
 pub(super) fn reset_after_fork() {

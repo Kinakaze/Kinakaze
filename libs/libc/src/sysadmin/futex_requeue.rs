@@ -13,13 +13,13 @@ struct Entry {
     reserved: u32,
 }
 
-fn key(address: FutexAddress) -> Result<crate::futex::Key, i32> {
+pub(super) fn key(address: FutexAddress) -> Result<crate::futex::Key, i32> {
     address
         .shared
         .map_or_else(|| crate::futex::Key::flagged_private(address.key), Ok)
 }
 
-fn promote(
+pub(super) fn promote(
     transaction: &mut crate::futex::Transaction,
     queues: &mut FutexQueue,
     address: FutexAddress,
@@ -78,7 +78,7 @@ pub(super) fn requeue(
             promote(&mut transaction, &mut queues, source, source_key);
         }
         let selected = transaction.wake(source_key, wake, u32::MAX)?;
-        let moved = transaction.transfer(source_key, target_key, transfer);
+        let moved = transaction.transfer(source_key, target_key, transfer)?;
         transaction.commit();
         Ok(selected + moved)
     })();

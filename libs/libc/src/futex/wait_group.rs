@@ -17,7 +17,7 @@ impl WaitGroup {
         let shared = shared()?;
         let record = Record {
             key: Key([0; 5]),
-            token: shared.header().next_token.fetch_add(1, Ordering::Relaxed),
+            token: shared.token(),
             born: current_thread_birth()?,
             host: std::process::id(),
             thread: unsafe { GetCurrentThreadId() },
@@ -106,7 +106,7 @@ impl WaitGroup {
         let _guard = self.shared.acquire()?;
         let records = self.shared.records()?;
         let mut present = 0u128;
-        for record in records.iter().filter(|r| r.token == self.record.token) {
+        for record in records.iter().filter(|r| !r.metadata() && r.token == self.record.token) {
             if !(1..=128).contains(&record.reserved) {
                 return Err(EIO);
             }
@@ -117,7 +117,7 @@ impl WaitGroup {
         if cancel || woken.is_some() {
             if present != 0 {
                 let mut records = records.to_vec();
-                records.retain(|r| r.token != self.record.token);
+                records.retain(|r| r.metadata() || r.token != self.record.token);
                 self.shared.commit(&records);
             }
             self.retired.set(Some(woken));

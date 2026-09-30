@@ -15,6 +15,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::set_errno;
 mod futex_deadline;
+mod futex_pi;
 mod futex_requeue;
 mod futex_scalar;
 #[cfg(test)]
@@ -2531,6 +2532,8 @@ const FUTEX_REQUEUE: u32 = 3;
 const FUTEX_CMP_REQUEUE: u32 = 4;
 const FUTEX_WAKE_OP: u32 = 5;
 const FUTEX_LOCK_PI: u32 = 6;
+const FUTEX_UNLOCK_PI: u32 = 7;
+const FUTEX_TRYLOCK_PI: u32 = 8;
 const FUTEX_WAIT_BITSET: u32 = 9;
 const FUTEX_WAKE_BITSET: u32 = 10;
 const FUTEX_WAIT_REQUEUE_PI: u32 = 11;
@@ -2591,7 +2594,7 @@ impl FutexAddress {
     fn resolve(word: *mut c_int, private: bool) -> Result<Self, i64> {
         futex_key_address(word)?;
         if !private {
-            futex_word(word)?;
+            futex_access(word as usize, size_of::<i32>(), false)?;
         }
         // All unflagged keys use the kernel-domain queue, even for private
         // memory, so mixed private/shared requeues remain atomic. PRIVATE_FLAG
@@ -2642,6 +2645,7 @@ mod futex_handoff {
         if len != 0 {
             return kinakaze_vfs::EINVAL;
         }
+        crate::fsextra::reset_native_thread_identity_after_fork();
         super::FUTEX_QUEUES.store(core::ptr::null_mut(), super::Ordering::Release);
         super::FUTEX_PRIVATE_BRIDGED.store(false, super::Ordering::Release);
         crate::futex::reset_after_fork();
@@ -2692,7 +2696,7 @@ fn futex_word(address: *mut c_int) -> Result<&'static AtomicI32, i64> {
     Ok(unsafe { &*(address.cast::<AtomicI32>()) })
 }
 
-fn futex_access(address: usize, length: usize, write: bool) -> Result<(), i64> {
+pub(crate) fn futex_access(address: usize, length: usize, write: bool) -> Result<(), i64> {
     use windows_sys::Win32::System::Memory::*;
     let end = address.checked_add(length).ok_or(-i64::from(EFAULT))?;
     let mut cursor = address;
@@ -3146,11 +3150,24 @@ fn futex_syscall(
     uaddr2: *mut c_int,
     val3: u32,
 ) -> i64 {
+    loop {
+        let result = futex_syscall_attempt(uaddr, op, val, timeout, uaddr2, val3);
+        if result != futex_pi::RESTART { return result; }
+    }
+}
+
+fn futex_syscall_attempt(
+    uaddr: *mut c_int,
+    op: i32,
+    val: u32,
+    timeout: *const KernelTimespec,
+    uaddr2: *mut c_int,
+    val3: u32,
+) -> i64 {
     let flags = (op as u32) & (FUTEX_PRIVATE_FLAG | FUTEX_CLOCK_REALTIME);
     let cmd = (op as u32) & !(FUTEX_PRIVATE_FLAG | FUTEX_CLOCK_REALTIME);
     // sys_futex copies timed commands' utime before do_futex checks command
-    // flags, masks or either key. This includes PI commands whose backend is
-    // still unsupported; their entry-time faults must not become ENOSYS.
+    // flags, masks or either key, including commands without a backend.
     let deadline = match futex_deadline::legacy(cmd, flags, timeout) {
         Ok(deadline) => deadline,
         Err(error) => return error,
@@ -3159,7 +3176,7 @@ fn futex_syscall(
     if deadline.is_some() {
         futex_deadline::tests::pause_after_copy(uaddr as usize);
     }
-    if flags & FUTEX_CLOCK_REALTIME != 0 && cmd != FUTEX_WAIT_BITSET {
+    if flags & FUTEX_CLOCK_REALTIME != 0 && !matches!(cmd, FUTEX_WAIT_BITSET | FUTEX_LOCK_PI2) {
         return -i64::from(ENOSYS);
     }
     if !matches!(
@@ -3171,6 +3188,10 @@ fn futex_syscall(
             | FUTEX_REQUEUE
             | FUTEX_CMP_REQUEUE
             | FUTEX_WAKE_OP
+            | FUTEX_LOCK_PI
+            | FUTEX_UNLOCK_PI
+            | FUTEX_TRYLOCK_PI
+            | FUTEX_LOCK_PI2
     ) {
         return -i64::from(ENOSYS);
     }
@@ -3183,11 +3204,13 @@ fn futex_syscall(
         return -i64::from(EINVAL);
     }
     let private = flags & FUTEX_PRIVATE_FLAG != 0;
+    if cmd == FUTEX_UNLOCK_PI { return futex_pi::unlock(uaddr, private); }
     let address = match FutexAddress::resolve(uaddr, private) {
         Ok(address) => address,
         Err(error) => return error,
     };
     match cmd {
+        FUTEX_LOCK_PI | FUTEX_TRYLOCK_PI | FUTEX_LOCK_PI2 => futex_pi::lock(address, cmd == FUTEX_TRYLOCK_PI, deadline.unwrap_or(futex_deadline::Prepared { duration: None, started: std::time::Instant::now() })),
         FUTEX_WAIT | FUTEX_WAIT_BITSET => {
             let deadline = deadline.expect("timed command was prepared before key resolution");
             futex_wait_prepared(

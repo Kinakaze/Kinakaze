@@ -168,6 +168,11 @@ fn apply(handle: &OwnedHandle, policy: i32, priority: i32) -> i32 {
     if let Err(error) = validate(policy, priority) {
         return error;
     }
+    let hook = super::PRIORITY_BASE_HOOK.load(super::Ordering::Acquire);
+    if hook != 0 {
+        let callback: extern "sysv64" fn(u32, i32) -> i32 = unsafe { core::mem::transmute(hook) };
+        return callback(unsafe { windows_sys::Win32::System::Threading::GetThreadId(handle.as_raw_handle()) }, THREAD_PRIORITY_NORMAL);
+    }
     if unsafe { SetThreadPriority(handle.as_raw_handle(), THREAD_PRIORITY_NORMAL) } == 0 {
         return native_error();
     }
