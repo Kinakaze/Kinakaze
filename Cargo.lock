@@ -650,6 +650,8 @@ dependencies = [
  "kinakaze-v2-abi",
  "kinakaze-v2-bridge",
  "kinakaze-v2-host-win",
+ "kinakaze-v2-protocol",
+ "serde_json",
 ]
 
 [[package]]
