@@ -245,3 +245,11 @@ waitv 的重复私有地址测试在杂散中断后会退休旧注册并逐项�
 文件、外部共享等待迁入当前进程私有队列；报告保存完整发行目录 SHA-256。
 这些探针的单次执行时间不作为吞吐结论，也不证明完整 futex 语义全部完成。
 PI、完整 robust pthread、Unix 共享环、SIMD 阈值及端到端性能对照仍属于持续目标。
+
+## Git 保存
+
+按用户要求，每项任务验证完成后立即独立 commit 并 push 到 `origin/main`。
+syscall 模板、tmpfs 连续读取、VFS 路由、普通 robust-list 及 waitv/requeue
+整合已分别保存。拆分提交时保留已提交的 fork 注册接口；普通 robust-list
+另从待提交树隔离构建，5 项 robust 回归和 41 项 pthread 测试全部通过，记录
+存于 `artifacts/syscall-io-goal-20260930/commits/robust-tests/report.json`。
