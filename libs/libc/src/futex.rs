@@ -13,6 +13,8 @@ mod wait_group;
 pub(crate) use wait_group::WaitGroup;
 mod hybrid;
 pub(crate) use hybrid::{ParkIdentity, Transaction, park, park_identity};
+mod atomic_word;
+pub(crate) mod pi;
 
 #[inline]
 pub(crate) fn optimized() -> bool {
@@ -146,12 +148,20 @@ struct Record {
 }
 
 impl Record {
+    fn metadata(self) -> bool {
+        self.reserved & (pi::STATE | pi::JOURNAL) != 0
+    }
+
+    fn pi_wait(self) -> bool {
+        self.reserved & pi::WAIT != 0
+    }
+
     fn event_name(self, domain: u64) -> Vec<u16> {
         if self.reserved & hybrid::PRIVATE_PARK != 0 {
             return hybrid::park_name(domain, self.host, self.thread, self.born);
         }
         wide(&format!(
-            r"Local\kinakaze.futex.wait.v1.{domain:016x}.{:016x}",
+            r"Local\kinakaze.futex.wait.v2.{domain:016x}.{:016x}",
             self.token
         ))
     }
@@ -308,7 +318,7 @@ fn thread_birth(thread: HANDLE) -> Result<u64, i32> {
 // A domain has a bounded kernel resource, not a silently truncated queue.
 // Exhaustion reports ENOMEM after reclaiming dead waiters.
 const CAPACITY: usize = 32_768;
-const MAGIC: u64 = u64::from_le_bytes(*b"CYFUT001");
+const MAGIC: u64 = u64::from_le_bytes(*b"CYFUT002");
 
 #[repr(C)]
 struct Header {
@@ -379,6 +389,13 @@ impl Shared {
         unsafe { &*self.view.Value.cast::<Header>() }
     }
 
+    fn token(&self) -> u64 {
+        loop {
+            let token = self.header().next_token.fetch_add(1, Ordering::Relaxed);
+            if token != 0 { return token; }
+        }
+    }
+
     fn bank(&self, index: u32) -> *mut Bank {
         debug_assert!(index < 2);
         unsafe {
@@ -436,12 +453,12 @@ impl Shared {
                 let cursor = unsafe { &mut (*self.view.Value.cast::<Header>()).reserved };
                 let index = *cursor as usize % records.len();
                 *cursor = cursor.wrapping_add(1);
-                if records[index].dead() {
+                if !records[index].metadata() && !records[index].pi_wait() && records[index].dead() {
                     records.remove(index);
                 }
             }
         } else {
-            records.retain(|record| !record.dead());
+            records.retain(|record| record.metadata() || record.pi_wait() || !record.dead());
         }
         if records.len().saturating_add(count) > CAPACITY {
             Err(ENOMEM)
@@ -470,9 +487,12 @@ impl Shared {
         let mut index = 0;
         while index < records.len() && selected < count {
             let record = records[index];
-            if record.key != key || record.bitset & bitset == 0 {
+            if record.metadata() || record.key != key || (!record.pi_wait() && record.bitset & bitset == 0) {
                 index += 1;
                 continue;
+            }
+            if record.pi_wait() {
+                return Err(kinakaze_vfs::EINVAL);
             }
             if record.dead() {
                 records.remove(index);
@@ -517,9 +537,14 @@ impl Shared {
         records.retain(|&record| {
             if error.is_some()
                 || selected >= count
+                || record.metadata()
                 || record.key != key
-                || record.bitset & bitset == 0
+                || (!record.pi_wait() && record.bitset & bitset == 0)
             {
+                return true;
+            }
+            if record.pi_wait() {
+                error = Some(kinakaze_vfs::EINVAL);
                 return true;
             }
             if record.dead() {
@@ -564,7 +589,7 @@ fn shared() -> Result<&'static Shared, i32> {
         CreateMutexW(
             ptr::null(),
             0,
-            wide(&format!(r"Local\kinakaze.futex.guard.v1.{domain:016x}")).as_ptr(),
+            wide(&format!(r"Local\kinakaze.futex.guard.v2.{domain:016x}")).as_ptr(),
         )
     })?;
     let section = Handle::new(unsafe {
@@ -574,7 +599,7 @@ fn shared() -> Result<&'static Shared, i32> {
             PAGE_READWRITE,
             0,
             SECTION_SIZE as u32,
-            wide(&format!(r"Local\kinakaze.futex.v1.{domain:016x}")).as_ptr(),
+            wide(&format!(r"Local\kinakaze.futex.v2.{domain:016x}")).as_ptr(),
         )
     })?;
     let view = unsafe { MapViewOfFile(section.0, FILE_MAP_ALL_ACCESS, 0, 0, SECTION_SIZE) };
@@ -621,6 +646,7 @@ pub(crate) fn reset_after_fork() {
     PROCESS_BIRTH.set(None);
     THREAD_BIRTH.set(None);
     hybrid::reset_after_fork();
+    pi::reset_after_fork();
 }
 
 pub(crate) fn wake(key: Key, count: u32, bitset: u32) -> Result<u32, i32> {
@@ -649,7 +675,7 @@ pub(crate) fn count_for_test(key: Key) -> usize {
         .records()
         .unwrap()
         .iter()
-        .filter(|record| record.key == key)
+        .filter(|record| record.key == key && !record.metadata())
         .count()
 }
 
@@ -666,54 +692,17 @@ pub(crate) fn requeue(
     comparison: Option<(&AtomicI32, i32)>,
 ) -> Result<u32, i32> {
     let shared = shared()?;
-    let _guard = shared.acquire()?;
+    let guard = shared.acquire()?;
     if comparison.is_some_and(|(word, expected)| word.load(Ordering::SeqCst) != expected) {
         return Err(EAGAIN);
     }
-    if optimized() && !shared.records()?.iter().any(|r| r.key == key) {
+    if optimized() && !shared.records()?.iter().any(|record| record.key == key && !record.metadata()) {
         return Ok(0);
     }
-    let mut records = shared.load()?;
-    let result = (|| {
-        let woken = shared.select(&mut records, key, count, u32::MAX)?;
-        let mut moved = 0;
-        let mut transfers = Vec::new();
-        if optimized() {
-            records.retain(|&record| {
-                if record.key != key || moved >= move_count {
-                    return true;
-                }
-                if record.dead() {
-                    return false;
-                }
-                transfers.push(Record {
-                    key: destination,
-                    ..record
-                });
-                moved += 1;
-                false
-            });
-        } else {
-            let mut index = 0;
-            while index < records.len() && moved < move_count {
-                if records[index].key != key {
-                    index += 1;
-                    continue;
-                }
-                let mut record = records.remove(index);
-                if record.dead() {
-                    continue;
-                }
-                record.key = destination;
-                transfers.push(record);
-                moved += 1;
-            }
-        }
-        records.extend(transfers);
-        Ok(woken + moved)
-    })();
-    shared.commit(&records);
-    result
+    let mut transaction = Transaction::from_guard(shared, guard)?;
+    let woken = transaction.wake(key, count, u32::MAX)?;
+    let moved = transaction.transfer(key, destination, move_count)?;
+    Ok(woken + moved)
 }
 
 pub(crate) fn wake_op(
@@ -769,7 +758,7 @@ impl Waiter {
         }
         let mut records = shared.load()?;
         shared.reserve(&mut records, 1)?;
-        let token = shared.header().next_token.fetch_add(1, Ordering::Relaxed);
+        let token = shared.token();
         let record = Record {
             key,
             token,
@@ -802,7 +791,7 @@ impl Waiter {
         let records = self.shared.records()?;
         let Some(index) = records
             .iter()
-            .position(|record| record.token == self.record.token)
+            .position(|record| !record.metadata() && record.token == self.record.token)
         else {
             self.retired.set(Some(true));
             return Ok(true);

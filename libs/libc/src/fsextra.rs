@@ -4617,6 +4617,10 @@ extern "C" fn record_initial_native_thread() {
 #[unsafe(link_section = ".CRT$XCU")]
 static INITIAL_NATIVE_THREAD_INITIALIZER: extern "C" fn() = record_initial_native_thread;
 
+pub(crate) fn reset_native_thread_identity_after_fork() {
+    record_initial_native_thread();
+}
+
 /// Translate the PID-namespace leader TID exposed by gettid back to its host ID.
 pub(crate) fn native_signal_tid(tid: i32) -> u32 {
     if tid == crate::process::kinakaze_abi_getpid() {
@@ -4629,11 +4633,13 @@ pub(crate) fn native_signal_tid(tid: i32) -> u32 {
 #[unsafe(no_mangle)]
 pub extern "sysv64" fn kinakaze_abi_gettid() -> i32 {
     let tid = unsafe { windows_sys::Win32::System::Threading::GetCurrentThreadId() };
-    if tid == INITIAL_NATIVE_THREAD.load(std::sync::atomic::Ordering::Relaxed) {
+    let tid = if tid == INITIAL_NATIVE_THREAD.load(std::sync::atomic::Ordering::Relaxed) {
         crate::process::kinakaze_abi_getpid()
     } else {
         tid as i32
-    }
+    };
+    let _ = crate::futex::pi::register_current(tid);
+    tid
 }
 
 #[unsafe(no_mangle)]

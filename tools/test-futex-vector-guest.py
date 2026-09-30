@@ -11,9 +11,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('root', 'dist', 'output'):
         parser.add_argument('--' + name, type=Path, required=True)
-    parser.add_argument('--probe', choices=('scalar', 'signal', 'timeout', 'vector', 'requeue'), default='vector')
+    parser.add_argument('--probe', choices=('pi', 'scalar', 'signal', 'timeout', 'vector', 'requeue'), default='vector')
     args = parser.parse_args()
-    name, marker = {'scalar': ('FutexScalarProbe.py', 'FUTEX_SCALAR_PASS'),
+    name, marker = {'pi': ('FutexPiProbe.py', 'FUTEX_PI_PASS'),
+                    'scalar': ('FutexScalarProbe.py', 'FUTEX_SCALAR_PASS'),
                     'signal': ('FutexSignalRestartProbe.py', 'FUTEX_SIGNAL_RESTART_PASS'),
                     'timeout': ('FutexTimeoutProbe.py', 'FUTEX_TIMEOUT_PASS'),
                     'vector': ('FutexVectorProbe.py', 'FUTEX_VECTOR_PASS'),
