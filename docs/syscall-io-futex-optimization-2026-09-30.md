@@ -264,3 +264,11 @@ syscall 模板、tmpfs 连续读取、VFS 路由、普通 robust-list 及 waitv/
 fork 快照补齐非默认 condition 时钟，修复子进程立即超时。
 详见 [pthread 记录](pthread-event-parking-2026-10-01.md)。
 PI、pshared 和完整 robust pthread 状态仍属于持续目标。
+
+## 进程私有 robust pthread 整合
+
+进程私有 robust mutex 已接入真实宿主线程 abandonment 检测、EOWNERDEAD、
+consistent、ENOTRECOVERABLE、条件等待及 fork 状态恢复。raw SYS_exit 也
+退休内部 pthread 注册、原生等待资源和栈元数据，保持绕过用户析构及单次
+任务计数递减。验证证据见 [robust 记录](pthread-private-robust-2026-10-01.md)。
+共享 robust mutex、PI 和 requeue PI 仍待实现。

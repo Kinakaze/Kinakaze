@@ -11,6 +11,11 @@ extern int pthread_create(word *, const void *, void *(*)(void *), void *);
 extern int pthread_join(word, void **);
 extern int pthread_cancel(word);
 extern int pthread_mutex_init(void *, const void *);
+#ifdef PROBE_ROBUST_MUTEX
+extern int pthread_mutexattr_init(void *);
+extern int pthread_mutexattr_setrobust(void *, int);
+extern int pthread_mutexattr_destroy(void *);
+#endif
 extern int pthread_mutex_destroy(void *);
 extern int pthread_mutex_lock(void *);
 extern int pthread_mutex_trylock(void *);
@@ -46,7 +51,14 @@ static void *waiter(void *mode) {
 
 int probe_cond_cancel(int timed) {
     ready = cleaned = held = 0;
+#ifdef PROBE_ROBUST_MUTEX
+    int attr;
+    if (pthread_mutexattr_init(&attr) || pthread_mutexattr_setrobust(&attr, 1)) return 1;
+    if (pthread_mutex_init(mutex, &attr) || pthread_cond_init(cond, 0)) return 1;
+    pthread_mutexattr_destroy(&attr);
+#else
     if (pthread_mutex_init(mutex, 0) || pthread_cond_init(cond, 0)) return 1;
+#endif
     word thread;
     if (pthread_create(&thread, 0, waiter, (void *)(word)timed)) return 2;
     while (!__atomic_load_n(&ready, __ATOMIC_ACQUIRE)) sched_yield();

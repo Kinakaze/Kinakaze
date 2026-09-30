@@ -373,3 +373,10 @@ EXPORTS
   "waitpid@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_waitpid PRIVATE
   "write"=libc.so.6.kinakaze_abi_write PRIVATE
   "write@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_write PRIVATE
+  "pthread_mutex_consistent_np"=pthread_mutex_consistent PRIVATE
+  "pthread_mutex_consistent_np@GLIBC_2.4"=pthread_mutex_consistent PRIVATE
+  "pthread_mutexattr_getrobust_np"=pthread_mutexattr_getrobust PRIVATE
+  "pthread_mutexattr_getrobust_np@GLIBC_2.4"=pthread_mutexattr_getrobust PRIVATE
+  "pthread_mutexattr_setrobust_np"=pthread_mutexattr_setrobust PRIVATE
+  "pthread_mutexattr_setrobust_np@GLIBC_2.4"=pthread_mutexattr_setrobust PRIVATE
+  "pthread_mutexattr_getrobust@GLIBC_2.12"=pthread_mutexattr_getrobust PRIVATE

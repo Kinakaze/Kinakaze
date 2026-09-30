@@ -269,6 +269,43 @@ fn arm(timer: HANDLE, deadline: &Timespec, clock: i32) -> Result<bool, i32> {
     Ok(true)
 }
 
+pub(super) fn wait_native(handle: HANDLE, deadline: Option<(&Timespec, i32)>) -> Result<u32, i32> {
+    use windows_sys::Win32::Foundation::{WAIT_ABANDONED, WAIT_TIMEOUT};
+    // An immediately obtainable mutex ignores malformed/expired timespecs.
+    let first = unsafe { WaitForSingleObject(handle, 0) };
+    if first == WAIT_OBJECT_0 || first == WAIT_ABANDONED {
+        return Ok(first);
+    }
+    if first != WAIT_TIMEOUT {
+        return Err(EINVAL);
+    }
+    let Some((time, clock)) = deadline else {
+        let result = unsafe { WaitForSingleObject(handle, INFINITE) };
+        return if result == WAIT_OBJECT_0 || result == WAIT_ABANDONED {
+            Ok(result)
+        } else {
+            Err(EINVAL)
+        };
+    };
+    let (_, timer) = handles(true)?;
+    let result = loop {
+        match arm(timer, time, clock) {
+            Ok(true) => {}
+            Ok(false) => break Err(ETIMEDOUT),
+            Err(error) => break Err(error),
+        }
+        let result = unsafe { WaitForMultipleObjects(2, [handle, timer].as_ptr(), 0, INFINITE) };
+        if result == WAIT_OBJECT_0 || result == WAIT_ABANDONED {
+            break Ok(result);
+        }
+        if result != WAIT_OBJECT_0 + 1 {
+            break Err(EINVAL);
+        }
+    };
+    unsafe { CancelWaitableTimer(timer) };
+    result
+}
+
 pub(super) unsafe fn timed_mutex(mutex: *mut usize, clock: i32, deadline: Timespec) -> i32 {
     match remaining(&deadline, clock) {
         Ok(Some(_)) => {}
@@ -319,10 +356,13 @@ pub(super) unsafe fn condition(
                     return error;
                 }
                 let error = unsafe { pthread_mutex_lock(mutex) };
-                if error != 0 {
+                if error != 0 && error != 130 {
                     return error;
                 }
                 pthread_testcancel();
+                if error != 0 {
+                    return error;
+                }
                 return ETIMEDOUT;
             }
             Ok(Some(_)) => {}
@@ -373,7 +413,7 @@ pub(super) unsafe fn condition(
     let selected = ticket.finish();
     drop(ticket); // ExitThread and guest cleanup do not unwind Rust locals.
     let error = unsafe { pthread_mutex_lock(mutex) };
-    if error != 0 {
+    if error != 0 && error != 130 {
         return error;
     }
     if cancellation_pending() {
@@ -381,6 +421,11 @@ pub(super) unsafe fn condition(
             let _ = signal(cond, false);
         }
         pthread_testcancel();
+    }
+    // The caller must repair an abandoned mutex. Releasing it around a guest
+    // signal handler here would instead permanently poison its state.
+    if error != 0 {
+        return error;
     }
     let error = unsafe { deliver_condition_signals(mutex) };
     if error != 0 {

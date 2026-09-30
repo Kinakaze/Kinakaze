@@ -76,6 +76,18 @@ pub(super) fn unregister(id: usize) {
         .remove(&id);
 }
 
+/// Share the real handle already retained for this guest pthread. Robust
+/// ownership needs it for fork liveness, without duplicating on each lock.
+pub(super) fn retain_current(id: usize) -> Result<Arc<OwnedHandle>, i32> {
+    register_current(id)?;
+    live()
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .get(&id)
+        .cloned()
+        .ok_or(ESRCH)
+}
+
 pub(super) fn reset_after_fork(id: usize) -> Result<(), i32> {
     // Parent native handles have no identity in the new worker. All permitted
     // policies are currently OTHER/0, which the new native thread inherits.
