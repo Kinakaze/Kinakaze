@@ -30,6 +30,10 @@ use std::sync::Mutex;
 /// wild read inside ordinary guest code.
 const CONTROL_BLOCK_SIZE: usize = 0x450;
 
+// Initial-exec DSOs (notably libgomp in Python wheels) can be dlopened after
+// threads exist. Their fixed offsets must fit without moving any thread's TP.
+const STATIC_TLS_SURPLUS: usize = 16 * 1024;
+
 /// Stable size of the host-private state registered by the loader's fork
 /// participant. Keeping this fixed makes the payload exhaustive: newly used
 /// fields inside the block cannot be silently omitted by child restoration.
@@ -327,9 +331,13 @@ pub(super) struct Layout {
     pub modules: Vec<StaticModule>,
     /// Total bytes reserved below the thread pointer.
     pub total: usize,
-    /// Set once a thread pointer has been installed, after which the layout can no
-    /// longer change: existing threads already have their blocks sized.
+    /// Once installed, offsets and allocation bounds cannot change. New modules
+    /// may still consume the unused portion of that allocation.
     pub frozen: bool,
+    pub capacity: usize,
+    pub alignment: usize,
+    /// Live managed TPs, protected against destruction by the layout lock.
+    pub threads: Vec<usize>,
 }
 
 impl Layout {
@@ -349,14 +357,15 @@ impl Layout {
         {
             return Ok(existing.offset);
         }
-        if self.frozen {
-            return Err(super::TlsError::LayoutFrozen);
-        }
         let raw = self
             .total
             .checked_add(size)
             .ok_or(super::TlsError::OffsetOutOfRange)?;
         let offset = round_up(raw, align).ok_or(super::TlsError::OffsetOutOfRange)?;
+        if self.frozen && (offset > self.capacity || align > self.alignment) {
+            return Err(super::TlsError::LayoutFrozen);
+        }
+        self.alignment = self.alignment.max(align).max(64);
         self.total = offset;
         self.modules.push(StaticModule {
             module_id,
@@ -364,6 +373,18 @@ impl Layout {
             size,
         });
         Ok(offset)
+    }
+
+    fn freeze(&mut self) -> Result<(), super::TlsError> {
+        if !self.frozen {
+            self.capacity = self
+                .total
+                .checked_add(STATIC_TLS_SURPLUS)
+                .ok_or(super::TlsError::OffsetOutOfRange)?;
+            self.alignment = self.alignment.max(64);
+            self.frozen = true;
+        }
+        Ok(())
     }
 
     fn executable(
@@ -495,6 +516,30 @@ pub fn offset_of(module_id: usize) -> Option<usize> {
         .map(|module| module.offset)
 }
 
+/// Publish relocated .tdata in all existing threads before the DSO runs code.
+/// The caller holds the template lock, which also excludes new installations.
+pub(super) fn initialize_module(module_id: usize, image: &[u8]) -> Result<bool, super::TlsError> {
+    let layout = layout().lock().map_err(|_| super::TlsError::Poisoned)?;
+    let Some(module) = layout.modules.iter().find(|m| m.module_id == module_id) else {
+        return Ok(false);
+    };
+    if image.len() > module.size {
+        return Err(super::TlsError::InvalidTemplate);
+    }
+    for &tp in &layout.threads {
+        // Every registered TP has the frozen capacity. Drop takes this same
+        // lock before freeing a block, and offsets never move after publication.
+        unsafe {
+            std::ptr::copy_nonoverlapping(
+                image.as_ptr(),
+                (tp - module.offset) as *mut u8,
+                image.len(),
+            )
+        };
+    }
+    Ok(true)
+}
+
 /// True when anything needs the static block.
 ///
 /// The block is installed regardless, because the canary lives in it even when no
@@ -554,6 +599,14 @@ impl ThreadBlock {
 
 impl Drop for ThreadBlock {
     fn drop(&mut self) {
+        if let Ok(mut layout) = layout().lock() {
+            layout.threads.retain(|&tp| tp != self.thread_pointer);
+        }
+        let _ = super::STATIC_ELF_TLS_POINTER.try_with(|slot| {
+            if slot.get() == self.thread_pointer {
+                slot.set(0);
+            }
+        });
         // Clear the base before the storage goes away. Leaving it pointing into a
         // freed allocation turns every later `%fs:` access on this thread into a
         // use-after-free rather than a clean fault.
@@ -572,21 +625,22 @@ impl Drop for ThreadBlock {
 /// The returned block must be kept alive for as long as the thread runs.
 pub fn install(images: &[(usize, &[u8])]) -> Result<ThreadBlock, super::TlsError> {
     let mut layout = layout().lock().map_err(|_| super::TlsError::Poisoned)?;
-    layout.frozen = true;
-    let below = layout.total.max(4096);
+    layout.freeze()?;
+    let below = layout.capacity;
+    let alignment = layout.alignment;
     let modules = layout.modules.clone();
-    drop(layout);
 
     // One allocation holds the module area, the control block, and enough slack to
     // align the thread pointer without a second allocation.
     let total = below
         .checked_add(CONTROL_BLOCK_SIZE)
-        .and_then(|size| size.checked_add(64))
+        .and_then(|size| size.checked_add(alignment))
         .ok_or(super::TlsError::OffsetOutOfRange)?;
     // Guest FS, generated host-call trampolines and suspended fork frames keep
     // these addresses. Allocate only these escaping buffers through the runtime
     // arena; module-private Vec/Box storage stays on the ordinary host heap.
-    let allocation = super::TlsBlock::zeroed(total, 64).ok_or(super::TlsError::OutOfMemory)?;
+    let allocation =
+        super::TlsBlock::zeroed(total, alignment).ok_or(super::TlsError::OutOfMemory)?;
     let transition_allocation = super::TlsBlock::zeroed(HOST_TRANSITION_BLOCK_SIZE + 64, 64)
         .ok_or(super::TlsError::OutOfMemory)?;
     let transition_pointer = round_up(transition_allocation.as_ptr() as usize, 64)
@@ -599,13 +653,13 @@ pub fn install(images: &[(usize, &[u8])]) -> Result<ThreadBlock, super::TlsError
     let host_call_stack = super::TlsBlock::zeroed(HOST_CALL_STACK_SIZE + 16, 16)
         .ok_or(super::TlsError::OutOfMemory)?;
 
-    // The thread pointer sits just above the module area, aligned to 64 bytes so
-    // every module's own alignment below it is also satisfied.
+    // The TP alignment covers every initially reserved module, including those
+    // with alignment greater than a cache line.
     let base = allocation.as_ptr() as usize;
     let unaligned = base
         .checked_add(below)
         .ok_or(super::TlsError::OffsetOutOfRange)?;
-    let thread_pointer = round_up(unaligned, 64).ok_or(super::TlsError::OffsetOutOfRange)?;
+    let thread_pointer = round_up(unaligned, alignment).ok_or(super::TlsError::OffsetOutOfRange)?;
     if thread_pointer + CONTROL_BLOCK_SIZE > base + allocation.len() {
         return Err(super::TlsError::OffsetOutOfRange);
     }
@@ -658,6 +712,7 @@ pub fn install(images: &[(usize, &[u8])]) -> Result<ThreadBlock, super::TlsError
         unsafe { write_fs_base(thread_pointer as u64) };
     }
 
+    layout.threads.push(thread_pointer);
     Ok(ThreadBlock {
         _allocation: allocation,
         _transition_allocation: transition_allocation,
@@ -734,22 +789,53 @@ mod tests {
     use super::*;
 
     #[test]
+    fn late_static_modules_keep_offsets_and_enforce_frozen_bounds() {
+        let mut layout = Layout::default();
+        let first = layout.reserve(1, 13, 256).unwrap();
+        layout.freeze().unwrap();
+        let capacity = layout.capacity;
+        assert_eq!(layout.alignment, 256);
+        let late = layout.reserve(2, 136, 64).unwrap();
+        assert_eq!(late % 64, 0);
+        assert_eq!(layout.reserve(1, 13, 256).unwrap(), first);
+        assert_eq!(layout.capacity, capacity);
+        assert_eq!(
+            layout.reserve(3, 1, 512),
+            Err(super::super::TlsError::LayoutFrozen)
+        );
+        assert_eq!(
+            layout.reserve(3, capacity, 8),
+            Err(super::super::TlsError::LayoutFrozen)
+        );
+        assert_eq!(layout.total, late);
+        assert_eq!(layout.modules.len(), 2);
+        assert_eq!(layout.reserve(3, capacity - late, 1).unwrap(), capacity);
+        assert_eq!(
+            layout.reserve(4, 1, 1),
+            Err(super::super::TlsError::LayoutFrozen)
+        );
+    }
+
+    #[test]
     fn executable_tls_precedes_native_errno_and_preserves_alignment() {
         let templates = [
             super::super::ModuleTemplate {
                 image: vec![0; 4],
                 memory_size: 4,
                 align: 4,
+                dynamic_used: false,
             },
             super::super::ModuleTemplate {
                 image: Vec::new(),
                 memory_size: 8,
                 align: 8,
+                dynamic_used: false,
             },
             super::super::ModuleTemplate {
                 image: vec![9],
                 memory_size: 17,
                 align: 32,
+                dynamic_used: false,
             },
         ];
         let mut layout = Layout::default();
@@ -782,6 +868,7 @@ mod tests {
             image: vec![0; 4],
             memory_size: 4,
             align: 4,
+            dynamic_used: false,
         }];
         let mut layout = Layout::default();
         layout.reserve(1, 4, 4).unwrap();

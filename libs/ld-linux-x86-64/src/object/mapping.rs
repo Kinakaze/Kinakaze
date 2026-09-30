@@ -303,7 +303,9 @@ fn snapshot_layout(
         }
         layout.push((target, source, count));
     }
-    if shared < 1024 * 1024 {
+    // Init now shares small command/DSO snapshots too. Keep the existing
+    // bounds, overlap and private-page ratio checks for those images.
+    if shared < 32 * 1024 {
         return None;
     }
     spans.sort_unstable();

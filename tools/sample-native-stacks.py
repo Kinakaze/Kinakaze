@@ -35,6 +35,8 @@ def sample(pid):
     kernel.VirtualQueryEx.argtypes = [wintypes.HANDLE, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t]
     kernel.VirtualQueryEx.restype = ctypes.c_size_t
     kernel.K32GetMappedFileNameW.argtypes = [wintypes.HANDLE, ctypes.c_void_p, wintypes.LPWSTR, wintypes.DWORD]
+    ntdll = ctypes.WinDLL('ntdll')
+    create_stub = ctypes.cast(ntdll.NtCreateFile, ctypes.c_void_p).value
     process = psutil.Process(pid)
     birth = process.create_time()
     handle = kernel.OpenProcess(0x410, False, pid)
@@ -76,6 +78,33 @@ def sample(pid):
                          'r8', 'r9', 'r10', 'r11', 'r12', 'r13', 'r14', 'r15', 'rip'),
                         struct.unpack('<17Q', ctypes.string_at(context + 120, 136))))
                     kernel.ReadProcessMemory(handle, row['rsp'], stack, len(stack), ctypes.byref(copied))
+                    # Decode the actual object name at NtCreateFile, rather
+                    # than infer filesystem activity from stale stack words.
+                    # Require the same mapped image base before comparing the
+                    # local export address; read only bounded remote buffers.
+                    if 0 <= row['rip'] - create_stub < 32:
+                        memory = ctypes.create_string_buffer(48)
+                        if (kernel.VirtualQueryEx(handle, row['rip'], memory, len(memory))
+                                and struct.unpack_from('<Q', memory.raw, 8)[0] == ntdll._handle):
+                            def read_remote(address, length):
+                                buffer = ctypes.create_string_buffer(length)
+                                count = ctypes.c_size_t()
+                                if (kernel.ReadProcessMemory(handle, address, buffer, length, ctypes.byref(count))
+                                        and count.value == length):
+                                    return buffer.raw
+                            attrs = read_remote(row['registers']['r8'], 48)
+                            if attrs and struct.unpack_from('<I', attrs)[0] == 48:
+                                name = read_remote(struct.unpack_from('<Q', attrs, 16)[0], 16)
+                                if name:
+                                    length = struct.unpack_from('<H', name)[0]
+                                    if length <= 8192 and length % 2 == 0:
+                                        raw_name = (read_remote(struct.unpack_from('<Q', name, 8)[0], length)
+                                                    if length else b'')
+                                        if raw_name is not None:
+                                            row['native_create'] = dict(
+                                                name=raw_name.decode('utf-16-le', errors='replace'),
+                                                root=hex(struct.unpack_from('<Q', attrs, 8)[0]),
+                                                access=hex(row['registers']['rdx']))
             finally:
                 try:
                     if suspended and kernel.ResumeThread(native) == 0xffffffff:

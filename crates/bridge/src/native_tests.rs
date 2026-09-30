@@ -111,6 +111,34 @@ fn malformed_exports_are_rejected_even_when_the_name_is_rust_only() {
 }
 
 #[test]
+fn export_names_and_addresses_may_alternate_between_sections() {
+    let mut bytes = fixture();
+    put32(&mut bytes, 0x250, 0x2020);
+    bytes[0x420..0x42a].copy_from_slice(b"_Rinternal");
+    put32(&mut bytes, 0x258, 0x2040);
+    bytes[0x440..0x446].copy_from_slice(b"object");
+    put32(&mut bytes, 0x240, 0x2010);
+    put32(&mut bytes, 0x244, 0x11c0);
+    let symbols = borrowed_exports(&bytes).unwrap();
+    assert_eq!(
+        symbols
+            .symbols
+            .iter()
+            .map(|s| (s.name, s.object))
+            .collect::<Vec<_>>(),
+        [
+            ("_Rinternal", Some(true)),
+            ("forwarded", Some(false)),
+            ("object", Some(true))
+        ]
+    );
+    // A previously valid section must not hide a later out-of-bounds name.
+    put32(&mut bytes, 0x258, 0x21ff);
+    bytes[0x5ff] = b'x';
+    assert!(borrowed_exports(&bytes).is_err());
+}
+
+#[test]
 fn export_names_keep_the_length_cap_and_cannot_cross_sections() {
     let mut bytes = fixture();
     bytes.resize(0x2400, 0);

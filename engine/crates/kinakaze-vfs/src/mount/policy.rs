@@ -8,7 +8,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::{
     collections::HashMap,
     ptr,
-    sync::{Arc, Mutex, OnceLock},
+    sync::{Arc, Mutex, OnceLock, Weak},
 };
 use windows_sys::Win32::Foundation::{
     ERROR_SHARING_VIOLATION, GetLastError, INVALID_HANDLE_VALUE, WAIT_ABANDONED, WAIT_OBJECT_0,
@@ -40,6 +40,9 @@ pub(crate) struct Policy {
     mutex: Object,
     view: MEMORY_MAPPED_VIEW_ADDRESS,
     gate: Vec<u16>,
+    // A weak reference cannot retain a mount writer after its last operation.
+    // Process identity prevents a fork from reusing a copied native handle.
+    writer: Mutex<(u32, Weak<Object>)>,
 }
 unsafe impl Send for Policy {}
 unsafe impl Sync for Policy {}
@@ -149,12 +152,33 @@ impl Policy {
         Object::owned(handle)
     }
     pub(crate) fn writer(&self) -> Result<Arc<Object>, i32> {
+        if let Some(writer) = self.live_writer()? {
+            return Ok(writer);
+        }
         let _guard = self.lock()?;
         if self.flags() & 1 != 0 {
             return Err(EROFS);
         }
-        let object = self.gate(false)?;
-        Ok(Arc::new(object))
+        if let Some(writer) = self.live_writer()? {
+            return Ok(writer);
+        }
+        let object = Arc::new(self.gate(false)?);
+        *self.writer.lock().map_err(|_| EIO)? = (std::process::id(), Arc::downgrade(&object));
+        Ok(object)
+    }
+    fn live_writer(&self) -> Result<Option<Arc<Object>>, i32> {
+        let cached = self.writer.lock().map_err(|_| EIO)?;
+        if cached.0 != std::process::id() {
+            return Ok(None);
+        }
+        let writer = cached.1.upgrade();
+        // A live gate denies the exclusive open used by remount/set_mapping.
+        // Upgrading its weak owner keeps that denial uninterrupted. No new
+        // writer can appear from an expired weak reference without the lock.
+        if writer.is_some() && self.flags() & 1 != 0 {
+            return Err(EROFS);
+        }
+        Ok(writer)
     }
 }
 impl Guard<'_> {
@@ -205,6 +229,7 @@ pub(crate) fn get(namespace: u64, id: u64, flags: u64) -> Result<Arc<Policy>, i3
         mutex,
         view,
         gate,
+        writer: Mutex::new((std::process::id(), Weak::new())),
     });
     if policy.header().magic.load(Ordering::Acquire) == 0 {
         let _guard = policy.lock()?;
@@ -331,6 +356,29 @@ impl Drop for Changes {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn overlapping_writers_share_a_gate_without_retaining_it() {
+        let id = crate::mount::shared::next_group().unwrap();
+        let policy = get(0xfeed, id, 0).unwrap();
+        let first = policy.writer().unwrap();
+        for _ in 0..128 {
+            let second = policy.writer().unwrap();
+            assert!(Arc::ptr_eq(&first, &second));
+            assert_eq!(policy.lock().unwrap().check(1), Err(EBUSY));
+        }
+        let weak = Arc::downgrade(&first);
+        drop(first);
+        assert!(weak.upgrade().is_none());
+        Changes::apply(vec![(policy.clone(), 1)]).unwrap().commit();
+        assert!(matches!(policy.writer(), Err(EROFS)));
+        Changes::apply(vec![(policy.clone(), 0)]).unwrap().commit();
+        let next = policy.writer().unwrap();
+        assert!(weak.upgrade().is_none());
+        assert_eq!(policy.lock().unwrap().check(1), Err(EBUSY));
+        drop(next);
+        assert_eq!(policy.lock().unwrap().check(1), Ok(()));
+        cache().lock().unwrap().remove(&(0xfeed, id));
+    }
     #[test]
     fn initialized_policy_restore_does_not_wait_on_a_frozen_parent_writer() {
         let id = crate::mount::shared::next_group().unwrap();

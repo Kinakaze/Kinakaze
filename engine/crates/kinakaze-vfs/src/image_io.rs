@@ -36,7 +36,7 @@ impl GuestImage {
         let len = usize::try_from(self.logical_length()?)
             .map_err(|_| io::Error::new(io::ErrorKind::OutOfMemory, "image too large"))?;
         #[cfg(windows)]
-        if len >= 8 * 1024 * 1024
+        if kinakaze_v2_protocol::image_cache::eligible(len)
             && let Some(bytes) = crate::fs::verity::cached_image_object(&self.file, len)
         {
             return Ok(bytes);

@@ -386,7 +386,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 .to_string_lossy()
                 .into_owned(),
         );
-        pool_size.get_or_insert(1);
+        pool_size.get_or_insert(2);
+    }
+    // An explicitly rooted generic session gets the same bounded default as
+    // desktop sessions. A command-specific prewarm keeps its existing route.
+    if prewarm_root.is_some() && prewarm_dist.is_some() && prewarm_command.is_empty() {
+        pool_size.get_or_insert(2);
     }
     let endpoint = match endpoint {
         Some(endpoint) => endpoint,

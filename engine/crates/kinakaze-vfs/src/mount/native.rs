@@ -133,9 +133,11 @@ pub(crate) fn prepare_open_canonical(
     let Some(policy) = policy_at_canonical(canonical)? else {
         return Ok(None);
     };
-    let create = flags & crate::fs::O_CREAT != 0 && crate::fs::stat(path).is_err();
+    // A writable open already requires the mount writer. Only a read-only
+    // O_CREAT needs an existence query to distinguish lookup from creation.
     let write = flags & crate::fs::O_PATH == 0
-        && (flags & (crate::fs::O_ACCMODE | crate::fs::O_TRUNC) != 0 || create);
+        && (flags & (crate::fs::O_ACCMODE | crate::fs::O_TRUNC) != 0
+            || flags & crate::fs::O_CREAT != 0 && crate::fs::stat(path).is_err());
     let writer = if write { Some(policy.writer()?) } else { None };
     Ok(Some(Description {
         policy,
@@ -145,6 +147,12 @@ pub(crate) fn prepare_open_canonical(
 }
 pub(crate) fn write_path(path: &str, follow: bool) -> Result<Option<Arc<Object>>, i32> {
     path_policy(path, follow)?.map(|p| p.writer()).transpose()
+}
+/// The caller already walked links and mount boundaries in this operation.
+pub(crate) fn write_canonical(canonical: &str) -> Result<Option<Arc<Object>>, i32> {
+    policy_at_canonical(canonical)?
+        .map(|p| p.writer())
+        .transpose()
 }
 pub(crate) fn namespace_for_native(
     entry: FdEntry,

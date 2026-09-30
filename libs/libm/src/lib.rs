@@ -12,6 +12,8 @@ use core::ffi::{c_char, c_int};
 #[cfg(target_arch = "x86_64")]
 mod complex;
 #[cfg(target_arch = "x86_64")]
+mod complex_extended;
+#[cfg(target_arch = "x86_64")]
 mod extended_integer;
 #[cfg(target_arch = "x86_64")]
 mod power80;

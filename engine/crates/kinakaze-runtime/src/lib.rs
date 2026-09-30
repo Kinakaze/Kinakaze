@@ -28,6 +28,8 @@ pub mod immutable;
 pub mod memory_protection;
 #[cfg(windows)]
 mod process_creation;
+#[cfg(all(windows, target_arch = "x86_64"))]
+mod sparse_copy;
 #[cfg(windows)]
 pub use process_creation::child_creation_flags;
 pub mod services;
@@ -4572,6 +4574,29 @@ pub mod job {
         Some(current)
     }
 
+    /// Whether a group still belongs to this session. Unreaped zombies retain
+    /// their group membership: a fast pipeline leader may exit before later
+    /// children call setpgid, while Bash still owns its waitable process row.
+    /// Signal delivery uses `members` instead, since zombies cannot receive it.
+    pub fn group_in_session(pgid: u32, sid: u32) -> bool {
+        with_table(|base| {
+            // SAFETY: the section is mapped and the mutex is held.
+            unsafe { sweep(base) };
+            let mut found = false;
+            for index in 0..CAPACITY {
+                let record = unsafe { read_slot(slot(base, index)) };
+                if record.pid != 0 && record.pgid == pgid {
+                    if record.sid != sid {
+                        return false;
+                    }
+                    found = true;
+                }
+            }
+            found
+        })
+        .unwrap_or(false)
+    }
+
     /// Every live member of process group `pgid`.
     ///
     /// Proxies are omitted when their delegate is registered, so a group signal
@@ -5874,7 +5899,7 @@ mod windows {
     };
     use windows_sys::Win32::System::Memory::{
         CreateFileMappingW, FILE_MAP_READ, FILE_MAP_WRITE, MEM_COMMIT, MEM_FREE,
-        MEM_PRESERVE_PLACEHOLDER, MEM_RELEASE, MEM_REPLACE_PLACEHOLDER, MEM_RESERVE,
+        MEM_PRESERVE_PLACEHOLDER, MEM_PRIVATE, MEM_RELEASE, MEM_REPLACE_PLACEHOLDER, MEM_RESERVE,
         MEM_RESERVE_PLACEHOLDER, MEMORY_BASIC_INFORMATION, MEMORY_MAPPED_VIEW_ADDRESS,
         MapViewOfFile, MapViewOfFile3, PAGE_EXECUTE_READWRITE, PAGE_NOACCESS, PAGE_READWRITE,
         UnmapViewOfFile, VirtualAlloc, VirtualAlloc2, VirtualAllocEx, VirtualFree, VirtualFreeEx,
@@ -8379,7 +8404,9 @@ mod windows {
                                     length,
                                     local.Protect,
                                     ptr::null_mut(),
+                                    false,
                                 )
+                                .map(|_| ())
                             };
                             let cow = if mapping.storage == ForkMappingStorage::AnonymousSnapshot {
                                 unsafe {
@@ -8407,9 +8434,11 @@ mod windows {
                                     } else {
                                         staging.byte_add(cursor - mapping.base)
                                     },
-                                )?;
+                                    mapping.storage == ForkMappingStorage::Ordinary
+                                        && local.Type == MEM_PRIVATE
+                                        && region_len >= 64 * 1024,
+                                )?
                             }
-                            (region_len, 1)
                         };
                         stats.copied_bytes += copied;
                         match mapping.domain {
@@ -8703,7 +8732,8 @@ mod windows {
         len: usize,
         protection: u32,
         staging: *mut c_void,
-    ) -> Result<(), ForkError> {
+        zeroed_private: bool,
+    ) -> Result<(usize, usize), ForkError> {
         use windows_sys::Win32::System::Memory::{
             PAGE_EXECUTE, PAGE_GUARD, PAGE_READONLY, VirtualProtect,
         };
@@ -8715,7 +8745,24 @@ mod windows {
         {
             return Err(os_error(ForkStage::GuestMapping));
         }
-        let outcome = if staging.is_null() {
+        let outcome = if zeroed_private {
+            // Ordinary reservations above are newly allocated or newly mapped
+            // pagefile sections. Windows guarantees their initial zero bytes.
+            // Skip complete zero runs, especially the unused 8 MiB guest stack,
+            // rather than copying/faulting them in every dpkg helper process.
+            debug_assert!(staging.is_null());
+            unsafe {
+                super::sparse_copy::copy(address, len, |offset, count| {
+                    write_remote_exact(
+                        process,
+                        (address + offset) as _,
+                        (address + offset) as _,
+                        count,
+                        ForkStage::GuestMapping,
+                    )
+                })
+            }
+        } else if staging.is_null() {
             unsafe {
                 write_remote_exact(
                     process,
@@ -8725,6 +8772,7 @@ mod windows {
                     ForkStage::GuestMapping,
                 )
             }
+            .map(|()| (len, 1))
         } else {
             unsafe {
                 read_remote_exact(
@@ -8735,6 +8783,7 @@ mod windows {
                     ForkStage::GuestMapping,
                 )
             }
+            .map(|()| (len, 1))
         };
         if changed {
             let mut discarded = 0;

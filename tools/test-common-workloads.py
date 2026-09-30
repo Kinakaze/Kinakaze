@@ -45,7 +45,8 @@ def main():
 
     add('shell-spawn', 'for i in $(seq 1 20); do /bin/true; done; '
         'printf "c\\na\\nb\\n" | sort | uniq > sorted; test "$(cat sorted)" = "$(printf "a\\nb\\nc")"')
-    add('apt-check', 'apt-get check; apt-cache show bash > package; grep -q "Package: bash" package')
+    add('apt-check', 'apt-get check; dpkg --audit > audit; test ! -s audit; '
+        'dpkg-query -W > packages; test -s packages')
     add('apt-inventory', "apt list --installed > packages; dpkg-query -W -f='${Package}\\n' > installed; "
         'test -s installed; while read package; do grep -q "^$package/" packages; done < installed')
     add('ps', 'ps -p $$ -o pid=,comm= > process; grep -q bash process; ps -eLf > threads; test -s threads')
@@ -139,6 +140,7 @@ gcc -O2 -fno-pie -no-pie ExecutableTlsProbe.c -pthread -o tls-exec
         './cpp-futures | grep -q CPP_FUTURES_OK', ['/usr/bin/clang++'], 120)
     add('go', shlex.quote(args.go) + ' run program.go', [args.go], 180)
     add('cargo', '''mkdir -p src
+export CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=gcc
 cat > Cargo.toml <<'EOF'
 [package]
 name = "compatibility-fixture"
@@ -166,7 +168,39 @@ cat out err
 grep -q '3 passed; 0 failed' out
 cargo test --offline -- --test-threads=2 > out 2> err
 grep -q '3 passed; 0 failed' out
-! grep -q 'Compiling compatibility-fixture' err''', ['/usr/bin/cargo', '/usr/bin/rustc'], 180)
+! grep -q 'Compiling compatibility-fixture' err''', ['/usr/bin/cargo', '/usr/bin/rustc', '/usr/bin/gcc'], 180)
+    add('git-workflow', '''git init -q -b main repository
+git -C repository config user.name Compatibility
+git -C repository config user.email compatibility@example.invalid
+printf 'first\\n' > repository/payload
+git -C repository add payload
+git -C repository commit -qm first
+git -C repository checkout -qb feature
+printf 'second\\n' >> repository/payload
+git -C repository commit -qam second
+git -C repository checkout -q main
+git -C repository merge --ff-only feature
+git -C repository gc --prune=now
+git -C repository fsck --strict
+git clone --no-hardlinks repository clone
+cmp repository/payload clone/payload
+test "$(git -C clone rev-list --count HEAD)" = 2
+test -z "$(git -C clone status --porcelain)"
+mkdir extracted
+git -C clone archive HEAD | tar -x -C extracted
+cmp clone/payload extracted/payload''', ['/usr/bin/git', '/bin/tar'], 120)
+    add('archive-roundtrip', '''mkdir source extracted
+python3 -c 'from pathlib import Path; p=Path("source"); (p/"payload").write_bytes(bytes(range(256))*4096); (p/"empty").touch(); (p/"space name").write_text("archive fixture\\n")'
+tar -cf payload.tar source
+gzip -c payload.tar > payload.tar.gz
+gzip -dc payload.tar.gz | cmp - payload.tar
+xz -c payload.tar > payload.tar.xz
+xz -dc payload.tar.xz | cmp - payload.tar
+zip -qr payload.zip source
+unzip -q payload.zip -d extracted
+diff -r source extracted/source
+tar -xf payload.tar -C extracted
+diff -r source extracted/source''', ['/usr/bin/python3', '/bin/tar', '/bin/gzip', '/usr/bin/xz', '/usr/bin/zip', '/usr/bin/unzip'], 90)
     add('cmake-ninja', '''cat > CMakeLists.txt <<'EOF'
 cmake_minimum_required(VERSION 3.16)
 project(compatibility_fixture C)
@@ -256,7 +290,7 @@ if(json_decode(json_encode(["x"=>42]),true)["x"]!=42) exit(2); echo "PHP_OK\\n";
                     'int increment(void){return ++value;}\n', encoding='utf-8')
                 shutil.copyfile(source / 'GoRuntimeProbe.go', stage / 'program.go')
                 marker = 'WORKLOAD_OK_' + name
-                script = 'set -eu\nexport PATH=/usr/sbin:/usr/bin:/sbin:/bin HOME=/root\n' + case['script'] + '\nprintf "%s\\n" ' + shlex.quote(marker)
+                script = 'set -euo pipefail\nexport PATH=/usr/sbin:/usr/bin:/sbin:/bin HOME=/root\n' + case['script'] + '\nprintf "%s\\n" ' + shlex.quote(marker)
                 row.update(execute([str(dist / 'worker.exe'), 'oneshot', '--root', str(root), '--dist', str(dist),
                     '--cwd', guest, '--', '/bin/bash', '-c', script], output / f'{name}-{iteration}', env,
                     timeout=case['timeout']))

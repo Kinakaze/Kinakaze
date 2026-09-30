@@ -85,6 +85,10 @@ def prepare(dist, cache, preset_path, online=False, elf_imports=None):
         payloads[target] = source.read_bytes()
         if online and source.parent == dist / 'rootfs/lib':
             preparer['atomic_write'](dist / 'native' / source.name, payloads[target])
+        # Guest linkers need ELF interfaces in offline images too. Native PE
+        # providers remain in /lib for runtime loading; they are not ELF input
+        # files that GCC, Clang or Rust's linker can consume.
+        if source.parent == dist / 'rootfs/lib':
             if elf_imports is not None and source.name in {
                     'libc.so.6', 'libm.so.6', 'libpthread.so.0', 'libdl.so.2',
                     'librt.so.1', 'libresolv.so.2', 'ld-linux-x86-64.so.2'}:
@@ -95,6 +99,16 @@ def prepare(dist, cache, preset_path, online=False, elf_imports=None):
                 interface_target = f'{directory}/x86_64-linux-gnu/{source.name}'
                 payloads[interface_target] = interface
                 linker_targets.add(interface_target)
+                if source.name == 'ld-linux-x86-64.so.2':
+                    # A GNU linker script may otherwise consume the native PE
+                    # command facade, producing invalid leaf shared libraries.
+                    # Keep the executable /lib64 alias intact and change only
+                    # the link-time input when the development script exists.
+                    script = 'usr/lib/x86_64-linux-gnu/libc.so'
+                    if script in payloads:
+                        payloads[script] = payloads[script].replace(
+                            b'/lib64/ld-linux-x86-64.so.2',
+                            ('/' + interface_target).encode())
     configure_packages(payloads, locked, packages, preset['native_packages'], version, links)
     for name in payloads:
         links.pop(name, None)

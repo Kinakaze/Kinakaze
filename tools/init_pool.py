@@ -45,6 +45,8 @@ class InitPool:
                 directory = self.output / 'profile'
                 directory.mkdir(exist_ok=True)
                 env[name] = str(directory)
+        for name in ['KINAKAZE_FORK_TIMINGS', 'KINAKAZE_FORK_TIMINGS_DIR']:
+            env.pop(name, None)
         self.buffers = [bytearray(), bytearray()]
         self.lock = threading.Lock()
         self.control_lock = threading.Lock()
@@ -55,9 +57,12 @@ class InitPool:
         self.samples = []
         self.sample_lock = threading.Lock()
         self.started = time.perf_counter_ns()
-        self.child = SessionProcess([str(self.dist / 'init.exe'), '--pipe', self.endpoint,
+        command = [str(self.dist / 'init.exe'), '--pipe', self.endpoint,
             '--controller-pid', str(os.getpid()), '--prewarm-root', str(self.root),
-            '--prewarm-dist', str(self.dist), '--prewarm-pool', str(size)], env=env,
+            '--prewarm-dist', str(self.dist)]
+        if size is not None:
+            command += ['--prewarm-pool', str(size)]
+        self.child = SessionProcess(command, env=env,
             stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             memory_limit_bytes=memory_limit_bytes)
         self.watchdog = None
@@ -71,7 +76,7 @@ class InitPool:
                 thread.start()
                 self.drainers.append(thread)
             self.controller = Controller(self.endpoint, self.token, self.child, time.monotonic() + (timeout or 30))
-            self.controller.call({'AwaitPoolReady': {'minimum': size}})
+            self.controller.call({'AwaitPoolReady': {'minimum': 2 if size is None else size}})
             self.preparation_ms = (time.perf_counter_ns()-self.started)/1e6
         except BaseException:
             self.close()

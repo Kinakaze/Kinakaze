@@ -29,6 +29,7 @@ mod index;
 mod lookup;
 mod metacopy;
 mod mounted;
+mod native_lookup;
 mod options;
 mod profile;
 pub use directory::DirectoryRecord;
@@ -36,6 +37,7 @@ pub use mounted::check_execute;
 pub use mounted::metadata_path;
 pub use mounted::rename_with_flags;
 pub use mounted::sync_descriptor;
+pub(crate) use mounted::sync_opened;
 pub use mounted::{MetadataHandle, chmod_descriptor, metadata_handle};
 pub use mounted::{
     WritePath, descriptor_path, descriptor_write_path, hard_link, prepare_create, prepare_write,

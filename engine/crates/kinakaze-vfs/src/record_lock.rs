@@ -1,4 +1,4 @@
-//! Linux process-owned advisory record locks.
+//! Linux process-owned and open-description-owned advisory record locks.
 //!
 //! Native byte-range locks are mandatory and owned by a Windows file object;
 //! neither property implements F_SETLK. This registry instead shares inode,
@@ -82,12 +82,31 @@ impl Kind {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(C)]
 struct Inode {
+    backing: u64,
     volume: u64,
     id: [u8; 16],
 }
 
 impl Inode {
     fn from_entry(entry: FdEntry) -> Result<Self, i32> {
+        if !entry.flags.contains(FdFlags::PATH_ONLY)
+            && matches!(entry.kind, FdKind::TmpfsFile | FdKind::TmpfsDirectory)
+        {
+            // The caller holds the descriptor table or owns the closing handle.
+            // A tmpfs descriptor starts with its volume and stable inode ID.
+            let store = crate::mount::shared::object_entry(entry)?;
+            let bytes = store.read()?.1;
+            let mut reader = crate::state_codec::Reader(&bytes);
+            let volume = reader.word()?;
+            let node = reader.word()?;
+            let mut id = [0; 16];
+            id[..8].copy_from_slice(&node.to_le_bytes());
+            return Ok(Self {
+                backing: 1,
+                volume,
+                id,
+            });
+        }
         if entry.flags.contains(FdFlags::PATH_ONLY)
             || !matches!(entry.kind, FdKind::File | FdKind::Directory)
             || entry.raw == 0
@@ -108,6 +127,7 @@ impl Inode {
             return Err(errno_from_win32(unsafe { GetLastError() }));
         }
         Ok(Self {
+            backing: 0,
             volume: info.VolumeSerialNumber,
             id: info.FileId.Identifier,
         })
@@ -123,6 +143,28 @@ struct Owner {
 }
 
 impl Owner {
+    // PID zero cannot own a POSIX lock. Use the existing shared OFD section's
+    // unique identity; its native lifetime follows dup/fork/exec/SCM_RIGHTS.
+    fn description(id: u64) -> Self {
+        Self {
+            pid: 0,
+            namespace: 0,
+            born: id,
+        }
+    }
+
+    fn is_description(self) -> bool {
+        self.pid == 0
+    }
+
+    fn alive(self) -> bool {
+        if self.is_description() {
+            // Never retain this observer: it must not keep a closed OFD alive.
+            crate::mount::shared::pin_user_object(self.born).is_ok()
+        } else {
+            self.live_entry().is_some()
+        }
+    }
     fn from_entry(entry: kinakaze_runtime::job::Entry) -> Self {
         Self {
             pid: entry.namespace_pid,
@@ -169,6 +211,7 @@ impl Record {
 #[repr(C)]
 struct Waiter {
     wanted: Record,
+    process: Owner,
     host: u32,
     thread: u32,
 }
@@ -210,7 +253,7 @@ fn object_name(kind: &str) -> Vec<u16> {
     // Owner liveness is resolved in this kernel's PID registry. Sharing the
     // lock table with another init would let its sweep discard our live locks.
     let domain = kinakaze_runtime::authority::domain_id();
-    wide(&format!("Local\\kinakaze.record-lock.v2.{domain}.{kind}"))
+    wide(&format!("Local\\kinakaze.record-lock.v3.{domain}.{kind}"))
 }
 
 struct Handle(HANDLE);
@@ -492,18 +535,22 @@ impl State {
             .map(|r| r.owner)
             .chain(self.waiters.iter().map(|w| w.wanted.owner))
         {
-            owners.entry(owner).or_insert_with(|| owner.live_entry());
+            owners.entry(owner).or_insert_with(|| owner.alive());
         }
         let before = self.locks.len();
-        self.locks.retain(|r| owners[&r.owner].is_some());
+        self.locks.retain(|r| owners[&r.owner]);
         self.dirty |= before != self.locks.len();
         self.wake |= before != self.locks.len();
         let before = self.waiters.len();
         self.waiters.retain(|waiter| {
-            let Some(entry) = owners[&waiter.wanted.owner] else {
+            if !owners[&waiter.wanted.owner] {
                 return false;
-            };
-            if entry.pid != waiter.host {
+            }
+            if waiter
+                .process
+                .live_entry()
+                .is_none_or(|entry| entry.pid != waiter.host)
+            {
                 return false;
             }
             let Ok(thread) = Handle::new(unsafe {
@@ -564,15 +611,27 @@ fn descriptor(fd: i32) -> Result<(FdEntry, Inode), i32> {
 pub struct Conflict {
     pub kind: Kind,
     pub range: Range,
-    pub pid: u32,
+    pub pid: i32,
 }
 
 pub fn query(fd: i32, range: Range, kind: Kind) -> Result<Option<Conflict>, i32> {
+    query_owned(fd, range, kind, false)
+}
+
+pub fn query_owned(fd: i32, range: Range, kind: Kind, ofd: bool) -> Result<Option<Conflict>, i32> {
     Range::new(range.start, range.end)?;
     let (entry, inode) = descriptor(fd)?;
+    let description = if ofd {
+        Some(crate::ofd::promote(fd)?)
+    } else {
+        None
+    };
     let wanted = Record {
         inode,
-        owner: Owner::current()?,
+        owner: match &description {
+            Some(store) => Owner::description(store.id()),
+            None => Owner::current()?,
+        },
         range,
         kind: kind.raw(),
         reserved: 0,
@@ -588,24 +647,48 @@ pub fn query(fd: i32, range: Range, kind: Kind) -> Result<Option<Conflict>, i32>
                 Kind::Write
             },
             range: record.range,
-            pid: record.owner.pid,
+            pid: if record.owner.is_description() {
+                -1
+            } else {
+                record.owner.pid as i32
+            },
         }))
     })
 }
 
 /// `None` unlocks. A failed upgrade preserves the owner's previous locks.
 pub fn set(fd: i32, range: Range, kind: Option<Kind>, wait: bool) -> Result<(), i32> {
+    set_owned(fd, range, kind, wait, false)
+}
+
+pub fn set_owned(
+    fd: i32,
+    range: Range,
+    kind: Option<Kind>,
+    wait: bool,
+    ofd: bool,
+) -> Result<(), i32> {
+    crate::job::ensure_registered();
     Range::new(range.start, range.end)?;
     let (entry, inode) = descriptor(fd)?;
+    let description = if ofd {
+        Some(crate::ofd::promote(fd)?)
+    } else {
+        None
+    };
     let wanted = Record {
         inode,
-        owner: Owner::current()?,
+        owner: match &description {
+            Some(store) => Owner::description(store.id()),
+            None => Owner::current()?,
+        },
         range,
         kind: kind.unwrap_or(Kind::Read).raw(),
         reserved: 0,
     };
     let waiter = Waiter {
         wanted,
+        process: Owner::current()?,
         host: std::process::id(),
         thread: crate::interrupt::current_thread_id(),
     };
@@ -624,7 +707,8 @@ pub fn set(fd: i32, range: Range, kind: Option<Kind>, wait: bool) -> Result<(), 
                 if !wait {
                     return Err(EAGAIN);
                 }
-                if state.would_deadlock(wanted) {
+                // Linux does not perform deadlock detection for OFD locks.
+                if !ofd && state.would_deadlock(wanted) {
                     state.remove_waiter(waiter);
                     return Err(EDEADLK);
                 }
@@ -666,13 +750,20 @@ pub fn set(fd: i32, range: Range, kind: Option<Kind>, wait: bool) -> Result<(), 
 }
 
 fn wait_for_change(event: HANDLE, blocker: Owner) -> Result<(), i32> {
-    let Some(entry) = blocker.live_entry() else {
-        return Ok(());
-    };
-    let process = match Handle::new(unsafe { OpenProcess(PROCESS_SYNCHRONIZE, 0, entry.pid) }) {
-        Ok(process) => process,
-        Err(_) if blocker.live_entry().is_none() => return Ok(()),
-        Err(error) => return Err(error),
+    let process = if blocker.is_description() {
+        if !blocker.alive() {
+            return Ok(());
+        }
+        None
+    } else {
+        let Some(entry) = blocker.live_entry() else {
+            return Ok(());
+        };
+        match Handle::new(unsafe { OpenProcess(PROCESS_SYNCHRONIZE, 0, entry.pid) }) {
+            Ok(process) => Some(process),
+            Err(_) if blocker.live_entry().is_none() => return Ok(()),
+            Err(error) => return Err(error),
+        }
     };
     let interrupt = crate::interrupt::current();
     if interrupt.is_null() {
@@ -682,12 +773,23 @@ fn wait_for_change(event: HANDLE, blocker: Owner) -> Result<(), i32> {
     let outcome = if crate::signal::deliver_pending() == crate::signal::Delivery::Interrupted {
         Err(EINTR)
     } else {
-        let handles = [event, process.0, interrupt];
-        match unsafe { WaitForMultipleObjects(handles.len() as u32, handles.as_ptr(), 0, INFINITE) }
+        let mut handles = vec![event, interrupt];
+        if let Some(process) = &process {
+            handles.push(process.0);
+        }
+        // A section is not waitable. Normal closes/unlocks notify our event;
+        // periodically recheck native lifetime for abrupt OFD-holder death.
+        let timeout = if blocker.is_description() {
+            50
+        } else {
+            INFINITE
+        };
+        match unsafe { WaitForMultipleObjects(handles.len() as u32, handles.as_ptr(), 0, timeout) }
         {
             WAIT_OBJECT_0 => Ok(()),
-            value if value == WAIT_OBJECT_0 + 1 => Ok(()),
-            value if value == WAIT_OBJECT_0 + 2 => {
+            WAIT_TIMEOUT => Ok(()),
+            value if value == WAIT_OBJECT_0 + 2 => Ok(()),
+            value if value == WAIT_OBJECT_0 + 1 => {
                 if crate::signal::deliver_pending() == crate::signal::Delivery::Interrupted {
                     Err(EINTR)
                 } else {
@@ -704,7 +806,10 @@ fn wait_for_change(event: HANDLE, blocker: Owner) -> Result<(), i32> {
 /// Any close of this inode drops this process's POSIX locks, even a different fd.
 pub(crate) fn descriptor_closed(entry: FdEntry) -> Result<(), i32> {
     if CACHE.load(Ordering::Acquire) == 0
-        || !matches!(entry.kind, FdKind::File | FdKind::Directory)
+        || !matches!(
+            entry.kind,
+            FdKind::File | FdKind::Directory | FdKind::TmpfsFile | FdKind::TmpfsDirectory
+        )
         || entry.flags.contains(FdFlags::PATH_ONLY)
     {
         return Ok(());
@@ -737,13 +842,17 @@ pub(crate) fn serialize_exec_closed(entries: &[FdEntry]) -> Result<Vec<u8>, i32>
     for entry in entries {
         if entry.flags.contains(FdFlags::CLOSE_ON_EXEC)
             && !entry.flags.contains(FdFlags::PATH_ONLY)
-            && matches!(entry.kind, FdKind::File | FdKind::Directory)
+            && matches!(
+                entry.kind,
+                FdKind::File | FdKind::Directory | FdKind::TmpfsFile | FdKind::TmpfsDirectory
+            )
         {
             inodes.insert(Inode::from_entry(*entry)?);
         }
     }
     let mut bytes = Vec::with_capacity(inodes.len() * size_of::<Inode>());
     for inode in inodes {
+        bytes.extend_from_slice(&inode.backing.to_le_bytes());
         bytes.extend_from_slice(&inode.volume.to_le_bytes());
         bytes.extend_from_slice(&inode.id);
     }
@@ -761,8 +870,9 @@ pub(crate) fn restore(payload: &[u8]) -> bool {
     let inodes: Vec<Inode> = payload
         .chunks_exact(size_of::<Inode>())
         .map(|bytes| Inode {
-            volume: u64::from_le_bytes(bytes[..8].try_into().unwrap()),
-            id: bytes[8..24].try_into().unwrap(),
+            backing: u64::from_le_bytes(bytes[..8].try_into().unwrap()),
+            volume: u64::from_le_bytes(bytes[8..16].try_into().unwrap()),
+            id: bytes[16..32].try_into().unwrap(),
         })
         .collect();
     // Map even for an empty payload: exec can preserve locks acquired by the old
@@ -915,7 +1025,7 @@ mod tests {
         let range = Range::new(0, 9).unwrap();
         let conflict = query(fd, range, Kind::Write).unwrap().unwrap();
         assert_eq!(conflict.kind, Kind::Write);
-        assert_ne!(conflict.pid, Owner::current().unwrap().pid);
+        assert_ne!(conflict.pid, Owner::current().unwrap().pid as i32);
         assert_eq!(set(fd, range, Some(Kind::Read), false), Err(EAGAIN));
         // Advisory locks must never obstruct ordinary host/guest file access.
         std::fs::write(&fixture.0, b"still writable").unwrap();
@@ -1017,6 +1127,7 @@ mod tests {
     fn record(pid: u32, inode: u64, start: u64, end: u64, kind: Kind) -> Record {
         Record {
             inode: Inode {
+                backing: 0,
                 volume: inode,
                 id: [0; 16],
             },
@@ -1029,6 +1140,65 @@ mod tests {
             kind: kind.raw(),
             reserved: 0,
         }
+    }
+
+    #[test]
+    fn description_locks_share_aliases_but_conflict_with_posix_and_independent_opens() {
+        let fixture = Fixture::new();
+        let fd = open_test_file(&fixture.0);
+        let entry = crate::get(fd).unwrap();
+        let raw = crate::fs::object::Object::duplicate(entry.raw as HANDLE)
+            .unwrap()
+            .into_raw();
+        let alias = crate::install_duplicate(raw as usize, entry.kind, entry.flags, entry).unwrap();
+        let other = open_test_file(&fixture.0);
+        let range = Range::new(0, 99).unwrap();
+        set_owned(fd, range, Some(Kind::Write), false, true).unwrap();
+        assert_eq!(query_owned(alias, range, Kind::Write, true), Ok(None));
+        assert_eq!(query(other, range, Kind::Write).unwrap().unwrap().pid, -1);
+        assert_eq!(set(other, range, Some(Kind::Read), false), Err(EAGAIN));
+        assert_eq!(
+            set_owned(other, range, Some(Kind::Read), false, true),
+            Err(EAGAIN)
+        );
+        // Closing an unrelated descriptor releases only POSIX locks.
+        crate::close(other).unwrap();
+        crate::close(fd).unwrap();
+        let other = open_test_file(&fixture.0);
+        assert_eq!(query(other, range, Kind::Read).unwrap().unwrap().pid, -1);
+        set_owned(alias, Range::new(20, 39).unwrap(), None, false, true).unwrap();
+        assert_eq!(
+            query(other, Range::new(20, 39).unwrap(), Kind::Write),
+            Ok(None)
+        );
+        assert_eq!(
+            query(other, Range::new(40, 99).unwrap(), Kind::Write)
+                .unwrap()
+                .unwrap()
+                .range,
+            Range::new(40, 99).unwrap()
+        );
+        crate::close(alias).unwrap();
+        assert_eq!(query(other, range, Kind::Write), Ok(None));
+        crate::close(other).unwrap();
+    }
+
+    #[test]
+    fn last_description_close_wakes_an_independent_blocking_owner() {
+        let fixture = Fixture::new();
+        let fd = open_test_file(&fixture.0);
+        let other = open_test_file(&fixture.0);
+        let range = Range::new(0, 9).unwrap();
+        set_owned(fd, range, Some(Kind::Write), false, true).unwrap();
+        let (tx, rx) = std::sync::mpsc::channel();
+        let waiting = std::thread::spawn(move || {
+            tx.send(crate::interrupt::current_thread_id()).unwrap();
+            set_owned(other, range, Some(Kind::Write), true, true)
+        });
+        await_waiter(rx.recv_timeout(Duration::from_secs(5)).unwrap());
+        crate::close(fd).unwrap();
+        assert_eq!(waiting.join().unwrap(), Ok(()));
+        crate::close(other).unwrap();
     }
 
     #[test]
@@ -1103,6 +1273,7 @@ mod tests {
         assert!(!state.would_deadlock(first));
         state.waiters.push(Waiter {
             wanted: first,
+            process: first.owner,
             host: 1,
             thread: 1,
         });

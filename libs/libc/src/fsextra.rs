@@ -214,7 +214,6 @@ unsafe extern "system" {
     /// `GetLastError`: the calling thread's last error code.
     fn GetLastError() -> u32;
     /// `FlushFileBuffers`: writes a handle's buffered data through to the disk.
-    fn FlushFileBuffers(handle: *mut c_void) -> i32;
     /// `GetFinalPathNameByHandleW`: the path an open handle refers to.
     fn GetFinalPathNameByHandleW(handle: *mut c_void, path: *mut u16, size: u32, flags: u32)
     -> u32;
@@ -2581,77 +2580,23 @@ pub extern "sysv64" fn kinakaze_abi_syncfs(fd: c_int) -> c_int {
 }
 
 #[unsafe(no_mangle)]
-pub extern "sysv64" fn sync_file_range(
-    fd: c_int,
-    _offset: i64,
-    _nbytes: i64,
-    _flags: u32,
-) -> c_int {
-    kinakaze_abi_sync_file_range(fd, _offset, _nbytes, _flags)
+pub extern "sysv64" fn sync_file_range(fd: c_int, offset: i64, nbytes: i64, flags: u32) -> c_int {
+    kinakaze_abi_sync_file_range(fd, offset, nbytes, flags)
 }
 
 #[unsafe(no_mangle)]
 pub extern "sysv64" fn kinakaze_abi_sync_file_range(
     fd: c_int,
-    _offset: i64,
-    _nbytes: i64,
-    _flags: u32,
+    offset: i64,
+    nbytes: i64,
+    flags: u32,
 ) -> c_int {
-    posix(flush(fd))
+    posix(kinakaze_vfs::fs::sync_file_range(fd, offset, nbytes, flags))
 }
 
 /// Flushes one descriptor's buffers.
 fn flush(fd: c_int) -> Result<(), i32> {
-    if matches!(
-        kinakaze_vfs::get(fd)?.kind,
-        kinakaze_vfs::FdKind::TmpfsFile
-            | kinakaze_vfs::FdKind::TmpfsDirectory
-            | kinakaze_vfs::FdKind::MessageQueue
-            | kinakaze_vfs::FdKind::SysfsFile
-    ) {
-        return if kinakaze_vfs::get(fd)?
-            .flags
-            .contains(kinakaze_vfs::FdFlags::PATH_ONLY)
-        {
-            Err(kinakaze_vfs::EBADF)
-        } else {
-            Ok(())
-        };
-    }
-    let entry = kinakaze_vfs::get(fd)?;
-    if matches!(
-        entry.kind,
-        kinakaze_vfs::FdKind::File | kinakaze_vfs::FdKind::Directory
-    ) && kinakaze_vfs::mount::overlay::sync_descriptor(fd)?.is_some()
-    {
-        return Ok(());
-    }
-    match entry.kind {
-        kinakaze_vfs::FdKind::Directory => {
-            // Windows NTFS commits directory metadata automatically, and FlushFileBuffers
-            // on directory handles returns ERROR_ACCESS_DENIED. Return Ok(()) for POSIX directory fsync.
-            Ok(())
-        }
-        kinakaze_vfs::FdKind::File => {
-            // SAFETY: the handle comes from the descriptor table and is live.
-            if unsafe { FlushFileBuffers(entry.raw as *mut c_void) } == 0 {
-                let err = unsafe { GetLastError() };
-                if err == windows_sys::Win32::Foundation::ERROR_ACCESS_DENIED {
-                    return Ok(());
-                }
-                return Err(errno_from_win32(err));
-            }
-            Ok(())
-        }
-        // A generated file has no backing store, so there is nothing to commit
-        // and the call has already succeeded.
-        kinakaze_vfs::FdKind::Synthetic
-        | kinakaze_vfs::FdKind::SyntheticDirectory
-        | kinakaze_vfs::FdKind::CgroupFile => Ok(()),
-        // Linux reports EINVAL for fsync on a pipe, socket or terminal: those
-        // have no file to synchronize.
-        _ => Err(EINVAL),
-    }
+    kinakaze_vfs::fs::sync_descriptor(fd)
 }
 
 // ---------------------------------------------------------------------------

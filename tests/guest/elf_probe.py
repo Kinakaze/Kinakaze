@@ -32,7 +32,7 @@ def build(source, root, dist, libraries=(), cflags=(), ldflags=(), link_dir=None
              *[f'-l:{name}' for name in libraries], *ldflags, '-o', root / 'probe'])
 
 
-def run(source_name, root_name, marker, prepare=None, extra_files=None, libraries=(), cflags=(), ldflags=(), root_files=()):
+def run(source_name, root_name, marker, prepare=None, extra_files=None, libraries=(), cflags=(), ldflags=(), root_files=(), worker_mode='run'):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--dist', type=Path, default=WORKSPACE / 'dist')
     parser.add_argument('--worker', type=Path, default=WORKSPACE / 'target/debug/worker.exe')
@@ -53,7 +53,7 @@ def run(source_name, root_name, marker, prepare=None, extra_files=None, librarie
     exit_code, timed_out = None, False
     with (root / 'stdout.log').open('wb') as out, (root / 'stderr.log').open('wb') as err:
         try:
-            result = subprocess.run([str(worker), 'run', '--root', str(root), '--dist', str(dist),
+            result = subprocess.run([str(worker), worker_mode, '--root', str(root), '--dist', str(dist),
                                      '--', '/probe'], stdout=out, stderr=err,
                                     timeout=30, creationflags=NO_WINDOW)
             exit_code = result.returncode

@@ -1,0 +1,54 @@
+[
+  {
+    "file": "expm1l.c",
+    "source": "https://raw.githubusercontent.com/ifduyue/musl/v1.2.5/src/math/expm1l.c",
+    "upstream_sha256": "a8362abd18ef31f00a7dd74c8b618ef658a4e9c3919c456d03d65a12fe445c2f",
+    "changes": "Scale the final fraction directly for k >= 64 to avoid intermediate overflow near LDBL_MAX."
+  },
+  {
+    "file": "cbrtl.c",
+    "source": "https://raw.githubusercontent.com/ifduyue/musl/v1.2.5/src/math/cbrtl.c",
+    "upstream_sha256": "ee82c17b1a24681dfd7de0161088b45ecbd2d0346ddeda9d4594b48e4da0d3e5"
+  },
+  {
+    "file": "expl.c",
+    "source": "https://raw.githubusercontent.com/ifduyue/musl/v1.2.5/src/math/expl.c",
+    "upstream_sha256": "7218f10e56cd73c76f01a6924373dd1918730a0e793cf3c64670a34346173e68"
+  },
+  {
+    "file": "sinl.c",
+    "source": "https://raw.githubusercontent.com/ifduyue/musl/v1.2.5/src/math/sinl.c",
+    "upstream_sha256": "ef6c9704017e2af353a27fd1e57db1864704fb9f9e92badc2753c1c2961b2424"
+  },
+  {
+    "file": "cosl.c",
+    "source": "https://raw.githubusercontent.com/ifduyue/musl/v1.2.5/src/math/cosl.c",
+    "upstream_sha256": "35e7b531fb8d836960bcd41cd5d8f6dbfce9a35c050828c4fe171c2e0816ec15"
+  },
+  {
+    "file": "__sinl.c",
+    "source": "https://raw.githubusercontent.com/ifduyue/musl/v1.2.5/src/math/__sinl.c",
+    "upstream_sha256": "b6dfffc327cac147a0a2b17a12e9f4ec8ff6df463733db55c316a55ef4bcdb96"
+  },
+  {
+    "file": "__cosl.c",
+    "source": "https://raw.githubusercontent.com/ifduyue/musl/v1.2.5/src/math/__cosl.c",
+    "upstream_sha256": "fd644ce4ab8797b1220e2197b284212094a3b299bdf2c4faf66ead81b0fc620d"
+  },
+  {
+    "file": "__rem_pio2l.c",
+    "source": "https://raw.githubusercontent.com/ifduyue/musl/v1.2.5/src/math/__rem_pio2l.c",
+    "upstream_sha256": "70f1c69285c0d211d696d5c048e269d46000e5d75fc6a80623ef45e861447a94"
+  },
+  {
+    "file": "__rem_pio2_large.c",
+    "source": "https://raw.githubusercontent.com/ifduyue/musl/v1.2.5/src/math/__rem_pio2_large.c",
+    "upstream_sha256": "b97f19fb5951c83a0c10506fab35646caefde13bd03100ad2af55ef00af0b9fb"
+  },
+  {
+    "file": "catrigl.c",
+    "source": "https://raw.githubusercontent.com/freebsd/freebsd-src/releng/14.3/lib/msun/src/catrigl.c",
+    "upstream_sha256": "56cb1cc99311f4caeec013b7c3bb61db5492f0d60fc430e7eaff30d479ea1b42",
+    "changes": "Replace platform headers with the private binary80 adapter."
+  }
+]

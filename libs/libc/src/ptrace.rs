@@ -1290,6 +1290,14 @@ pub fn wait(selector: i32, options: i32) -> Option<Result<(i32, i32), i32>> {
 
 fn wait_existing(selector: i32, options: i32) -> Option<Result<(i32, i32), i32>> {
     let mut state_guard = lock_state();
+    if selector <= 0 && selector != -1 {
+        // Native debugging suspends every target thread, including one that
+        // owns the shared process-table mutex. Group matching cannot query
+        // that table safely until group membership is available independently.
+        // Keep unsupported selectors explicit instead of deadlocking a tracer.
+        return (!state_guard.sessions.is_empty() || !state_guard.reports.is_empty())
+            .then_some(Err(kinakaze_vfs::EOPNOTSUPP));
+    }
     loop {
         if let Some(index) = state_guard
             .reports
@@ -1582,6 +1590,8 @@ mod tests {
             1
         );
         report(pid, 23 << 8);
+        assert_eq!(wait_existing(0, 1), Some(Err(kinakaze_vfs::EOPNOTSUPP)));
+        assert_eq!(wait_existing(-1234, 1), Some(Err(kinakaze_vfs::EOPNOTSUPP)));
         assert_eq!(wait_existing(pid, 0x0100_0000), Some(Ok((pid, 23 << 8))));
         assert_eq!(wait_existing(pid, 0), Some(Ok((pid, 23 << 8))));
         assert!(wait_existing(pid, 1).is_none());

@@ -17,9 +17,13 @@ use windows_sys::Win32::{
     System::{IO::*, Ioctl::*, Memory::*, Threading::*},
 };
 
-const MIN_SIZE: usize = 8 * 1024 * 1024;
-const MAX_SIZE: usize = 64 * 1024 * 1024;
+#[cfg(test)]
+use kinakaze_v2_protocol::image_cache::MIN_SIZE;
 const BUDGET: usize = 256 * 1024 * 1024;
+// Bound native file/event/section handles as well as pagefile-backed memory.
+const MAX_ENTRIES: usize = 128;
+const PAGE_SIZE: usize = 4096;
+const PARALLEL_READ_MIN: usize = 8 * 1024 * 1024;
 
 unsafe fn owned(handle: HANDLE) -> io::Result<OwnedHandle> {
     if handle.is_null() || handle == INVALID_HANDLE_VALUE {
@@ -123,6 +127,11 @@ struct Entry {
     // milliseconds; this view shares the already-budgeted backing pages.
     _view: View,
 }
+impl Entry {
+    fn charge(&self) -> usize {
+        self.key.length.div_ceil(PAGE_SIZE) * PAGE_SIZE
+    }
+}
 struct View(MEMORY_MAPPED_VIEW_ADDRESS);
 impl Drop for View {
     fn drop(&mut self) {
@@ -222,7 +231,10 @@ impl Images {
         source: u64,
         length: usize,
     ) -> io::Result<(u64, [u8; 32])> {
-        if !(MIN_SIZE..=MAX_SIZE).contains(&length) || source == 0 || source > isize::MAX as u64 {
+        if !kinakaze_v2_protocol::image_cache::eligible(length)
+            || source == 0
+            || source > isize::MAX as u64
+        {
             return Err(io::Error::other("cache request outside limits"));
         }
         let process = unsafe {
@@ -265,22 +277,37 @@ impl Images {
         }
         let file = File::from(unsafe { owned(duplicate)? });
         let key = file_key(&file, length)?;
-        self.entries.retain(|entry| entry.lease.valid());
-        self.bytes = self.entries.iter().map(|entry| entry.key.length).sum();
         let index = self.entries.iter().position(|entry| entry.key == key);
-        let entry = match index {
-            Some(index) => self.entries.remove(index).unwrap(),
+        let cached = index.and_then(|index| {
+            let entry = self.entries.remove(index).unwrap();
+            self.bytes -= entry.charge();
+            // An event belongs to this inode's read lease, not its pathname or
+            // mtime. Checking unrelated entries on a hit cost N kernel waits.
+            entry.lease.valid().then_some(entry)
+        });
+        let entry = match cached {
+            Some(entry) => {
+                let _hit = kinakaze_v2_host_win::StartupSpan::begin("image-cache-hit");
+                entry
+            }
             None => {
+                let _miss = kinakaze_v2_host_win::StartupSpan::begin("image-cache-miss");
                 let lease = Lease::new(file)?;
+                // A stale entry is bounded retained state, never a valid hit.
+                // Retire broken leases on misses only; keep hits independent
+                // of cache size. Make room before allocating the new section
+                // so replacement does not transiently exceed the byte budget.
+                self.entries.retain(|entry| entry.lease.valid());
+                self.bytes = self.entries.iter().map(Entry::charge).sum();
+                let charge = length.div_ceil(PAGE_SIZE) * PAGE_SIZE;
+                while self.bytes + charge > BUDGET || self.entries.len() >= MAX_ENTRIES {
+                    let old = self.entries.pop_front().unwrap();
+                    self.bytes -= old.charge();
+                }
                 let (section, hash, view) = snapshot(&lease, length)?;
                 if !lease.valid() {
                     return Err(io::Error::other("image changed during snapshot"));
                 }
-                while self.bytes + length > BUDGET {
-                    let old = self.entries.pop_front().unwrap();
-                    self.bytes -= old.key.length;
-                }
-                self.bytes += length;
                 Entry {
                     key,
                     lease,
@@ -310,6 +337,7 @@ impl Images {
         } else {
             Err(io::Error::other("image cache unavailable"))
         };
+        self.bytes += entry.charge();
         self.entries.push_back(entry);
         result
     }
@@ -390,35 +418,31 @@ fn snapshot(lease: &Lease, length: usize) -> io::Result<(OwnedHandle, [u8; 32], 
     }
     let view = View(view);
     let bytes = unsafe { std::slice::from_raw_parts_mut(view.0.Value.cast::<u8>(), length) };
-    let count = std::thread::available_parallelism()
-        .map_or(1, |n| n.get())
-        .min(4);
-    let chunk = length.div_ceil(count).div_ceil(4096) * 4096;
-    std::thread::scope(|scope| {
-        let mut threads = Vec::new();
-        for (index, bytes) in bytes.chunks_mut(chunk).enumerate() {
-            let file = &lease.file;
-            threads.push(std::thread::Builder::new().spawn_scoped(scope, move || {
-                let mut offset = (index * chunk) as u64;
-                let mut remaining = bytes;
-                while !remaining.is_empty() {
-                    let read = read::at(file, remaining, offset)?;
-                    if read == 0 {
-                        return Err(io::Error::from(io::ErrorKind::UnexpectedEof));
-                    }
-                    offset += read as u64;
-                    remaining = &mut remaining[read..];
-                }
-                Ok(())
-            })?);
-        }
-        for thread in threads {
-            thread
-                .join()
-                .map_err(|_| io::Error::other("image read panicked"))??;
-        }
-        Ok::<_, io::Error>(())
-    })?;
+    if length < PARALLEL_READ_MIN {
+        // Small executables and DSOs should not create four native threads for
+        // a cache miss. The long-lived cache thread owns this positional I/O.
+        read_exact_at(&lease.file, bytes, 0)?;
+    } else {
+        let count = std::thread::available_parallelism()
+            .map_or(1, |n| n.get())
+            .min(4);
+        let chunk = length.div_ceil(count).div_ceil(PAGE_SIZE) * PAGE_SIZE;
+        std::thread::scope(|scope| {
+            let mut threads = Vec::new();
+            for (index, bytes) in bytes.chunks_mut(chunk).enumerate() {
+                let file = &lease.file;
+                threads.push(std::thread::Builder::new().spawn_scoped(scope, move || {
+                    read_exact_at(file, bytes, (index * chunk) as u64)
+                })?);
+            }
+            for thread in threads {
+                thread
+                    .join()
+                    .map_err(|_| io::Error::other("image read panicked"))??;
+            }
+            Ok::<_, io::Error>(())
+        })?;
+    }
     drop(reading);
     let _hashing = kinakaze_v2_host_win::StartupSpan::begin("image-cache-hash");
     let bytes = unsafe { std::slice::from_raw_parts(view.0.Value.cast::<u8>(), length) };
@@ -428,6 +452,18 @@ fn snapshot(lease: &Lease, length: usize) -> io::Result<(OwnedHandle, [u8; 32], 
         return Err(io::Error::last_os_error());
     }
     Ok((section, hash, view))
+}
+
+fn read_exact_at(file: &File, mut bytes: &mut [u8], mut offset: u64) -> io::Result<()> {
+    while !bytes.is_empty() {
+        let read = read::at(file, bytes, offset)?;
+        if read == 0 {
+            return Err(io::Error::from(io::ErrorKind::UnexpectedEof));
+        }
+        offset += read as u64;
+        bytes = &mut bytes[read..];
+    }
+    Ok(())
 }
 
 #[cfg(test)]

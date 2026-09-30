@@ -661,15 +661,6 @@ fn host_path(path: &str) -> Result<PathBuf, i32> {
     kinakaze_vfs::resolve_linux_path(path).map_err(|_| EINVAL)
 }
 
-/// Maps an I/O failure onto an errno, preferring the real OS code.
-fn io_errno(error: &std::io::Error) -> i32 {
-    error.raw_os_error().map_or(EIO, |code| {
-        // A Windows I/O error arrives as a Win32 code, which the VFS knows how to
-        // translate; a code that is already a Linux errno passes through.
-        errno_from_win32(code as u32)
-    })
-}
-
 /// `setmntent`, which opens the mount table or a file shaped like one.
 ///
 /// The filename decides what happens, and both branches are real work:
@@ -1215,16 +1206,76 @@ fn utmp_cursor() -> &'static Mutex<UtmpCursor> {
 /// A trailing partial record is discarded, which is what glibc does when it reads
 /// a file another process is midway through extending.
 fn read_records(path: &str) -> Vec<Utmpx> {
-    let Ok(host) = host_path(path) else {
+    let Ok(_guard) = UTMP_IO.lock() else {
         return Vec::new();
     };
-    let Ok(bytes) = std::fs::read(&host) else {
-        return Vec::new();
-    };
-    bytes
-        .chunks_exact(RECORD_SIZE)
-        .filter_map(Utmpx::from_bytes)
-        .collect()
+    UtmpFile::open(path, false)
+        .and_then(|file| file.records())
+        .unwrap_or_default()
+}
+
+// POSIX record locks serialize processes, not threads in the same process.
+static UTMP_IO: Mutex<()> = Mutex::new(());
+
+struct UtmpFile(i32);
+impl Drop for UtmpFile {
+    fn drop(&mut self) {
+        let _ = kinakaze_vfs::close(self.0);
+    }
+}
+impl UtmpFile {
+    fn open(path: &str, write: bool) -> Result<Self, i32> {
+        use kinakaze_vfs::{
+            fs,
+            record_lock::{self, Kind, Range},
+        };
+        let flags = if write {
+            fs::O_RDWR | fs::O_CREAT
+        } else {
+            fs::O_RDONLY
+        };
+        let file = Self(fs::open(path, flags | fs::O_CLOEXEC, 0o644)?);
+        record_lock::set(
+            file.0,
+            Range::new(0, i64::MAX as u64)?,
+            Some(if write { Kind::Write } else { Kind::Read }),
+            true,
+        )?;
+        Ok(file)
+    }
+
+    fn records(&self) -> Result<Vec<Utmpx>, i32> {
+        let mut records = Vec::new();
+        let mut bytes = [0; RECORD_SIZE];
+        loop {
+            let mut filled = 0;
+            while filled < bytes.len() {
+                let n = kinakaze_vfs::read(self.0, &mut bytes[filled..])?;
+                if n == 0 {
+                    return Ok(records);
+                }
+                filled += n;
+            }
+            records.push(Utmpx::from_bytes(&bytes).ok_or(EIO)?);
+        }
+    }
+
+    fn write_record(&self, index: usize, record: &Utmpx) -> Result<(), i32> {
+        kinakaze_vfs::fs::lseek(
+            self.0,
+            (index * RECORD_SIZE) as i64,
+            kinakaze_vfs::fs::SEEK_SET,
+        )?;
+        let mut bytes = record.as_bytes();
+        while !bytes.is_empty() {
+            let n = kinakaze_vfs::write(self.0, bytes)?;
+            if n == 0 {
+                return Err(EIO);
+            }
+            bytes = &bytes[n..];
+        }
+        Ok(())
+    }
 }
 
 /// The static `struct utmpx` the non-reentrant getters return.
@@ -1355,14 +1406,25 @@ fn same_slot(existing: &Utmpx, wanted: &Utmpx) -> bool {
 /// `/var/run` does not exist in a fresh guest tree, and failing the first
 /// `pututxline` because of that would be a failure of this layer rather than a
 /// true report about the database.
-fn ensure_parent(path: &std::path::Path) -> Result<(), i32> {
-    let Some(parent) = path.parent() else {
-        return Ok(());
-    };
-    if parent.as_os_str().is_empty() || parent.is_dir() {
+fn ensure_parent(path: &str) -> Result<(), i32> {
+    use kinakaze_vfs::{EEXIST, ENOENT, ENOTDIR, fs};
+    let absolute = fs::absolute_linux(path);
+    let parent = absolute.rsplit_once('/').map_or("/", |(parent, _)| parent);
+    if parent.is_empty() {
         return Ok(());
     }
-    std::fs::create_dir_all(parent).map_err(|error| io_errno(&error))
+    match fs::stat(parent) {
+        Ok(stat) if stat.st_mode & fs::S_IFMT == fs::S_IFDIR => Ok(()),
+        Ok(_) => Err(ENOTDIR),
+        Err(ENOENT) => {
+            ensure_parent(parent)?;
+            match fs::mkdir(parent, 0o755) {
+                Err(EEXIST) if fs::stat(parent)?.st_mode & fs::S_IFMT == fs::S_IFDIR => Ok(()),
+                result => result,
+            }
+        }
+        Err(error) => Err(error),
+    }
 }
 
 /// `pututxline`, which writes one record into the database.
@@ -1397,39 +1459,37 @@ pub unsafe extern "sysv64" fn kinakaze_abi_pututxline(record: *const Utmpx) -> *
     }
 
     let path = current_utmp_path();
-    let host = match host_path(&path) {
-        Ok(host) => host,
+    if let Err(error) = ensure_parent(&path) {
+        crate::set_errno(error);
+        return ptr::null_mut();
+    }
+
+    // Lock the same inode guest fcntl callers lock, then replace only one slot.
+    // A read/modify/rewrite through std::fs both bypassed guest advisory locks
+    // and could lose another process's newly appended login record.
+    let updated = (|| {
+        let _guard = UTMP_IO.lock().map_err(|_| EIO)?;
+        let file = UtmpFile::open(&path, true)?;
+        let mut records = file.records()?;
+        let index = records
+            .iter()
+            .position(|existing| same_slot(existing, &wanted))
+            .unwrap_or(records.len());
+        file.write_record(index, &wanted)?;
+        if index == records.len() {
+            records.push(wanted);
+        } else {
+            records[index] = wanted;
+        }
+        Ok::<_, i32>(records)
+    })();
+    let records = match updated {
+        Ok(records) => records,
         Err(error) => {
             crate::set_errno(error);
             return ptr::null_mut();
         }
     };
-    if let Err(error) = ensure_parent(&host) {
-        crate::set_errno(error);
-        return ptr::null_mut();
-    }
-
-    // The whole file is rewritten rather than seeking to one record. The database
-    // is a few hundred records at most, and a full rewrite makes the replacement
-    // atomic from a reader's point of view without a lock this layer has no way
-    // to take across processes.
-    let mut records = read_records(&path);
-    match records
-        .iter()
-        .position(|existing| same_slot(existing, &wanted))
-    {
-        Some(index) => records[index] = wanted,
-        None => records.push(wanted),
-    }
-
-    let mut bytes = Vec::with_capacity(records.len() * RECORD_SIZE);
-    for entry in &records {
-        bytes.extend_from_slice(entry.as_bytes());
-    }
-    if let Err(error) = std::fs::write(&host, &bytes) {
-        crate::set_errno(io_errno(&error));
-        return ptr::null_mut();
-    }
 
     // The in-process snapshot is now stale, so it is refreshed. Without this a
     // program that writes a record and then walks the database — which is what
@@ -1458,8 +1518,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_pututxline(record: *const Utmpx) -> *
 ///
 /// glibc declares this as returning `void`, so a failure can only be reported
 /// through errno. Callers must clear errno first and check it after; there is no
-/// return value to test. The record is never silently dropped: on any failure
-/// errno holds the real reason and nothing was written.
+/// return value to test. On failure errno holds the underlying VFS error.
 ///
 /// # Safety
 ///
@@ -1476,28 +1535,23 @@ pub unsafe extern "sysv64" fn kinakaze_abi_updwtmpx(path: *const c_char, record:
         crate::set_errno(kinakaze_vfs::EFAULT);
         return;
     }
-    let host = match host_path(path) {
-        Ok(host) => host,
-        Err(error) => {
-            crate::set_errno(error);
-            return;
-        }
-    };
-    if let Err(error) = ensure_parent(&host) {
+    if let Err(error) = ensure_parent(path) {
         crate::set_errno(error);
         return;
     }
-    // SAFETY: the caller guarantees a readable record.
-    let bytes = unsafe { (*record).as_bytes() };
-
-    use std::io::Write as _;
-    let appended = std::fs::OpenOptions::new()
-        .append(true)
-        .create(true)
-        .open(&host)
-        .and_then(|mut file| file.write_all(bytes));
+    let appended = (|| {
+        let _guard = UTMP_IO.lock().map_err(|_| EIO)?;
+        let file = UtmpFile::open(path, true)?;
+        let size = kinakaze_vfs::fs::fstat(file.0)?.st_size as usize;
+        // Discard a previous partial tail, as glibc's wtmp writer does.
+        let aligned = size / RECORD_SIZE * RECORD_SIZE;
+        if aligned != size {
+            kinakaze_vfs::fs::ftruncate(file.0, aligned as i64)?;
+        }
+        file.write_record(aligned / RECORD_SIZE, unsafe { &*record })
+    })();
     if let Err(error) = appended {
-        crate::set_errno(io_errno(&error));
+        crate::set_errno(error);
     }
 }
 

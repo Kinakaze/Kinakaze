@@ -130,8 +130,8 @@ impl Record {
 }
 
 fn read_record(object: &Object) -> Result<Option<Record>, i32> {
-    match ea::read(object, EA_NAME) {
-        Ok(record) => record.map(|bytes| Record::decode(&bytes)).transpose(),
+    match ea::read_decoded(object, EA_NAME, Record::decode) {
+        Ok(record) => Ok(record),
         // A filesystem without EAs cannot contain this backend's verity state.
         // This is absence of the filesystem feature, not an I/O-error fallback.
         Err(EOPNOTSUPP) => Ok(None),

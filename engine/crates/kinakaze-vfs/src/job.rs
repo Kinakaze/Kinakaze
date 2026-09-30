@@ -817,9 +817,7 @@ pub fn group_in_session(pgid: i32, sid: i32) -> bool {
         return false;
     }
     ensure_registered();
-    table::members(pgid as u32)
-        .iter()
-        .any(|member| member.sid == sid as u32)
+    table::group_in_session(pgid as u32, sid as u32)
 }
 
 // ---------------------------------------------------------------------------
@@ -1274,11 +1272,8 @@ pub fn setpgid(pid: i32, pgid: i32) -> Result<(), i32> {
     // Joining an existing group is only allowed within one session. A group id
     // nobody holds yet is a new group, which is legal exactly when the process
     // is becoming its own leader.
-    if group != target {
-        let members = table::members(group);
-        if members.is_empty() || members.iter().any(|member| member.sid != subject.sid) {
-            return Err(EPERM);
-        }
+    if group != target && !table::group_in_session(group, subject.sid) {
+        return Err(EPERM);
     }
     if table::set_group(target, group) {
         Ok(())

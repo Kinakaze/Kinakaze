@@ -148,11 +148,24 @@ fn selected_exports<const ALL: bool>(bytes: &[u8]) -> Result<BorrowedExports<'_>
         }
         sections.push((rva, end, raw, raw_size, flags));
     }
+    // Export names and tables normally share one section. Keep a hint only
+    // for this immutable image inspection; every hit still checks its bounds.
+    let backing_hint = std::cell::Cell::new(0usize);
     let backing = |rva: u32, size: usize| -> Result<(usize, usize)> {
-        for &(start, _, raw, raw_size, _) in &sections {
+        let (start, _, raw, raw_size, _) = sections[backing_hint.get()];
+        if let Some(relative) = rva.checked_sub(start)
+            && (relative as u64) + size as u64 <= raw_size as u64
+        {
+            return Ok((
+                raw as usize + relative as usize,
+                (raw_size - relative) as usize,
+            ));
+        }
+        for (index, &(start, _, raw, raw_size, _)) in sections.iter().enumerate() {
             if let Some(relative) = rva.checked_sub(start)
                 && (relative as u64) + size as u64 <= raw_size as u64
             {
+                backing_hint.set(index);
                 let at = raw as usize + relative as usize;
                 return Ok((at, (raw_size - relative) as usize));
             }
@@ -188,33 +201,50 @@ fn selected_exports<const ALL: bool>(bytes: &[u8]) -> Result<BorrowedExports<'_>
     if functions == 0 || functions > 65536 || names > 65536 {
         return Err(invalid("invalid PE export counts"));
     }
-    let addresses = offset(dword(bytes, directory + 28)?, functions * 4)?;
-    let pointers = offset(dword(bytes, directory + 32)?, names * 4)?;
-    let ordinals = offset(dword(bytes, directory + 36)?, names * 2)?;
+    let addresses = span(
+        bytes,
+        offset(dword(bytes, directory + 28)?, functions * 4)?,
+        functions * 4,
+    )?;
+    let pointers = span(
+        bytes,
+        offset(dword(bytes, directory + 32)?, names * 4)?,
+        names * 4,
+    )?;
+    let ordinals = span(
+        bytes,
+        offset(dword(bytes, directory + 36)?, names * 2)?,
+        names * 2,
+    )?;
     let mut symbols = Vec::with_capacity(if ALL { names } else { 3 });
     let mut previous = None;
-    for index in 0..names {
-        let name = string(dword(bytes, pointers + index * 4)?)?;
+    let mut address_section = 0;
+    for (pointer, ordinal) in pointers.chunks_exact(4).zip(ordinals.chunks_exact(2)) {
+        let name = string(u32::from_le_bytes(pointer.try_into().unwrap()))?;
         if previous.is_some_and(|old: &str| old >= name) {
             return Err(invalid("unsorted or duplicate PE exports"));
         }
         previous = Some(name);
-        let ordinal = word(bytes, ordinals + index * 2)? as usize;
+        let ordinal = u16::from_le_bytes(ordinal.try_into().unwrap()) as usize;
         if ordinal >= functions {
             return Err(invalid("PE ordinal exceeds address table"));
         }
-        let address = dword(bytes, addresses + ordinal * 4)?;
+        let address =
+            u32::from_le_bytes(addresses[ordinal * 4..ordinal * 4 + 4].try_into().unwrap());
         if address == 0 {
             return Err(invalid("null PE export"));
         }
         let object = if (rva..end).contains(&address) {
             None
         } else {
-            let flags = sections
-                .iter()
-                .find(|&&(start, end, _, _, _)| address >= start && (address as u64) < end)
-                .ok_or_else(|| invalid("export outside PE sections"))?
-                .4;
+            let (start, end, _, _, _) = sections[address_section];
+            if address < start || address as u64 >= end {
+                address_section = sections
+                    .iter()
+                    .position(|&(start, end, _, _, _)| address >= start && (address as u64) < end)
+                    .ok_or_else(|| invalid("export outside PE sections"))?;
+            }
+            let flags = sections[address_section].4;
             if flags & 0x4000_0000 == 0 {
                 return Err(invalid("unreadable PE export"));
             }
@@ -250,7 +280,7 @@ pub fn runtime_path(directory: &Path) -> Result<std::path::PathBuf> {
     if conventional.is_file() {
         let bytes = read(&conventional)?;
         if !bytes.starts_with(b"\x7fELF") {
-            let image = borrowed_exports(&bytes)?;
+            let image = selected_exports::<false>(&bytes)?;
             if image
                 .symbols
                 .iter()
@@ -416,6 +446,31 @@ pub struct DiscoveredModule {
 struct NativeImage {
     path: PathBuf,
     file: Arc<ReadOnlyFile>,
+    // Offsets into the pinned immutable file, never borrowed pointers or owned
+    // copies of Rust export names. Discovery validates the PE once; binding
+    // consumes this guest-only index instead of rescanning every export.
+    exports: Vec<IndexedExport>,
+    has_layout: bool,
+}
+
+struct IndexedExport {
+    start: u32,
+    length: u32,
+    object: Option<bool>,
+}
+
+impl NativeImage {
+    fn exports(&self) -> impl Iterator<Item = BorrowedExport<'_>> {
+        self.exports.iter().map(|entry| {
+            let start = entry.start as usize;
+            let end = start + entry.length as usize;
+            BorrowedExport {
+                name: std::str::from_utf8(&self.file[start..end])
+                    .expect("validated, pinned PE export name"),
+                object: entry.object,
+            }
+        })
+    }
 }
 
 impl ModuleCatalog {
@@ -446,7 +501,7 @@ impl ModuleCatalog {
             if bytes.starts_with(b"\x7fELF") {
                 continue;
             } // The ELF linker owns ordinary guest libraries.
-            let native = selected_exports::<false>(&bytes)?;
+            let native = borrowed_exports(&bytes)?;
             let runtime = native
                 .symbols
                 .iter()
@@ -465,9 +520,42 @@ impl ModuleCatalog {
                 .iter()
                 .any(|symbol| symbol.name == "kinakaze_module_object_v1");
             let native_name = native.name.to_owned();
+            let aliases: HashSet<_> = native
+                .symbols
+                .iter()
+                .filter_map(|symbol| {
+                    symbol
+                        .name
+                        .strip_prefix("kinakaze_engine_")?
+                        .split_once('_')
+                        .map(|(_, name)| name)
+                })
+                .collect();
+            let exports = if has_layout || runtime {
+                native
+                    .symbols
+                    .iter()
+                    .filter(|symbol| {
+                        guest_symbol(symbol.name)
+                            || aliases.contains(symbol.name)
+                            || runtime && symbol.name == "kinakaze_runtime_abi_version"
+                    })
+                    .map(|symbol| IndexedExport {
+                        // read() bounds the whole file to 128 MiB; each name was
+                        // checked for UTF-8, section bounds and the 4096-byte cap.
+                        start: (symbol.name.as_ptr() as usize - bytes.as_ptr() as usize) as u32,
+                        length: symbol.name.len() as u32,
+                        object: symbol.object,
+                    })
+                    .collect()
+            } else {
+                Vec::new()
+            };
             let image = Arc::new(NativeImage {
                 path: path.clone(),
                 file: Arc::new(bytes),
+                exports,
+                has_layout,
             });
             set.images.push(Arc::clone(&image));
             if !has_layout && !runtime {
@@ -521,35 +609,15 @@ impl DiscoveredModule {
     /// layout-query DLL owner along with its metadata so it cannot unload in
     /// between querying an object's shape and binding the provider.
     pub fn materialize(&self) -> Result<(Module, Option<Arc<Library>>)> {
-        // Reparse the same immutable view; discovery already checked all PE
-        // names, ordinals and sections, including unused Rust-only exports.
-        let native = borrowed_exports(&self.image.file)?;
-        let runtime = self.id == 0;
+        // Reuse discovery's validated offsets into the same pinned file. The
+        // live owner prevents mutation/unlink until deferred binding finishes.
         let filename = &self.soname;
-        let has_layout = native
-            .symbols
-            .iter()
-            .any(|symbol| symbol.name == "kinakaze_module_object_v1");
-        let aliases: std::collections::HashSet<_> = native
-            .symbols
-            .iter()
-            .filter_map(|symbol| {
-                symbol
-                    .name
-                    .strip_prefix("kinakaze_engine_")?
-                    .split_once('_')
-                    .map(|(_, name)| name)
-            })
-            .collect();
+        let has_layout = self.image.has_layout;
         type ObjectLayout = unsafe extern "C" fn(*const u8, usize) -> u64;
         let mut query: Option<ObjectLayout> = None;
         let mut owner = None;
         let mut symbols: BTreeMap<&str, Export> = BTreeMap::new();
-        for symbol in native.symbols.iter().filter(|symbol| {
-            guest_symbol(symbol.name)
-                || aliases.contains(symbol.name)
-                || runtime && symbol.name == "kinakaze_runtime_abi_version"
-        }) {
+        for symbol in self.image.exports() {
             let (name, version) = symbol
                 .name
                 .split_once('@')

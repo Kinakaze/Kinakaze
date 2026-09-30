@@ -790,6 +790,59 @@ fn native_metadata_operations_reuse_completed_lookup() {
     let link = crate::to_guest_path(&link);
     assert_eq!(fs::stat(&link).unwrap().st_ino, replaced.st_ino);
     assert_eq!(fs::lstat(&link).unwrap().st_mode & S_IFMT, S_IFLNK);
+    let before = RESOLUTION_WALKS.get();
+    for mode in [0o600, 0o644] {
+        fs::set_mode(&link, mode).unwrap();
+        let selected = metadata_path(&link, true).unwrap();
+        assert_eq!(std::fs::read(&*selected).unwrap(), b"replacement");
+    }
+    assert_eq!(RESOLUTION_WALKS.get() - before, 4);
+    assert_eq!(fs::stat(&path).unwrap().st_mode & 0o777, 0o644);
+    assert_eq!(fs::lstat(&link).unwrap().st_mode & S_IFMT, S_IFLNK);
+    // Reusing a native lookup must still retain its mount writer policy.
+    crate::mount::bind(&path, &f.guest("dir/a"), 4096).unwrap();
+    crate::mount::remount_bind(&f.guest("dir/a"), 4096 | 32 | 1).unwrap();
+    assert!(matches!(
+        prepare_write(&f.guest("dir/a"), true, false),
+        Err(EROFS)
+    ));
+    assert_eq!(fs::unlink(&f.guest("dir/a")), Err(EROFS));
+    let moved = crate::to_guest_path(&directory.join("renamed"));
+    assert_eq!(fs::rename(&f.guest("dir/a"), &moved), Err(EROFS));
+    crate::mount::unmount(&f.guest("dir/a"), 0).unwrap();
+
+    let fd = fs::open(&path, fs::O_RDONLY, 0).unwrap();
+    let before = RESOLUTION_WALKS.get();
+    fs::rename(&path, &moved).unwrap();
+    assert_eq!(RESOLUTION_WALKS.get() - before, 2);
+    let before = RESOLUTION_WALKS.get();
+    fs::unlink(&link).unwrap();
+    assert_eq!(RESOLUTION_WALKS.get() - before, 1);
+    assert_eq!(
+        std::fs::read(directory.join("renamed")).unwrap(),
+        b"replacement"
+    );
+    let before = RESOLUTION_WALKS.get();
+    fs::unlink(&moved).unwrap();
+    assert_eq!(RESOLUTION_WALKS.get() - before, 1);
+    let mut bytes = [0; 11];
+    assert_eq!(crate::read(fd, &mut bytes).unwrap(), bytes.len());
+    assert_eq!(&bytes, b"replacement");
+    crate::close(fd).unwrap();
+    let before = RESOLUTION_WALKS.get();
+    assert_eq!(fs::unlink(&moved), Err(ENOENT));
+    assert_eq!(RESOLUTION_WALKS.get() - before, 1);
+    let empty = directory.join("empty");
+    std::fs::create_dir(&empty).unwrap();
+    let empty = crate::to_guest_path(&empty);
+    assert_eq!(fs::unlink(&empty), Err(crate::EISDIR));
+    let before = RESOLUTION_WALKS.get();
+    fs::rmdir(&empty).unwrap();
+    assert_eq!(RESOLUTION_WALKS.get() - before, 1);
+    assert_eq!(
+        fs::rmdir(&crate::to_guest_path(&directory.join("old-file"))),
+        Err(ENOTDIR)
+    );
 }
 
 impl Fixture {

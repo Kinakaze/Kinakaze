@@ -111,7 +111,9 @@ class SessionProcess:
                     total_cpu_ms=(value.basic.user + value.basic.kernel) / 10000,
                     processes=value.basic.processes, active_processes=value.basic.active,
                     page_faults=value.basic.page_faults,
-                    read_bytes=value.io.read_bytes, write_bytes=value.io.write_bytes)
+                    read_bytes=value.io.read_bytes, write_bytes=value.io.write_bytes,
+                    read_ops=value.io.read_ops, write_ops=value.io.write_ops,
+                    other_ops=value.io.other_ops, other_bytes=value.io.other_bytes)
 
     def memory_metrics(self):
         """Peak committed memory charged to this Job, including exited children."""

@@ -291,6 +291,11 @@ fn package(args: Args) -> Result<()> {
         &documentation.join("copyright"),
         include_bytes!("../../../libs/libc/third-party-notices.txt"),
     )?;
+    let math_documentation = output_directory(documentation.parent().unwrap(), "kinakaze-libm")?;
+    atomic_write(
+        &math_documentation.join("copyright"),
+        include_bytes!("../../../libs/libm/third-party-notices.txt"),
+    )?;
     let libraries = output_directory(&root, "lib")?;
     for (name, bytes) in &images {
         atomic_write(&libraries.join(name), bytes)?;

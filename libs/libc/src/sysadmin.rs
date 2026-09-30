@@ -3376,19 +3376,122 @@ unsafe fn dispatch_syscall(number: i64, arguments: [u64; 6]) -> i64 {
                     }
                 })
             };
-            match mask {
-                Ok(mask) => to_kernel(unsafe {
+            let result = (|| -> Result<i64, i32> {
+                let mask = mask?;
+                let mask = if mask == 0 {
+                    None
+                } else {
+                    Some(crate::ptrace::read_value::<u64>(mask)?)
+                };
+                let timeout = if argument5 == 0 {
+                    None
+                } else {
+                    let value =
+                        crate::ptrace::read_value::<crate::fdio::Timespec>(argument5 as usize)?;
+                    if value.tv_sec < 0 || !(0..1_000_000_000).contains(&value.tv_nsec) {
+                        return Err(EINVAL);
+                    }
+                    Some(value)
+                };
+                let nfds = argument1 as i32;
+                if nfds < 0 || nfds as usize > kinakaze_vfs::MAX_FDS {
+                    return Err(EINVAL);
+                }
+                let bytes = (nfds as usize).div_ceil(64) * 8;
+                for pointer in [argument2, argument3, argument4] {
+                    if pointer != 0 {
+                        futex_access(pointer as usize, bytes, true).map_err(|e| -e as i32)?;
+                    }
+                }
+                let started = std::time::Instant::now();
+                let value = to_kernel(unsafe {
                     crate::fdio::kinakaze_abi_pselect(
-                        argument1 as i32,
+                        nfds,
                         argument2 as _,
                         argument3 as _,
                         argument4 as _,
-                        argument5 as _,
-                        mask as _,
+                        timeout.as_ref().map_or(core::ptr::null(), |value| value),
+                        mask.as_ref().map_or(core::ptr::null(), |value| value),
                     )
-                } as i64),
-                Err(error) => -i64::from(error),
+                } as i64);
+                // Unlike libc pselect, the raw ABI returns remaining time.
+                // Linux ignores writeback faults (including read-only storage).
+                if let Some(timeout) = timeout
+                    && (timeout.tv_sec != 0 || timeout.tv_nsec != 0)
+                    && futex_access(argument5 as usize, 16, true).is_ok()
+                {
+                    let remaining =
+                        std::time::Duration::new(timeout.tv_sec as u64, timeout.tv_nsec as u32)
+                            .saturating_sub(started.elapsed());
+                    let _ = crate::ptrace::write_value(
+                        argument5 as usize,
+                        crate::fdio::Timespec {
+                            tv_sec: remaining.as_secs() as i64,
+                            tv_nsec: i64::from(remaining.subsec_nanos()),
+                        },
+                    );
+                }
+                Ok(value)
+            })();
+            result.unwrap_or_else(|error| -i64::from(error))
+        }
+        454 => {
+            let flags = argument4 as u32;
+            if flags & !0x83 != 0
+                || flags & 3 != 2
+                || argument2 == 0
+                || argument2 > u64::from(u32::MAX)
+            {
+                return -i64::from(EINVAL);
             }
+            let address = match FutexAddress::resolve(argument1 as _, flags & 0x80 != 0) {
+                Ok(address) => address,
+                Err(error) => return error,
+            };
+            if let Err(error) = futex_word(address.word) {
+                return error;
+            }
+            // futex2 fixes legacy FUTEX_WAKE's zero-count wake-one behavior.
+            if argument3 as i32 == 0 {
+                0
+            } else {
+                futex_wake(address, argument3 as u32, argument2 as u32)
+            }
+        }
+        455 => {
+            let flags = argument4 as u32;
+            if flags & !0x83 != 0
+                || flags & 3 != 2
+                || argument2 > u64::from(u32::MAX)
+                || argument3 > u64::from(u32::MAX)
+            {
+                return -i64::from(EINVAL);
+            }
+            let clock = i64::from(argument6 as i32);
+            let realtime = argument5 != 0 && clock == CLOCK_REALTIME;
+            if argument5 != 0 {
+                if !matches!(clock, CLOCK_REALTIME | CLOCK_MONOTONIC) {
+                    return -i64::from(EINVAL);
+                }
+                if let Err(error) = futex_timeout(argument5 as _, true, realtime) {
+                    return error;
+                }
+            }
+            if argument3 == 0 {
+                return -i64::from(EINVAL);
+            }
+            let address = match FutexAddress::resolve(argument1 as _, flags & 0x80 != 0) {
+                Ok(address) => address,
+                Err(error) => return error,
+            };
+            futex_wait(
+                address,
+                argument2 as i32,
+                argument5 as _,
+                true,
+                realtime,
+                argument3 as u32,
+            )
         }
         305 => {
             if argument1 as i32 != 0 {
@@ -6651,6 +6754,141 @@ mod tests {
             -i64::from(EFAULT)
         );
         std::fs::remove_file(native).unwrap();
+    }
+
+    #[test]
+    fn syscall_pselect6_returns_time_and_checks_guest_records() {
+        let mut timeout = crate::fdio::Timespec {
+            tv_sec: 0,
+            tv_nsec: 2_000_000,
+        };
+        assert_eq!(
+            unsafe { kinakaze_abi_syscall_raw(270, 0, 0, 0, 0, &raw mut timeout as u64, 0) },
+            0
+        );
+        assert_eq!((timeout.tv_sec, timeout.tv_nsec), (0, 0));
+        assert_eq!(
+            unsafe { kinakaze_abi_syscall_raw(270, 0, 0, 0, 0, 1, 0) },
+            -i64::from(EFAULT)
+        );
+        let bad_mask = [1usize, 8];
+        assert_eq!(
+            unsafe {
+                kinakaze_abi_syscall_raw(
+                    270,
+                    0,
+                    0,
+                    0,
+                    0,
+                    &raw mut timeout as u64,
+                    bad_mask.as_ptr() as u64,
+                )
+            },
+            -i64::from(EFAULT)
+        );
+        assert_eq!(
+            unsafe { kinakaze_abi_syscall_raw(270, 1, 1, 0, 0, &raw mut timeout as u64, 0) },
+            -i64::from(EFAULT)
+        );
+        let unchanged = crate::fdio::Timespec {
+            tv_sec: 0,
+            tv_nsec: 1_000_000,
+        };
+        assert_eq!(
+            unsafe {
+                crate::fdio::kinakaze_abi_pselect(
+                    0,
+                    core::ptr::null_mut(),
+                    core::ptr::null_mut(),
+                    core::ptr::null_mut(),
+                    &unchanged,
+                    core::ptr::null(),
+                )
+            },
+            0
+        );
+        assert_eq!(unchanged.tv_nsec, 1_000_000);
+    }
+
+    #[test]
+    fn syscall_futex2_preserves_masks_zero_wake_and_legacy_interoperation() {
+        let word = std::sync::Arc::new(AtomicI32::new(7));
+        let address = std::sync::Arc::as_ptr(&word) as usize;
+        let child_word = word.clone();
+        let child = std::thread::spawn(move || {
+            let mut now = KernelTimespec::default();
+            assert_eq!(unsafe { clock_gettime(CLOCK_MONOTONIC, &raw mut now) }, 0);
+            now.tv_sec += 5;
+            unsafe {
+                kinakaze_abi_syscall_raw(
+                    455,
+                    std::sync::Arc::as_ptr(&child_word) as u64,
+                    7,
+                    2,
+                    0x82,
+                    &raw const now as u64,
+                    CLOCK_MONOTONIC as u64,
+                )
+            }
+        });
+        wait_for_futex_queue(address, 1);
+        assert_eq!(
+            unsafe { kinakaze_abi_syscall_raw(454, address as u64, 2, 0, 0x82, 0, 0) },
+            0
+        );
+        assert_eq!(
+            unsafe { kinakaze_abi_syscall_raw(454, address as u64, 1, 1, 0x82, 0, 0) },
+            0
+        );
+        assert_eq!(
+            unsafe {
+                kinakaze_abi_syscall_raw(
+                    SYS_FUTEX,
+                    address as u64,
+                    u64::from(FUTEX_WAKE_BITSET | FUTEX_PRIVATE_FLAG),
+                    1,
+                    0,
+                    0,
+                    2,
+                )
+            },
+            1
+        );
+        assert_eq!(child.join().unwrap(), 0);
+        assert!(!futex_queues().lock().unwrap().contains_key(&address));
+        for flags in [0, 1, 3, 6, 0x102] {
+            assert_eq!(
+                unsafe { kinakaze_abi_syscall_raw(454, address as u64, 1, 1, flags, 0, 0) },
+                -i64::from(EINVAL)
+            );
+        }
+        assert_eq!(
+            unsafe { kinakaze_abi_syscall_raw(455, address as u64, 8, 1, 0x82, 0, 999) },
+            -i64::from(EAGAIN)
+        ); // clockid is ignored without a timeout.
+        let past = KernelTimespec::default();
+        assert_eq!(
+            unsafe {
+                kinakaze_abi_syscall_raw(
+                    455,
+                    address as u64,
+                    7,
+                    1,
+                    0x82,
+                    &raw const past as u64,
+                    CLOCK_REALTIME as u64,
+                )
+            },
+            -i64::from(kinakaze_vfs::ETIMEDOUT)
+        );
+        assert_eq!(
+            unsafe { kinakaze_abi_syscall_raw(454, address as u64, 1 << 32, 1, 0x82, 0, 0) },
+            -i64::from(EINVAL)
+        );
+        assert_eq!(
+            unsafe { kinakaze_abi_syscall_raw(454, 1, 1, 0, 0x82, 0, 0) },
+            -i64::from(EINVAL)
+        );
     }
 
     #[test]

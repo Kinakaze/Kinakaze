@@ -51,7 +51,7 @@ def main():
 
     try:
         for iteration in range(args.repeat):
-            with InitPool(root, dist, output / str(iteration), size=1, timeout=30) as pool:
+            with InitPool(root, dist, output / str(iteration), size=None, timeout=30) as pool:
                 retained.append(pool)
                 result = pool.run(['/usr/bin/python3', '-c', source])
                 assert result['status'] == 'passed', result
@@ -59,7 +59,7 @@ def main():
             check_closed(pool, iteration)
         # Keep a child alive until the watchdog kills its owned process tree.
         try:
-            with InitPool(root, dist, output / 'timeout', size=1, timeout=2,
+            with InitPool(root, dist, output / 'timeout', size=None, timeout=2,
                           memory_limit_bytes=1024**3) as pool:
                 retained.append(pool)
                 application = pool.launch(['/usr/bin/python3', '-c',

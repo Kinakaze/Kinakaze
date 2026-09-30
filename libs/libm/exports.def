@@ -107,21 +107,93 @@ EXPORTS
   kinakaze_engine_libm_cabsl
   "cabsl"=kinakaze_engine_libm_cabsl PRIVATE
   "cabsl@GLIBC_2.2.5"=kinakaze_engine_libm_cabsl PRIVATE
+  kinakaze_engine_libm_cacos
+  "cacos"=kinakaze_engine_libm_cacos PRIVATE
+  "cacos@GLIBC_2.2.5"=kinakaze_engine_libm_cacos PRIVATE
+  kinakaze_engine_libm_cacosf
+  "cacosf"=kinakaze_engine_libm_cacosf PRIVATE
+  "cacosf@GLIBC_2.2.5"=kinakaze_engine_libm_cacosf PRIVATE
+  kinakaze_engine_libm_cacosh
+  "cacosh"=kinakaze_engine_libm_cacosh PRIVATE
+  "cacosh@GLIBC_2.2.5"=kinakaze_engine_libm_cacosh PRIVATE
+  kinakaze_engine_libm_cacoshf
+  "cacoshf"=kinakaze_engine_libm_cacoshf PRIVATE
+  "cacoshf@GLIBC_2.2.5"=kinakaze_engine_libm_cacoshf PRIVATE
+  kinakaze_engine_libm_cacoshl
+  "cacoshl"=kinakaze_engine_libm_cacoshl PRIVATE
+  "cacoshl@GLIBC_2.2.5"=kinakaze_engine_libm_cacoshl PRIVATE
+  kinakaze_engine_libm_cacosl
+  "cacosl"=kinakaze_engine_libm_cacosl PRIVATE
+  "cacosl@GLIBC_2.2.5"=kinakaze_engine_libm_cacosl PRIVATE
   kinakaze_engine_libm_carg
   "carg"=kinakaze_engine_libm_carg PRIVATE
   "carg@GLIBC_2.2.5"=kinakaze_engine_libm_carg PRIVATE
+  kinakaze_engine_libm_cargf
+  "cargf"=kinakaze_engine_libm_cargf PRIVATE
+  "cargf@GLIBC_2.2.5"=kinakaze_engine_libm_cargf PRIVATE
+  kinakaze_engine_libm_cargl
+  "cargl"=kinakaze_engine_libm_cargl PRIVATE
+  "cargl@GLIBC_2.2.5"=kinakaze_engine_libm_cargl PRIVATE
+  kinakaze_engine_libm_casin
+  "casin"=kinakaze_engine_libm_casin PRIVATE
+  "casin@GLIBC_2.2.5"=kinakaze_engine_libm_casin PRIVATE
+  kinakaze_engine_libm_casinf
+  "casinf"=kinakaze_engine_libm_casinf PRIVATE
+  "casinf@GLIBC_2.2.5"=kinakaze_engine_libm_casinf PRIVATE
+  kinakaze_engine_libm_casinh
+  "casinh"=kinakaze_engine_libm_casinh PRIVATE
+  "casinh@GLIBC_2.2.5"=kinakaze_engine_libm_casinh PRIVATE
+  kinakaze_engine_libm_casinhf
+  "casinhf"=kinakaze_engine_libm_casinhf PRIVATE
+  "casinhf@GLIBC_2.2.5"=kinakaze_engine_libm_casinhf PRIVATE
+  kinakaze_engine_libm_casinhl
+  "casinhl"=kinakaze_engine_libm_casinhl PRIVATE
+  "casinhl@GLIBC_2.2.5"=kinakaze_engine_libm_casinhl PRIVATE
+  kinakaze_engine_libm_casinl
+  "casinl"=kinakaze_engine_libm_casinl PRIVATE
+  "casinl@GLIBC_2.2.5"=kinakaze_engine_libm_casinl PRIVATE
+  kinakaze_engine_libm_catan
+  "catan"=kinakaze_engine_libm_catan PRIVATE
+  "catan@GLIBC_2.2.5"=kinakaze_engine_libm_catan PRIVATE
+  kinakaze_engine_libm_catanf
+  "catanf"=kinakaze_engine_libm_catanf PRIVATE
+  "catanf@GLIBC_2.2.5"=kinakaze_engine_libm_catanf PRIVATE
+  kinakaze_engine_libm_catanh
+  "catanh"=kinakaze_engine_libm_catanh PRIVATE
+  "catanh@GLIBC_2.2.5"=kinakaze_engine_libm_catanh PRIVATE
+  kinakaze_engine_libm_catanhf
+  "catanhf"=kinakaze_engine_libm_catanhf PRIVATE
+  "catanhf@GLIBC_2.2.5"=kinakaze_engine_libm_catanhf PRIVATE
+  kinakaze_engine_libm_catanhl
+  "catanhl"=kinakaze_engine_libm_catanhl PRIVATE
+  "catanhl@GLIBC_2.2.5"=kinakaze_engine_libm_catanhl PRIVATE
+  kinakaze_engine_libm_catanl
+  "catanl"=kinakaze_engine_libm_catanl PRIVATE
+  "catanl@GLIBC_2.2.5"=kinakaze_engine_libm_catanl PRIVATE
   kinakaze_engine_libm_cbrt
   "cbrt"=kinakaze_engine_libm_cbrt PRIVATE
   "cbrt@GLIBC_2.2.5"=kinakaze_engine_libm_cbrt PRIVATE
   kinakaze_engine_libm_cbrtf
   "cbrtf"=kinakaze_engine_libm_cbrtf PRIVATE
   "cbrtf@GLIBC_2.2.5"=kinakaze_engine_libm_cbrtf PRIVATE
+  kinakaze_engine_libm_cbrtl
+  "cbrtl"=kinakaze_engine_libm_cbrtl PRIVATE
+  "cbrtl@GLIBC_2.2.5"=kinakaze_engine_libm_cbrtl PRIVATE
   kinakaze_engine_libm_ccos
   "ccos"=kinakaze_engine_libm_ccos PRIVATE
   "ccos@GLIBC_2.2.5"=kinakaze_engine_libm_ccos PRIVATE
   kinakaze_engine_libm_ccosf
   "ccosf"=kinakaze_engine_libm_ccosf PRIVATE
   "ccosf@GLIBC_2.2.5"=kinakaze_engine_libm_ccosf PRIVATE
+  kinakaze_engine_libm_ccosh
+  "ccosh"=kinakaze_engine_libm_ccosh PRIVATE
+  "ccosh@GLIBC_2.2.5"=kinakaze_engine_libm_ccosh PRIVATE
+  kinakaze_engine_libm_ccoshf
+  "ccoshf"=kinakaze_engine_libm_ccoshf PRIVATE
+  "ccoshf@GLIBC_2.2.5"=kinakaze_engine_libm_ccoshf PRIVATE
+  kinakaze_engine_libm_ccoshl
+  "ccoshl"=kinakaze_engine_libm_ccoshl PRIVATE
+  "ccoshl@GLIBC_2.2.5"=kinakaze_engine_libm_ccoshl PRIVATE
   kinakaze_engine_libm_ccosl
   "ccosl"=kinakaze_engine_libm_ccosl PRIVATE
   "ccosl@GLIBC_2.2.5"=kinakaze_engine_libm_ccosl PRIVATE
@@ -143,6 +215,15 @@ EXPORTS
   kinakaze_engine_libm_cexpl
   "cexpl"=kinakaze_engine_libm_cexpl PRIVATE
   "cexpl@GLIBC_2.2.5"=kinakaze_engine_libm_cexpl PRIVATE
+  kinakaze_engine_libm_cimag
+  "cimag"=kinakaze_engine_libm_cimag PRIVATE
+  "cimag@GLIBC_2.2.5"=kinakaze_engine_libm_cimag PRIVATE
+  kinakaze_engine_libm_cimagf
+  "cimagf"=kinakaze_engine_libm_cimagf PRIVATE
+  "cimagf@GLIBC_2.2.5"=kinakaze_engine_libm_cimagf PRIVATE
+  kinakaze_engine_libm_cimagl
+  "cimagl"=kinakaze_engine_libm_cimagl PRIVATE
+  "cimagl@GLIBC_2.2.5"=kinakaze_engine_libm_cimagl PRIVATE
   kinakaze_engine_libm_clog
   "clog"=kinakaze_engine_libm_clog PRIVATE
   "clog@GLIBC_2.2.5"=kinakaze_engine_libm_clog PRIVATE
@@ -152,6 +233,15 @@ EXPORTS
   kinakaze_engine_libm_clogl
   "clogl"=kinakaze_engine_libm_clogl PRIVATE
   "clogl@GLIBC_2.2.5"=kinakaze_engine_libm_clogl PRIVATE
+  kinakaze_engine_libm_conj
+  "conj"=kinakaze_engine_libm_conj PRIVATE
+  "conj@GLIBC_2.2.5"=kinakaze_engine_libm_conj PRIVATE
+  kinakaze_engine_libm_conjf
+  "conjf"=kinakaze_engine_libm_conjf PRIVATE
+  "conjf@GLIBC_2.2.5"=kinakaze_engine_libm_conjf PRIVATE
+  kinakaze_engine_libm_conjl
+  "conjl"=kinakaze_engine_libm_conjl PRIVATE
+  "conjl@GLIBC_2.2.5"=kinakaze_engine_libm_conjl PRIVATE
   kinakaze_engine_libm_copysign
   "copysign"=kinakaze_engine_libm_copysign PRIVATE
   kinakaze_engine_libm_copysignf
@@ -174,12 +264,48 @@ EXPORTS
   kinakaze_engine_libm_cosl
   "cosl"=kinakaze_engine_libm_cosl PRIVATE
   "cosl@GLIBC_2.2.5"=kinakaze_engine_libm_cosl PRIVATE
+  kinakaze_engine_libm_cpow
+  "cpow"=kinakaze_engine_libm_cpow PRIVATE
+  "cpow@GLIBC_2.2.5"=kinakaze_engine_libm_cpow PRIVATE
+  kinakaze_engine_libm_cpowf
+  "cpowf"=kinakaze_engine_libm_cpowf PRIVATE
+  "cpowf@GLIBC_2.2.5"=kinakaze_engine_libm_cpowf PRIVATE
+  kinakaze_engine_libm_cpowl
+  "cpowl"=kinakaze_engine_libm_cpowl PRIVATE
+  "cpowl@GLIBC_2.2.5"=kinakaze_engine_libm_cpowl PRIVATE
+  kinakaze_engine_libm_cproj
+  "cproj"=kinakaze_engine_libm_cproj PRIVATE
+  "cproj@GLIBC_2.2.5"=kinakaze_engine_libm_cproj PRIVATE
+  kinakaze_engine_libm_cprojf
+  "cprojf"=kinakaze_engine_libm_cprojf PRIVATE
+  "cprojf@GLIBC_2.2.5"=kinakaze_engine_libm_cprojf PRIVATE
+  kinakaze_engine_libm_cprojl
+  "cprojl"=kinakaze_engine_libm_cprojl PRIVATE
+  "cprojl@GLIBC_2.2.5"=kinakaze_engine_libm_cprojl PRIVATE
+  kinakaze_engine_libm_creal
+  "creal"=kinakaze_engine_libm_creal PRIVATE
+  "creal@GLIBC_2.2.5"=kinakaze_engine_libm_creal PRIVATE
+  kinakaze_engine_libm_crealf
+  "crealf"=kinakaze_engine_libm_crealf PRIVATE
+  "crealf@GLIBC_2.2.5"=kinakaze_engine_libm_crealf PRIVATE
+  kinakaze_engine_libm_creall
+  "creall"=kinakaze_engine_libm_creall PRIVATE
+  "creall@GLIBC_2.2.5"=kinakaze_engine_libm_creall PRIVATE
   kinakaze_engine_libm_csin
   "csin"=kinakaze_engine_libm_csin PRIVATE
   "csin@GLIBC_2.2.5"=kinakaze_engine_libm_csin PRIVATE
   kinakaze_engine_libm_csinf
   "csinf"=kinakaze_engine_libm_csinf PRIVATE
   "csinf@GLIBC_2.2.5"=kinakaze_engine_libm_csinf PRIVATE
+  kinakaze_engine_libm_csinh
+  "csinh"=kinakaze_engine_libm_csinh PRIVATE
+  "csinh@GLIBC_2.2.5"=kinakaze_engine_libm_csinh PRIVATE
+  kinakaze_engine_libm_csinhf
+  "csinhf"=kinakaze_engine_libm_csinhf PRIVATE
+  "csinhf@GLIBC_2.2.5"=kinakaze_engine_libm_csinhf PRIVATE
+  kinakaze_engine_libm_csinhl
+  "csinhl"=kinakaze_engine_libm_csinhl PRIVATE
+  "csinhl@GLIBC_2.2.5"=kinakaze_engine_libm_csinhl PRIVATE
   kinakaze_engine_libm_csinl
   "csinl"=kinakaze_engine_libm_csinl PRIVATE
   "csinl@GLIBC_2.2.5"=kinakaze_engine_libm_csinl PRIVATE
@@ -192,6 +318,24 @@ EXPORTS
   kinakaze_engine_libm_csqrtl
   "csqrtl"=kinakaze_engine_libm_csqrtl PRIVATE
   "csqrtl@GLIBC_2.2.5"=kinakaze_engine_libm_csqrtl PRIVATE
+  kinakaze_engine_libm_ctan
+  "ctan"=kinakaze_engine_libm_ctan PRIVATE
+  "ctan@GLIBC_2.2.5"=kinakaze_engine_libm_ctan PRIVATE
+  kinakaze_engine_libm_ctanf
+  "ctanf"=kinakaze_engine_libm_ctanf PRIVATE
+  "ctanf@GLIBC_2.2.5"=kinakaze_engine_libm_ctanf PRIVATE
+  kinakaze_engine_libm_ctanh
+  "ctanh"=kinakaze_engine_libm_ctanh PRIVATE
+  "ctanh@GLIBC_2.2.5"=kinakaze_engine_libm_ctanh PRIVATE
+  kinakaze_engine_libm_ctanhf
+  "ctanhf"=kinakaze_engine_libm_ctanhf PRIVATE
+  "ctanhf@GLIBC_2.2.5"=kinakaze_engine_libm_ctanhf PRIVATE
+  kinakaze_engine_libm_ctanhl
+  "ctanhl"=kinakaze_engine_libm_ctanhl PRIVATE
+  "ctanhl@GLIBC_2.2.5"=kinakaze_engine_libm_ctanhl PRIVATE
+  kinakaze_engine_libm_ctanl
+  "ctanl"=kinakaze_engine_libm_ctanl PRIVATE
+  "ctanl@GLIBC_2.2.5"=kinakaze_engine_libm_ctanl PRIVATE
   kinakaze_engine_libm_remainder
   "drem"=kinakaze_engine_libm_remainder PRIVATE
   "drem@GLIBC_2.2.5"=kinakaze_engine_libm_remainder PRIVATE
@@ -238,6 +382,9 @@ EXPORTS
   kinakaze_engine_libm_expm1f
   "expm1f"=kinakaze_engine_libm_expm1f PRIVATE
   "expm1f@GLIBC_2.2.5"=kinakaze_engine_libm_expm1f PRIVATE
+  kinakaze_engine_libm_expm1l
+  "expm1l"=kinakaze_engine_libm_expm1l PRIVATE
+  "expm1l@GLIBC_2.2.5"=kinakaze_engine_libm_expm1l PRIVATE
   kinakaze_engine_libm_fabs
   "fabs"=kinakaze_engine_libm_fabs PRIVATE
   "fabs@GLIBC_2.2.5"=kinakaze_engine_libm_fabs PRIVATE

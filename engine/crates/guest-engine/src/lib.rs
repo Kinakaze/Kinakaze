@@ -362,6 +362,11 @@ fn hosted_main() -> i32 {
         path
     };
     let original_path = path.clone();
+    // Keep the inode opened for the format probe until snapshotting. Direct
+    // ELF launches otherwise open the same path twice, and a rename between
+    // those opens can even make the probe and the linker observe different
+    // files. Exec handoff already owns immutable bytes and needs no reader.
+    let mut probed_image = None;
     let (path, guest_arguments) = {
         let mut shebang_buf = [0u8; 1024];
         let first_bytes =
@@ -369,9 +374,9 @@ fn hosted_main() -> i32 {
                 Some(&image[..image.len().min(shebang_buf.len())])
             } else if let Ok(mut file) = kinakaze_link::open_guest_image(&path) {
                 use std::io::Read;
-                file.read(&mut shebang_buf)
-                    .ok()
-                    .map(|read| &shebang_buf[..read])
+                let read = file.read(&mut shebang_buf).ok();
+                probed_image = Some(file);
+                read.map(|read| &shebang_buf[..read])
             } else {
                 None
             };
@@ -407,6 +412,11 @@ fn hosted_main() -> i32 {
         } else {
             None
         };
+        if shebang_opt.is_some() {
+            // The selected interpreter has its own inode. Release the script
+            // reader before opening it, including interpreter error paths.
+            probed_image = None;
+        }
         shebang_opt.unwrap_or((path, guest_arguments))
     };
     // A shebang selects a different root ELF. The shared bytes describe the
@@ -423,7 +433,10 @@ fn hosted_main() -> i32 {
     // linker. A temporary Vec here would still inflate every later fork copy.
     let root_image = match root_image {
         Some(image) => image,
-        None => match kinakaze_link::snapshot_guest_image(&path) {
+        None => match probed_image.map_or_else(
+            || kinakaze_link::snapshot_guest_image(&path),
+            |file| file.snapshot(),
+        ) {
             Ok(image) => image,
             Err(error) => {
                 report_loader_error(format_args!("ELF image snapshot failed: {error}"));

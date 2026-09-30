@@ -667,6 +667,9 @@ const F_SETFL: c_int = 4;
 const F_SETLK: c_int = 6;
 const F_SETLKW: c_int = 7;
 const F_GETLK: c_int = 5;
+const F_OFD_GETLK: c_int = 36;
+const F_OFD_SETLK: c_int = 37;
+const F_OFD_SETLKW: c_int = 38;
 const F_SETOWN: c_int = 8;
 const F_GETOWN: c_int = 9;
 const F_SETPIPE_SZ: c_int = 1031;
@@ -699,11 +702,21 @@ pub struct Flock {
 }
 
 /// Resolves Linux's inclusive byte range, including OFF_MAX for l_len == 0.
-fn lock_range(entry: FdEntry, request: &Flock) -> Result<kinakaze_vfs::record_lock::Range, i32> {
+fn lock_range(
+    fd: c_int,
+    entry: FdEntry,
+    request: &Flock,
+) -> Result<kinakaze_vfs::record_lock::Range, i32> {
     use kinakaze_vfs::record_lock::Range;
     let base = match request.l_whence as c_int {
         SEEK_SET => 0i64,
+        SEEK_CUR if matches!(entry.kind, FdKind::TmpfsFile | FdKind::TmpfsDirectory) => {
+            i64::try_from(fs::lseek(fd, 0, SEEK_CUR)?).map_err(|_| EOVERFLOW)?
+        }
         SEEK_CUR => i64::try_from(entry.offset).map_err(|_| EOVERFLOW)?,
+        SEEK_END if matches!(entry.kind, FdKind::TmpfsFile | FdKind::TmpfsDirectory) => {
+            kinakaze_vfs::tmpfs::fstat(fd)?.st_size
+        }
         SEEK_END => i64::try_from(fs::verity::authoritative_size(entry.raw as *mut c_void)?)
             .map_err(|_| EOVERFLOW)?,
         _ => return Err(EINVAL),
@@ -733,21 +746,29 @@ unsafe fn record_lock_command(fd: c_int, command: c_int, request: *mut Flock) ->
     }
     let entry = kinakaze_vfs::get(fd)?;
     if entry.flags.contains(FdFlags::PATH_ONLY)
-        || !matches!(entry.kind, FdKind::File | FdKind::Directory)
+        || !matches!(
+            entry.kind,
+            FdKind::File | FdKind::Directory | FdKind::TmpfsFile | FdKind::TmpfsDirectory
+        )
         || entry.raw == 0
     {
         return Err(EBADF);
     }
     let wanted = unsafe { *request };
+    let ofd = matches!(command, F_OFD_GETLK | F_OFD_SETLK | F_OFD_SETLKW);
+    let query = matches!(command, F_GETLK | F_OFD_GETLK);
+    if ofd && wanted.l_pid != 0 {
+        return Err(EINVAL);
+    }
     let kind = match wanted.l_type {
         F_RDLCK => Some(Kind::Read),
         F_WRLCK => Some(Kind::Write),
-        F_UNLCK if command != F_GETLK => None,
+        F_UNLCK if !query => None,
         _ => return Err(EINVAL),
     };
-    let range = lock_range(entry, &wanted)?;
-    if command == F_GETLK {
-        match record_lock::query(fd, range, kind.ok_or(EINVAL)?)? {
+    let range = lock_range(fd, entry, &wanted)?;
+    if query {
+        match record_lock::query_owned(fd, range, kind.ok_or(EINVAL)?, ofd)? {
             None => unsafe { (*request).l_type = F_UNLCK },
             Some(conflict) => unsafe {
                 (*request).l_type = if conflict.kind == Kind::Read {
@@ -773,7 +794,13 @@ unsafe fn record_lock_command(fd: c_int, command: c_int, request: *mut Flock) ->
     {
         return Err(EBADF);
     }
-    record_lock::set(fd, range, kind, command == F_SETLKW)
+    record_lock::set_owned(
+        fd,
+        range,
+        kind,
+        matches!(command, F_SETLKW | F_OFD_SETLKW),
+        ofd,
+    )
 }
 
 /// Reads the logical `FD_CLOEXEC` bit.
@@ -903,7 +930,7 @@ fn pipe_capacity(entry: FdEntry) -> Result<c_int, i32> {
 ///
 /// # Safety
 ///
-/// For the `F_GETLK`, `F_SETLK` and `F_SETLKW` commands, `argument` must be a
+/// For record lock commands (including `F_OFD_*`), `argument` must be a
 /// pointer to a valid `struct flock`. For every other command it is an integer.
 #[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn kinakaze_abi_fcntl64(
@@ -977,7 +1004,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_fcntl64(
                 }
         }
         F_SETFL => posix(set_status_flags(fd, argument as c_int)),
-        F_GETLK | F_SETLK | F_SETLKW => {
+        F_GETLK | F_SETLK | F_SETLKW | F_OFD_GETLK | F_OFD_SETLK | F_OFD_SETLKW => {
             // SAFETY: the fcntl ABI requires a valid struct flock pointer.
             posix(unsafe { record_lock_command(fd, command, argument as *mut Flock) })
         }

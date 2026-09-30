@@ -1049,6 +1049,15 @@ fn emit_save_extended_state(
             code.extend_from_slice(&displacement.to_le_bytes());
         }
         kinakaze_tls::thread_pointer::ExtendedStateFormat::Xsave { mask, .. } => {
+            // This stack is also used by ordinary host calls. XSAVE updates
+            // XSTATE_BV but leaves XCOMP_BV and reserved header bytes intact;
+            // XRSTOR rejects stale nonzero bytes with #GP. Initialize the full
+            // standard-format header without touching unsaved vector registers.
+            code.extend_from_slice(&[0x31, 0xc0]); // xor eax,eax
+            for offset in (512..576).step_by(8) {
+                code.extend_from_slice(&[0x48, 0x89, 0x84, 0x24]); // mov [rsp+disp32],rax
+                code.extend_from_slice(&(displacement + offset).to_le_bytes());
+            }
             code.push(0xb8); // mov eax,mask.low
             code.extend_from_slice(&(mask as u32).to_le_bytes());
             code.push(0xba); // mov edx,mask.high
@@ -1690,6 +1699,29 @@ mod tests {
         assert!(rel32_reachable(block as usize, site.trampoline));
         tls_block.restore().unwrap();
         NESTED_SYSCALL_TARGET.store(block as usize, Ordering::SeqCst);
+
+        // Host calls reuse these stack lanes before a later raw syscall. XSAVE
+        // does not overwrite the standard-format header's reserved fields;
+        // seed both outer and nested frames with nonzero previous stack data.
+        if let kinakaze_tls::thread_pointer::ExtendedStateFormat::Xsave { size, .. } =
+            kinakaze_tls::thread_pointer::extended_state_format()
+        {
+            let state_offset =
+                kinakaze_tls::thread_pointer::RAW_SYSCALL_FRAME_EXTENDED_STATE_OFFSET;
+            let frame_size = (state_offset + size + 63) & !63;
+            for lane in 0..2 {
+                let frame = (host_stack_top
+                    - lane * kinakaze_tls::thread_pointer::HOST_CALL_STACK_LANE_SIZE)
+                    & !63;
+                unsafe {
+                    std::ptr::write_bytes(
+                        (frame - frame_size + state_offset + 512) as *mut u8,
+                        0xa5,
+                        64,
+                    );
+                }
+            }
+        }
 
         // Call the patched code:
         // Pass rax=100, rdi=1, rsi=2, rdx=3, r10=4, r8=5, r9=6

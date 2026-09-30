@@ -7,6 +7,41 @@ use windows_sys::Win32::Storage::FileSystem::{
 };
 
 #[test]
+fn native_data_hole_seek_preserves_offset_on_failure() {
+    let path = std::env::temp_dir().join(format!("kinakaze-hole-seek-{}.tmp", std::process::id()));
+    let file = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .read(true)
+        .write(true)
+        .custom_flags(FILE_FLAG_DELETE_ON_CLOSE)
+        .open(&path)
+        .unwrap();
+    file.set_len(1152).unwrap();
+    let fd = crate::install(
+        file.into_raw_handle() as usize,
+        FdKind::File,
+        FdFlags::SEEKABLE
+            .union(FdFlags::READ_ACCESS)
+            .union(FdFlags::WRITE_ACCESS),
+    )
+    .unwrap();
+    assert_eq!(fs::lseek(fd, 384, 3), Ok(384));
+    assert_eq!(fs::lseek(fd, 384, 4), Ok(1152));
+    for (offset, error) in [
+        (-1, crate::EINVAL),
+        (1152, crate::ENXIO),
+        (2000, crate::ENXIO),
+    ] {
+        for whence in [3, 4] {
+            assert_eq!(fs::lseek(fd, offset, whence), Err(error));
+            assert_eq!(fs::lseek(fd, 0, fs::SEEK_CUR), Ok(1152));
+        }
+    }
+    crate::close(fd).unwrap();
+}
+
+#[test]
 fn promoted_alias_publishes_its_completed_write_read_and_seek_position() {
     let path = std::env::temp_dir().join(format!(
         "kinakaze-ofd-alias-{}-{}.tmp",

@@ -33,4 +33,39 @@ fn main() {
         "could not compile the IEEE binary80 power implementation"
     );
     println!("cargo:rustc-link-arg={}", output.display());
+    println!("cargo:rerun-if-changed=src/math80");
+    for source in [
+        "bridge",
+        "expm1l",
+        "cbrtl",
+        "expl",
+        "sinl",
+        "cosl",
+        "__sinl",
+        "__cosl",
+        "__rem_pio2l",
+        "__rem_pio2_large",
+        "catrigl",
+    ] {
+        let output = std::path::PathBuf::from(std::env::var_os("OUT_DIR").unwrap())
+            .join(format!("math80_{source}.obj"));
+        let status = std::process::Command::new(&compiler)
+            .arg(format!("--target={target}"))
+            .args([
+                "-c",
+                "-O2",
+                "-mlong-double-80",
+                "-ffp-model=strict",
+                "-ffreestanding",
+                "-fno-builtin",
+                "-Werror=implicit-function-declaration",
+            ])
+            .arg(format!("src/math80/{source}.c"))
+            .arg("-o")
+            .arg(&output)
+            .status()
+            .expect("Clang is required for binary80 complex math (KINAKAZE_CLANG)");
+        assert!(status.success(), "could not compile binary80 {source}");
+        println!("cargo:rustc-link-arg={}", output.display());
+    }
 }

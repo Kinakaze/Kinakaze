@@ -7,6 +7,7 @@
 | 内容 | 来源与许可说明 |
 | --- | --- |
 | [`libs/libm/src/ld80/powl.c`](libs/libm/src/ld80/powl.c) | 来自 musl v1.2.5 / OpenBSD / Stephen L. Moshier；文件开头保留版权和许可全文，背景见 [目录说明](libs/libm/src/ld80/README.md) |
+| [`libs/libm/src/math80`](libs/libm/src/math80/README.md) | musl v1.2.5 数学内核和 FreeBSD 14.3 复数反三角函数；保留来源、哈希与许可，打包时将 [`third-party-notices.txt`](libs/libm/third-party-notices.txt) 复制到客体 `usr/share/doc/kinakaze-libm/copyright` |
 | [`libs/libc/third-party-notices.txt`](libs/libc/third-party-notices.txt) | `rustc_apfloat` 及相关 LLVM 来源声明；打包器会复制到客体 `usr/share/doc/kinakaze-libc/copyright` |
 
 ## Rust 依赖

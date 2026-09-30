@@ -11,6 +11,7 @@ use std::sync::OnceLock;
 use kinakaze_vfs::{EINVAL, ENOENT, EPERM, ERANGE};
 
 pub(crate) mod account_files;
+mod enumeration;
 mod nss_parse;
 mod password_lock;
 mod returned;
@@ -152,6 +153,8 @@ mod identity_handoff {
             return kinakaze_vfs::EINVAL;
         };
         restore_process_identity(values, groups);
+        enumeration::reset_users();
+        enumeration::reset_groups();
         for (cursor, bytes) in [&PASSWD_CURSOR, &GROUP_CURSOR]
             .into_iter()
             .zip(cursors.chunks_exact(8))
@@ -1207,59 +1210,58 @@ struct UserAccount {
 }
 
 fn load_user_accounts() -> Vec<UserAccount> {
-    let mut accounts = Vec::new();
-
-    if let Ok(path) = kinakaze_vfs::resolve_linux_path("/etc/passwd") {
-        if let Ok(content) = std::fs::read_to_string(&path) {
-            for line in content.lines() {
-                let trimmed = line.trim();
-                if trimmed.is_empty() || trimmed.starts_with('#') {
-                    continue;
-                }
-                let parts: Vec<&str> = trimmed.split(':').collect();
-                if parts.len() >= 7 {
-                    let name = parts[0].to_string();
-                    let password = parts[1].to_string();
-                    let (Ok(uid), Ok(gid)) = (parts[2].parse::<u32>(), parts[3].parse::<u32>())
-                    else {
-                        continue;
-                    };
-                    let gecos = parts[4].to_string();
-                    let dir = parts[5].to_string();
-                    let shell = parts[6].to_string();
-                    accounts.push(UserAccount {
-                        name,
-                        password,
-                        uid,
-                        gid,
-                        gecos,
-                        dir,
-                        shell,
-                    });
-                }
-            }
-            // A present guest database is authoritative; do not inject accounts.
-            return accounts;
-        }
+    if let Some(content) = account_text("/etc/passwd") {
+        return account_lines(&content)
+            .filter_map(parse_user_account)
+            .collect();
     }
+    fallback_user_accounts()
+}
 
-    if !accounts.iter().any(|account| account.name == "root") {
-        accounts.insert(
-            0,
-            UserAccount {
-                name: "root".to_string(),
-                password: "x".to_string(),
-                uid: 0,
-                gid: 0,
-                gecos: "".to_string(),
-                dir: "/root".to_string(),
-                shell: "/bin/sh".to_string(),
-            },
-        );
-    }
+fn account_text(path: &str) -> Option<String> {
+    let path = kinakaze_vfs::resolve_linux_path(path).ok()?;
+    std::fs::read_to_string(path).ok()
+}
 
-    if !accounts.iter().any(|a| a.name == "sshd") {
-        accounts.push(UserAccount {
+fn account_lines(content: &str) -> impl Iterator<Item = &str> {
+    content
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+}
+
+fn parse_user_account(line: &str) -> Option<UserAccount> {
+    let mut fields = line.split(':');
+    let name = fields.next()?;
+    let password = fields.next()?;
+    let uid = fields.next()?.parse().ok()?;
+    let gid = fields.next()?.parse().ok()?;
+    let gecos = fields.next()?;
+    let dir = fields.next()?;
+    let shell = fields.next()?;
+    Some(UserAccount {
+        name: name.into(),
+        password: password.into(),
+        uid,
+        gid,
+        gecos: gecos.into(),
+        dir: dir.into(),
+        shell: shell.into(),
+    })
+}
+
+fn fallback_user_accounts() -> Vec<UserAccount> {
+    vec![
+        UserAccount {
+            name: "root".to_string(),
+            password: "x".to_string(),
+            uid: 0,
+            gid: 0,
+            gecos: "".to_string(),
+            dir: "/root".to_string(),
+            shell: "/bin/sh".to_string(),
+        },
+        UserAccount {
             name: "sshd".to_string(),
             password: "x".to_string(),
             uid: 101,
@@ -1267,11 +1269,8 @@ fn load_user_accounts() -> Vec<UserAccount> {
             gecos: "".to_string(),
             dir: "/run/sshd".to_string(),
             shell: "/usr/sbin/nologin".to_string(),
-        });
-    }
-
-    if !accounts.iter().any(|a| a.name == "nobody") {
-        accounts.push(UserAccount {
+        },
+        UserAccount {
             name: "nobody".to_string(),
             password: "x".to_string(),
             uid: 65534,
@@ -1279,18 +1278,30 @@ fn load_user_accounts() -> Vec<UserAccount> {
             gecos: "nobody".to_string(),
             dir: "/nonexistent".to_string(),
             shell: "/bin/false".to_string(),
-        });
-    }
-
-    accounts
+        },
+    ]
 }
 
 fn find_user_by_name(name: &str) -> Option<UserAccount> {
-    load_user_accounts().into_iter().find(|a| a.name == name)
+    if let Some(content) = account_text("/etc/passwd") {
+        return account_lines(&content)
+            .filter(|line| line.split(':').next() == Some(name))
+            .find_map(parse_user_account);
+    }
+    fallback_user_accounts()
+        .into_iter()
+        .find(|a| a.name == name)
 }
 
 fn find_user_by_uid(uid: u32) -> Option<UserAccount> {
-    load_user_accounts().into_iter().find(|a| a.uid == uid)
+    if let Some(content) = account_text("/etc/passwd") {
+        return account_lines(&content)
+            .filter(|line| {
+                line.split(':').nth(2).and_then(|id| id.parse::<u32>().ok()) == Some(uid)
+            })
+            .find_map(parse_user_account);
+    }
+    fallback_user_accounts().into_iter().find(|a| a.uid == uid)
 }
 
 fn passwd_entry_for(account: &UserAccount) -> *mut Passwd {
@@ -1306,70 +1317,69 @@ struct GroupAccount {
 }
 
 fn load_group_accounts() -> Vec<GroupAccount> {
-    let mut groups = Vec::new();
-
-    if let Ok(path) = kinakaze_vfs::resolve_linux_path("/etc/group") {
-        if let Ok(content) = std::fs::read_to_string(&path) {
-            for line in content.lines() {
-                let trimmed = line.trim();
-                if trimmed.is_empty() || trimmed.starts_with('#') {
-                    continue;
-                }
-                let parts: Vec<&str> = trimmed.split(':').collect();
-                if parts.len() >= 3 {
-                    let name = parts[0].to_string();
-                    let password = parts[1].to_string();
-                    let Ok(gid) = parts[2].parse::<u32>() else {
-                        continue;
-                    };
-                    let members = if parts.len() > 3 && !parts[3].trim().is_empty() {
-                        parts[3].split(',').map(|s| s.trim().to_string()).collect()
-                    } else {
-                        Vec::new()
-                    };
-                    groups.push(GroupAccount {
-                        name,
-                        password,
-                        gid,
-                        members,
-                    });
-                }
-            }
-            // A present guest database is authoritative; do not inject accounts.
-            return groups;
-        }
+    if let Some(content) = account_text("/etc/group") {
+        return account_lines(&content)
+            .filter_map(parse_group_account)
+            .collect();
     }
+    fallback_group_accounts()
+}
 
-    if !groups.iter().any(|g| g.name == "root") {
-        groups.insert(
-            0,
-            GroupAccount {
-                name: "root".to_string(),
-                password: "x".to_string(),
-                gid: 0,
-                members: vec!["root".to_string()],
-            },
-        );
-    }
+fn parse_group_account(line: &str) -> Option<GroupAccount> {
+    let mut fields = line.split(':');
+    let name = fields.next()?;
+    let password = fields.next()?;
+    let gid = fields.next()?.parse().ok()?;
+    let members = fields
+        .next()
+        .filter(|members| !members.trim().is_empty())
+        .map(|members| members.split(',').map(|s| s.trim().to_owned()).collect())
+        .unwrap_or_default();
+    Some(GroupAccount {
+        name: name.into(),
+        password: password.into(),
+        gid,
+        members,
+    })
+}
 
-    if !groups.iter().any(|g| g.name == "nogroup") {
-        groups.push(GroupAccount {
+fn fallback_group_accounts() -> Vec<GroupAccount> {
+    vec![
+        GroupAccount {
+            name: "root".to_string(),
+            password: "x".to_string(),
+            gid: 0,
+            members: vec!["root".to_string()],
+        },
+        GroupAccount {
             name: "nogroup".to_string(),
             password: "x".to_string(),
             gid: 65534,
             members: Vec::new(),
-        });
-    }
-
-    groups
+        },
+    ]
 }
 
 fn find_group_by_name(name: &str) -> Option<GroupAccount> {
-    load_group_accounts().into_iter().find(|g| g.name == name)
+    if let Some(content) = account_text("/etc/group") {
+        return account_lines(&content)
+            .filter(|line| line.split(':').next() == Some(name))
+            .find_map(parse_group_account);
+    }
+    fallback_group_accounts()
+        .into_iter()
+        .find(|g| g.name == name)
 }
 
 fn find_group_by_gid(gid: u32) -> Option<GroupAccount> {
-    load_group_accounts().into_iter().find(|g| g.gid == gid)
+    if let Some(content) = account_text("/etc/group") {
+        return account_lines(&content)
+            .filter(|line| {
+                line.split(':').nth(2).and_then(|id| id.parse::<u32>().ok()) == Some(gid)
+            })
+            .find_map(parse_group_account);
+    }
+    fallback_group_accounts().into_iter().find(|g| g.gid == gid)
 }
 
 fn group_entry_for(account: &GroupAccount) -> *mut Group {
@@ -1459,22 +1469,13 @@ pub unsafe extern "sysv64" fn kinakaze_abi_getpwent_r(
         return kinakaze_vfs::EINVAL;
     }
     unsafe { *result = ptr::null_mut() };
-    let accounts = load_user_accounts();
-    loop {
-        let index = PASSWD_CURSOR.load(Ordering::SeqCst);
-        let Some(account) = accounts.get(index) else {
-            return kinakaze_vfs::ENOENT;
-        };
-        if let Err(error) = unsafe { fill_passwd_for(account, entry, buffer, length) } {
-            return error;
-        }
-        if PASSWD_CURSOR
-            .compare_exchange(index, index + 1, Ordering::SeqCst, Ordering::SeqCst)
-            .is_ok()
-        {
+    match enumeration::user(|account| unsafe { fill_passwd_for(account, entry, buffer, length) }) {
+        Ok(Some(())) => {
             unsafe { *result = entry };
-            return 0;
+            0
         }
+        Ok(None) => kinakaze_vfs::ENOENT,
+        Err(error) => error,
     }
 }
 
@@ -1489,71 +1490,78 @@ pub unsafe extern "sysv64" fn kinakaze_abi_getgrent_r(
         return kinakaze_vfs::EINVAL;
     }
     unsafe { *result = ptr::null_mut() };
-    let accounts = load_group_accounts();
-    loop {
-        let index = GROUP_CURSOR.load(Ordering::SeqCst);
-        let Some(account) = accounts.get(index) else {
-            return kinakaze_vfs::ENOENT;
-        };
-        if let Err(error) = unsafe { fill_group_for(account, entry, buffer, length) } {
-            return error;
-        }
-        if GROUP_CURSOR
-            .compare_exchange(index, index + 1, Ordering::SeqCst, Ordering::SeqCst)
-            .is_ok()
-        {
+    match enumeration::group(|account| unsafe { fill_group_for(account, entry, buffer, length) }) {
+        Ok(Some(())) => {
             unsafe { *result = entry };
-            return 0;
+            0
         }
+        Ok(None) => kinakaze_vfs::ENOENT,
+        Err(error) => error,
     }
 }
 
 /// `getpwent`, returning the next guest passwd entry.
 #[unsafe(no_mangle)]
 pub extern "sysv64" fn kinakaze_abi_getpwent() -> *mut Passwd {
-    let index = PASSWD_CURSOR.fetch_add(1, Ordering::SeqCst);
-    load_user_accounts()
-        .get(index)
-        .map(passwd_entry_for)
-        .unwrap_or(ptr::null_mut())
+    enumeration::user(|account| {
+        let entry = passwd_entry_for(account);
+        if entry.is_null() {
+            Err(crate::kinakaze_errno())
+        } else {
+            Ok(entry)
+        }
+    })
+    .unwrap_or_else(|error| {
+        crate::set_errno(error);
+        None
+    })
+    .unwrap_or(ptr::null_mut())
 }
 
 /// `setpwent`, which rewinds the enumeration.
 #[unsafe(no_mangle)]
 pub extern "sysv64" fn kinakaze_abi_setpwent() {
-    PASSWD_CURSOR.store(0, Ordering::SeqCst);
+    enumeration::reset_users();
 }
 
 /// `endpwent`, which closes the enumeration.
 ///
-/// There is no file handle to release, but the position is reset so a later
+/// Releases the enumeration snapshot and resets the position so a later
 /// `getpwent` without an intervening `setpwent` starts from the beginning, as it
 /// does on glibc.
 #[unsafe(no_mangle)]
 pub extern "sysv64" fn kinakaze_abi_endpwent() {
-    PASSWD_CURSOR.store(0, Ordering::SeqCst);
+    enumeration::reset_users();
 }
 
 /// `getgrent`.
 #[unsafe(no_mangle)]
 pub extern "sysv64" fn kinakaze_abi_getgrent() -> *mut Group {
-    let index = GROUP_CURSOR.fetch_add(1, Ordering::SeqCst);
-    load_group_accounts()
-        .get(index)
-        .map(group_entry_for)
-        .unwrap_or(ptr::null_mut())
+    enumeration::group(|account| {
+        let entry = group_entry_for(account);
+        if entry.is_null() {
+            Err(crate::kinakaze_errno())
+        } else {
+            Ok(entry)
+        }
+    })
+    .unwrap_or_else(|error| {
+        crate::set_errno(error);
+        None
+    })
+    .unwrap_or(ptr::null_mut())
 }
 
 /// `setgrent`.
 #[unsafe(no_mangle)]
 pub extern "sysv64" fn kinakaze_abi_setgrent() {
-    GROUP_CURSOR.store(0, Ordering::SeqCst);
+    enumeration::reset_groups();
 }
 
 /// `endgrent`.
 #[unsafe(no_mangle)]
 pub extern "sysv64" fn kinakaze_abi_endgrent() {
-    GROUP_CURSOR.store(0, Ordering::SeqCst);
+    enumeration::reset_groups();
 }
 
 unsafe fn fill_passwd_for(
@@ -2960,6 +2968,44 @@ pub extern "sysv64" fn kinakaze_abi_setpriority(which: c_int, who: u32, value: c
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn account_parser_keeps_full_width_ids_and_skips_malformed_records() {
+        let database = " # ignored\n\nroot:x:bad:0::/root:/bin/sh\n\
+            root:x:0:4294967296::/root:/bin/sh\n\
+            root:x:4294967295:4294967294::/root:/bin/sh:unused\n";
+        let records: Vec<_> = account_lines(database)
+            .filter_map(parse_user_account)
+            .collect();
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].name, "root");
+        assert_eq!(records[0].uid, u32::MAX);
+        assert_eq!(records[0].gid, u32::MAX - 1);
+        assert_eq!(records[0].shell, "/bin/sh");
+        assert!(parse_user_account("short:x:0:0::/root").is_none());
+        assert!(parse_user_account("negative:x:-1:0::/:/bin/sh").is_none());
+    }
+
+    #[test]
+    fn group_parser_preserves_optional_members_and_authoritative_empty_input() {
+        let group = parse_group_account("staff:x:4294967295: alice, bob :ignored").unwrap();
+        assert_eq!(group.gid, u32::MAX);
+        assert_eq!(group.members, ["alice", "bob"]);
+        assert!(parse_group_account("empty:x:0").unwrap().members.is_empty());
+        assert!(parse_group_account("overflow:x:4294967296:").is_none());
+        assert!(
+            account_lines("\n # no users\n")
+                .filter_map(parse_user_account)
+                .next()
+                .is_none()
+        );
+        assert!(
+            account_lines("\n # no groups\n")
+                .filter_map(parse_group_account)
+                .next()
+                .is_none()
+        );
+    }
 
     /// Reads a C string the ABI produced, asserting it is valid and terminated.
     ///

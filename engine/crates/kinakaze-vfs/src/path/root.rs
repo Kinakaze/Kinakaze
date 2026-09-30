@@ -77,14 +77,17 @@ pub(crate) fn namespace_root_path() -> Result<Option<String>, i32> {
     } else if let Some(root) =
         crate::fs_context::read(|s| if s.confined { s.root.clone() } else { None })
     {
-        match root.strip_prefix(default_system_root()) {
-            Ok(relative) => {
+        // Worker configuration may use C:\root while the immutable base was
+        // canonicalized to \\?\C:\root. Both describe the same namespace;
+        // losing this coordinate disables confined lookup after every exec.
+        match super::strip_native_root(&root, &default_system_root()) {
+            Some(relative) => {
                 let text =
                     unescape_path(&relative.to_string_lossy().replace('\\', "/")).into_owned();
                 Some(format!("/{}", text.trim_matches('/')))
             }
-            Err(_) if namespace.is_some() => return Err(crate::EIO),
-            Err(_) => None,
+            None if namespace.is_some() => return Err(crate::EIO),
+            None => None,
         }
     } else {
         None

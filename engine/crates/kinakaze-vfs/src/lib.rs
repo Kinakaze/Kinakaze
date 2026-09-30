@@ -433,6 +433,11 @@ impl FdFlags {
     /// The Winsock handle carries IP frames; readiness and data belong to the
     /// shared user TCP/IP engine, not the native UDP transport.
     pub const PACKET_SOCKET: Self = Self(1 << 13);
+    /// This native data-write open was checked for fs-verity before publication.
+    /// Its retained write access excludes enable's deny-write reservation for
+    /// the whole open-description lifetime, including dup/fork/exec aliases.
+    /// Only checked native opens set this; imported handles use the slow check.
+    pub(crate) const VERITY_WRITABLE: Self = Self(1 << 14);
 
     pub const fn contains(self, other: Self) -> bool {
         self.0 & other.0 == other.0
@@ -449,6 +454,13 @@ impl FdFlags {
 
 #[inline]
 fn validate_descriptor_flags(kind: FdKind, flags: FdFlags) -> Result<(), i32> {
+    if flags.contains(FdFlags::VERITY_WRITABLE)
+        && (kind != FdKind::File
+            || !flags.contains(FdFlags::WRITE_ACCESS)
+            || flags.contains(FdFlags::PATH_ONLY))
+    {
+        return Err(EINVAL);
+    }
     if kind == FdKind::Pipe && !flags.has_pipe_access() {
         return Err(EINVAL);
     }
@@ -4495,6 +4507,13 @@ mod platform {
             && !entry.flags.contains(FdFlags::WRITE_ACCESS)
         {
             return Err(super::EBADF);
+        }
+        // Pins and descriptor aliases retain the original data-write object.
+        // No enable transaction can acquire its deny-write reservation while
+        // this object is live. Never infer this proof from WRITE_ACCESS alone:
+        // externally installed handles still validate the native rights/EA.
+        if entry.flags.contains(FdFlags::VERITY_WRITABLE) {
+            return Ok(());
         }
         let access = super::fs::object::Object::granted_access(entry.raw as HANDLE)?;
         if access & (FILE_WRITE_DATA | FILE_APPEND_DATA) == 0 {

@@ -181,6 +181,56 @@ fn catalog_checks_unused_rust_exports_and_runtime_identity_up_front() {
 }
 
 #[test]
+fn retained_export_index_preserves_aliases_and_versions_after_catalog_drop() {
+    let directory = Directory::new();
+    directory.write("libruntime.so", &runtime());
+    directory.write(
+        "libindexed.so",
+        &fixture(&[
+            ("_Rinternal", false),
+            ("kinakaze_hidden", false),
+            ("kinakaze_engine_42_kinakaze_hidden", false),
+            ("kinakaze_module_object_v1", false),
+            ("lookup", false),
+            ("lookup@VERSION_1", false),
+        ]),
+    );
+    let catalog = ModuleCatalog::discover(&directory.0).unwrap();
+    let module = catalog
+        .modules
+        .into_iter()
+        .find(|module| module.soname == "libindexed.so")
+        .unwrap();
+    drop(catalog.images);
+    // The deferred module is now the only image owner. It must retain both the
+    // file pin and the offsets, including normally hidden engine alias names.
+    let names: Vec<_> = module.image.exports().map(|symbol| symbol.name).collect();
+    assert_eq!(names, ["kinakaze_hidden", "lookup", "lookup@VERSION_1"]);
+    let (metadata, owner) = module.materialize().unwrap();
+    assert!(
+        owner.is_none(),
+        "function-only exports never load the fixture DLL"
+    );
+    assert_eq!(metadata.exports.len(), 2);
+    assert_eq!(metadata.exports[0].name, "kinakaze_hidden");
+    assert_eq!(metadata.exports[1].name, "lookup");
+    assert_eq!(metadata.exports[1].versions, ["VERSION_1"]);
+    assert!(
+        fs::OpenOptions::new()
+            .write(true)
+            .open(directory.0.join("libindexed.so"))
+            .is_err()
+    );
+    drop(module);
+    assert!(
+        fs::OpenOptions::new()
+            .write(true)
+            .open(directory.0.join("libindexed.so"))
+            .is_ok()
+    );
+}
+
+#[test]
 fn demanded_metadata_validates_names_and_versions_and_eager_api_still_rejects_it() {
     let directory = Directory::new();
     directory.write("libruntime.so", &runtime());

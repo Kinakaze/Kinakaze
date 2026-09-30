@@ -32,8 +32,13 @@ fn subtree(bytes: &[u8], offset: u64, depth: u32) -> ChainingValue {
     merge_subtrees_non_root(&left, &right, Mode::Hash)
 }
 pub(super) fn hash(bytes: &[u8]) -> [u8; 32] {
+    // Small shared images use BLAKE3's SIMD implementation inline, without a
+    // native CPU-topology query or helper-thread setup for each cold miss.
+    if bytes.len() < 8 * 1024 * 1024 {
+        return *blake3::hash(bytes).as_bytes();
+    }
     let threads = std::thread::available_parallelism().map_or(1, |v| v.get());
-    if threads < 2 || bytes.len() < 8 * 1024 * 1024 {
+    if threads < 2 {
         return *blake3::hash(bytes).as_bytes();
     }
     let (left, right) = children(bytes, 0, if threads >= 4 { 2 } else { 1 });

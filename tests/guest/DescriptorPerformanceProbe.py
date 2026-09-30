@@ -60,6 +60,39 @@ elif mode == 'fstatvfs':
                 value = os.fstatvfs(stream.fileno())
                 assert value.f_bsize == expected.f_bsize and value.f_fsid == expected.f_fsid
             elapsed = time.perf_counter_ns() - start
+elif mode in ('missing-stat', 'missing-lstat'):
+    with tempfile.TemporaryDirectory(prefix='native-missing-perf-', dir='/var/tmp') as directory:
+        path = directory + '/absent'
+        operation = os.stat if mode == 'missing-stat' else os.lstat
+        start = time.perf_counter_ns()
+        for _ in range(iterations):
+            try:
+                operation(path)
+            except FileNotFoundError:
+                pass
+            else:
+                raise AssertionError('missing name unexpectedly exists')
+        elapsed = time.perf_counter_ns() - start
+        # A missing result belongs to one operation, never to a path cache.
+        with open(path, 'wb') as stream:
+            stream.write(b'new inode')
+        assert operation(path).st_size == 9
+elif mode == 'native-write':
+    with tempfile.TemporaryDirectory(prefix='native-write-perf-', dir='/var/tmp') as directory:
+        path = directory + '/file'
+        fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        payload = b'verified native write workload!\n'
+        try:
+            start = time.perf_counter_ns()
+            for _ in range(iterations):
+                assert os.write(fd, payload) == len(payload)
+            elapsed = time.perf_counter_ns() - start
+            # Durability and content checks are retained outside the transfer timer.
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+        with open(path, 'rb') as stream:
+            assert stream.read() == payload * iterations
 elif mode == 'tmpfs-io':
     import ctypes as c
     libc = c.CDLL(None, use_errno=True)

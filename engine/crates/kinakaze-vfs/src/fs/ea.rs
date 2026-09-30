@@ -49,6 +49,31 @@ fn validate_name(name: &[u8]) -> Result<(), i32> {
 struct EaNameBuffer([u8; 6 + 255]);
 
 pub(super) fn read(object: &Object, name: &[u8]) -> Result<Option<Vec<u8>>, i32> {
+    read_private(object.raw(), name)
+}
+
+/// Decode bounded inode/verity records directly from the completed native
+/// buffer. Only owned decoded fields can escape; no EA allocation or copy is
+/// needed for ordinary fixed-size records.
+pub(super) fn read_decoded<T>(
+    object: &Object,
+    name: &[u8],
+    decode: impl FnOnce(&[u8]) -> Result<T, i32>,
+) -> Result<Option<T>, i32> {
+    read_private_decoded(object.raw(), name, decode)
+}
+
+/// The caller owns an independent metadata open through completion; borrowing
+/// a shared data descriptor here would mix its pending I/O with this query.
+pub(crate) fn read_private(handle: HANDLE, name: &[u8]) -> Result<Option<Vec<u8>>, i32> {
+    read_private_decoded(handle, name, |bytes| Ok(bytes.to_vec()))
+}
+
+fn read_private_decoded<T>(
+    handle: HANDLE,
+    name: &[u8],
+    decode: impl FnOnce(&[u8]) -> Result<T, i32>,
+) -> Result<Option<T>, i32> {
     validate_name(name)?;
     // The NT EA name is at most 255 bytes. Keep the common absent/small-record
     // query off the managed heap, including path probes during ELF loading.
@@ -65,7 +90,7 @@ pub(super) fn read(object: &Object, name: &[u8]) -> Result<Option<Vec<u8>>, i32>
         let mut io = NativeIoStatus::default();
         let status = unsafe {
             NtQueryEaFile(
-                object.raw(),
+                handle,
                 &mut io,
                 storage.as_mut_ptr().cast(),
                 (storage.len() * 8) as u32,
@@ -76,7 +101,7 @@ pub(super) fn read(object: &Object, name: &[u8]) -> Result<Option<Vec<u8>>, i32>
                 1,
             )
         };
-        let status = unsafe { complete_native_status(object.raw(), &mut io, status)? };
+        let status = unsafe { complete_native_status(handle, &mut io, status)? };
         if matches!(status as u32, 0xc000_0051 | 0xc000_0052 | 0x8000_0012) {
             return Ok(None);
         }
@@ -103,25 +128,41 @@ pub(super) fn read(object: &Object, name: &[u8]) -> Result<Option<Vec<u8>>, i32>
         {
             return Err(EIO);
         }
-        return Ok((value_len != 0).then(|| bytes[name_end + 1..end].to_vec()));
+        return if value_len == 0 {
+            Ok(None)
+        } else {
+            decode(&bytes[name_end + 1..end]).map(Some)
+        };
     }
 }
 
 pub(super) fn write(object: &Object, name: &[u8], value: &[u8]) -> Result<(), i32> {
+    write_private(object.raw(), name, value)
+}
+
+/// Same private-open contract as `read_private`.
+pub(crate) fn write_private(handle: HANDLE, name: &[u8], value: &[u8]) -> Result<(), i32> {
     validate_name(name)?;
     let size = 9 + name.len() + value.len();
     if size > 65_535 {
         return Err(ENOSPC);
     }
-    let mut storage = vec![0u64; size.div_ceil(8)];
+    let mut small_storage = [0u64; 64];
+    let mut large_storage;
+    let storage = if size <= std::mem::size_of_val(&small_storage) {
+        &mut small_storage[..]
+    } else {
+        large_storage = vec![0u64; size.div_ceil(8)];
+        &mut large_storage[..]
+    };
     let bytes = unsafe { std::slice::from_raw_parts_mut(storage.as_mut_ptr().cast::<u8>(), size) };
     bytes[5] = name.len() as u8;
     bytes[6..8].copy_from_slice(&(value.len() as u16).to_le_bytes());
     bytes[8..8 + name.len()].copy_from_slice(name);
     bytes[9 + name.len()..].copy_from_slice(value);
     let mut io = NativeIoStatus::default();
-    let status = unsafe { NtSetEaFile(object.raw(), &mut io, bytes.as_ptr().cast(), size as u32) };
-    let status = unsafe { complete_native_status(object.raw(), &mut io, status)? };
+    let status = unsafe { NtSetEaFile(handle, &mut io, bytes.as_ptr().cast(), size as u32) };
+    let status = unsafe { complete_native_status(handle, &mut io, status)? };
     if status == 0 {
         Ok(())
     } else {

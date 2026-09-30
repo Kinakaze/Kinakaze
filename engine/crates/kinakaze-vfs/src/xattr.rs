@@ -12,13 +12,12 @@
 //! as ENOSPC, just as different Linux filesystems have different xattr limits.
 
 use std::collections::BTreeMap;
-use std::ffi::c_void;
 use std::path::Path;
 use std::ptr;
 
 use windows_sys::Win32::Foundation::{
-    CloseHandle, GetLastError, HANDLE, INVALID_HANDLE_VALUE, WAIT_ABANDONED, WAIT_OBJECT_0,
-    WAIT_TIMEOUT,
+    CloseHandle, ERROR_ALREADY_EXISTS, GetLastError, HANDLE, INVALID_HANDLE_VALUE, WAIT_ABANDONED,
+    WAIT_OBJECT_0, WAIT_TIMEOUT,
 };
 use windows_sys::Win32::Storage::FileSystem::{
     BY_HANDLE_FILE_INFORMATION, FILE_READ_ATTRIBUTES, FILE_READ_EA, FILE_WRITE_EA,
@@ -41,33 +40,6 @@ const MAGIC: &[u8; 8] = b"CYXATTR1";
 // An NT EA record, including its header, must fit in the filesystem EA buffer.
 const MAX_RECORD_SIZE: usize = 65_535;
 type Table = BTreeMap<Vec<u8>, Vec<u8>>;
-
-use crate::fs::NativeIoStatus as IoStatus;
-
-#[link(name = "ntdll")]
-unsafe extern "system" {
-    fn NtQueryEaFile(
-        file: HANDLE,
-        io: *mut IoStatus,
-        buffer: *mut c_void,
-        length: u32,
-        single: u8,
-        names: *const c_void,
-        names_length: u32,
-        index: *const u32,
-        restart: u8,
-    ) -> i32;
-    fn NtSetEaFile(file: HANDLE, io: *mut IoStatus, buffer: *const c_void, length: u32) -> i32;
-    fn RtlNtStatusToDosError(status: i32) -> u32;
-}
-
-fn nt_errno(status: i32) -> i32 {
-    match status as u32 {
-        0xc000_004f | 0xc000_00bb => EOPNOTSUPP, // EAS_NOT_SUPPORTED / NOT_SUPPORTED
-        0xc000_0050 => ENOSPC,                   // EA_TOO_LARGE
-        _ => errno_from_win32(unsafe { RtlNtStatusToDosError(status) }),
-    }
-}
 
 struct Handle(HANDLE);
 impl Handle {
@@ -99,7 +71,15 @@ impl InodeLock {
         .encode_utf16()
         .chain(Some(0))
         .collect();
-        let mutex = Handle::new(unsafe { CreateMutexW(ptr::null(), 0, name.as_ptr()) })?;
+        // A newly created mutex can be owned atomically by its creator. Most
+        // inode transactions are uncontended and close the last handle on
+        // return, so avoid a separate kernel wait for that common case.
+        // Existing objects ignore initial ownership: retain the recursive,
+        // abandoned-owner and interruptible contention paths below.
+        let mutex = Handle::new(unsafe { CreateMutexW(ptr::null(), 1, name.as_ptr()) })?;
+        if unsafe { GetLastError() } != ERROR_ALREADY_EXISTS {
+            return Ok(Self(mutex));
+        }
         match unsafe { WaitForSingleObject(mutex.0, 0) } {
             WAIT_OBJECT_0 | WAIT_ABANDONED => return Ok(Self(mutex)),
             WAIT_TIMEOUT => {}
@@ -206,74 +186,31 @@ impl Attributes {
     }
 
     fn read_table(&self) -> Result<Table, i32> {
-        // FILE_GET_EA_INFORMATION: next offset, name length, name + NUL.
-        let mut names = vec![0u8; 5 + EA_NAME.len() + 1];
-        names[4] = EA_NAME.len() as u8;
-        names[5..5 + EA_NAME.len()].copy_from_slice(EA_NAME);
-        let mut buffer = vec![0u8; 65_536];
-        let mut io = IoStatus::default();
-        let status = unsafe {
-            NtQueryEaFile(
-                self.raw(),
-                &mut io,
-                buffer.as_mut_ptr().cast(),
-                buffer.len() as u32,
-                1,
-                names.as_ptr().cast(),
-                names.len() as u32,
-                ptr::null(),
-                1,
-            )
-        };
-        let status = unsafe { crate::fs::complete_native_status(self.raw(), &mut io, status)? };
-        if matches!(status as u32, 0xc000_0051 | 0xc000_0052 | 0x8000_0012) {
-            return Ok(Table::new());
+        Self::read_private_table(self.raw())
+    }
+
+    fn read_private_table(handle: HANDLE) -> Result<Table, i32> {
+        match crate::fs::ea::read_private(handle, EA_NAME)? {
+            Some(bytes) => decode(&bytes),
+            None => Ok(Table::new()),
         }
-        if status < 0 {
-            return Err(nt_errno(status));
-        }
-        if status != 0 || io.information < 8 || io.information > buffer.len() {
-            return Err(EIO);
-        }
-        let length = u16::from_le_bytes([buffer[6], buffer[7]]) as usize;
-        let name_end = 8 + buffer[5] as usize;
-        let end = name_end + 1 + length;
-        if end > io.information || buffer.get(8..name_end) != Some(EA_NAME) || buffer[name_end] != 0
-        {
-            return Err(EIO);
-        }
-        // Querying an absent named EA can return a record with a zero value.
-        if length == 0 {
-            return Ok(Table::new());
-        }
-        decode(&buffer[name_end + 1..end])
     }
 
     fn write_table(&self, table: &Table) -> Result<(), i32> {
-        let value = encode(table)?;
-        let mut buffer = vec![0u8; 8 + EA_NAME.len() + 1 + value.len()];
-        if buffer.len() > MAX_RECORD_SIZE {
-            return Err(ENOSPC);
-        }
-        buffer[5] = EA_NAME.len() as u8;
-        buffer[6..8].copy_from_slice(&(value.len() as u16).to_le_bytes());
-        buffer[8..8 + EA_NAME.len()].copy_from_slice(EA_NAME);
-        buffer[9 + EA_NAME.len()..].copy_from_slice(&value);
-        let mut io = IoStatus::default();
-        let status = unsafe {
-            NtSetEaFile(
-                self.raw(),
-                &mut io,
-                buffer.as_ptr().cast(),
-                buffer.len() as u32,
-            )
-        };
-        let status = unsafe { crate::fs::complete_native_status(self.raw(), &mut io, status)? };
-        if status == 0 {
-            Ok(())
-        } else {
-            Err(nt_errno(status))
-        }
+        crate::fs::ea::write_private(self.raw(), EA_NAME, &encode(table)?)
+    }
+
+    /// The caller already holds the inode mutex and owns this metadata open.
+    /// Keep chown's privilege removal in the same transaction without another
+    /// native reopen, recursive mutex acquisition, or maximum-size EA buffer.
+    pub(crate) fn remove_private_locked(
+        object: &crate::fs::object::Object,
+        name: &[u8],
+    ) -> Result<(), i32> {
+        validate_name(name)?;
+        let mut table = Self::read_private_table(object.raw())?;
+        table.remove(name).ok_or(ENODATA)?;
+        crate::fs::ea::write_private(object.raw(), EA_NAME, &encode(&table)?)
     }
 
     pub fn get(&self, name: &[u8]) -> Result<Vec<u8>, i32> {
@@ -404,6 +341,36 @@ mod tests {
         fn drop(&mut self) {
             let _ = std::fs::remove_dir_all(&self.0);
         }
+    }
+
+    #[test]
+    fn nested_inode_locks_keep_exclusion_until_the_outer_guard_is_released() {
+        let f = Fixture::new();
+        let path = f.0.join("recursive-lock");
+        std::fs::write(&path, b"data").unwrap();
+        let attrs = Attributes::open_host(&path, false).unwrap();
+        let outer = InodeLock::acquire(attrs.raw()).unwrap();
+        let inner = InodeLock::acquire(attrs.raw()).unwrap();
+        let (ready_tx, ready_rx) = std::sync::mpsc::channel();
+        let (owned_tx, owned_rx) = std::sync::mpsc::channel();
+        let waiter = std::thread::spawn(move || {
+            let attrs = Attributes::open_host(&path, false).unwrap();
+            ready_tx.send(()).unwrap();
+            let _lock = InodeLock::acquire(attrs.raw()).unwrap();
+            owned_tx.send(()).unwrap();
+        });
+        ready_rx.recv().unwrap();
+        drop(inner);
+        let before_release = owned_rx.recv_timeout(std::time::Duration::from_millis(50));
+        drop(outer);
+        // Release before asserting so even a failure cannot strand the waiter.
+        let after_release = owned_rx.recv_timeout(std::time::Duration::from_secs(5));
+        waiter.join().unwrap();
+        assert_eq!(
+            before_release,
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout)
+        );
+        assert_eq!(after_release, Ok(()));
     }
 
     #[test]

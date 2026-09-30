@@ -53,6 +53,15 @@ impl AsRawHandle for NativePin {
     }
 }
 impl NativePin {
+    pub(crate) fn sync_overlay(&self) -> Result<Option<()>, i32> {
+        self.overlay
+            .as_ref()
+            .map(|description| {
+                crate::mount::overlay::sync_opened(description, self.as_raw_handle())
+            })
+            .transpose()
+    }
+
     pub(crate) fn native_mount_flags(&self) -> Option<u64> {
         self._native
             .as_ref()

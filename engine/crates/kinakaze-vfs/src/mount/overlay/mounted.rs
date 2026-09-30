@@ -626,6 +626,9 @@ pub(crate) struct Resolved {
     pub(crate) path: PathBuf,
     pub(crate) location: Option<Location>,
     guest: String,
+    // Valid only as an observation during this operation. A create must still
+    // ask NTFS atomically whether the leaf now exists.
+    native_missing: bool,
 }
 #[cfg(test)]
 thread_local! { static RESOLUTION_WALKS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) }; }
@@ -697,6 +700,19 @@ fn resolve_inner(
     } else {
         format!("{}/{path}", fs::getcwd())
     };
+    if overlay_root.is_none()
+        && tree.is_none()
+        && let Some(namespace_root) = namespace_root.as_deref()
+        && let Some(lookup) =
+            super::native_lookup::resolve(&root, namespace_root, &absolute, follow)?
+    {
+        return Ok(Some(Resolved {
+            path: lookup.path,
+            guest: lookup.guest,
+            location: None,
+            native_missing: lookup.missing,
+        }));
+    }
     let mut pending: VecDeque<String> = absolute
         .split('/')
         .filter(|s| !s.is_empty())
@@ -861,7 +877,14 @@ fn resolve_inner(
                     crate::path::resolve_unmounted(&root, &translated, false).map_err(path_error)?
                 }
             };
-            let link = crate::path::symlink_component(&native, !final_component)?;
+            // lstat, unlink and exclusive create select the leaf itself. Its
+            // inode query belongs to that operation; reading its EA merely to
+            // discover a link we must not follow opens every dpkg leaf twice.
+            let link = if final_component && !follow {
+                None
+            } else {
+                crate::path::symlink_component(&native, !final_component)?
+            };
             native_parent = Some((translated, native.clone()));
             (native, None, link)
         };
@@ -900,6 +923,7 @@ fn resolve_inner(
             path: native,
             location,
             guest,
+            native_missing: false,
         });
         if final_component {
             break;
@@ -1309,6 +1333,20 @@ pub fn prepare_write(path: &str, follow: bool, create: bool) -> Result<WritePath
 /// The guard keeps namespace mutations out until the caller pins the inode.
 pub fn metadata_path(path: &str, follow: bool) -> Result<WritePath, i32> {
     let resolved = resolve(path, follow, false)?;
+    let resolved = match resolved {
+        Some(resolved) if resolved.location.is_none() => {
+            return Ok(WritePath {
+                path: resolved.path,
+                location: None,
+                publication: None,
+                anonymous: false,
+                _guard: None,
+                writer: None,
+                _native_writer: None,
+            });
+        }
+        other => other,
+    };
     let Some(Resolved {
         location: Some(location),
         ..
@@ -1372,6 +1410,24 @@ fn prepare_mode(
     metadata_only: bool,
 ) -> Result<WritePath, i32> {
     let resolved = resolve(path, follow, create)?;
+    let resolved = match resolved {
+        Some(resolved) if resolved.location.is_none() => {
+            // Use the name and policy selected by this walk. Repeating the
+            // walk here doubled metadata I/O and could select a replacement.
+            let canonical = visible_guest(resolved.guest)?;
+            let native_writer = crate::mount::native::write_canonical(&canonical)?;
+            return Ok(WritePath {
+                path: resolved.path,
+                location: None,
+                publication: None,
+                anonymous: false,
+                _guard: None,
+                writer: None,
+                _native_writer: native_writer,
+            });
+        }
+        other => other,
+    };
     let Some(Resolved {
         location: Some(location),
         ..
@@ -1422,7 +1478,7 @@ fn prepare_mode(
 
 pub(crate) enum StatResolution {
     Overlay(Stat),
-    Native(PathBuf),
+    Native { path: PathBuf, missing: bool },
     Virtual,
 }
 
@@ -1438,7 +1494,10 @@ pub(crate) fn stat_resolution(path: &str, follow: bool) -> Result<Option<StatRes
         return Ok(None);
     };
     let Some(location) = resolved.location else {
-        return Ok(Some(StatResolution::Native(resolved.path)));
+        return Ok(Some(StatResolution::Native {
+            path: resolved.path,
+            missing: resolved.native_missing,
+        }));
     };
     let _guard = InodeLock::acquire(location.instance.root.backing_object().raw())?;
     Ok(Some(StatResolution::Overlay(
@@ -1950,19 +2009,24 @@ pub(crate) fn reopen_object(
 }
 
 pub struct MetadataHandle {
-    handle: std::os::windows::io::OwnedHandle,
+    handle: Object,
     overlay: bool,
     _writer: Option<Writer>,
     _native_writer: Option<Arc<Object>>,
 }
 impl MetadataHandle {
+    /// This handle already owns independent metadata I/O and the mount writer.
+    /// Compound metadata operations may borrow it without another native open.
+    pub(crate) fn object(&self) -> &Object {
+        &self.handle
+    }
     pub(crate) fn is_overlay(&self) -> bool {
         self.overlay
     }
 }
 impl std::os::windows::io::AsRawHandle for MetadataHandle {
     fn as_raw_handle(&self) -> std::os::windows::io::RawHandle {
-        std::os::windows::io::AsRawHandle::as_raw_handle(&self.handle)
+        self.handle.raw()
     }
 }
 pub fn metadata_handle(
@@ -1970,7 +2034,25 @@ pub fn metadata_handle(
     write: bool,
     allow_path: bool,
 ) -> Result<Option<MetadataHandle>, i32> {
-    use std::os::windows::io::{AsRawHandle, FromRawHandle};
+    metadata_handle_with_access(fd, write, allow_path, 0)
+}
+
+pub(crate) fn ownership_handle(fd: i32, allow_path: bool) -> Result<Option<MetadataHandle>, i32> {
+    metadata_handle_with_access(
+        fd,
+        true,
+        allow_path,
+        windows_sys::Win32::Storage::FileSystem::READ_CONTROL,
+    )
+}
+
+fn metadata_handle_with_access(
+    fd: i32,
+    write: bool,
+    allow_path: bool,
+    extra_access: u32,
+) -> Result<Option<MetadataHandle>, i32> {
+    use std::os::windows::io::AsRawHandle;
     let mut description = None;
     let mut native = None;
     let pinned = crate::native_pin::pin_native_fd(fd, |entry| {
@@ -1996,6 +2078,7 @@ pub fn metadata_handle(
             None
         };
         let access = ACCESS
+            | extra_access
             | if write {
                 windows_sys::Win32::Storage::FileSystem::FILE_WRITE_EA
                     | windows_sys::Win32::Storage::FileSystem::FILE_WRITE_ATTRIBUTES
@@ -2005,15 +2088,14 @@ pub fn metadata_handle(
         let object = Object::reopen(pinned.as_raw_handle(), access)?;
         return Ok(Some(MetadataHandle {
             overlay: false,
-            handle: unsafe {
-                std::os::windows::io::OwnedHandle::from_raw_handle(object.into_raw())
-            },
+            handle: object,
             _writer: None,
             _native_writer: writer,
         }));
     };
     let (object, refreshed) = reopen_object(&description, pinned.as_raw_handle(), write, true)?;
     let access = ACCESS
+        | extra_access
         | if write {
             windows_sys::Win32::Storage::FileSystem::FILE_WRITE_EA
                 | windows_sys::Win32::Storage::FileSystem::FILE_WRITE_ATTRIBUTES
@@ -2023,18 +2105,17 @@ pub fn metadata_handle(
     let object = Object::reopen(object.raw(), access)?;
     Ok(Some(MetadataHandle {
         overlay: true,
-        handle: unsafe { std::os::windows::io::OwnedHandle::from_raw_handle(object.into_raw()) },
+        handle: object,
         _writer: refreshed.writer,
         _native_writer: None,
     }))
 }
 
 pub fn chmod_descriptor(fd: i32, mode: u32) -> Result<bool, i32> {
-    use std::os::windows::io::AsRawHandle;
     let Some(handle) = metadata_handle(fd, true, false)? else {
         return Ok(false);
     };
-    fs::set_mode_handle(handle.as_raw_handle(), mode)?;
+    fs::set_mode_object(handle.object(), mode, |_| Ok(()))?;
     Ok(true)
 }
 pub(crate) fn closed(description: u64) {
@@ -2118,6 +2199,9 @@ pub(crate) fn ownership_mapping(
     path: &str,
     follow: bool,
 ) -> Result<Option<crate::user_namespace::Mapping>, i32> {
+    if crate::path::overlay_root().is_none() && !crate::mount::has_overlay()? {
+        return Ok(None);
+    }
     if let Some(location) = resolve(path, follow, false)?.and_then(|r| r.location) {
         if let Some(policy) = location.policy {
             return policy.mapping();
@@ -2246,7 +2330,6 @@ pub fn descriptor_filesystem(fd: i32) -> Result<Option<(PathBuf, u64, bool)>, i3
 /// Flush the writable metadata inode even when the data FD still pins lower.
 pub fn sync_descriptor(fd: i32) -> Result<Option<()>, i32> {
     use std::os::windows::io::AsRawHandle;
-    use windows_sys::Win32::Foundation::{GENERIC_READ, GENERIC_WRITE};
     let mut description = None;
     let pinned = crate::native_pin::pin_native_fd(fd, |entry| {
         description = reference(entry)?;
@@ -2258,19 +2341,27 @@ pub fn sync_descriptor(fd: i32) -> Result<Option<()>, i32> {
     let Some(description) = description else {
         return Ok(None);
     };
+    sync_opened(&description, pinned.1.as_raw_handle()).map(Some)
+}
+
+pub(crate) fn sync_opened(
+    description: &Description,
+    handle: windows_sys::Win32::Foundation::HANDLE,
+) -> Result<(), i32> {
+    use windows_sys::Win32::Foundation::{GENERIC_READ, GENERIC_WRITE};
     if let Some((volume, since)) = description.volatile_state()? {
         super::volatile::check(volume, since)?;
-        return Ok(Some(()));
+        return Ok(());
     }
     let _guard = InodeLock::acquire(description.location.instance.root.backing_object().raw())?;
-    let (object, description) = reopen_object(&description, pinned.1.as_raw_handle(), false, true)?;
+    let (object, description) = reopen_object(description, handle, false, true)?;
     if let Some(node) = &description.location.node
         && description.location.instance.work.is_some()
         && (node.backing_layer() == 0 || node.entries[0].indexed)
     {
         Object::reopen(object.raw(), GENERIC_READ | GENERIC_WRITE)?.flush()?;
     }
-    Ok(Some(()))
+    Ok(())
 }
 
 pub(crate) fn serialize(keep: impl Fn(i32) -> bool) -> Result<Vec<u8>, i32> {
@@ -2583,12 +2674,27 @@ pub(crate) fn seek_directory(fd: i32, offset: i64, whence: i32) -> Result<Option
 }
 
 pub(crate) fn remove(path: &str, directory: bool) -> Result<Option<()>, i32> {
-    let Some(Resolved {
-        location: Some(location),
-        ..
-    }) = resolve(path, false, false)?
-    else {
+    let Some(resolved) = resolve(path, false, false)? else {
         return Ok(None);
+    };
+    let Some(location) = resolved.location else {
+        // These dispatchers retain descriptor/cgroup semantics outside the
+        // native path route. Overlay tree descriptors were handled above.
+        if fs::proc_descendant(path).is_some()
+            || directory && crate::cgroup::owns(&fs::absolute_linux(path))
+        {
+            return Ok(None);
+        }
+        let canonical = visible_guest(resolved.guest)?;
+        let _writer = crate::mount::native::write_canonical(&canonical)?;
+        if resolved.native_missing {
+            // The whole-path query and verified parent already observed
+            // ENOENT. dpkg removes several absent backup names per file;
+            // repeating a type query and DELETE open adds no information.
+            return Err(ENOENT);
+        }
+        fs::remove_host_path(&resolved.path, directory)?;
+        return Ok(Some(()));
     };
     if location.components.is_empty() {
         return Err(EBUSY);
@@ -2665,8 +2771,27 @@ pub fn rename_with_flags(from: &str, to: &str, flags: u32) -> Result<Option<()>,
     if flags & !7 != 0 || flags & 2 != 0 && flags & 5 != 0 {
         return Err(EINVAL);
     }
-    let from = resolve(from, false, false)?.and_then(|r| r.location);
-    let to = resolve(to, false, true)?.and_then(|r| r.location);
+    let from = resolve(from, false, false)?;
+    let to = resolve(to, false, true)?;
+    if let (Some(source), Some(target)) = (&from, &to)
+        && source.location.is_none()
+        && target.location.is_none()
+    {
+        if flags & 6 != 0 {
+            return Err(crate::EOPNOTSUPP);
+        }
+        let source_guest = visible_guest(source.guest.clone())?;
+        let target_guest = visible_guest(target.guest.clone())?;
+        let _source_writer = crate::mount::native::write_canonical(&source_guest)?;
+        let _target_writer = crate::mount::native::write_canonical(&target_guest)?;
+        if source.native_missing {
+            return Err(ENOENT);
+        }
+        fs::rename_host_paths(&source.path, &target.path, flags & 1 == 0)?;
+        return Ok(Some(()));
+    }
+    let from = from.and_then(|r| r.location);
+    let to = to.and_then(|r| r.location);
     let (from, to) = match (from, to) {
         (None, None) => return Ok(None),
         (Some(from), Some(to)) if from.instance.source == to.instance.source => (from, to),

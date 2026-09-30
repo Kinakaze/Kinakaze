@@ -436,6 +436,56 @@ impl Object {
         }
         unsafe { Self::relative_options(self.raw(), name, access, 2, SHARE, 0x0020_0040) }
     }
+
+    /// Publish a newly created file and its Linux inode record in one native
+    /// create. Existing inodes are never opened, truncated, or updated.
+    pub(crate) fn create_regular_child_with_inode(
+        &self,
+        stored: &OsStr,
+        access: u32,
+        record: &super::inode::Record,
+    ) -> Result<Self, i32> {
+        let name = wide(stored)?;
+        if name.len() < 2
+            || name == [46, 0]
+            || name == [46, 46, 0]
+            || name[..name.len() - 1]
+                .iter()
+                .any(|&c| matches!(c, 47 | 92 | 58))
+        {
+            return Err(EINVAL);
+        }
+        let value = record.encode()?;
+        let ea = super::inode::EA_NAME;
+        let size = 9 + ea.len() + value.len();
+        if size > 65535 {
+            return Err(crate::ENOSPC);
+        }
+        let mut storage = vec![0u64; size.div_ceil(8)];
+        let bytes =
+            unsafe { std::slice::from_raw_parts_mut(storage.as_mut_ptr().cast::<u8>(), size) };
+        bytes[5] = ea.len() as u8;
+        bytes[6..8].copy_from_slice(&(value.len() as u16).to_le_bytes());
+        bytes[8..8 + ea.len()].copy_from_slice(ea);
+        bytes[9 + ea.len()..].copy_from_slice(&value);
+        let attributes = if record.mode.is_some_and(|mode| mode & 0o200 == 0) {
+            windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_READONLY
+        } else {
+            FILE_ATTRIBUTE_NORMAL
+        };
+        unsafe {
+            Self::relative_options_with_ea(
+                self.raw(),
+                name,
+                access,
+                2,
+                SHARE,
+                0x0020_0040,
+                attributes,
+                bytes,
+            )
+        }
+    }
     unsafe fn relative_with_share(
         parent: HANDLE,
         name: Vec<u16>,
@@ -447,11 +497,35 @@ impl Object {
     }
     unsafe fn relative_options(
         parent: HANDLE,
+        name: Vec<u16>,
+        access: u32,
+        disposition: u32,
+        share: u32,
+        options: u32,
+    ) -> Result<Self, i32> {
+        unsafe {
+            Self::relative_options_with_ea(
+                parent,
+                name,
+                access,
+                disposition,
+                share,
+                options,
+                FILE_ATTRIBUTE_NORMAL,
+                &[],
+            )
+        }
+    }
+
+    unsafe fn relative_options_with_ea(
+        parent: HANDLE,
         mut name: Vec<u16>,
         access: u32,
         disposition: u32,
         share: u32,
         options: u32,
+        file_attributes: u32,
+        ea: &[u8],
     ) -> Result<Self, i32> {
         let length = u16::try_from((name.len() - 1) * 2).map_err(|_| ENAMETOOLONG)?;
         let maximum_length = u16::try_from(name.len() * 2).map_err(|_| ENAMETOOLONG)?;
@@ -477,15 +551,22 @@ impl Object {
                 &attrs,
                 &mut io,
                 ptr::null(),
-                FILE_ATTRIBUTE_NORMAL,
+                file_attributes,
                 share,
                 disposition,
                 options,
-                ptr::null(),
-                0,
+                if ea.is_empty() {
+                    ptr::null()
+                } else {
+                    ea.as_ptr()
+                },
+                ea.len() as u32,
             )
         };
         if status < 0 {
+            if !ea.is_empty() && matches!(status as u32, 0xc000_004f | 0xc000_00bb) {
+                return Err(crate::EOPNOTSUPP);
+            }
             if status as u32 == 0xc000_0043 && share & FILE_SHARE_WRITE == 0 {
                 return Err(26); // ETXTBSY: an existing data writer or mapping.
             }
@@ -1013,6 +1094,59 @@ mod tests {
             b"value"
         );
         fs::set_mode_host_path(&path, 0o640).unwrap();
+    }
+
+    #[test]
+    fn compound_inode_initialization_preserves_identity_xattrs_and_handles() {
+        use windows_sys::Win32::System::Threading::{GetCurrentProcess, GetProcessHandleCount};
+        let f = Fixture::new();
+        let path = f.path("compound");
+        std::fs::write(&path, b"data").unwrap();
+        crate::xattr::Attributes::open_host(&path, true)
+            .unwrap()
+            .set(b"user.keep", b"preserved", 0)
+            .unwrap();
+        let object = Object::open(&path, FILE_READ_ATTRIBUTES).unwrap();
+        let parent = fs::Stat {
+            st_mode: fs::S_IFDIR | 0o2775,
+            st_gid: 37,
+            ..fs::Stat::default()
+        };
+        fs::initialize_inode(object.raw(), &parent, fs::S_IFREG | 0o640).unwrap();
+        let mut before = 0;
+        assert_ne!(
+            unsafe { GetProcessHandleCount(GetCurrentProcess(), &mut before) },
+            0
+        );
+        for index in 0..64 {
+            fs::initialize_inode(
+                object.raw(),
+                &parent,
+                fs::S_IFREG | if index % 2 == 0 { 0o400 } else { 0o640 },
+            )
+            .unwrap();
+        }
+        let mut after = 0;
+        assert_ne!(
+            unsafe { GetProcessHandleCount(GetCurrentProcess(), &mut after) },
+            0
+        );
+        assert!(
+            after <= before + 2,
+            "metadata handles grew: {before} -> {after}"
+        );
+        let stat = fs::stat_handle(object.raw(), false).unwrap();
+        assert_eq!(stat.st_mode, fs::S_IFREG | 0o640);
+        assert_eq!(stat.st_uid, crate::credentials::filesystem().uid);
+        assert_eq!(stat.st_gid, 37);
+        assert_eq!(
+            crate::xattr::Attributes::open_host(&path, false)
+                .unwrap()
+                .get(b"user.keep")
+                .unwrap(),
+            b"preserved"
+        );
+        assert_eq!(std::fs::read(&path).unwrap(), b"data");
     }
 
     #[test]

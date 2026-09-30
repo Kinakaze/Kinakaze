@@ -25,6 +25,7 @@ struct ModuleTemplate {
     image: Vec<u8>,
     memory_size: usize,
     align: usize,
+    dynamic_used: bool,
 }
 
 struct TlsBlock {
@@ -85,6 +86,8 @@ thread_local! {
     /// accesses. Keeping ownership in host TLS gives every guest pthread its own
     /// block and makes VEH lookup independent of any process-global pointer.
     static STATIC_ELF_TLS: RefCell<Option<thread_pointer::ThreadBlock>> = const { RefCell::new(None) };
+    // Also retained in a fork child whose copied block has no Rust owner.
+    static STATIC_ELF_TLS_POINTER: Cell<usize> = const { Cell::new(0) };
     static PTHREAD_VALUES: RefCell<KeyValues> = const { RefCell::new(KeyValues(Vec::new())) };
     /// The block `KeyValues::drop` is currently running destructors for, or
     /// null. A raw pointer has no drop glue, so this key never registers a
@@ -339,6 +342,7 @@ fn modules() -> &'static RwLock<Vec<ModuleTemplate>> {
             image: vec![0; 4],
             memory_size: 4,
             align: 4,
+            dynamic_used: false,
         }])
     })
 }
@@ -415,6 +419,7 @@ pub fn register_elf_module(
         image: initial_image.to_vec(),
         memory_size,
         align: align.max(1),
+        dynamic_used: false,
     });
     Ok(modules.len())
 }
@@ -430,11 +435,12 @@ pub fn relocate_elf_module_image(module_id: usize, image: &[u8]) -> Result<(), T
         return Err(TlsError::InvalidTemplate);
     }
     module.image.copy_from_slice(image);
+    let is_static = thread_pointer::initialize_module(module_id, image)?;
     drop(modules);
     // Bootstrap may have installed this thread's block before linking finished.
     // Only this newly linked module's initialized bytes are replaced; unrelated
     // modules and .tbss retain their state. Later threads use the template above.
-    if let Some(block) = current_elf_tls_data(module_id) {
+    if !is_static && let Some(block) = current_elf_tls_data(module_id) {
         unsafe {
             ptr::copy_nonoverlapping(image.as_ptr(), block, image.len());
         }
@@ -452,13 +458,18 @@ pub fn reserve_static_elf_module(module_id: usize) -> Result<usize, TlsError> {
         return Ok(offset);
     }
     let module_index = module_id.checked_sub(1).ok_or(TlsError::UnknownModule)?;
-    let template = modules()
-        .read()
-        .map_err(|_| TlsError::Poisoned)?
-        .get(module_index)
-        .cloned()
-        .ok_or(TlsError::UnknownModule)?;
-    thread_pointer::reserve(module_id, template.memory_size, template.align)
+    let templates = modules().write().map_err(|_| TlsError::Poisoned)?;
+    if let Some(offset) = thread_pointer::offset_of(module_id) {
+        return Ok(offset);
+    }
+    let template = templates.get(module_index).ok_or(TlsError::UnknownModule)?;
+    // A previously returned dynamic address must never change to a static slot.
+    if template.dynamic_used {
+        return Err(TlsError::LayoutFrozen);
+    }
+    let offset = thread_pointer::reserve(module_id, template.memory_size, template.align)?;
+    thread_pointer::initialize_module(module_id, &template.image)?;
+    Ok(offset)
 }
 
 /// The executable's local-exec TLS offsets are already encoded in its code.
@@ -601,7 +612,7 @@ pub fn set_guest_gs_base(value: usize) -> bool {
 /// Builds and activates the calling thread's static ELF TLS block.
 ///
 /// Calling this again is idempotent and merely restores a base Windows may have
-/// discarded. The layout must already contain every initial-exec module.
+/// discarded. Late initial-exec modules use the preallocated static surplus.
 pub fn install_current_thread_static_tls() -> Result<usize, TlsError> {
     STATIC_ELF_TLS
         .try_with(|slot| {
@@ -630,7 +641,8 @@ pub fn install_current_thread_static_tls() -> Result<usize, TlsError> {
             let transition = host_transition_pointer();
             if published != 0 && transition != 0 {
                 thread_pointer::restore_thread_pointer(published)?;
-                return Ok(published);
+                let managed = STATIC_ELF_TLS_POINTER.get();
+                return Ok(if managed != 0 { managed } else { published });
             }
 
             let modules = modules().read().map_err(|_| TlsError::Poisoned)?;
@@ -655,6 +667,7 @@ pub fn install_current_thread_static_tls() -> Result<usize, TlsError> {
             }
             publish_static_thread_pointer(pointer)?;
             publish_host_transition_pointer(block.transition_pointer())?;
+            STATIC_ELF_TLS_POINTER.set(pointer);
             *slot.borrow_mut() = Some(block);
             Ok(pointer)
         })
@@ -704,17 +717,12 @@ pub fn get_current_thread_fs_base() -> usize {
 pub fn current_elf_tls_data(module_id: usize) -> Option<*mut u8> {
     let module_index = module_id.checked_sub(1)?;
     if let Some(offset) = thread_pointer::offset_of(module_id) {
-        let current = STATIC_ELF_TLS
-            .try_with(|slot| {
-                slot.try_borrow()
-                    .ok()?
-                    .as_ref()?
-                    .thread_pointer()
-                    .checked_sub(offset)
-                    .map(|base| base as *mut u8)
-            })
+        let current = STATIC_ELF_TLS_POINTER
+            .try_with(Cell::get)
             .ok()
-            .flatten();
+            .filter(|&tp| tp != 0)
+            .and_then(|tp| tp.checked_sub(offset))
+            .map(|base| base as *mut u8);
         if current.is_some() {
             return current;
         }
@@ -739,18 +747,24 @@ pub fn current_elf_tls_data(module_id: usize) -> Option<*mut u8> {
 /// touches.
 pub fn elf_tls_get_addr(module_id: usize, offset: usize) -> Result<*mut u8, TlsError> {
     if let Some(static_offset) = thread_pointer::offset_of(module_id) {
-        if let Ok(tp) = install_current_thread_static_tls() {
-            let base = tp
-                .checked_sub(static_offset)
-                .ok_or(TlsError::OffsetOutOfRange)?;
-            let addr = base.checked_add(offset).ok_or(TlsError::OffsetOutOfRange)?;
-            return Ok(addr as *mut u8);
-        }
+        let tp = install_current_thread_static_tls()?;
+        let base = tp
+            .checked_sub(static_offset)
+            .ok_or(TlsError::OffsetOutOfRange)?;
+        let addr = base.checked_add(offset).ok_or(TlsError::OffsetOutOfRange)?;
+        return Ok(addr as *mut u8);
     }
 
     let module_index = module_id.checked_sub(1).ok_or(TlsError::UnknownModule)?;
-    let modules = modules().read().map_err(|_| TlsError::Poisoned)?;
-    let template = modules.get(module_index).ok_or(TlsError::UnknownModule)?;
+    let mut modules = modules().write().map_err(|_| TlsError::Poisoned)?;
+    // A reservation may have completed while this lookup waited for templates.
+    if thread_pointer::offset_of(module_id).is_some() {
+        drop(modules);
+        return elf_tls_get_addr(module_id, offset);
+    }
+    let template = modules
+        .get_mut(module_index)
+        .ok_or(TlsError::UnknownModule)?;
     if offset >= template.memory_size {
         return Err(TlsError::OffsetOutOfRange);
     }
@@ -764,6 +778,7 @@ pub fn elf_tls_get_addr(module_id: usize, offset: usize) -> Result<*mut u8, TlsE
             if slots[module_index].is_none() {
                 slots[module_index] = Some(TlsBlock::new(template).ok_or(TlsError::OutOfMemory)?);
             }
+            template.dynamic_used = true;
             let block = slots[module_index]
                 .as_ref()
                 .expect("TLS block was initialized above");
@@ -867,7 +882,7 @@ pub enum TlsError {
     ThreadPointerUnsupported,
     /// A reservation asked for an alignment that is zero or not a power of two.
     InvalidAlignment,
-    /// A thread pointer is already installed, so the static layout cannot grow.
+    /// Static capacity/alignment is exhausted, or dynamic addresses already escaped.
     LayoutFrozen,
     TooManyModules,
     UnknownModule,
@@ -884,7 +899,7 @@ pub enum TlsError {
 // ---------------------------------------------------------------------------
 
 #[cfg(windows)]
-const FORK_TLS_MAGIC: u64 = 0x4352_5954_4c53_4636; // "CRYTLSF6"
+const FORK_TLS_MAGIC: u64 = 0x4352_5954_4c53_4637; // "CRYTLSF7"
 
 #[cfg(windows)]
 fn serialize_fork_state() -> Option<Vec<u8>> {
@@ -941,6 +956,7 @@ fn serialize_fork_state() -> Option<Vec<u8>> {
         out.extend_from_slice(&(module.memory_size as u64).to_le_bytes());
         out.extend_from_slice(&(module.align as u64).to_le_bytes());
         out.extend_from_slice(&(module.image.len() as u64).to_le_bytes());
+        out.extend_from_slice(&(module.dynamic_used as u64).to_le_bytes());
         out.extend_from_slice(&module.image);
         while !out.len().is_multiple_of(8) {
             out.push(0);
@@ -983,6 +999,9 @@ fn serialize_fork_state() -> Option<Vec<u8>> {
         out.extend_from_slice(&(record.dso as u64).to_le_bytes());
     }
     out.extend_from_slice(&(static_layout.total as u64).to_le_bytes());
+    out.extend_from_slice(&(static_layout.capacity as u64).to_le_bytes());
+    out.extend_from_slice(&(static_layout.alignment as u64).to_le_bytes());
+    out.extend_from_slice(&(STATIC_ELF_TLS_POINTER.get() as u64).to_le_bytes());
     out.extend_from_slice(&(static_layout.frozen as u32).to_le_bytes());
     out.extend_from_slice(&(static_layout.modules.len() as u32).to_le_bytes());
     for module in static_layout.modules {
@@ -1050,6 +1069,11 @@ fn restore_fork_state(payload: &[u8]) -> Result<(), ()> {
         let memory_size = usize::try_from(reader.u64().ok_or(())?).map_err(|_| ())?;
         let align = usize::try_from(reader.u64().ok_or(())?).map_err(|_| ())?;
         let image_len = usize::try_from(reader.u64().ok_or(())?).map_err(|_| ())?;
+        let dynamic_used = match reader.u64().ok_or(())? {
+            0 => false,
+            1 => true,
+            _ => return Err(()),
+        };
         if image_len > memory_size || !align.is_power_of_two() {
             return Err(());
         }
@@ -1059,6 +1083,7 @@ fn restore_fork_state(payload: &[u8]) -> Result<(), ()> {
             image,
             memory_size,
             align,
+            dynamic_used,
         });
     }
     let mut restored_keys = Vec::with_capacity(key_count);
@@ -1139,19 +1164,39 @@ fn restore_fork_state(payload: &[u8]) -> Result<(), ()> {
         });
     }
     let total = usize::try_from(reader.u64().ok_or(())?).map_err(|_| ())?;
+    let capacity = usize::try_from(reader.u64().ok_or(())?).map_err(|_| ())?;
+    let alignment = usize::try_from(reader.u64().ok_or(())?).map_err(|_| ())?;
+    let managed_tp = usize::try_from(reader.u64().ok_or(())?).map_err(|_| ())?;
     let frozen = match reader.u32().ok_or(())? {
         0 => false,
         1 => true,
         _ => return Err(()),
     };
     let static_count = reader.u32().ok_or(())? as usize;
-    if static_count > module_count {
+    if static_count > module_count
+        || (frozen && (capacity < total || alignment < 64 || !alignment.is_power_of_two()))
+        || (managed_tp != 0
+            && (!frozen
+                || managed_tp % alignment != 0
+                || managed_tp.checked_sub(capacity).is_none_or(|base| {
+                    capacity
+                        .checked_add(0x450)
+                        .is_none_or(|len| !arena_contains(base, len))
+                })))
+    {
         return Err(());
     }
     let mut static_layout = thread_pointer::Layout {
         modules: Vec::with_capacity(static_count),
         total,
         frozen,
+        capacity,
+        alignment,
+        threads: if managed_tp == 0 {
+            Vec::new()
+        } else {
+            vec![managed_tp]
+        },
     };
     let mut previous_end = 0;
     let mut seen = vec![false; module_count];
@@ -1161,6 +1206,8 @@ fn restore_fork_state(payload: &[u8]) -> Result<(), ()> {
         let index = module_id.checked_sub(1).ok_or(())?;
         let template = restored_modules.get(index).ok_or(())?;
         if seen[index]
+            || template.dynamic_used
+            || template.align > alignment
             || offset > total
             || offset % template.align != 0
             || offset
@@ -1186,6 +1233,7 @@ fn restore_fork_state(payload: &[u8]) -> Result<(), ()> {
     let mut current_modules = modules().write().map_err(|_| ())?;
     let mut current_keys = pthread_keys().write().map_err(|_| ())?;
     thread_pointer::restore_fork_layout(static_layout)?;
+    STATIC_ELF_TLS_POINTER.set(managed_tp);
     // All validation and fallible lock acquisition precede mutation or ownership
     // adoption. A malformed value generation cannot invalidate existing TLS.
     let restored_slots = restored_slots
@@ -1484,7 +1532,7 @@ mod tests {
         assert_eq!(templates.len(), 1);
         let template_bytes: usize = templates
             .iter()
-            .map(|module| (24 + module.image.len() + 7) & !7)
+            .map(|module| (32 + module.image.len() + 7) & !7)
             .sum();
         drop(templates);
         assert!(ELF_TLS.with(|slots| slots.borrow().is_empty()));
@@ -1546,6 +1594,22 @@ mod tests {
     }
 
     #[test]
+    fn dynamic_tls_addresses_cannot_be_promoted_to_static() {
+        if !isolated_case("dynamic_tls_addresses_cannot_be_promoted_to_static") {
+            return;
+        }
+        let module = register_elf_module(&[19], 16, 8).unwrap();
+        let address = elf_tls_get_addr(module, 0).unwrap();
+        unsafe { address.write(42) };
+        assert_eq!(
+            reserve_static_elf_module(module),
+            Err(TlsError::LayoutFrozen)
+        );
+        assert_eq!(elf_tls_get_addr(module, 0).unwrap(), address);
+        assert_eq!(unsafe { address.read() }, 42);
+    }
+
+    #[test]
     fn exhausted_key_generation_is_never_reused() {
         if !isolated_case("exhausted_key_generation_is_never_reused") {
             return;
@@ -1571,7 +1635,7 @@ mod tests {
         let pointer = elf_tls_get_addr(module, 0).unwrap();
         let mut payload = serialize_fork_state().unwrap();
         // This fixture has one value and no C++ destructor footer.
-        let value_offset = payload.len() - 16 - 16; // value, then empty static-layout footer
+        let value_offset = payload.len() - 16 - 40; // value, then empty static-layout footer
         payload[value_offset..value_offset + 8].copy_from_slice(&2u64.to_le_bytes());
         unsafe { pointer.write(0x42) };
         assert_eq!(restore_fork_state(&payload), Err(()));

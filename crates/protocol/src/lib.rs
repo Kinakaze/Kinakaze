@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::io::{self, Read, Write};
 
+pub mod image_cache;
 pub mod kernel;
 
 // V4 acknowledges completed transactions in the next request envelope. Older

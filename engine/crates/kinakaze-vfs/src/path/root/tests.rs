@@ -2,6 +2,32 @@ use super::*;
 use crate::state_codec::{Reader, word};
 
 #[test]
+fn configured_root_preserves_namespace_across_native_prefix_forms() {
+    struct Restore(crate::fs_context::State, Option<PathBuf>);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            crate::fs_context::update(|state| *state = self.0.clone());
+            OPERATION_BASE.with(|slot| {
+                slot.replace(self.1.take());
+            });
+        }
+    }
+    // The namespace base override is thread-local and never touches the host
+    // filesystem or the process-wide immutable worker configuration.
+    let before = crate::fs_context::read(Clone::clone);
+    let original = OPERATION_BASE.with(|slot| slot.replace(Some(r"\\?\C:\guest".into())));
+    let _restore = Restore(before, original);
+    for native in [r"C:\guest\jail", r"\\?\C:\guest\jail"] {
+        crate::fs_context::update(|state| {
+            state.root = Some(native.into());
+            state.overlay = None;
+            state.confined = true;
+        });
+        assert_eq!(namespace_root_path().unwrap(), Some("/jail".into()));
+    }
+}
+
+#[test]
 fn root_handoff_rejects_corruption_and_base_changes_before_mutation() {
     let before = crate::fs_context::read(Clone::clone);
     let base = default_system_root().to_path_buf();

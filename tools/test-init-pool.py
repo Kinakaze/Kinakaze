@@ -18,6 +18,7 @@ def main():
     parser.add_argument('--dist', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--java', default='/usr/lib/jvm/jdk-25.0.4.1+1-jre/bin/java')
+    parser.add_argument('--skip-java', action='store_true', help='use the shell cases when the fixture has no JVM')
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     rows = []
@@ -60,7 +61,7 @@ def main():
     marker = args.root.resolve()/'tmp'/('pool-side-effect-'+uuid.uuid4().hex)
     handles = []
     try:
-        with InitPool(args.root, args.dist, args.output, size=2, timeout=90) as pool:
+        with InitPool(args.root, args.dist, args.output, size=None, timeout=90) as pool:
             parent = psutil.Process(pool.child.process.pid)
             children = parent.children()
             assert len(children) == 2
@@ -87,6 +88,8 @@ def main():
                 dict(command=['/bin/sh','-c','test "${POOL_VALUE-unset}" = unset && printf POOL_ENV_CLEAN; printf POOL_STDERR >&2; exit 7'],
                     expect=['POOL_ENV_CLEAN','POOL_STDERR'], expected_exit=7)]
             for index, case in enumerate(cases):
+                if args.skip_java and case['command'][0] == args.java:
+                    continue
                 row = dict(case=f'mixed-application-{index}', **pool.run(**case))
                 rows.append(row)
                 assert row['status']=='passed', row

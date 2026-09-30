@@ -136,6 +136,53 @@ fn corruption_fails_before_unverified_bytes_are_returned() {
 }
 
 #[test]
+fn checked_writer_alias_retains_exclusion_after_rename_unlink_and_fd_replacement() {
+    use crate::{DuplicateTarget, duplicate_descriptor};
+    let fixture = Fixture::new();
+    let path = fixture.file("checked-writer", b"original");
+    let guest = crate::to_guest_path(&path);
+    let reader = Fd::read(&path);
+    let writer = Fd(crate::fs::open(&guest, crate::fs::O_RDWR, 0).unwrap());
+    let alias = Fd(duplicate_descriptor(writer.0, DuplicateTarget::Lowest, false).unwrap());
+    drop(writer);
+    let renamed = crate::to_guest_path(&fixture.0.join("renamed"));
+    crate::fs::rename(&guest, &renamed).unwrap();
+    crate::fs::unlink(&renamed).unwrap();
+    std::fs::write(&path, b"unrelated replacement").unwrap();
+    assert_eq!(crate::write(alias.0, b"updated!"), Ok(8));
+    assert_eq!(enable(reader.0, 1, 4096, b""), Err(ETXTBSY));
+    assert_eq!(std::fs::read(&path).unwrap(), b"unrelated replacement");
+    duplicate_descriptor(reader.0, DuplicateTarget::Exactly(alias.0), false).unwrap();
+    assert_eq!(crate::write(alias.0, b"must fail"), Err(EBADF));
+    enable(reader.0, 1, 4096, b"").unwrap();
+    let mut bytes = [0; 8];
+    assert_eq!(crate::read(alias.0, &mut bytes), Ok(8));
+    assert_eq!(&bytes, b"updated!");
+}
+
+#[test]
+fn externally_installed_writer_still_checks_enabled_verity() {
+    let fixture = Fixture::new();
+    let path = fixture.file("unchecked-writer", b"original");
+    let reader = Fd::read(&path);
+    enable(reader.0, 1, 4096, b"").unwrap();
+    // Host APIs can acquire a native writer even for a guest-verity inode.
+    // WRITE_ACCESS by itself must never be treated as a completed check.
+    let raw = Object::open(&path, GENERIC_WRITE).unwrap();
+    let writer = Fd(crate::install(
+        raw.raw() as usize,
+        FdKind::File,
+        FdFlags::WRITE_ACCESS
+            .union(FdFlags::OVERLAPPED)
+            .union(FdFlags::SEEKABLE),
+    )
+    .unwrap());
+    raw.into_raw();
+    assert_eq!(crate::write(writer.0, b"must fail"), Err(EPERM));
+    assert_eq!(std::fs::read(&path).unwrap(), b"original");
+}
+
+#[test]
 fn abandoned_preparing_tail_is_masked_and_recovered_before_write() {
     let f = Fixture::new();
     let path = f.file("abandoned", b"original payload");

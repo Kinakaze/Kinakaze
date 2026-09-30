@@ -16,10 +16,12 @@ import time
 import tomllib
 
 
-PACKAGES = ('kinakaze-v2-libc', 'kinakaze-guest-engine')
+PACKAGES = ('kinakaze-v2-libc', 'kinakaze-guest-engine', 'kinakaze-vfs', 'kinakaze-kernel')
 FILTERS = {
+    'kinakaze-kernel': ('sparse_copy::tests', 'windows::fork_mapping_tests', 'windows::wait_tests', 'cow::tests'),
     'kinakaze-v2-libc': ('ptrace::tests', 'fdio::remap::', 'sysadmin::tests', 'sysvipc::tests'),
     'kinakaze-guest-engine': ('execution::traps::tests', 'execution::instruction_trampoline::tests'),
+    'kinakaze-vfs': ('fs::object::tests', 'fs::install_tests', 'fs::atomic_create_tests', 'fs::writeback::tests', 'xattr::tests', 'path::root::tests', 'mount::overlay::mounted::tests', 'mount::overlay::native_lookup::', 'mount::policy::tests'),
 }
 
 

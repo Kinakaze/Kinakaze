@@ -17,10 +17,7 @@ pub(crate) use kinakaze_v2_abi::inode::Record;
 /// Query an independently opened metadata handle; no shared data I/O can be
 /// cancelled by this query. Callers with a borrowed descriptor use `read`.
 pub(super) fn read_object(object: &Object) -> Result<Record, i32> {
-    ea::read(object, EA_NAME)?
-        .map(|bytes| Record::decode(&bytes))
-        .transpose()
-        .map(Option::unwrap_or_default)
+    ea::read_decoded(object, EA_NAME, Record::decode).map(Option::unwrap_or_default)
 }
 
 /// The caller keeps the borrowed inode live. An independent open owns each
@@ -45,9 +42,19 @@ pub(crate) fn update(
 ) -> Result<(), i32> {
     let object = Object::reopen(handle, FILE_READ_ATTRIBUTES | FILE_READ_EA | FILE_WRITE_EA)?;
     let _lock = crate::xattr::InodeLock::acquire(object.raw())?;
-    let mut record = read_object(&object)?;
+    update_locked(&object, change)
+}
+
+/// Caller holds the inode lock and a private metadata open with read/write EA
+/// access. Reuse both across a compound update instead of reopening the inode
+/// and recursively acquiring the same named mutex for each field.
+pub(super) fn update_locked(
+    object: &Object,
+    change: impl FnOnce(&mut Record) -> Result<(), i32>,
+) -> Result<(), i32> {
+    let mut record = read_object(object)?;
     change(&mut record)?;
-    ea::write(&object, EA_NAME, &record.encode()?)
+    ea::write(object, EA_NAME, &record.encode()?)
 }
 
 /// Whole-record copy for an unpublished inode; does not copy guest xattrs.
