@@ -24,6 +24,6 @@ native 线程所有权和放弃检测使用 [Windows mutex](https://learn.micros
 
 该微基准约 9.08 倍；不代表应用整体吞吐或竞争锁的改善。初次测量与编译同时运行产生较大漂移，采用编译结束后的配对结果。原始数据、二进制/源码 SHA-256 和 guest 结果见 [测量记录](measurements/pthread-shared-mutex-2026-10-01.json)。复现：使用 `tools/stage-native-test-artifacts.py` 冻结 Cargo test JSON，再运行 `tools/benchmark-pthread-shared.py --native <frozen> --output <report>`；guest runner 选择 `--probe shared`。
 
-本次完成进程共享 pthread mutex。跨进程条件变量、PI 调度继承和原始 futex 锁字互操作仍属于后续目标。
+本次完成进程共享 pthread mutex。跨进程条件变量已由后续的[共享条件变量实现](pthread-shared-condition-2026-10-01.md)补齐；PI 调度继承和原始 futex 锁字互操作进度另见对应阶段记录。
 
 与 main 同时更新的 VFS exclusive-create 优化及 robust 别名生成规则已合并。合并后再次完整 release 构建并 staging 全套 DLL，10 行 pthread guest 回归及独立 robust aliases guest 验证全部通过；共享 getter/setter 的 GLIBC_2.2.5、libc GLIBC_2.34 和未知版本拒绝也由真实 guest dlvsym 验证。导出生成器在没有 import inventory 的情况下保留这些版本，参照 [glibc 的符号版本表](https://github.com/bminor/glibc/blob/glibc-2.36/nptl/Versions)。

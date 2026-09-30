@@ -18,3 +18,5 @@
 同一冻结 executable 预热一对，再交替测量 5 对，每次 10,000 个无等待者的共享 signal：关闭开关的中位耗时 12,785.56 ns/次，开启空队列剪枝为 2.00 ns/次。该结果只说明空队列省去了打开、映射和等待 native 对象的调用；极短快路径受计时分辨率影响，不据此宣称竞争队列或应用吞吐改善。[原始测量与二进制 SHA-256](measurements/pthread-shared-condition-2026-10-01.json)。复现：`tools/benchmark-pthread-shared.py --native <frozen> --probe empty-cond --output <report>`；guest runner 选择 `--probe shared-cond`，共享取消使用 `--probe cancel --shared-cancel --robust-cancel`。
 
 这次完成共享条件变量实现及回归。原始 futex PI、PI requeue、调度继承与整体 I/O 优化进度另见对应实现和测量记录，不能用本次 pthread 验证替代。
+
+与 main 的 raw futex PI 后端及导出生成器去重修复合并后，整合源树 `ac53904` 再次完整 release 构建通过。新图重新 staging 38 个文件，14 行 pthread guest 与 2 行 PI guest 均通过，最终导出工具为 25 项通过。共享条件队列、停车和 libc pthread 包装源码在合并前后保持一致；PI 生产/运行验证不据此宣称 WAIT_REQUEUE_PI、pthread PI 属性或整个优化目标已完成。
