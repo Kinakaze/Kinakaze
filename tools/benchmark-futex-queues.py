@@ -15,6 +15,7 @@ import subprocess
 CASES = {
     'pthread': ('KINAKAZE_PTHREAD_PARK_OPT', 'parking::tests::benchmark_event_parking', 'PTHREAD_PARK_BENCH'),
     'wait2': ('KINAKAZE_FUTEX_OPT', 'sysadmin::futex_scalar::tests::benchmark_wait2_registration', 'WAIT2_BENCH'),
+    'legacy-wait': ('KINAKAZE_FUTEX_OPT', 'sysadmin::futex_deadline::tests::benchmark_legacy_wait_registration', 'LEGACY_WAIT_BENCH'),
     'futex': ('KINAKAZE_FUTEX_OPT', 'futex::queue_tests::benchmark_shared_queue', 'FUTEX_BENCH'),
     'waitv-background': ('KINAKAZE_FUTEX_OPT', 'sysadmin::futex_vector::batch_tests::benchmark_vector_registration', 'FUTEX_VECTOR_BENCH'),
     'waitv': ('KINAKAZE_FUTEX_OPT', 'sysadmin::futex_vector::tests::benchmark_waitv_registration', 'WAITV_BENCH'),

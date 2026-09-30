@@ -90,6 +90,7 @@ def inventory(root):
                root / 'libs/libc/src/sysadmin/futex_vector.rs',
                root / 'libs/libc/src/sysadmin/futex_requeue.rs',
                root / 'libs/libc/src/sysadmin/futex_scalar.rs',
+               root / 'libs/libc/src/sysadmin/futex_deadline.rs',
                root / 'libs/libc/src/futex/hybrid.rs',
                root / 'libs/libc/src/futex/wait_group.rs',
                root / 'engine/crates/kinakaze-vfs/src/lib.rs',

@@ -1,0 +1,608 @@
+{
+  "date": "2026-10-01",
+  "scope": "legacy futex timeout preparation and safe timespec copies for legacy/scalar/vector waits; PI entry error order, not PI locking",
+  "dependency_baseline": "1e050ec; isolated review worktree with prior futex changes; baseline fork registration interface retained",
+  "review_sources_sha256": {
+    "libs/libc/src/sysadmin.rs": "6ef897b99ec089ccbcefd57860b03f62695715967059f934f96f2af73a62e868",
+    "libs/libc/src/sysadmin/futex_deadline.rs": "045ba462d2f9feed74763ca9a6d5ff17be3c0fdd84dded2a4601e0786da0e805",
+    "libs/libc/src/sysadmin/futex_deadline/tests.rs": "dc89c117be4693cd3f500127ca9a922481ab6ef6086322fa90c58ceb61771c94",
+    "libs/libc/src/futex.rs": "99a0f89b92859c5cd47f6f2c0f6139a6db7f176de5e7061ec754acaabd192cba",
+    "libs/libc/src/sysadmin/futex_scalar.rs": "3f34cc86a428c32a6823c992d6e72e647afb01b0c6551ba2bf484748b6eedcca",
+    "libs/libc/src/sysadmin/futex_vector.rs": "2686b38b4b0d3dc6834dc8ad48053d6632d93431f01d359b24d21cd73962bc3e",
+    "libs/libc/src/sysadmin/futex_requeue.rs": "d122d503d56d6064afab4df48ae174c3de2af2214de99cea04570c106cbea961"
+  },
+  "native": {
+    "passed": true,
+    "artifacts_unchanged": true,
+    "build_sha256": "7371b28cd60444b2de003d1145036eb9334e185f7296f7a8132c96109d5aa428",
+    "executables": {
+      "kinakaze_libc": "kinakaze_libc-7f9765c78f27372e.exe"
+    },
+    "files_sha256": {
+      "kinakaze_elf.so": "bd08456d7360930591e9f7e3d8d65e349a57cbf7e872f3b4cf0d0c1b32965772",
+      "serde_derive-05f8cc86e80a64bc.dll": "ba41b8cc88fd30a91315773291da3b0c1d10d79ff4676396778f6a7a9c1771aa",
+      "kinakaze_alloc.so": "86fe314ed4d7eae3c15b1229f97f7f7fe483ebd66edfdff5869da3640ccd243e",
+      "kinakaze_kernel.so": "c13094f72a3f2c5462e1830f8c21aa7bc9f0761b573bbb72040e6d741daedf27",
+      "kinakaze_tls.so": "814dd8a9cf6d54cea1e71057b2efa579b5a76ed5f54710c8834f06d6ba47df83",
+      "libm.so.6": "fbdc5c213026a0cccc92e3f71113d80ce9e258599a758ba111fe57976740bed1",
+      "kinakaze_vfs.so": "3585897f85704324a58c1486c648ea9af1b72ad86f95bbe83ad9b5eb0d57cb28",
+      "libpthread.so.0": "15970b8a1643adb83a29e989fe1519b9f7cf36c4375487ca0cd824773908524a",
+      "ld-linux-x86-64.so.2": "bf7741ef768b8014c5676e349cf773f2f1aed081ee161b1ced7e24c882bd88c2",
+      "kinakaze_libc-7f9765c78f27372e.exe": "628c25116a534331004019178e3034540abf1b56110b4cf4e7429d5954da608a",
+      "std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc"
+    },
+    "rows": [
+      {
+        "optimized": true,
+        "returncode": 0,
+        "summary": [
+          "test result: ok. 605 passed; 0 failed; 15 ignored; 0 measured; 0 filtered out; finished in 11.38s"
+        ],
+        "log": "artifacts\\syscall-all-paths-20261001\\libc-deadline-final-1.log",
+        "log_sha256": "fee1b8bfa317d9c03c1bdaa5aaeaab3e0212a5c99eda4ed678882ef451e69a4a"
+      },
+      {
+        "optimized": false,
+        "returncode": 0,
+        "summary": [
+          "test result: ok. 605 passed; 0 failed; 15 ignored; 0 measured; 0 filtered out; finished in 13.15s"
+        ],
+        "log": "artifacts\\syscall-all-paths-20261001\\libc-deadline-final-0.log",
+        "log_sha256": "06619a0cf6543f77895da896f86d6541e03b3e0b69b29e7c1943f508a3956674"
+      }
+    ],
+    "windows_features": [
+      "windows-sys/Win32",
+      "windows-sys/Win32_Devices",
+      "windows-sys/Win32_Devices_Display",
+      "windows-sys/Win32_Foundation",
+      "windows-sys/Win32_Graphics",
+      "windows-sys/Win32_Graphics_Gdi",
+      "windows-sys/Win32_Graphics_GdiPlus",
+      "windows-sys/Win32_Graphics_OpenGL",
+      "windows-sys/Win32_Media",
+      "windows-sys/Win32_Media_Audio",
+      "windows-sys/Win32_NetworkManagement",
+      "windows-sys/Win32_NetworkManagement_IpHelper",
+      "windows-sys/Win32_NetworkManagement_Ndis",
+      "windows-sys/Win32_Networking",
+      "windows-sys/Win32_Networking_WinHttp",
+      "windows-sys/Win32_Networking_WinSock",
+      "windows-sys/Win32_Security",
+      "windows-sys/Win32_Security_Authorization",
+      "windows-sys/Win32_Security_Cryptography",
+      "windows-sys/Win32_Storage",
+      "windows-sys/Win32_Storage_FileSystem",
+      "windows-sys/Win32_System",
+      "windows-sys/Win32_System_Console",
+      "windows-sys/Win32_System_Diagnostics",
+      "windows-sys/Win32_System_Diagnostics_Debug",
+      "windows-sys/Win32_System_Environment",
+      "windows-sys/Win32_System_IO",
+      "windows-sys/Win32_System_Ioctl",
+      "windows-sys/Win32_System_JobObjects",
+      "windows-sys/Win32_System_Kernel",
+      "windows-sys/Win32_System_LibraryLoader",
+      "windows-sys/Win32_System_Memory",
+      "windows-sys/Win32_System_Performance",
+      "windows-sys/Win32_System_Pipes",
+      "windows-sys/Win32_System_ProcessStatus",
+      "windows-sys/Win32_System_SystemInformation",
+      "windows-sys/Win32_System_SystemServices",
+      "windows-sys/Win32_System_Threading",
+      "windows-sys/Win32_System_WindowsProgramming",
+      "windows-sys/Win32_UI",
+      "windows-sys/Win32_UI_ColorSystem",
+      "windows-sys/Win32_UI_Input",
+      "windows-sys/Win32_UI_Input_KeyboardAndMouse",
+      "windows-sys/Win32_UI_Shell",
+      "windows-sys/Win32_UI_WindowsAndMessaging",
+      "windows-sys/default"
+    ]
+  },
+  "guest": {
+    "build_sha256": "d6d4b2f458131e81e4a00830ac5065a642fd3ce7bea4fadab885975da82a1f28",
+    "images_sha256": {
+      "rootfs/lib/kinakaze_elf.so": "a5d3ee9bfb90dbc4b7f5cbdb4e29dc461777d63d272ee4e38731136e51cf9f6f",
+      "rootfs/lib/libGLESv2.so.2": "09cb80d1eabf459a92409fd9f943588007cc24fb58918fe710b936dffb22f53e",
+      "rootfs/lib/libEGL.so.1": "e3a1dba8a0731f467fc6931c7be0306e61d190ec85f5fb35a84a61a6604d207d",
+      "rootfs/lib/libdl.so.2": "71ec61f234779f1b56377a56e4a44a8f3659d2025e250739d1e9a9f1c45e4f4e",
+      "rootfs/lib/libXinerama.so.1": "82be6be819939f29ea0cd9b91dbd5f56adf21c4fd968372577e23485d90d2fe9",
+      "rootfs/lib/libOpenGL.so.0": "25427e9c90395a3b605cb5bab04b30d42321e1a186a9f1c2bb4ccd77887c9884",
+      "rootfs/lib/libXxf86vm.so.1": "027a3c6fc75a4fe20ec5c074696573062f1bfd88f7fd0a3b07c21b8a42569981",
+      "rootfs/lib/libXrender.so.1": "c0a4c9c82734b1053f441bb044f1fbe108304df15ca0355fc6db0b1c58367e9b",
+      "rootfs/lib/libGLX.so.0": "cb1b2db13a534a5c8f56e04a548255c6f9dcc80680f93aa8711801f7e6917b5a",
+      "rootfs/lib/libX11-xcb.so.1": "611e34a02a122a59cfdf9f03b61a85b2a17344e512e781d75b22ca7615438aa0",
+      "rootfs/lib/libXcursor.so.1": "03b3ab9f795611b90f3b7f26fd8a1d35fc40ae63d81a68cccd29b0d020f3f079",
+      "worker.exe": "ff77e9596370831e4557986196f5a22ba7c4c5d032dd0215cb756a9195b10643",
+      "init.exe": "504400407a99056a90e384f931f6f85b919664c51dd9ff3aed02c07be7fdc81e",
+      "rootfs/lib/kinakaze_alloc.so": "3f2a7e6f2777691cbb79e83dff3c35bda3377555a5146752a3438441d3ef183b",
+      "rootfs/lib/kinakaze_kernel.so": "bbfb3af99aae2c18c8024f7ff0aca962f0f7bc71ccbe560657172221f232a4ac",
+      "rootfs/lib/kinakaze_tls.so": "81f38e4575df5ad363e6b9c44e3f6379917c721287d205703ec3c70e86a0d5af",
+      "rootfs/lib/libm.so.6": "d61e0532f8f02c10ba0df652972a7dab17ddfcc0e53eb6db749e60060033fa3f",
+      "rootfs/lib/libdisplay.so.1": "631d36fe65d93b225b9e92e9d2ca85f3c2428f6f4959831ed2c9cd38bb4ed796",
+      "rootfs/lib/kinakaze_vfs.so": "e4dd6e4743d2069848075574d9fcd80449fd695ee3cfb19c640ca89eed749b8d",
+      "rootfs/lib/libcuda.so.1": "467f7de50385681154834480feda73d1cb90665055bfd16c370f22ca39abbbc8",
+      "rootfs/lib/libpthread.so.0": "5b72a18ad7b9958a979f8617bc670809a9741cc96985ef5423c1bd4ea92aaec2",
+      "rootfs/lib/ld-linux-x86-64.so.2": "41d2bce012ac2621d7e8f47e54028cf8568f8f69bd6fb37bd3ae8cbcdb7a5cc4",
+      "rootfs/lib/libc.so.6": "8941eeb5648944e336e16096df9686dee4100011905a381f29f9eeec4913f0ab",
+      "rootfs/lib/libresolv.so.2": "44237f65434d54e61948f8e996ab01b4af05ef29ca7ac1342d165690fc357960",
+      "rootfs/lib/librt.so.1": "373d1b879d96108bc808dca52397fc97ad529597e389b72cb6152c58f15f0161",
+      "rootfs/lib/libpulse.so.0": "5ae24cd3f357833ff45e270876f5a5e20dec22ad0e1837960ddb4a7e8ab97769",
+      "rootfs/lib/libpipewire-0.3.so.0": "7f02cd7c4b3cfd6d5de8c7473cfeef1e4bdd40a1cfe96a0b4ab1bd507182b6f2",
+      "rootfs/lib/libasound.so.2": "15aacaf51590d338149a0a3ff344a1e639ae1f70721d07fe5c3b43c6ff0fa38b",
+      "rootfs/lib/kinakaze_guest_engine.so": "fba9681901207752a8bcd92843662aed8672cdd506a32b8ae87e599ec0f44548",
+      "rootfs/lib/libkinakaze-runtime.so.1": "133707ca9f4b45b6bd1b9457cd92c84144fc23646d3d859504b830a4fdd7dcd7",
+      "rootfs/lib/libX11.so.6": "38058e944791e1a13304c02f5191d4bc369738f20adc59998984cb133bf27f3e",
+      "rootfs/lib/libXrandr.so.2": "39cdbeb01337732bc31ad66f1a69706365362febbe565323c700a20e63b45b0e",
+      "rootfs/lib/libXext.so.6": "81261bdc89d0d18ba5058307f7340f4355afab7c01690aa15d4eec35e293f129",
+      "rootfs/lib/libGL.so.1": "f87d353ef783c335ef60042a71ab2c5767b03d10e974e86707dcaa4c1cce43c3",
+      "rootfs/lib/libXi.so.6": "75264e4b34b8c68ca9a4cd9d1b0d33088c6c8856a2bcd621c82041fd52984eda",
+      "rootfs/lib/libxcb.so.1": "4eef502434b88cd8679f0a065ed455a88449c492adb18c8a4eaefa4008a0552e",
+      "rootfs/lib/libvulkan.so.1": "46c0560121f9292652e7333dd0a3711ff274b5b52b7272c4ab8777d3d9245d3d",
+      "std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc"
+    },
+    "probes": {
+      "timeout": {
+        "report": "artifacts/syscall-all-paths-20261001/guest-deadline-timeout/report.json",
+        "report_sha256": "6683f1c72412b729da25d6cf3661a157da29f9b1ea9d9779996bad38657b7f97",
+        "passed": true,
+        "rows": [
+          {
+            "optimized": false,
+            "status": "passed",
+            "exit_code": 0,
+            "missing_markers": []
+          },
+          {
+            "optimized": true,
+            "status": "passed",
+            "exit_code": 0,
+            "missing_markers": []
+          }
+        ]
+      },
+      "signal": {
+        "report": "artifacts/syscall-all-paths-20261001/guest-deadline-signal/report.json",
+        "report_sha256": "bba80521586ea29004b0d38635cc840ce082a006ae6bff90c9969defe14f564e",
+        "passed": true,
+        "rows": [
+          {
+            "optimized": false,
+            "status": "passed",
+            "exit_code": 0,
+            "missing_markers": []
+          },
+          {
+            "optimized": true,
+            "status": "passed",
+            "exit_code": 0,
+            "missing_markers": []
+          }
+        ]
+      },
+      "scalar": {
+        "report": "artifacts/syscall-all-paths-20261001/guest-deadline-scalar/report.json",
+        "report_sha256": "46c8553e718236868735fda1d959912a004e90d0a3a15ed6906e0b331d158dc0",
+        "passed": true,
+        "rows": [
+          {
+            "optimized": false,
+            "status": "passed",
+            "exit_code": 0,
+            "missing_markers": []
+          },
+          {
+            "optimized": true,
+            "status": "passed",
+            "exit_code": 0,
+            "missing_markers": []
+          }
+        ]
+      },
+      "vector": {
+        "report": "artifacts/syscall-all-paths-20261001/guest-deadline-vector/report.json",
+        "report_sha256": "87bf46c108044203540806eedb492beecf039441c4b924e706be3368086dd2d7",
+        "passed": true,
+        "rows": [
+          {
+            "optimized": false,
+            "status": "passed",
+            "exit_code": 0,
+            "missing_markers": []
+          },
+          {
+            "optimized": true,
+            "status": "passed",
+            "exit_code": 0,
+            "missing_markers": []
+          }
+        ]
+      },
+      "requeue": {
+        "report": "artifacts/syscall-all-paths-20261001/guest-deadline-requeue/report.json",
+        "report_sha256": "f276092d52809a8f09a31faafaf84e79aaa4a2b50d31696dabf6de5c664ce301",
+        "passed": true,
+        "rows": [
+          {
+            "optimized": false,
+            "status": "passed",
+            "exit_code": 0,
+            "missing_markers": []
+          },
+          {
+            "optimized": true,
+            "status": "passed",
+            "exit_code": 0,
+            "missing_markers": []
+          }
+        ]
+      }
+    }
+  },
+  "coverage": {
+    "dispatched": 304,
+    "explicit-refusal": 1,
+    "missing-dispatch": 70,
+    "syscalls": 375,
+    "required_path_reviews": 3750,
+    "verified_path_reviews": 0
+  },
+  "benchmarks": {
+    "legacy": {
+      "passed": true,
+      "case": "legacy-wait",
+      "binary": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\native-deadline-final\\kinakaze_libc-7f9765c78f27372e.exe",
+      "sha256": "628c25116a534331004019178e3034540abf1b56110b4cf4e7429d5954da608a",
+      "dependencies": {
+        "kinakaze_alloc.so": "86fe314ed4d7eae3c15b1229f97f7f7fe483ebd66edfdff5869da3640ccd243e",
+        "kinakaze_elf.so": "bd08456d7360930591e9f7e3d8d65e349a57cbf7e872f3b4cf0d0c1b32965772",
+        "kinakaze_kernel.so": "c13094f72a3f2c5462e1830f8c21aa7bc9f0761b573bbb72040e6d741daedf27",
+        "kinakaze_tls.so": "814dd8a9cf6d54cea1e71057b2efa579b5a76ed5f54710c8834f06d6ba47df83",
+        "kinakaze_vfs.so": "3585897f85704324a58c1486c648ea9af1b72ad86f95bbe83ad9b5eb0d57cb28",
+        "ld-linux-x86-64.so.2": "bf7741ef768b8014c5676e349cf773f2f1aed081ee161b1ced7e24c882bd88c2",
+        "libm.so.6": "fbdc5c213026a0cccc92e3f71113d80ce9e258599a758ba111fe57976740bed1",
+        "libpthread.so.0": "15970b8a1643adb83a29e989fe1519b9f7cf36c4375487ca0cd824773908524a"
+      },
+      "rows": [
+        {
+          "iterations": 5000,
+          "background_iterations": 128,
+          "relative_private_ns": 9334400,
+          "bitset_private_ns": 7432800,
+          "relative_shared_ns": 43613400,
+          "bitset_shared_ns": 43151300,
+          "relative_background_ns": 384842100,
+          "bitset_background_ns": 383110400,
+          "round": 0,
+          "enabled": false,
+          "warmup": true
+        },
+        {
+          "iterations": 5000,
+          "background_iterations": 128,
+          "relative_private_ns": 9432200,
+          "bitset_private_ns": 6059900,
+          "relative_shared_ns": 45275400,
+          "bitset_shared_ns": 43850800,
+          "relative_background_ns": 4105300,
+          "bitset_background_ns": 3828600,
+          "round": 0,
+          "enabled": true,
+          "warmup": true
+        },
+        {
+          "iterations": 5000,
+          "background_iterations": 128,
+          "relative_private_ns": 10891100,
+          "bitset_private_ns": 11674300,
+          "relative_shared_ns": 38052600,
+          "bitset_shared_ns": 35781600,
+          "relative_background_ns": 4424200,
+          "bitset_background_ns": 2633200,
+          "round": 1,
+          "enabled": true,
+          "warmup": false
+        },
+        {
+          "iterations": 5000,
+          "background_iterations": 128,
+          "relative_private_ns": 7934700,
+          "bitset_private_ns": 6013000,
+          "relative_shared_ns": 48547700,
+          "bitset_shared_ns": 43520300,
+          "relative_background_ns": 432025800,
+          "bitset_background_ns": 442562200,
+          "round": 1,
+          "enabled": false,
+          "warmup": false
+        },
+        {
+          "iterations": 5000,
+          "background_iterations": 128,
+          "relative_private_ns": 7282200,
+          "bitset_private_ns": 7892000,
+          "relative_shared_ns": 51317000,
+          "bitset_shared_ns": 44511200,
+          "relative_background_ns": 423614300,
+          "bitset_background_ns": 437856500,
+          "round": 2,
+          "enabled": false,
+          "warmup": false
+        },
+        {
+          "iterations": 5000,
+          "background_iterations": 128,
+          "relative_private_ns": 9976100,
+          "bitset_private_ns": 6031500,
+          "relative_shared_ns": 51421600,
+          "bitset_shared_ns": 41547800,
+          "relative_background_ns": 2763400,
+          "bitset_background_ns": 2769200,
+          "round": 2,
+          "enabled": true,
+          "warmup": false
+        },
+        {
+          "iterations": 5000,
+          "background_iterations": 128,
+          "relative_private_ns": 8216900,
+          "bitset_private_ns": 6786500,
+          "relative_shared_ns": 52024800,
+          "bitset_shared_ns": 40394800,
+          "relative_background_ns": 4182200,
+          "bitset_background_ns": 5101500,
+          "round": 3,
+          "enabled": true,
+          "warmup": false
+        },
+        {
+          "iterations": 5000,
+          "background_iterations": 128,
+          "relative_private_ns": 7381200,
+          "bitset_private_ns": 6017600,
+          "relative_shared_ns": 40695200,
+          "bitset_shared_ns": 33871200,
+          "relative_background_ns": 356556100,
+          "bitset_background_ns": 371256900,
+          "round": 3,
+          "enabled": false,
+          "warmup": false
+        },
+        {
+          "iterations": 5000,
+          "background_iterations": 128,
+          "relative_private_ns": 8915400,
+          "bitset_private_ns": 6375300,
+          "relative_shared_ns": 47250200,
+          "bitset_shared_ns": 42523400,
+          "relative_background_ns": 374267100,
+          "bitset_background_ns": 372791200,
+          "round": 4,
+          "enabled": false,
+          "warmup": false
+        },
+        {
+          "iterations": 5000,
+          "background_iterations": 128,
+          "relative_private_ns": 6741200,
+          "bitset_private_ns": 8022500,
+          "relative_shared_ns": 44364100,
+          "bitset_shared_ns": 34221900,
+          "relative_background_ns": 3124300,
+          "bitset_background_ns": 3272700,
+          "round": 4,
+          "enabled": true,
+          "warmup": false
+        },
+        {
+          "iterations": 5000,
+          "background_iterations": 128,
+          "relative_private_ns": 7428500,
+          "bitset_private_ns": 6396900,
+          "relative_shared_ns": 36415500,
+          "bitset_shared_ns": 43820400,
+          "relative_background_ns": 3313100,
+          "bitset_background_ns": 3750500,
+          "round": 5,
+          "enabled": true,
+          "warmup": false
+        },
+        {
+          "iterations": 5000,
+          "background_iterations": 128,
+          "relative_private_ns": 6913300,
+          "bitset_private_ns": 6099000,
+          "relative_shared_ns": 39231200,
+          "bitset_shared_ns": 46656700,
+          "relative_background_ns": 400310900,
+          "bitset_background_ns": 386401100,
+          "round": 5,
+          "enabled": false,
+          "warmup": false
+        }
+      ],
+      "medians_ns": {
+        "control": {
+          "relative_private_ns": 7381200,
+          "bitset_private_ns": 6099000,
+          "relative_shared_ns": 47250200,
+          "bitset_shared_ns": 43520300,
+          "relative_background_ns": 400310900,
+          "bitset_background_ns": 386401100
+        },
+        "candidate": {
+          "relative_private_ns": 8216900,
+          "bitset_private_ns": 6786500,
+          "relative_shared_ns": 44364100,
+          "bitset_shared_ns": 40394800,
+          "relative_background_ns": 3313100,
+          "bitset_background_ns": 3272700
+        }
+      }
+    },
+    "scalar": {
+      "passed": true,
+      "case": "wait2",
+      "binary": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\native-deadline-final\\kinakaze_libc-7f9765c78f27372e.exe",
+      "sha256": "628c25116a534331004019178e3034540abf1b56110b4cf4e7429d5954da608a",
+      "dependencies": {
+        "kinakaze_alloc.so": "86fe314ed4d7eae3c15b1229f97f7f7fe483ebd66edfdff5869da3640ccd243e",
+        "kinakaze_elf.so": "bd08456d7360930591e9f7e3d8d65e349a57cbf7e872f3b4cf0d0c1b32965772",
+        "kinakaze_kernel.so": "c13094f72a3f2c5462e1830f8c21aa7bc9f0761b573bbb72040e6d741daedf27",
+        "kinakaze_tls.so": "814dd8a9cf6d54cea1e71057b2efa579b5a76ed5f54710c8834f06d6ba47df83",
+        "kinakaze_vfs.so": "3585897f85704324a58c1486c648ea9af1b72ad86f95bbe83ad9b5eb0d57cb28",
+        "ld-linux-x86-64.so.2": "bf7741ef768b8014c5676e349cf773f2f1aed081ee161b1ced7e24c882bd88c2",
+        "libm.so.6": "fbdc5c213026a0cccc92e3f71113d80ce9e258599a758ba111fe57976740bed1",
+        "libpthread.so.0": "15970b8a1643adb83a29e989fe1519b9f7cf36c4375487ca0cd824773908524a"
+      },
+      "rows": [
+        {
+          "iterations": 5000,
+          "background_iterations": 128,
+          "private_ns": 8340900,
+          "shared_ns": 36909900,
+          "shared_background_ns": 451696500,
+          "round": 0,
+          "enabled": false,
+          "warmup": true
+        },
+        {
+          "iterations": 5000,
+          "background_iterations": 128,
+          "private_ns": 12444000,
+          "shared_ns": 49506600,
+          "shared_background_ns": 3276600,
+          "round": 0,
+          "enabled": true,
+          "warmup": true
+        },
+        {
+          "iterations": 5000,
+          "background_iterations": 128,
+          "private_ns": 9323000,
+          "shared_ns": 50406400,
+          "shared_background_ns": 4161900,
+          "round": 1,
+          "enabled": true,
+          "warmup": false
+        },
+        {
+          "iterations": 5000,
+          "background_iterations": 128,
+          "private_ns": 7048600,
+          "shared_ns": 37830000,
+          "shared_background_ns": 398783100,
+          "round": 1,
+          "enabled": false,
+          "warmup": false
+        },
+        {
+          "iterations": 5000,
+          "background_iterations": 128,
+          "private_ns": 9257200,
+          "shared_ns": 45337300,
+          "shared_background_ns": 392537600,
+          "round": 2,
+          "enabled": false,
+          "warmup": false
+        },
+        {
+          "iterations": 5000,
+          "background_iterations": 128,
+          "private_ns": 7300700,
+          "shared_ns": 37875000,
+          "shared_background_ns": 2839900,
+          "round": 2,
+          "enabled": true,
+          "warmup": false
+        },
+        {
+          "iterations": 5000,
+          "background_iterations": 128,
+          "private_ns": 7893500,
+          "shared_ns": 46360600,
+          "shared_background_ns": 2928600,
+          "round": 3,
+          "enabled": true,
+          "warmup": false
+        },
+        {
+          "iterations": 5000,
+          "background_iterations": 128,
+          "private_ns": 8506200,
+          "shared_ns": 39761500,
+          "shared_background_ns": 416346200,
+          "round": 3,
+          "enabled": false,
+          "warmup": false
+        },
+        {
+          "iterations": 5000,
+          "background_iterations": 128,
+          "private_ns": 9130400,
+          "shared_ns": 50513900,
+          "shared_background_ns": 413748700,
+          "round": 4,
+          "enabled": false,
+          "warmup": false
+        },
+        {
+          "iterations": 5000,
+          "background_iterations": 128,
+          "private_ns": 7617800,
+          "shared_ns": 33040100,
+          "shared_background_ns": 4817000,
+          "round": 4,
+          "enabled": true,
+          "warmup": false
+        },
+        {
+          "iterations": 5000,
+          "background_iterations": 128,
+          "private_ns": 7436700,
+          "shared_ns": 44362700,
+          "shared_background_ns": 3745400,
+          "round": 5,
+          "enabled": true,
+          "warmup": false
+        },
+        {
+          "iterations": 5000,
+          "background_iterations": 128,
+          "private_ns": 8929400,
+          "shared_ns": 41627400,
+          "shared_background_ns": 409123200,
+          "round": 5,
+          "enabled": false,
+          "warmup": false
+        }
+      ],
+      "medians_ns": {
+        "control": {
+          "private_ns": 8929400,
+          "shared_ns": 41627400,
+          "shared_background_ns": 409123200
+        },
+        "candidate": {
+          "private_ns": 7617800,
+          "shared_ns": 44362700,
+          "shared_background_ns": 3745400
+        }
+      }
+    }
+  },
+  "benchmark_scope": "Expired-timeout raw 202 WAIT and WAIT_BITSET, private/unflagged, plus raw 455; registration/retirement and 2048 unrelated fixture members; not thread wakeup latency, cross-process throughput, Unix IO or end-to-end performance.",
+  "benchmark_schedule": "Sequentially after builds, native regressions and guest checks; one warmup and five alternating rounds; independent helper domain per child.",
+  "excluded_native_attempt": {
+    "report": "artifacts/syscall-all-paths-20261001/deadline-native-tests.json",
+    "reason": "The waitv protection-page test incorrectly supplied a null vector, which Linux rejects before timeout copying. Final tests use a valid descriptor and separately check null-vector EINVAL."
+  },
+  "remaining": [
+    "PI owner state, donation chains, proxy requeue and task exit",
+    "robust pthread",
+    "realtime clock changes during wait",
+    "ordinary private/shared entry costs",
+    "all syscall/VFS/memory/Unix IO path proofs and measurements"
+  ]
+}

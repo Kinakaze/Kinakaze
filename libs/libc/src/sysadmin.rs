@@ -14,6 +14,7 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 
 use crate::set_errno;
+mod futex_deadline;
 mod futex_requeue;
 mod futex_scalar;
 #[cfg(test)]
@@ -2529,8 +2530,11 @@ const FUTEX_WAKE: u32 = 1;
 const FUTEX_REQUEUE: u32 = 3;
 const FUTEX_CMP_REQUEUE: u32 = 4;
 const FUTEX_WAKE_OP: u32 = 5;
+const FUTEX_LOCK_PI: u32 = 6;
 const FUTEX_WAIT_BITSET: u32 = 9;
 const FUTEX_WAKE_BITSET: u32 = 10;
+const FUTEX_WAIT_REQUEUE_PI: u32 = 11;
+const FUTEX_LOCK_PI2: u32 = 13;
 const FUTEX_PRIVATE_FLAG: u32 = 128;
 const FUTEX_CLOCK_REALTIME: u32 = 256;
 
@@ -2749,9 +2753,12 @@ fn futex_timeout(
     if timeout.is_null() {
         return Ok(None);
     }
-    futex_access(timeout as usize, size_of::<KernelTimespec>(), false)?;
-    // SAFETY: the syscall contract supplies a readable kernel timespec.
-    let target = timespec_ns(unsafe { &*timeout })?;
+    // Copy into a local before interpreting it. Kernel timespec pointers need
+    // not be aligned, and a concurrent unmap must report EFAULT rather than
+    // faulting the host between VirtualQuery and a Rust pointer dereference.
+    let copied = crate::ptrace::read_value::<KernelTimespec>(timeout as usize)
+        .map_err(|error| -i64::from(error))?;
+    let target = timespec_ns(&copied)?;
     let remaining = if absolute {
         let mut now = KernelTimespec::default();
         // SAFETY: `now` is a writable local and the selected clock is supported.
@@ -2972,6 +2979,7 @@ fn unqueue_futex(waiter: &Arc<FutexWaiter>) -> Result<bool, i64> {
     Ok(removed)
 }
 
+#[cfg(test)]
 fn futex_wait(
     address: impl Into<FutexAddress>,
     expected: i32,
@@ -2994,8 +3002,8 @@ fn futex_wait(
     futex_wait_prepared(address, expected, duration, std::time::Instant::now(), bitset)
 }
 
-/// A copied timeout has one budget, including key resolution and every restart.
-/// Modern futex waits validate/copy it before touching the futex address.
+/// One syscall attempt uses a copied timeout budget, including key resolution.
+/// Modern waits reparse their arguments on a genuine syscall restart.
 fn futex_wait_prepared(
     address: FutexAddress,
     expected: i32,
@@ -3140,6 +3148,17 @@ fn futex_syscall(
 ) -> i64 {
     let flags = (op as u32) & (FUTEX_PRIVATE_FLAG | FUTEX_CLOCK_REALTIME);
     let cmd = (op as u32) & !(FUTEX_PRIVATE_FLAG | FUTEX_CLOCK_REALTIME);
+    // sys_futex copies timed commands' utime before do_futex checks command
+    // flags, masks or either key. This includes PI commands whose backend is
+    // still unsupported; their entry-time faults must not become ENOSYS.
+    let deadline = match futex_deadline::legacy(cmd, flags, timeout) {
+        Ok(deadline) => deadline,
+        Err(error) => return error,
+    };
+    #[cfg(test)]
+    if deadline.is_some() {
+        futex_deadline::tests::pause_after_copy(uaddr as usize);
+    }
     if flags & FUTEX_CLOCK_REALTIME != 0 && cmd != FUTEX_WAIT_BITSET {
         return -i64::from(ENOSYS);
     }
@@ -3155,11 +3174,11 @@ fn futex_syscall(
     ) {
         return -i64::from(ENOSYS);
     }
-    // Linux checks non-PI requeue counts, and a wake's empty bit mask,
+    // Linux checks non-PI requeue counts and empty wait/wake bit masks
     // before resolving either futex key. Keep faults from taking precedence.
     if (matches!(cmd, FUTEX_REQUEUE | FUTEX_CMP_REQUEUE)
         && ((val as i32) < 0 || (timeout as usize as u32 as i32) < 0))
-        || (cmd == FUTEX_WAKE_BITSET && val3 == 0)
+        || (matches!(cmd, FUTEX_WAIT_BITSET | FUTEX_WAKE_BITSET) && val3 == 0)
     {
         return -i64::from(EINVAL);
     }
@@ -3169,22 +3188,16 @@ fn futex_syscall(
         Err(error) => return error,
     };
     match cmd {
-        FUTEX_WAIT => futex_wait(
-            address,
-            val as i32,
-            timeout,
-            false,
-            false,
-            FUTEX_BITSET_MATCH_ANY,
-        ),
-        FUTEX_WAIT_BITSET => futex_wait(
-            address,
-            val as i32,
-            timeout,
-            true,
-            flags & FUTEX_CLOCK_REALTIME != 0,
-            val3,
-        ),
+        FUTEX_WAIT | FUTEX_WAIT_BITSET => {
+            let deadline = deadline.expect("timed command was prepared before key resolution");
+            futex_wait_prepared(
+                address,
+                val as i32,
+                deadline.duration,
+                deadline.started,
+                if cmd == FUTEX_WAIT { FUTEX_BITSET_MATCH_ANY } else { val3 },
+            )
+        }
         FUTEX_WAKE => futex_wake(address, val, FUTEX_BITSET_MATCH_ANY),
         FUTEX_WAKE_BITSET => futex_wake(address, val, val3),
         FUTEX_REQUEUE | FUTEX_CMP_REQUEUE => {
@@ -6101,6 +6114,7 @@ fn clear_child_tid() {
 fn exit_current_guest_thread(status: i32) -> ! {
     robust::exit_current();
     clear_child_tid();
+    libpthread::retire_raw_thread();
     if kinakaze_runtime::retire_guest_thread() {
         crate::process::kinakaze_abi__exit(status);
     }
