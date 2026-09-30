@@ -1,6 +1,7 @@
 //! One operation's native metadata capability, selected while resolving links.
 //! The open inode and mount writer live through the caller's mutation. No path
 //! observation or mutable inode metadata survives the operation.
+use super::native_open;
 use crate::fs::object::Object;
 use std::os::windows::io::{AsRawHandle, RawHandle};
 use std::path::Path;
@@ -9,7 +10,6 @@ use windows_sys::Win32::Storage::FileSystem::{
     FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_REPARSE_POINT, FILE_ATTRIBUTE_TAG_INFO,
     FILE_READ_ATTRIBUTES, FILE_READ_EA, FileAttributeTagInfo, GetFileInformationByHandleEx,
 };
-mod native_open;
 
 pub struct NativeMetadata {
     object: Object,

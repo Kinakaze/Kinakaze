@@ -31,6 +31,7 @@ mod metacopy;
 mod mounted;
 mod native_lookup;
 mod native_metadata;
+pub(crate) mod native_open;
 mod options;
 mod profile;
 pub use directory::DirectoryRecord;
