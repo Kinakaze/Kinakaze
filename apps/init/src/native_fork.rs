@@ -344,7 +344,7 @@ fn trace() -> bool {
     std::env::var_os("KINAKAZE_FORK_TRACE").as_deref() == Some(std::ffi::OsStr::new("1"))
 }
 
-fn own(handle: windows_sys::Win32::Foundation::HANDLE) -> io::Result<OwnedHandle> {
+pub(super) fn own(handle: windows_sys::Win32::Foundation::HANDLE) -> io::Result<OwnedHandle> {
     if handle.is_null() || handle == INVALID_HANDLE_VALUE {
         Err(io::Error::last_os_error())
     } else {
@@ -431,12 +431,49 @@ fn spawn(service: &Service, pool: &Pool, spec: &Spec) -> io::Result<Standby> {
         ptr::copy_nonoverlapping(bytes.as_ptr(), view.Value.cast(), bytes.len());
         UnmapViewOfFile(view);
     }
-    let mut handles = vec![
+    let handles = vec![
         ready.as_raw_handle(),
         mapping.as_raw_handle(),
         activate.as_raw_handle(),
         parked.as_raw_handle(),
     ];
+    let command = format!(
+        "kinakaze-child --kinakaze-fork --crysoacu-fork-child={}:{}:{}:{}",
+        ready.as_raw_handle() as usize,
+        mapping.as_raw_handle() as usize,
+        activate.as_raw_handle() as usize,
+        parked.as_raw_handle() as usize
+    );
+    let native = spawn_bootstrap(service, &pool.root, &pool.dist, command, handles)?;
+    Ok(Standby {
+        process: native.process,
+        thread: native.thread,
+        ready,
+        activate,
+        parked,
+        peer: native.peer,
+        tid: native.tid,
+        since: Instant::now(),
+        kill: true,
+    })
+}
+
+pub(super) struct Spawned {
+    pub process: OwnedHandle,
+    pub thread: OwnedHandle,
+    pub peer: PeerIdentity,
+    pub tid: u32,
+}
+
+/// Create an unpublished bootstrap with an explicit inheritance list, and put
+/// it in the session Job before its primary thread may execute any code.
+pub(super) fn spawn_bootstrap(
+    service: &Service,
+    root: &Path,
+    dist: &Path,
+    command: String,
+    mut handles: Vec<windows_sys::Win32::Foundation::HANDLE>,
+) -> io::Result<Spawned> {
     let mut stdio = Vec::new();
     let mut std_handles = [ptr::null_mut(); 3];
     for (index, which) in [STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, STD_ERROR_HANDLE]
@@ -480,13 +517,6 @@ fn spawn(service: &Service, pool: &Pool, spec: &Spec) -> io::Result<Standby> {
         .encode_wide()
         .chain(Some(0))
         .collect();
-    let command = format!(
-        "kinakaze-child --kinakaze-fork --crysoacu-fork-child={}:{}:{}:{}",
-        ready.as_raw_handle() as usize,
-        mapping.as_raw_handle() as usize,
-        activate.as_raw_handle() as usize,
-        parked.as_raw_handle() as usize
-    );
     let mut command: Vec<u16> = command.encode_utf16().chain(Some(0)).collect();
     let mut environment: std::collections::BTreeMap<std::ffi::OsString, std::ffi::OsString> =
         std::env::vars_os().collect();
@@ -499,13 +529,14 @@ fn spawn(service: &Service, pool: &Pool, spec: &Spec) -> io::Result<Standby> {
             "KINAKAZE_V2_TOKEN",
             std::ffi::OsString::from(&service.token),
         ),
-        ("KINAKAZE_V2_ROOT", pool.root.as_os_str().to_owned()),
-        ("KINAKAZE_V2_DIST", pool.dist.as_os_str().to_owned()),
+        ("KINAKAZE_V2_ROOT", root.as_os_str().to_owned()),
+        ("KINAKAZE_V2_DIST", dist.as_os_str().to_owned()),
     ] {
         environment.insert(key.into(), value);
     }
     environment.remove(std::ffi::OsStr::new("KINAKAZE_V2_ADOPTION"));
     environment.remove(std::ffi::OsStr::new("KINAKAZE_V2_ADOPTION_TICKET"));
+    environment.remove(std::ffi::OsStr::new("KINAKAZE_V2_STARTUP_GATE"));
     let mut block = Vec::new();
     for (key, value) in environment {
         block.extend(key.encode_wide());
@@ -535,27 +566,32 @@ fn spawn(service: &Service, pool: &Pool, spec: &Spec) -> io::Result<Standby> {
     {
         return Err(io::Error::last_os_error());
     }
-    let mut slot = Standby {
-        process: own(process.hProcess)?,
-        thread: own(process.hThread)?,
-        ready,
-        activate,
-        parked,
-        peer: PeerIdentity {
-            host_pid: process.dwProcessId,
-            birth: 0,
-        },
-        tid: process.dwThreadId,
-        since: Instant::now(),
-        kill: true,
-    };
+    struct KillOnError(windows_sys::Win32::Foundation::HANDLE);
+    impl Drop for KillOnError {
+        fn drop(&mut self) {
+            if !self.0.is_null() {
+                unsafe { TerminateProcess(self.0, 125) };
+            }
+        }
+    }
+    let process_owner = own(process.hProcess)?;
+    let mut cleanup = KillOnError(process_owner.as_raw_handle());
+    let thread_owner = own(process.hThread)?;
     let native = ProcessHandle::open(process.dwProcessId)?;
     service.job.assign(&native)?;
-    slot.peer.birth = native.birth();
-    if unsafe { ResumeThread(slot.thread.as_raw_handle()) } == u32::MAX {
+    if unsafe { ResumeThread(thread_owner.as_raw_handle()) } == u32::MAX {
         return Err(io::Error::last_os_error());
     }
-    Ok(slot)
+    cleanup.0 = ptr::null_mut();
+    Ok(Spawned {
+        process: process_owner,
+        thread: thread_owner,
+        peer: PeerIdentity {
+            host_pid: process.dwProcessId,
+            birth: native.birth(),
+        },
+        tid: process.dwThreadId,
+    })
 }
 
 #[cfg(test)]

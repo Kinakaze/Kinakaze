@@ -34,6 +34,8 @@ pub struct ProcessAuthority {
     ) -> Option<(std::os::windows::io::OwnedHandle, [u8; 32])>,
     #[cfg(windows)]
     pub native_fork: fn(u64, kinakaze_v2_protocol::native_fork::Spec) -> Option<NativeFork>,
+    #[cfg(windows)]
+    pub native_exec: fn() -> Option<NativeExec>,
     pub prepare_fork: fn(Option<u32>) -> Result<ForkReservation, i32>,
     pub adopt_fork: fn(&ForkReservation) -> Result<(), i32>,
     pub mark_ready: fn() -> Result<(), i32>,
@@ -137,9 +139,22 @@ pub struct NativeFork {
 }
 
 #[cfg(windows)]
+pub struct NativeExec {
+    pub handles: [std::os::windows::io::OwnedHandle; 3],
+    pub pid: u32,
+}
+
+#[cfg(windows)]
+pub fn native_exec() -> Option<NativeExec> {
+    (get()?.native_exec)()
+}
+
+#[cfg(windows)]
 pub(crate) fn native_fork(spec: kinakaze_v2_protocol::native_fork::Spec) -> Option<NativeFork> {
     let transaction = RESERVED_TRANSACTION.load(Ordering::Acquire);
-    if transaction == 0 { return None; }
+    if transaction == 0 {
+        return None;
+    }
     (get()?.native_fork)(transaction, spec)
 }
 

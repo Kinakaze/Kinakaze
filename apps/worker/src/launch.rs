@@ -11,6 +11,8 @@ use std::{
     process::{Child, Command, Stdio},
 };
 
+mod preexec;
+
 struct Options {
     root: PathBuf,
     dist: PathBuf,
@@ -204,6 +206,21 @@ pub fn dispatch(mode: &std::ffi::OsStr, arguments: Vec<OsString>) -> Result<i32>
             };
             guest(options, None, false, false)
         }
+        Some("--kinakaze-exec-pool") => {
+            let activation = preexec::Activation::parse(&arguments)?;
+            let options = Options {
+                root: PathBuf::from(
+                    std::env::var_os("KINAKAZE_V2_ROOT").ok_or("exec root is missing")?,
+                ),
+                dist: PathBuf::from(
+                    std::env::var_os("KINAKAZE_V2_DIST").ok_or("exec distribution is missing")?,
+                ),
+                cwd: "/".into(),
+                web_address: None,
+                arguments: vec!["<exec-handoff>".into()],
+            };
+            guest_with_activation(options, None, false, false, Some(activation))
+        }
         _ => Err(failure("invalid native worker launch mode")),
     }
 }
@@ -278,6 +295,16 @@ fn supervisor(options: Options) -> Result<i32> {
 }
 
 fn guest(options: Options, executable: Option<PathBuf>, prewarm: bool, pool: bool) -> Result<i32> {
+    guest_with_activation(options, executable, prewarm, pool, None)
+}
+
+fn guest_with_activation(
+    options: Options,
+    mut executable: Option<PathBuf>,
+    prewarm: bool,
+    pool: bool,
+    activation: Option<preexec::Activation>,
+) -> Result<i32> {
     let startup = StartupSpan::begin("guest-bootstrap");
     let config = RuntimeOpenConfig {
         endpoint: std::env::var("KINAKAZE_V2_ENDPOINT")?,
@@ -306,6 +333,11 @@ fn guest(options: Options, executable: Option<PathBuf>, prewarm: bool, pool: boo
         unsafe { mem::transmute(library.symbol(c"kinakaze_runtime_close_v1")?) };
     let run: RuntimeGuestRunV1 =
         unsafe { mem::transmute(library.symbol(c"kinakaze_runtime_guest_run_v1")?) };
+    if let Some(activation) = activation {
+        let launch = activation.wait()?;
+        std::env::set_current_dir(&launch.cwd)?;
+        executable = Some(PathBuf::from(launch.executable));
+    }
     let mut api = MaybeUninit::uninit();
     let config = serde_json::to_vec(&config)?;
     if let Some(gate) = gate {
