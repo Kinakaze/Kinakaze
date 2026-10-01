@@ -13,7 +13,7 @@ raw syscall 202 已接入 WAIT_REQUEUE_PI（11）和 CMP_REQUEUE_PI（12）。�
 
 固定 release 原生图在 KINAKAZE_FUTEX_OPT=0/1 下分别通过 libc 625 项、pthread 59 项，零失败；分别忽略 19、4 项性能/helper 测试。新增测试覆盖验证顺序、两种时钟、实际拥有权、目标已有等待者优先于更早的源 token、超时后的真实 native 捐赠恢复、错误目标重试和四个真实 subprocess 崩溃时点。完整原始日志与二进制 SHA-256 保存在本轮 artifacts；测量索引和 guest 验证结果见 [记录](measurements/futex-requeue-pi-2026-10-01.json)。
 
-资源限额继续沿用共享 futex bank 的 2048 条记录和 PI 任务表的 4096 项，源等待者的绑定计入前者。满容量时清理已死亡的源行及绑定，不静默丢弃活跃等待者。pthread PI 属性、Linux 实时调度策略和整体 syscall/VFS/I/O 优化目标仍需继续完成。
+资源限额继续沿用共享 futex bank 的 2048 条记录和 PI 任务表的 4096 项，源等待者的绑定计入前者。满容量时清理已死亡的源行及绑定，不静默丢弃活跃等待者。pthread PI 属性已由[后续接入阶段](pthread-pi-mutex-2026-10-01.md)实现；Linux 实时调度策略和整体 syscall/VFS/I/O 优化目标仍需继续完成。
 
 完整 workspace release 构建成功后，从 Cargo JSON 冻结 38 个发行镜像。真实 Debian guest 的新 requeue-pi、既有 pi/timeout/signal/scalar/vector/requeue，以及共享 pthread condition/robust cancellation，在两种开关配置共 18 行全部通过；各报告的发行文件 SHA-256 完全一致。新探针同时覆盖迁移前后信号、两种 SA_RESTART 设置、private/unflagged、两种时钟、三线程 FIFO 以及 fork 后同文件不同 VA 的空闲/竞争目标。
 
