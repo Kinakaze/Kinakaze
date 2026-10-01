@@ -10,6 +10,16 @@ use windows_sys::Win32::System::Threading::INFINITE;
 
 pub(super) const RESTART: i64 = i64::MIN;
 
+pub(crate) fn transaction(
+    address: usize,
+    private: bool,
+) -> Result<(crate::futex::Transaction, crate::futex::Key), i32> {
+    let address = FutexAddress::resolve(address as _, private).map_err(|error| -error as i32)?;
+    let (transaction, key, queues) = begin(address)?;
+    drop(queues);
+    Ok((transaction, key))
+}
+
 fn begin(
     address: FutexAddress,
 ) -> Result<

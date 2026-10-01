@@ -117,7 +117,8 @@ PTHREAD_SHARED_VERSIONS = {
     for soname, versions in (("libpthread.so.0", {"GLIBC_2.2.5"}),
                              ("libc.so.6", {"GLIBC_2.2.5", "GLIBC_2.34"}))
     for name in ("pthread_mutexattr_setpshared", "pthread_mutexattr_getpshared",
-                 "pthread_condattr_setpshared", "pthread_condattr_getpshared")
+                 "pthread_condattr_setpshared", "pthread_condattr_getpshared",
+                 "pthread_mutexattr_setprotocol", "pthread_mutexattr_getprotocol")
 }
 
 

@@ -28,8 +28,8 @@ enabled. All 59 frozen distribution hashes were unchanged after the run.
 Job CPU was 10.18% lower and other I/O operation count was
 21.96% lower, but wall time did not improve. These are integrated
 observations under different host conditions, not isolated causal attribution
-to one change. The full-install best remains 204.887 seconds and the requested
-sub-180-second target remains unmet.
+to one change. This first run did not improve the 204.887-second reference; the later
+repeat below is the new best. The sub-180-second target remains unmet.
 
 The driver required 20 continuous observed quiet seconds before launch and
 performed no simultaneous build, setup or separate benchmark from this task.
@@ -64,4 +64,99 @@ but its instrumentation and source differ from this acceptance run.
 preserve every phase, source/binary provenance, host observations and the
 comparison. The earlier
 [204.887-second result](integrated-native-read-install-2026-10-01.md)
-remains the best verified full installation.
+is the historical reference for these comparisons.
+
+
+## Same-binary fresh-root repeat
+
+The same unchanged release completed another fresh installation in
+**185.597 seconds**, the new best verified result.
+Downloads took 2.656 seconds separately; Node/npm,
+audit and full file verification all passed. Verification took
+10.601 seconds. All 357 package names/versions matched,
+and all 59 hashes were unchanged. Job CPU was 229.516
+seconds (83.484 user, 146.031 kernel),
+with 5,275 processes, 39,713,856 page faults and
+9,595,454 other I/O operations.
+
+The quiet-start prerequisite was satisfied, but the entire run was not idle:
+26 of 184 samples included a foreign
+compiler; no foreign runtime worker was observed. Consecutive-identity
+competitor CPU growth totaled 29.734
+seconds. Median host CPU was 27.3% and observation
+used 0.500 CPU seconds. Fewer observed
+competitors coincide with the lower wall/CPU times; this does not identify
+all causes of the difference. The remaining target gap is
+5.597 seconds.
+
+A separate sampled rerun of `dpkg --verify` on the first installed tree passed
+in 9.783 seconds using the same binary. The first run's 116.269-second verify
+delay did not reproduce. Seventeen native snapshots were collected; raw stack
+candidates are not reconstructed call stacks or CPU percentages. This is a
+diagnostic rerun, not an installation measurement. Its evidence is retained
+without replacing the original long verification result.
+
+
+## Third fresh-root run with a stricter launch prerequisite
+
+The same frozen release completed another full installation in
+**207.504 seconds**. The sub-180-second target remains unmet; the best of these three runs is 185.597 seconds.
+Download preparation took 2.874 seconds separately;
+the complete installed-file verification passed in 11.033
+seconds. All eight phases passed, all 357 package names/versions matched the
+reference, and all 59 binary hashes were rechecked without change.
+
+The launch prerequisite additionally prohibited compiler processes throughout
+the 20-second quiet interval. It was satisfied after 89.225
+seconds. Foreign work can still start afterward: 141
+of 205 installation samples contained a compiler and
+0 contained foreign runtime workers.
+Observed consecutive-identity competitor CPU was
+264.516 seconds; median host CPU was
+34.3%. These sampled observations do not prove
+that every intervening instant was idle. The observer and prerequisite checks
+used 0.531 CPU seconds.
+
+Installation Job CPU was 254.375 seconds
+(93.203 user, 161.172 kernel), with
+5,275 processes, 39,702,971 page faults and
+9,596,791 other I/O operations. Maintainer scripts, triggers,
+writeback, fsync, source/binary provenance and the unchanged benchmark harness
+are the same as the preceding two runs. No production code changed between
+these observations, so their wall-time differences are not separate code
+optimization gains. All slower observations are retained above.
+
+
+## Fourth run without observed competing compilation
+
+A 60-second quiet-start interval was satisfied after
+154.353 seconds. The unchanged release completed a new
+357-package installation in **203.003 seconds**.
+All eight phases passed, all versions matched and all 59 binary hashes were
+unchanged. Download preparation took 2.306 seconds;
+complete file verification passed in 10.967 seconds.
+Maintainer scripts, triggers, writeback and durability barriers stayed enabled.
+
+None of the 202 installation samples contained an external compiler
+or guest runtime worker. The tracked foreign Python process consumed only
+0.015625 observed CPU seconds. This observer
+does not classify every Windows service or prove continuous host isolation.
+Median host CPU was 30.3%; Job CPU was
+252.438 seconds (88.766 user and
+163.672 kernel). The Job created 5,275 processes,
+with 39,699,529 page faults and 9,595,414 other I/O operations.
+Observation and prerequisite checks used
+0.703 CPU seconds.
+
+This run is slower than the earlier 185.597-second observation despite the
+absence of observed compilation. Compiler contention therefore does not
+explain all timing variation. The best remains 185.597 seconds and the
+180-second goal remains unmet; no further same-binary repetition is justified
+as a substitute for a measured code improvement.
+
+| Same frozen release | Install | Verify | Job CPU | Samples with compiler |
+| --- | ---: | ---: | ---: | ---: |
+| Run 1 | 206.074 s | 116.269 s | 258.766 s | 116/204 |
+| Run 2 | 185.597 s | 10.601 s | 229.516 s | 26/184 |
+| Run 3 | 207.504 s | 11.033 s | 254.375 s | 141/205 |
+| Run 4 | 203.003 s | 10.967 s | 252.438 s | 0/202 |

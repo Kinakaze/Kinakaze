@@ -15,7 +15,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::set_errno;
 mod futex_deadline;
-mod futex_pi;
+pub(crate) mod futex_pi;
 mod futex_requeue;
 mod futex_requeue_pi;
 #[cfg(test)]

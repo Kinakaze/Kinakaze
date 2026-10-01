@@ -11,10 +11,11 @@ extern int pthread_create(word *, const void *, void *(*)(void *), void *);
 extern int pthread_join(word, void **);
 extern int pthread_cancel(word);
 extern int pthread_mutex_init(void *, const void *);
-#if defined(PROBE_ROBUST_MUTEX) || defined(PROBE_SHARED_COND)
+#if defined(PROBE_ROBUST_MUTEX) || defined(PROBE_SHARED_COND) || defined(PROBE_PI_MUTEX)
 extern int pthread_mutexattr_init(void *);
 extern int pthread_mutexattr_setrobust(void *, int);
 extern int pthread_mutexattr_setpshared(void *, int);
+extern int pthread_mutexattr_setprotocol(void *, int);
 extern int pthread_mutexattr_destroy(void *);
 #endif
 extern int pthread_mutex_destroy(void *);
@@ -60,12 +61,21 @@ int probe_cond_cancel(int timed) {
 #ifdef PROBE_ROBUST_MUTEX
     if (pthread_mutexattr_setrobust(&attr, 1)) return 1;
 #endif
+#ifdef PROBE_PI_MUTEX
+    if (pthread_mutexattr_setprotocol(&attr, 1)) return 1;
+#endif
     if (pthread_condattr_init(&condition_attr) || pthread_condattr_setpshared(&condition_attr, 1)) return 1;
     if (pthread_mutex_init(mutex, &attr) || pthread_cond_init(cond, &condition_attr)) return 1;
     pthread_mutexattr_destroy(&attr);
-#elif defined(PROBE_ROBUST_MUTEX)
+#elif defined(PROBE_ROBUST_MUTEX) || defined(PROBE_PI_MUTEX)
     int attr;
-    if (pthread_mutexattr_init(&attr) || pthread_mutexattr_setrobust(&attr, 1)) return 1;
+    if (pthread_mutexattr_init(&attr)) return 1;
+#ifdef PROBE_ROBUST_MUTEX
+    if (pthread_mutexattr_setrobust(&attr, 1)) return 1;
+#endif
+#ifdef PROBE_PI_MUTEX
+    if (pthread_mutexattr_setprotocol(&attr, 1)) return 1;
+#endif
     if (pthread_mutex_init(mutex, &attr) || pthread_cond_init(cond, 0)) return 1;
     pthread_mutexattr_destroy(&attr);
 #else

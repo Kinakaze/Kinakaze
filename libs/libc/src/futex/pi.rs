@@ -18,13 +18,15 @@ pub(super) const TARGET: u32 = 1 << 25;
 pub(super) const SOURCE_JOURNAL: u32 = 1 << 23;
 pub(crate) const RETRY: i32 = i32::MAX;
 const NO_WAITERS: u32 = 1 << 24;
+pub(crate) mod pthread;
+const PINNED: u32 = 1 << 22;
 const DEAD: u32 = 1 << 27;
 const WAITERS: u32 = 1 << 31;
 const OWNER_DIED: u32 = 1 << 30;
 const TID_MASK: u32 = OWNER_DIED - 1;
 const ESRCH: i32 = 3;
 const TASK_CAPACITY: usize = 4096;
-const TASK_MAGIC: u64 = u64::from_le_bytes(*b"CYFPI003");
+const TASK_MAGIC: u64 = u64::from_le_bytes(*b"CYFPI004");
 pub(crate) mod requeue;
 pub(crate) use requeue::{
     RequeueStatus, compare_requeue, enqueue_requeue, poll_requeue, retire_requeue,
@@ -168,6 +170,8 @@ struct TaskBank {
 }
 const TASK_SIZE: usize = size_of::<Header>() + 2 * size_of::<TaskBank>();
 struct Tasks {
+    host: u32,
+    domain: u64,
     view: MEMORY_MAPPED_VIEW_ADDRESS,
     _section: Handle,
 }
@@ -181,11 +185,14 @@ static TASKS: AtomicPtr<Tasks> = AtomicPtr::new(ptr::null_mut());
 impl Tasks {
     /// The caller holds the common futex domain guard throughout access.
     fn shared() -> Result<&'static Self, i32> {
+        let domain = kinakaze_runtime::authority::domain_id();
         let pointer = TASKS.load(Ordering::Acquire);
         if !pointer.is_null() {
-            return Ok(unsafe { &*pointer });
+            let tasks = unsafe { &*pointer };
+            if tasks.host == std::process::id() && tasks.domain == domain {
+                return Ok(tasks);
+            }
         }
-        let domain = kinakaze_runtime::authority::domain_id();
         let section = Handle::new(unsafe {
             CreateFileMappingW(
                 INVALID_HANDLE_VALUE,
@@ -193,7 +200,7 @@ impl Tasks {
                 PAGE_READWRITE,
                 0,
                 TASK_SIZE as u32,
-                wide(&format!(r"Local\kinakaze.futex.pi.tasks.v3.{domain:016x}")).as_ptr(),
+                wide(&format!(r"Local\kinakaze.futex.pi.tasks.v4.{domain:016x}")).as_ptr(),
             )
         })?;
         let view = unsafe { MapViewOfFile(section.0, FILE_MAP_ALL_ACCESS, 0, 0, TASK_SIZE) };
@@ -201,6 +208,8 @@ impl Tasks {
             return Err(errno_from_win32(unsafe { GetLastError() }));
         }
         let tasks = Box::new(Self {
+            host: std::process::id(),
+            domain,
             view,
             _section: section,
         });
@@ -363,9 +372,16 @@ fn retire(task: Registered) {
     let Ok(mut transaction) = Transaction::begin() else {
         return;
     };
+    let journal_tokens: Vec<u64> = transaction
+        .records
+        .iter()
+        .filter(|row| row.reserved & JOURNAL != 0)
+        .map(|row| row.token)
+        .collect();
     transaction.records.retain(|record| {
         !((record.special_wait() || record.reserved & TARGET != 0)
-            && Identity::from(*record) == task.identity)
+            && Identity::from(*record) == task.identity
+            && !journal_tokens.contains(&record.token))
     });
     for record in &mut transaction.records {
         if record.reserved & STATE != 0 && Identity::from(*record) == task.identity {
@@ -573,6 +589,7 @@ fn remove_unused_state(transaction: &mut Transaction, key: Key) {
         .records
         .iter()
         .any(|record| record.key == key && record.pi_wait())
+        && !state(transaction, key).is_some_and(|row| row.reserved & PINNED != 0)
     {
         transaction
             .records
@@ -665,10 +682,12 @@ fn finish_journal(transaction: &mut Transaction, key: Key, address: usize) -> Re
     }) {
         notify(*record, transaction.shared.domain)?;
     }
+    let pinned = state(transaction, key).map_or(0, |row| row.reserved & PINNED);
     let mut found = false;
     for record in &mut transaction.records {
         if record.key == key && record.reserved & STATE != 0 {
-            *record = Identity::from(waiter).record(key, waiter.token, waiter.bitset, STATE);
+            *record =
+                Identity::from(waiter).record(key, waiter.token, waiter.bitset, STATE | pinned);
             found = true;
         }
     }
@@ -863,7 +882,12 @@ pub(crate) fn unlock(
         if atomic_word::compare_exchange(address, old, 0)? != old {
             return Err(EAGAIN);
         }
-        remove_unused_state(transaction, key);
+        // An unlocked object has no pinned owner, including raw unlock of a
+        // pthread PI word. Queued handoffs preserve PINNED in finish_journal.
+        transaction
+            .records
+            .retain(|row| !(row.key == key && row.reserved & (STATE | JOURNAL) != 0));
+        transaction.dirty = true;
         transaction.commit();
     }
     if had_state {
@@ -883,6 +907,17 @@ pub(crate) fn poll(
     token: u64,
     cancel: bool,
 ) -> Result<bool, i32> {
+    poll_policy(transaction, key, address, token, cancel, true)
+}
+
+fn poll_policy(
+    transaction: &mut Transaction,
+    key: Key,
+    address: usize,
+    token: u64,
+    cancel: bool,
+    recover: bool,
+) -> Result<bool, i32> {
     finish_journal(transaction, key, address)?;
     prune(transaction, key);
     let shared = Tasks::shared()?;
@@ -900,7 +935,7 @@ pub(crate) fn poll(
         priorities(transaction, shared, &mut tasks)?;
         return Ok(true);
     }
-    if owner.reserved & DEAD != 0 || owner.dead() {
+    if recover && (owner.reserved & DEAD != 0 || owner.dead()) {
         let next = top(transaction, key).ok_or(EINVAL)?;
         if !next.pi_wait() {
             return Err(EINVAL);

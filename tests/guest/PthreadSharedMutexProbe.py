@@ -1,6 +1,7 @@
 """Shared mutex exclusion, ownership, deadlines, aliases and owner recovery."""
 import ctypes as C
 import os
+import sys
 from pathlib import Path
 
 C.CDLL('libpthread.so.0', mode=C.RTLD_GLOBAL)
@@ -31,7 +32,10 @@ loader.dlvsym.restype = C.c_void_p
 for soname, versions in (('libpthread.so.0', ('GLIBC_2.2.5',)),
                          ('libc.so.6', ('GLIBC_2.2.5', 'GLIBC_2.34'))):
     library = C.CDLL(soname)
-    for name in ('pthread_mutexattr_getpshared', 'pthread_mutexattr_setpshared'):
+    names = ['pthread_mutexattr_getpshared', 'pthread_mutexattr_setpshared']
+    if '--pi-mutex' in sys.argv:
+        names += ['pthread_mutexattr_getprotocol', 'pthread_mutexattr_setprotocol']
+    for name in names:
         expected = C.cast(getattr(library, name), C.c_void_p).value
         for version in versions:
             assert loader.dlvsym(library._handle, name.encode(), version.encode()) == expected

@@ -10,6 +10,8 @@ extern int pthread_mutexattr_setrobust(void *, int);
 extern int pthread_mutexattr_getrobust(const void *, int *);
 extern int pthread_mutexattr_setpshared(void *, int);
 extern int pthread_mutexattr_getpshared(const void *, int *);
+extern int pthread_mutexattr_setprotocol(void *, int);
+extern int pthread_mutexattr_getprotocol(const void *, int *);
 extern int pthread_mutex_init(void *, const void *);
 extern int pthread_mutex_destroy(void *);
 extern int pthread_mutex_lock(void *);
@@ -48,6 +50,10 @@ static int initialize(struct shared *s, int kind, int robust) {
     if (pthread_mutexattr_getpshared(&attr, &found) || found != 1) return 4;
     if (pthread_mutexattr_getrobust(&attr, &found) || found != robust) return 5;
     if (pthread_mutexattr_gettype(&attr, &found) || found != kind) return 6;
+#ifdef PROBE_PI_MUTEX
+    if (pthread_mutexattr_setprotocol(&attr, 1) ||
+        pthread_mutexattr_getprotocol(&attr, &found) || found != 1) return 66;
+#endif
     s->counter = 0;
     int result = pthread_mutex_init(s->mutex, &attr);
     pthread_mutexattr_destroy(&attr);
@@ -211,7 +217,12 @@ int probe_shared_alias(const char *path) {
     if (a->counter != 1200 || b->counter != 1200) return 60;
     word old_generation = a->mutex[4];
     if (pthread_mutex_destroy(b->mutex) || initialize(a, 0, 0)) return 61;
+#ifndef PROBE_PI_MUTEX
     if (old_generation == b->mutex[4]) return 62;
+#else
+    (void)old_generation;
+    if (((int *)b->mutex)[4] != (32 | 128)) return 62;
+#endif
     if (pthread_mutex_lock(b->mutex) || pthread_mutex_unlock(a->mutex)) return 63;
     if (pthread_mutex_destroy(a->mutex)) return 64;
     if (munmap(a, 4096) || munmap(b, 4096) || close(fd) || unlink(path)) return 65;

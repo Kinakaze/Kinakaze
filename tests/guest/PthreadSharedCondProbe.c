@@ -6,6 +6,7 @@ extern int pthread_mutexattr_init(void *);
 extern int pthread_mutexattr_setpshared(void *, int);
 extern int pthread_mutexattr_setrobust(void *, int);
 extern int pthread_mutexattr_settype(void *, int);
+extern int pthread_mutexattr_setprotocol(void *, int);
 extern int pthread_mutex_init(void *, const void *);
 extern int pthread_mutex_destroy(void *);
 extern int pthread_mutex_lock(void *);
@@ -36,8 +37,11 @@ extern void _exit(int) __attribute__((noreturn));
 static int initialize(struct shared *s, int clock) {
     int attr, found;
     if (pthread_mutexattr_init(&attr) || pthread_mutexattr_setpshared(&attr, 1) ||
-        pthread_mutexattr_setrobust(&attr, 1) || pthread_mutexattr_settype(&attr, 2) ||
-        pthread_mutex_init(s->mutex, &attr)) return 1;
+        pthread_mutexattr_setrobust(&attr, 1) || pthread_mutexattr_settype(&attr, 2)) return 1;
+#ifdef PROBE_PI_MUTEX
+    if (pthread_mutexattr_setprotocol(&attr, 1)) return 1;
+#endif
+    if (pthread_mutex_init(s->mutex, &attr)) return 1;
     if (pthread_condattr_init(&attr) || pthread_condattr_setclock(&attr, clock) ||
         pthread_condattr_setpshared(&attr, 1)) return 2;
     if (pthread_condattr_getclock(&attr, &found) || found != clock ||

@@ -234,6 +234,7 @@ EXPORTS
   "pthread_mutexattr_destroy@GLIBC_2.2.5"=pthread_mutexattr_destroy PRIVATE
   pthread_mutexattr_getprotocol
   "pthread_mutexattr_getprotocol"=pthread_mutexattr_getprotocol
+  "pthread_mutexattr_getprotocol@GLIBC_2.2.5"=pthread_mutexattr_getprotocol PRIVATE
   pthread_mutexattr_getpshared
   "pthread_mutexattr_getpshared"=pthread_mutexattr_getpshared
   "pthread_mutexattr_getpshared@GLIBC_2.2.5"=pthread_mutexattr_getpshared PRIVATE
@@ -249,6 +250,7 @@ EXPORTS
   "pthread_mutexattr_init@GLIBC_2.2.5"=pthread_mutexattr_init PRIVATE
   pthread_mutexattr_setprotocol
   "pthread_mutexattr_setprotocol"=pthread_mutexattr_setprotocol
+  "pthread_mutexattr_setprotocol@GLIBC_2.2.5"=pthread_mutexattr_setprotocol PRIVATE
   pthread_mutexattr_setpshared
   "pthread_mutexattr_setpshared"=pthread_mutexattr_setpshared
   "pthread_mutexattr_setpshared@GLIBC_2.2.5"=pthread_mutexattr_setpshared PRIVATE

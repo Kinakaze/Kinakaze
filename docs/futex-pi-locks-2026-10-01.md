@@ -3,8 +3,9 @@
 本阶段接入 raw 202 的 LOCK_PI（6）、UNLOCK_PI（7）、TRYLOCK_PI（8）及
 LOCK_PI2（13）。支持 PRIVATE 与无标记键、共享匿名/文件别名、所有者 TID、
 WAITERS/OWNER_DIED、无竞争 CAS、阻塞转移、绝对超时和信号后的入口重启。
-这是完整 futex 目标中的锁原语阶段，PI requeue 已由[后续实现](futex-requeue-pi-2026-10-01.md)补齐；pthread PI 属性及 Linux 实时
-调度策略仍需实现；全部 3,750 项 syscall 路径审查仍未据此自动标为完成。
+这是完整 futex 目标中的锁原语阶段，PI requeue 已由[后续实现](futex-requeue-pi-2026-10-01.md)补齐；pthread PI 属性已由
+[mutex 接入阶段](pthread-pi-mutex-2026-10-01.md)实现。Linux 实时调度策略仍需实现；
+全部 3,750 项 syscall 路径审查仍未据此自动标为完成。
 
 ## 状态与崩溃恢复
 
@@ -83,7 +84,7 @@ fork 后 leader TID、不同 VA 的文件别名及 raw exit_group 后的死亡�
 
 ## 继续工作
 
-WAIT_REQUEUE_PI/CMP_REQUEUE_PI 已由后续阶段接入。pthread PI 属性、Linux 实时
+WAIT_REQUEUE_PI/CMP_REQUEUE_PI、pthread PI 属性已由后续阶段接入。Linux 实时
 策略、跨 PID namespace 层级的所有者视图，以及更多分配失败、非合作式退出
 和内存权限竞争路径仍需完成。死亡 PI 等待行由 PI 操作/退出清理维护，普通
 wake/requeue 不代替这项清理。原有 futex/VFS/io 的性能与所有 syscall 的
@@ -94,5 +95,6 @@ JIT、SIMD、模板生成及逐路径审查继续推进；本阶段没有宣称�
 以上原生/客体固定图验证对应 63bc6f9 的源树（基础 1153b90）。随后合并
 22df00b 的最新 main，得到 721624a，并通过 release 生产编译检查（14.07 秒）。
 本次合并同时包含独立完成的普通/robust 共享 pthread mutex 后端，见
-[共享 mutex 阶段记录](pthread-shared-mutex-2026-10-01.md)；pthread PI 属性
-仍未接入。此处的生产检查不替代对合并后新源树重新执行整套运行测试。
+[共享 mutex 阶段记录](pthread-shared-mutex-2026-10-01.md)；该固定图当时未接入
+pthread PI 属性，后续实现和新固定图验证见上述 mutex 接入记录。此处的生产
+检查不替代对合并后新源树重新执行整套运行测试。

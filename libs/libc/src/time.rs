@@ -1421,7 +1421,7 @@ fn system_clock_granularity() -> i64 {
 }
 
 /// Reads `clock` into `(seconds, nanoseconds)`, or reports the errno to use.
-fn read_clock(clock: c_int) -> Result<(i64, i64), i32> {
+pub(crate) fn read_clock(clock: c_int) -> Result<(i64, i64), i32> {
     match clock {
         CLOCK_REALTIME | 8 => Ok(read_realtime(true)),
         CLOCK_REALTIME_COARSE => Ok(read_realtime(false)),
