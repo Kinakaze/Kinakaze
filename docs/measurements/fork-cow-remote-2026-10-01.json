@@ -4975,9 +4975,11 @@
     "fix-r19-cow-remote-types.py": "00b4eca82e5922830fb64ee90d85f141e2fb7a533c7886cad4c54e8d53249dbd",
     "repeat-r19-cow-remote.py": "4994a861ef381d02593248adae4383f453cff43fb71a913ffa83e5eaed9761de",
     "record-r19-cow-remote.py": "ec7abbf9c39b7e32de2aba6fa52660198ef3cf29fae2d8e8082b1ea3fc7ab66c",
-    "native-r19-cow-remote-build-error.log": "da54d8226054822f4b1cdbc9072523e6b0acbae007ad8d0ef7460f743693810d"
+    "native-r19-cow-remote-build-error.log": "da54d8226054822f4b1cdbc9072523e6b0acbae007ad8d0ef7460f743693810d",
+    "correct-r18-r19-debconf-acceptance.py": "206e33228e47456ad6dfcb325eb05c4e1440248fc23042d65728b5ea07100c24"
   },
   "whole_fork_speedup_proven": false,
   "whole_install_speedup_proven": false,
-  "limitations": "Tests copy into real remote PAGE_WRITECOPY views of a newly created suspended process. Warm views are reused; cold views are unmapped and freshly mapped before each timed copy. Creation, mapping and full ReadProcessMemory checks are outside timers. Both routes share one binary and use three ABBA rounds per invocation. Host isolation is not guaranteed. Cold differences change sign, so no cold-copy gain is claimed; repeated warm gains support retaining coalescing. This is not a complete fork or installation benchmark."
+  "limitations": "Tests copy into real remote PAGE_WRITECOPY views of a newly created suspended process. Warm views are reused; cold views are unmapped and freshly mapped before each timed copy. Creation, mapping and full ReadProcessMemory checks are outside timers. Both routes share one binary and use three ABBA rounds per invocation. Host isolation is not guaranteed. Cold differences change sign, so no cold-copy gain is claimed; repeated warm gains support retaining coalescing. This is not a complete fork or installation benchmark.",
+  "installation_acceptance_update": "R18 completed its historical eight phases but failed debconf preconfiguration, so its 292.443-second time and the historical 185.597-second best are not accepted complete-work comparisons. The remote COW measurements and correctness assertions do not use the guest seed and remain valid. The working-preconfiguration reference is R10 at 215.415 seconds."
 }

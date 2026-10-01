@@ -39,8 +39,11 @@ and the repeats resolve this specific uncertainty rather than replacing it.
 This comparison strengthens the [local-view evidence](fork-cow-coalescing-2026-10-01.md)
 for selecting coalescing, but does not prove a complete fork or APT wall-time
 improvement. The latest [integrated installation](integrated-selected-cow-install-2026-10-01.md)
-passed correctness in 292.443 seconds under observed competing work. The
-185.597-second historical best and the unmet 180-second goal are unchanged.
+completed its historical checks in 292.443 seconds under observed competing
+work, but failed debconf preconfiguration. That run and the historical
+185.597-second result are not accepted complete-work comparisons. The current
+working-preconfiguration reference is R10 at 215.415 seconds; the 180-second
+goal remains unmet. These remote copy tests do not use the guest seed.
 
 [Raw samples and provenance](measurements/fork-cow-remote-2026-10-01.json)
 preserve every observation, per-invocation comparisons, binary hashes and

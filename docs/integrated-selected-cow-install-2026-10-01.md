@@ -7,18 +7,22 @@ for the current working-preconfiguration fixture; see the
 
 The frozen production source `2c66b62c92b46048680811fc8e725c828ad2d028` completed a fresh installation
 of the same 357 Node.js/npm packages in **292.443 seconds**.
-All eight phases passed: update, download, plan, installation, Node and npm smoke
-checks, empty dpkg audit and full installed-file verification. Package names and
-versions exactly match the previous reference. Downloads took
+All eight phases passed under the historical harness: update, download, plan,
+installation, Node and npm smoke checks, empty dpkg audit and full installed-file
+verification. However, its stderr contains debconf version/template extraction
+errors, so this observation fails the current preconfiguration acceptance check.
+It is retained as a historical measurement, not an accepted complete-work result.
+Package names and versions exactly match the previous reference. Downloads took
 2.564 seconds and verification took
 21.727 seconds, both reported separately.
 
 This production build combines selected absolute/relative native read and write
 opens, compact descriptor-link headers, the selected PI metadata path and
 [coalesced COW copy ranges](fork-cow-coalescing-2026-10-01.md), with the existing
-fork/exec pools and native catalog. Scripts, triggers, writeback and fsync remain
-enabled. The guest root was independently installed from the original immutable
-seed. Its initial package status and seed manifest hashes are recorded.
+fork/exec pools and native catalog. Maintainer scripts, triggers, writeback and
+fsync were enabled; debconf preconfiguration failed in the original seed. The
+guest root was independently installed from the original immutable seed. Its
+initial package status and seed manifest hashes are recorded.
 
 The build passed validation of 29 native modules and 5,973 guest exports.
 Thirteen packaged guest checks passed, including protected and sparse stacks,
@@ -48,8 +52,9 @@ Own compilation, setup and separate probes completed before timed installation.
 All five benchmark tool hashes remained unchanged.
 
 The 180-second target remains unmet in this observation.
-The previous best verified installation was 185.597 seconds. Component route
-comparisons justify their selection; this combined run does not isolate each
+The historical 185.597-second result used the same failing seed. The best
+verified result with working preconfiguration is R10 at 215.415 seconds.
+Component route comparisons justify their selection; this combined run does not isolate each
 change or establish timing variance across different host/storage states.
 
 Every packaged DLL and import library came from this Cargo invocation; static
