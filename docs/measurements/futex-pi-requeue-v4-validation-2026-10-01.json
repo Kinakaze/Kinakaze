@@ -1,0 +1,626 @@
+{
+  "base_commit": "4e5914f37c8642e361ef5224c5dfb4fe99d504e8",
+  "scope": "v4 PI requeue raw batch dispatch, readonly alias recovery, dead-source bank reclamation and coherent guest validation",
+  "source_sha256": {
+    "libs/libc/src/futex.rs": "0b592bfbfaa07f4f8ef5a0efe4ed7ffc6ac3243ef6a6c6d99905998bc4f4162a",
+    "libs/libc/src/futex/pi/requeue/tests.rs": "c97a59623f4e9ebfd04bde12851c1b7d17f5c12af1da291f25b11d3e73ba9e97",
+    "libs/libc/src/sysadmin/futex_requeue_pi/tests.rs": "36eae280e8fb1338957f12b94212c76e57b29592f15b257e4bb5aea77dc76c0d",
+    "tests/guest/FutexRequeuePiProbe.py": "b97d6882abf4c85bc1a57392ca7a83b47b0acc7fa1d488a00598e8b6cfa1a86b",
+    "tools/benchmark-futex-queues.py": "fc102581a0e9f47798a51201a3496a70ca5e9aa870e7a1fbf9c4d81a09dcb90f"
+  },
+  "native": {
+    "passed": true,
+    "image_hashes_unchanged": true,
+    "manifest": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-v4-native-final\\manifest.json",
+    "rows": [
+      {
+        "crate": "kinakaze_libc",
+        "optimized": false,
+        "exit_code": 0,
+        "summary": "test result: ok. 638 passed; 0 failed; 21 ignored",
+        "passed": 638,
+        "failed": 0,
+        "ignored": 21,
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-v4-final-kinakaze_libc-0.log",
+        "sha256": "b097b33492ff0170d293df61f31130d22f25c4ac40b188919dca01f8d0ff251f"
+      },
+      {
+        "crate": "kinakaze_libpthread",
+        "optimized": false,
+        "exit_code": 0,
+        "summary": "test result: ok. 59 passed; 0 failed; 4 ignored",
+        "passed": 59,
+        "failed": 0,
+        "ignored": 4,
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-v4-final-kinakaze_libpthread-0.log",
+        "sha256": "c95cf1665fa8c0687f28c17893c580cfa53f68351be3478bb01bcf3f80696acb"
+      },
+      {
+        "crate": "kinakaze_libc",
+        "optimized": true,
+        "exit_code": 0,
+        "summary": "test result: ok. 638 passed; 0 failed; 21 ignored",
+        "passed": 638,
+        "failed": 0,
+        "ignored": 21,
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-v4-final-kinakaze_libc-1.log",
+        "sha256": "9e283a010bee368a4a9520c658807c77bf5a4e378cb012ad62791f8abfcb2cd3"
+      },
+      {
+        "crate": "kinakaze_libpthread",
+        "optimized": true,
+        "exit_code": 0,
+        "summary": "test result: ok. 59 passed; 0 failed; 4 ignored",
+        "passed": 59,
+        "failed": 0,
+        "ignored": 4,
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-v4-final-kinakaze_libpthread-1.log",
+        "sha256": "160cb9d8e586f13bc5514fb1c0b550d2c3af36687ef49cfad310d65e24628710"
+      }
+    ]
+  },
+  "native_manifest": {
+    "build": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-v4-native-build-4.jsonl",
+    "build_sha256": "fc0346d6fb6690b621ab6e0544f21f1eebc037a56a4a31a0466f6f0dc7935494",
+    "executables": {
+      "kinakaze_libpthread": "kinakaze_libpthread-4d10b58392baf079.exe",
+      "kinakaze_libc": "kinakaze_libc-9b2ff81f74c64496.exe"
+    },
+    "files": {
+      "kinakaze_alloc.so": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_alloc.dll",
+        "sha256": "2d099db6066f9e87353febd2a66c10f5c0e4ef1ed9eee155dc59666e776da6e8"
+      },
+      "serde_derive-ebb234dc8366345c.dll": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\deps\\serde_derive-ebb234dc8366345c.dll",
+        "sha256": "e0805346528b838488002807261a16733e7efcd6f4843a9bd660e2f8c44ff48a"
+      },
+      "kinakaze_elf.so": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_elf.dll",
+        "sha256": "921e390b5f988eece280f6a94cb0bc77906e5e4112c616f321fd0549d28d7e45"
+      },
+      "kinakaze_kernel.so": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_kernel.dll",
+        "sha256": "83ef53f025b9c7ab433c8bf2ac9ae67dfaf3133e59a8e3c37b235b44d307dd6d"
+      },
+      "kinakaze_tls.so": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_tls.dll",
+        "sha256": "484fc5cf0934a36c085910707ab2589432da47d81f9e91014c9200f5ea8a80be"
+      },
+      "kinakaze_vfs.so": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_vfs.dll",
+        "sha256": "5768d660ef3da419741f1ee9b45e3b48770ab693989c9f2c10495b062280354c"
+      },
+      "libm.so.6": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libm.dll",
+        "sha256": "68c6c6f12c2da4cdb3022a2069f3d901cebcaf93635074ec3a0a097b7598f550"
+      },
+      "libpthread.so.0": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libpthread.dll",
+        "sha256": "0eb473dd7ba417bbb4c5d1a8561fa05b67b4afa597aad426df18522fc8f22676"
+      },
+      "ld-linux-x86-64.so.2": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_link.dll",
+        "sha256": "46deac6cc6bf77cad91c4d39b6e5fb99a2caf7363e4483f7810fbb44e4e74894"
+      },
+      "kinakaze_libpthread-4d10b58392baf079.exe": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\deps\\kinakaze_libpthread-4d10b58392baf079.exe",
+        "sha256": "3b3a71aa5715e1e49e46c6019b5c92349a03d488f6f6815722fa9614af46ebeb"
+      },
+      "kinakaze_libc-9b2ff81f74c64496.exe": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\deps\\kinakaze_libc-9b2ff81f74c64496.exe",
+        "sha256": "9cb8ff3144f22e11b669a309716311e84221cc77ff4813ff95b96f75a7044e64"
+      },
+      "std-0cebe7c42cd80226.dll": {
+        "source": "C:\\Users\\nanaeo\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\std-0cebe7c42cd80226.dll",
+        "sha256": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc"
+      }
+    }
+  },
+  "guest": {
+    "passed": true,
+    "rows": 18,
+    "distribution_sha256": {
+      "worker.exe": "790fefeb2f239e6ef4f1b4bc56de2627f6f03d0a47de51e182f46655806819f9",
+      "init.exe": "ad637ce3862bd75189e6a335a5153b7e89d9db61ca817678c033f45169f2a73b",
+      "rootfs.manifest.json": "efb5c990576e555db5ef532aaaac415b98bab802f3cebac145919a73a9f430c6",
+      "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+      "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+      "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "rootfs\\lib\\kinakaze_alloc.so": "2d099db6066f9e87353febd2a66c10f5c0e4ef1ed9eee155dc59666e776da6e8",
+      "rootfs\\lib\\kinakaze_elf.so": "921e390b5f988eece280f6a94cb0bc77906e5e4112c616f321fd0549d28d7e45",
+      "rootfs\\lib\\kinakaze_guest_engine.so": "3b2e347701f2dafeb3f8ef33d4c7d72034c04b2466ff233b22450b71d8709acc",
+      "rootfs\\lib\\kinakaze_kernel.so": "83ef53f025b9c7ab433c8bf2ac9ae67dfaf3133e59a8e3c37b235b44d307dd6d",
+      "rootfs\\lib\\kinakaze_tls.so": "484fc5cf0934a36c085910707ab2589432da47d81f9e91014c9200f5ea8a80be",
+      "rootfs\\lib\\kinakaze_vfs.so": "c60d4756be5a2af5c9a87e92ec8758b2d48e412e7c548f2ab4387ae3a63fc864",
+      "rootfs\\lib\\ld-linux-x86-64.so.2": "9d9539ca5021e3fdab98edbd92082596fd79e29e7d860769f1d3b573391da59f",
+      "rootfs\\lib\\libasound.so.2": "eef1c6dab26be076fe19992282c4ff51dce46b27834a1f197113825fe3856ead",
+      "rootfs\\lib\\libc.so.6": "69709858ab997337b8e1af5d1abe2ec5833c17a14e0d374ae0e557d34dcdc8ba",
+      "rootfs\\lib\\libcuda.so.1": "7be5e8127d514565590aef35be4106bdbbe6b95e2de44eab8ac520a9f994c469",
+      "rootfs\\lib\\libdisplay.so.1": "fc30afc458b78b5be29bcf35e0c9fb87a699ee4d10babbf6f53b2fce9f2e455f",
+      "rootfs\\lib\\libdl.so.2": "41e77387322b073f980e3f2fca290d025fe7e936ea2f07bd7b9a64f007782d83",
+      "rootfs\\lib\\libEGL.so.1": "8d7f5a4362997069213c11f07bf6a2423f6135abb6ddec2f2d691d1b05534ad4",
+      "rootfs\\lib\\libGL.so.1": "70e80ae6fac94277a29b7c17c2bc6c2423cc2e1406f5ef2a18964dfc482de7f3",
+      "rootfs\\lib\\libGLESv2.so.2": "098904e11b826445b9138c91c0903ff3178a2adbeb2027295925285bb03d4474",
+      "rootfs\\lib\\libGLX.so.0": "333987eb20b4a48af521f389118d2b1ba4363e1af1c61f9ab88a4689681f43eb",
+      "rootfs\\lib\\libkinakaze-runtime.so.1": "7d4366abffaeac906a2f40be135a88c5296c5cc0e5f99d797c1208d6c8904706",
+      "rootfs\\lib\\libm.so.6": "68c6c6f12c2da4cdb3022a2069f3d901cebcaf93635074ec3a0a097b7598f550",
+      "rootfs\\lib\\libOpenGL.so.0": "3498e1914a27143f0d954db001c5790e0807448053692347ab6fe826f91ce5ad",
+      "rootfs\\lib\\libpipewire-0.3.so.0": "be5c563c306d985edf788aa9d493c514055be6ee12dd6a9ba63e91dbdc372ca5",
+      "rootfs\\lib\\libpthread.so.0": "375d9f2b7a1d6b8ab8e6590b1f9fb29a2d4a992d0fb861b6e68d4b8500dc8274",
+      "rootfs\\lib\\libpulse.so.0": "81ceb961c1a018a7997e4abc3956db14fe7231c5823e8734b10320475885a815",
+      "rootfs\\lib\\libresolv.so.2": "7b389a2c6dd0ee8bb968f0c915b48df17fe8ea05d7a9fd985a45182437d9aaa1",
+      "rootfs\\lib\\librt.so.1": "662f3c4a9d85ae01157daf020dde322bff449e4a94382995e900897db3fce323",
+      "rootfs\\lib\\libvulkan.so.1": "c2f41ed580fa65c455d1395aab330c2cb05ec6cfd2a00e802df51d43f628a1fa",
+      "rootfs\\lib\\libX11-xcb.so.1": "e7e781ece04d378e7b3e47f2fadcb87cf705d7bb4a889a3e2c1e5d33fcb16b87",
+      "rootfs\\lib\\libX11.so.6": "d82941089d12062a98b6cd234782874dc303aa814490f00b7130d31cbd45ee02",
+      "rootfs\\lib\\libxcb.so.1": "7fe8ac138a5f04ee3b0bce5fe706512af84b450be02afaedde153a3d702ae9ba",
+      "rootfs\\lib\\libXcursor.so.1": "cecf33ddfb7103ab93be9c9481c01b5efe220f8efae2f58d1c62ff45eb0ee460",
+      "rootfs\\lib\\libXext.so.6": "78e939e84a2bf6915de036a057fc790ca198779eb06328d3ef6ef5827d538999",
+      "rootfs\\lib\\libXi.so.6": "3aea5d159d8459cd1d3c5dcacfa7f6b71a7b050e1bfc29c1072aeba511c03330",
+      "rootfs\\lib\\libXinerama.so.1": "057080ce8bcb65bf340f8dcc322681de89c0624d02ae115959eb398d17a2f3f8",
+      "rootfs\\lib\\libXrandr.so.2": "dd362494e20d3b3e133d40b0c58e6245022686dbf1625591db2af0c03c070054",
+      "rootfs\\lib\\libXrender.so.1": "8a0bcd45cab034b2e4bd6f53be65f08ac60ab0f437f0c8cb89902a0a290d46a6",
+      "rootfs\\lib\\libXxf86vm.so.1": "971341409a22bef7f643dc1bd1e4a75d3ac940c4f30c827886e0d937e683f570",
+      "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+      "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+    },
+    "reports": [
+      {
+        "report": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\guest-pi-requeue-v4\\report.json",
+        "sha256": "45a066c6303d2e40f8c0566f580bc56adf5c0edae31c446f276a76ae162ed2d0",
+        "rows": 2
+      },
+      {
+        "report": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\guest-pi-requeue-v4-pi\\report.json",
+        "sha256": "3c30e5a109b0e00ac5c91532b138c5eac9a46210fd99bcaebaeea7f114b0bca6",
+        "rows": 2
+      },
+      {
+        "report": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\guest-pi-requeue-v4-timeout\\report.json",
+        "sha256": "b5b7ee9b035ff8a90b4a66e9c9d41dc5c08a0bf807968036820f901f86c68651",
+        "rows": 2
+      },
+      {
+        "report": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\guest-pi-requeue-v4-signal\\report.json",
+        "sha256": "15333efdd189a8fd1d7c2fc524fb6e4682b971fc413491da94477e20d55df832",
+        "rows": 2
+      },
+      {
+        "report": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\guest-pi-requeue-v4-scalar\\report.json",
+        "sha256": "3663e117ceae0dfc315371623e32ff163c6760a10fa73c99e34dc643b4b4680c",
+        "rows": 2
+      },
+      {
+        "report": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\guest-pi-requeue-v4-vector\\report.json",
+        "sha256": "9b3d53c2aa7d474acdd6d86701673ae78aae425f62fcd9f3a6b25bb964781514",
+        "rows": 2
+      },
+      {
+        "report": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\guest-pi-requeue-v4-requeue\\report.json",
+        "sha256": "a713fb8afc26bac545ab9ff5e3c6b8248895c51f63076840214779247115fae8",
+        "rows": 2
+      },
+      {
+        "report": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\guest-pi-requeue-v4-pthread\\report.json",
+        "sha256": "9701d063fa185a027597cea178169a7d652a4b05c61527a6ee10db2ed9e69dd7",
+        "rows": 4
+      }
+    ]
+  },
+  "guest_staging": {
+    "build": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-v4-workspace-build.jsonl",
+    "build_sha256": "95caf4ee1b498d0c8c60346ba52d2ad3be1d3c6d72be1f8c1ae1603be0edf4e3",
+    "base": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\candidate-pi",
+    "candidate": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\candidate-pi-requeue-v4",
+    "files": {
+      "rootfs/lib/kinakaze_alloc.so": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_alloc.dll",
+        "sha256": "2d099db6066f9e87353febd2a66c10f5c0e4ef1ed9eee155dc59666e776da6e8"
+      },
+      "rootfs/lib/kinakaze_elf.so": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_elf.dll",
+        "sha256": "921e390b5f988eece280f6a94cb0bc77906e5e4112c616f321fd0549d28d7e45"
+      },
+      "rootfs/lib/kinakaze_kernel.so": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_kernel.dll",
+        "sha256": "83ef53f025b9c7ab433c8bf2ac9ae67dfaf3133e59a8e3c37b235b44d307dd6d"
+      },
+      "rootfs/lib/kinakaze_tls.so": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_tls.dll",
+        "sha256": "484fc5cf0934a36c085910707ab2589432da47d81f9e91014c9200f5ea8a80be"
+      },
+      "rootfs/lib/libm.so.6": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libm.dll",
+        "sha256": "68c6c6f12c2da4cdb3022a2069f3d901cebcaf93635074ec3a0a097b7598f550"
+      },
+      "rootfs/lib/libGLX.so.0": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libGLX.dll",
+        "sha256": "333987eb20b4a48af521f389118d2b1ba4363e1af1c61f9ab88a4689681f43eb"
+      },
+      "rootfs/lib/libOpenGL.so.0": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libOpenGL.dll",
+        "sha256": "3498e1914a27143f0d954db001c5790e0807448053692347ab6fe826f91ce5ad"
+      },
+      "rootfs/lib/libXxf86vm.so.1": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libXxf86vm.dll",
+        "sha256": "971341409a22bef7f643dc1bd1e4a75d3ac940c4f30c827886e0d937e683f570"
+      },
+      "rootfs/lib/libXcursor.so.1": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libXcursor.dll",
+        "sha256": "cecf33ddfb7103ab93be9c9481c01b5efe220f8efae2f58d1c62ff45eb0ee460"
+      },
+      "rootfs/lib/libEGL.so.1": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libEGL.dll",
+        "sha256": "8d7f5a4362997069213c11f07bf6a2423f6135abb6ddec2f2d691d1b05534ad4"
+      },
+      "rootfs/lib/libX11-xcb.so.1": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libX11_xcb.dll",
+        "sha256": "e7e781ece04d378e7b3e47f2fadcb87cf705d7bb4a889a3e2c1e5d33fcb16b87"
+      },
+      "rootfs/lib/libXinerama.so.1": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libXinerama.dll",
+        "sha256": "057080ce8bcb65bf340f8dcc322681de89c0624d02ae115959eb398d17a2f3f8"
+      },
+      "rootfs/lib/libdl.so.2": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libdl.dll",
+        "sha256": "41e77387322b073f980e3f2fca290d025fe7e936ea2f07bd7b9a64f007782d83"
+      },
+      "rootfs/lib/libXrender.so.1": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libXrender.dll",
+        "sha256": "8a0bcd45cab034b2e4bd6f53be65f08ac60ab0f437f0c8cb89902a0a290d46a6"
+      },
+      "rootfs/lib/libGLESv2.so.2": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libGLESv2.dll",
+        "sha256": "098904e11b826445b9138c91c0903ff3178a2adbeb2027295925285bb03d4474"
+      },
+      "rootfs/lib/libdisplay.so.1": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libdisplay.dll",
+        "sha256": "fc30afc458b78b5be29bcf35e0c9fb87a699ee4d10babbf6f53b2fce9f2e455f"
+      },
+      "worker.exe": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\worker.exe",
+        "sha256": "790fefeb2f239e6ef4f1b4bc56de2627f6f03d0a47de51e182f46655806819f9"
+      },
+      "init.exe": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\init.exe",
+        "sha256": "ad637ce3862bd75189e6a335a5153b7e89d9db61ca817678c033f45169f2a73b"
+      },
+      "rootfs/lib/kinakaze_vfs.so": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_vfs.dll",
+        "sha256": "c60d4756be5a2af5c9a87e92ec8758b2d48e412e7c548f2ab4387ae3a63fc864"
+      },
+      "rootfs/lib/libcuda.so.1": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libcuda.dll",
+        "sha256": "7be5e8127d514565590aef35be4106bdbbe6b95e2de44eab8ac520a9f994c469"
+      },
+      "rootfs/lib/libpthread.so.0": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libpthread.dll",
+        "sha256": "375d9f2b7a1d6b8ab8e6590b1f9fb29a2d4a992d0fb861b6e68d4b8500dc8274"
+      },
+      "rootfs/lib/ld-linux-x86-64.so.2": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_link.dll",
+        "sha256": "9d9539ca5021e3fdab98edbd92082596fd79e29e7d860769f1d3b573391da59f"
+      },
+      "rootfs/lib/libc.so.6": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libc.dll",
+        "sha256": "69709858ab997337b8e1af5d1abe2ec5833c17a14e0d374ae0e557d34dcdc8ba"
+      },
+      "rootfs/lib/libresolv.so.2": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libresolv.dll",
+        "sha256": "7b389a2c6dd0ee8bb968f0c915b48df17fe8ea05d7a9fd985a45182437d9aaa1"
+      },
+      "rootfs/lib/librt.so.1": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_librt.dll",
+        "sha256": "662f3c4a9d85ae01157daf020dde322bff449e4a94382995e900897db3fce323"
+      },
+      "rootfs/lib/libpipewire-0.3.so.0": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libpipewire.dll",
+        "sha256": "be5c563c306d985edf788aa9d493c514055be6ee12dd6a9ba63e91dbdc372ca5"
+      },
+      "rootfs/lib/libpulse.so.0": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libpulse.dll",
+        "sha256": "81ceb961c1a018a7997e4abc3956db14fe7231c5823e8734b10320475885a815"
+      },
+      "rootfs/lib/libasound.so.2": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libasound.dll",
+        "sha256": "eef1c6dab26be076fe19992282c4ff51dce46b27834a1f197113825fe3856ead"
+      },
+      "rootfs/lib/kinakaze_guest_engine.so": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_guest_engine.dll",
+        "sha256": "3b2e347701f2dafeb3f8ef33d4c7d72034c04b2466ff233b22450b71d8709acc"
+      },
+      "rootfs/lib/libkinakaze-runtime.so.1": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_runtime.dll",
+        "sha256": "7d4366abffaeac906a2f40be135a88c5296c5cc0e5f99d797c1208d6c8904706"
+      },
+      "rootfs/lib/libX11.so.6": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libX11.dll",
+        "sha256": "d82941089d12062a98b6cd234782874dc303aa814490f00b7130d31cbd45ee02"
+      },
+      "rootfs/lib/libXrandr.so.2": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libXrandr.dll",
+        "sha256": "dd362494e20d3b3e133d40b0c58e6245022686dbf1625591db2af0c03c070054"
+      },
+      "rootfs/lib/libGL.so.1": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libGL.dll",
+        "sha256": "70e80ae6fac94277a29b7c17c2bc6c2423cc2e1406f5ef2a18964dfc482de7f3"
+      },
+      "rootfs/lib/libXext.so.6": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libXext.dll",
+        "sha256": "78e939e84a2bf6915de036a057fc790ca198779eb06328d3ef6ef5827d538999"
+      },
+      "rootfs/lib/libXi.so.6": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libXi.dll",
+        "sha256": "3aea5d159d8459cd1d3c5dcacfa7f6b71a7b050e1bfc29c1072aeba511c03330"
+      },
+      "rootfs/lib/libxcb.so.1": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libxcb.dll",
+        "sha256": "7fe8ac138a5f04ee3b0bce5fe706512af84b450be02afaedde153a3d702ae9ba"
+      },
+      "rootfs/lib/libvulkan.so.1": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libvulkan.dll",
+        "sha256": "c2f41ed580fa65c455d1395aab330c2cb05ec6cfd2a00e802df51d43f628a1fa"
+      },
+      "std-0cebe7c42cd80226.dll": {
+        "source": "C:\\Users\\nanaeo\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\std-0cebe7c42cd80226.dll",
+        "sha256": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc"
+      }
+    }
+  },
+  "benchmark": {
+    "passed": true,
+    "case": "requeue-pi-batch",
+    "binary": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-v4-native-final\\kinakaze_libc-9b2ff81f74c64496.exe",
+    "sha256": "9cb8ff3144f22e11b669a309716311e84221cc77ff4813ff95b96f75a7044e64",
+    "dependencies": {
+      "kinakaze_alloc.so": "2d099db6066f9e87353febd2a66c10f5c0e4ef1ed9eee155dc59666e776da6e8",
+      "kinakaze_elf.so": "921e390b5f988eece280f6a94cb0bc77906e5e4112c616f321fd0549d28d7e45",
+      "kinakaze_kernel.so": "83ef53f025b9c7ab433c8bf2ac9ae67dfaf3133e59a8e3c37b235b44d307dd6d",
+      "kinakaze_tls.so": "484fc5cf0934a36c085910707ab2589432da47d81f9e91014c9200f5ea8a80be",
+      "kinakaze_vfs.so": "5768d660ef3da419741f1ee9b45e3b48770ab693989c9f2c10495b062280354c",
+      "ld-linux-x86-64.so.2": "46deac6cc6bf77cad91c4d39b6e5fb99a2caf7363e4483f7810fbb44e4e74894",
+      "libm.so.6": "68c6c6f12c2da4cdb3022a2069f3d901cebcaf93635074ec3a0a097b7598f550",
+      "libpthread.so.0": "0eb473dd7ba417bbb4c5d1a8561fa05b67b4afa597aad426df18522fc8f22676"
+    },
+    "rows": [
+      {
+        "iterations": 8,
+        "unflagged_8_ns": 316862.5,
+        "unflagged_32_ns": 2859275,
+        "unflagged_128_ns": 42801600,
+        "private_8_ns": 270675,
+        "private_32_ns": 3085375,
+        "private_128_ns": 44072712.5,
+        "round": 0,
+        "enabled": false,
+        "warmup": true
+      },
+      {
+        "iterations": 8,
+        "unflagged_8_ns": 138812.5,
+        "unflagged_32_ns": 317725,
+        "unflagged_128_ns": 1222250,
+        "private_8_ns": 80725,
+        "private_32_ns": 310400,
+        "private_128_ns": 1338262.5,
+        "round": 0,
+        "enabled": true,
+        "warmup": true
+      },
+      {
+        "iterations": 8,
+        "unflagged_8_ns": 134850,
+        "unflagged_32_ns": 321075,
+        "unflagged_128_ns": 1308362.5,
+        "private_8_ns": 83137.5,
+        "private_32_ns": 290387.5,
+        "private_128_ns": 1169612.5,
+        "round": 1,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 8,
+        "unflagged_8_ns": 300837.5,
+        "unflagged_32_ns": 2619237.5,
+        "unflagged_128_ns": 43094150,
+        "private_8_ns": 230800,
+        "private_32_ns": 2877200,
+        "private_128_ns": 44054725,
+        "round": 1,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "iterations": 8,
+        "unflagged_8_ns": 283087.5,
+        "unflagged_32_ns": 2862562.5,
+        "unflagged_128_ns": 42501862.5,
+        "private_8_ns": 235400,
+        "private_32_ns": 2907737.5,
+        "private_128_ns": 39770600,
+        "round": 2,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "iterations": 8,
+        "unflagged_8_ns": 127412.5,
+        "unflagged_32_ns": 301112.5,
+        "unflagged_128_ns": 1194837.5,
+        "private_8_ns": 82750,
+        "private_32_ns": 279725,
+        "private_128_ns": 1163950,
+        "round": 2,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 8,
+        "unflagged_8_ns": 138437.5,
+        "unflagged_32_ns": 305187.5,
+        "unflagged_128_ns": 1302375,
+        "private_8_ns": 138037.5,
+        "private_32_ns": 454787.5,
+        "private_128_ns": 1510600,
+        "round": 3,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 8,
+        "unflagged_8_ns": 319750,
+        "unflagged_32_ns": 2849287.5,
+        "unflagged_128_ns": 47178162.5,
+        "private_8_ns": 270350,
+        "private_32_ns": 2760800,
+        "private_128_ns": 41428775,
+        "round": 3,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "iterations": 8,
+        "unflagged_8_ns": 271537.5,
+        "unflagged_32_ns": 2856262.5,
+        "unflagged_128_ns": 46353050,
+        "private_8_ns": 506362.5,
+        "private_32_ns": 4326100,
+        "private_128_ns": 40705687.5,
+        "round": 4,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "iterations": 8,
+        "unflagged_8_ns": 127525,
+        "unflagged_32_ns": 319087.5,
+        "unflagged_128_ns": 1922987.5,
+        "private_8_ns": 83625,
+        "private_32_ns": 315687.5,
+        "private_128_ns": 1476412.5,
+        "round": 4,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 8,
+        "unflagged_8_ns": 144775,
+        "unflagged_32_ns": 319350,
+        "unflagged_128_ns": 1706512.5,
+        "private_8_ns": 178562.5,
+        "private_32_ns": 646100,
+        "private_128_ns": 2508787.5,
+        "round": 5,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 8,
+        "unflagged_8_ns": 435812.5,
+        "unflagged_32_ns": 3755862.5,
+        "unflagged_128_ns": 53212450,
+        "private_8_ns": 402100,
+        "private_32_ns": 4988125,
+        "private_128_ns": 51798700,
+        "round": 5,
+        "enabled": false,
+        "warmup": false
+      }
+    ],
+    "medians_ns": {
+      "control": {
+        "unflagged_8_ns": 300837.5,
+        "unflagged_32_ns": 2856262.5,
+        "unflagged_128_ns": 46353050,
+        "private_8_ns": 270350,
+        "private_32_ns": 2907737.5,
+        "private_128_ns": 41428775
+      },
+      "candidate": {
+        "unflagged_8_ns": 134850,
+        "unflagged_32_ns": 319087.5,
+        "unflagged_128_ns": 1308362.5,
+        "private_8_ns": 83625,
+        "private_32_ns": 315687.5,
+        "private_128_ns": 1476412.5
+      }
+    }
+  },
+  "benchmark_contract": {
+    "timer": "Only native raw syscall 202/CMP_REQUEUE_PI with a busy target; source registration, parent lock, owner handoff and joins outside timer",
+    "waiters": [
+      8,
+      32,
+      128
+    ],
+    "keys": [
+      "unflagged private anonymous",
+      "PRIVATE"
+    ],
+    "iterations_per_metric": 8,
+    "warmup_pairs": 1,
+    "measurement_pairs": 5,
+    "semantic_checks": [
+      "exact transfer count",
+      "source empty and destination count matches while target held",
+      "successful owner handoff and unlock for every worker",
+      "all source and target rows, including metadata, retired"
+    ]
+  },
+  "artifacts_sha256": {
+    "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-v4-native-build-4.jsonl": "fc0346d6fb6690b621ab6e0544f21f1eebc037a56a4a31a0466f6f0dc7935494",
+    "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-v4-native-build-4.log": "7edd24ba5b0d65ca846cd9a19bf3e1819d3f5da5261ffaf6873e2b4cf585a11b",
+    "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-v4-workspace-build.jsonl": "95caf4ee1b498d0c8c60346ba52d2ad3be1d3c6d72be1f8c1ae1603be0edf4e3",
+    "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-v4-workspace-build.log": "e29aa2b47767938921f179077f48c126e76e5bc00b794d95115f9bd4ebb29e1b",
+    "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-v4-final-results.json": "2b978382bf7b511bafef2ef281048bfc0ff54854a24d5e2b6f3f4e8e94d745c3",
+    "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-v4-guest-results.json": "a34e1508510f3d3a126d585fef2b76bc46ae4636f3545c0dfdfd3682a0a26edd",
+    "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-v4-guest-staging.json": "38e57530961874106091ee21e5664907c2201b8bd1e6597ffcaafbeb09d9324b",
+    "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-v4-batch-benchmark.json": "c1cc1180c0bce48ac738871ceaadb5f10a6b21db4d443790f53196bb3fa2c4c0",
+    "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-v4-benchmark-host-start.json": "c74a46f2b62a7b54b4bd492b27570dab7e83dd02b320d99243c1d24bb63d145e",
+    "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-v4-benchmark-host-end.json": "218f3a208501775c66f2e59704c1f1889aa92f1d2da2bda2e8eeaf75195c95be",
+    "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-v4-final-kinakaze_libc-0.log": "b097b33492ff0170d293df61f31130d22f25c4ac40b188919dca01f8d0ff251f",
+    "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-v4-final-kinakaze_libpthread-0.log": "c95cf1665fa8c0687f28c17893c580cfa53f68351be3478bb01bcf3f80696acb",
+    "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-v4-final-kinakaze_libc-1.log": "9e283a010bee368a4a9520c658807c77bf5a4e378cb012ad62791f8abfcb2cd3",
+    "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-v4-final-kinakaze_libpthread-1.log": "160cb9d8e586f13bc5514fb1c0b550d2c3af36687ef49cfad310d65e24628710"
+  },
+  "host_start": {
+    "time": 1790817195.1188602,
+    "logical_cpu_count": 20,
+    "processes": [
+      {
+        "pid": 27160,
+        "name": "kinakaze_libc-9b2ff81f74c64496.exe",
+        "cpu_seconds": 12.15625,
+        "rss": 20725760
+      }
+    ]
+  },
+  "host_end": {
+    "time": 1790817533.653231,
+    "logical_cpu_count": 20,
+    "processes": []
+  },
+  "excluded_evidence": [
+    "First native build referenced an unavailable serde_json dependency in the new benchmark; fixed with direct numeric JSON formatting.",
+    "First capacity probe observed zero rows after child exit; replaced with ready handshake, live row observation and parent-held domain guard during TerminateProcess. The failed run is retained separately."
+  ]
+}

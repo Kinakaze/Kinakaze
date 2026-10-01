@@ -22,6 +22,7 @@ CASES = {
     'waitv': ('KINAKAZE_FUTEX_OPT', 'sysadmin::futex_vector::tests::benchmark_waitv_registration', 'WAITV_BENCH'),
     'requeue': ('KINAKAZE_FUTEX_OPT', 'sysadmin::futex_requeue::tests::benchmark_requeue2_paths', 'REQUEUE_BENCH'),
     'requeue-pi': ('KINAKAZE_FUTEX_OPT', 'futex::pi::requeue::tests::benchmark_requeue_proxy', 'REQUEUE_PI_BENCH'),
+    'requeue-pi-batch': ('KINAKAZE_FUTEX_OPT', 'sysadmin::futex_requeue_pi::tests::benchmark_pi_requeue_batches', 'REQUEUE_PI_BATCH_BENCH'),
     'tmpfs': ('KINAKAZE_TMPFS_READ_OPT', 'tmpfs::read_pages::tests::benchmark_shared_read', 'TMPFS_READ_BENCH'),
     'syscall': ('KINAKAZE_SYSCALL_TEMPLATE', 'execution::instruction_trampoline::tests::benchmark_syscall_templates', 'SYSCALL_TEMPLATE_BENCH'),
     'route': ('KINAKAZE_IO_ROUTE_OPT', 'io_route_tests::benchmark_io_routes', 'IO_ROUTE_BENCH'),

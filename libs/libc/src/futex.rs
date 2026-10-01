@@ -692,6 +692,13 @@ pub(crate) fn count_for_test(key: Key) -> usize {
 }
 
 #[cfg(test)]
+pub(crate) fn total_records_for_test(keys: &[Key]) -> usize {
+    let shared = shared().unwrap();
+    let _guard = shared.acquire().unwrap();
+    shared.records().unwrap().iter().filter(|record| keys.contains(&record.key)).count()
+}
+
+#[cfg(test)]
 pub(crate) fn key_parts_for_test(key: Key) -> [u64; 5] {
     key.0
 }

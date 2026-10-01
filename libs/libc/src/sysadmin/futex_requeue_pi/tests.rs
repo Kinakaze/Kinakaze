@@ -675,3 +675,92 @@ fn pi_requeue_signal_restarts_source_but_returns_again_after_migration() {
     }
     signal::sigaction(signal::SIGUSR2, Some(previous)).unwrap();
 }
+
+#[test]
+#[ignore = "paired raw CMP_REQUEUE_PI batch timing; setup and handoff outside the timer"]
+fn benchmark_pi_requeue_batches() {
+    let iterations = 8;
+    let mut metrics = Vec::new();
+    for private in [false, true] {
+        for width in [8, 32, 128] {
+            let pair = Arc::new([AtomicU32::new(0), AtomicU32::new(0)]);
+            let begin = Arc::new(std::sync::Barrier::new(width + 1));
+            let end = Arc::new(std::sync::Barrier::new(width + 1));
+            let workers: Vec<_> = (0..width)
+                .map(|_| {
+                    let pair = Arc::clone(&pair);
+                    let begin = Arc::clone(&begin);
+                    let end = Arc::clone(&end);
+                    std::thread::spawn(move || {
+                        for _ in 0..iterations {
+                            begin.wait();
+                            assert_eq!(
+                                raw(
+                                    pair[0].as_ptr() as usize,
+                                    11,
+                                    private,
+                                    0,
+                                    0,
+                                    pair[1].as_ptr() as usize,
+                                    0
+                                ),
+                                0
+                            );
+                            assert_eq!(unlock(&pair[1], private), 0);
+                            end.wait();
+                        }
+                    })
+                })
+                .collect();
+            let mut elapsed = 0_u128;
+            for _ in 0..iterations {
+                assert_eq!(lock(&pair[1], private), 0);
+                begin.wait();
+                queued(&pair[0], private, width);
+                let started = Instant::now();
+                let moved = raw(
+                    pair[0].as_ptr() as usize,
+                    12,
+                    private,
+                    1,
+                    (width - 1) as usize,
+                    pair[1].as_ptr() as usize,
+                    0,
+                );
+                elapsed += started.elapsed().as_nanos();
+                assert_eq!(moved, width as i64);
+                queued(&pair[0], private, 0);
+                queued(&pair[1], private, width);
+                assert_eq!(unlock(&pair[1], private), 0);
+                end.wait();
+                assert_eq!(pair[1].load(Ordering::Acquire), 0);
+                queued(&pair[1], private, 0);
+            }
+            for worker in workers {
+                worker.join().unwrap();
+            }
+            let source_key = futex_requeue::key(
+                FutexAddress::resolve(pair[0].as_ptr().cast(), private).unwrap(),
+            )
+            .unwrap();
+            let target_key = futex_requeue::key(
+                FutexAddress::resolve(pair[1].as_ptr().cast(), private).unwrap(),
+            )
+            .unwrap();
+            assert_eq!(
+                crate::futex::total_records_for_test(&[source_key, target_key]),
+                0
+            );
+            metrics.push(format!(
+                "\"{}_{width}_ns\":{}",
+                if private { "private" } else { "unflagged" },
+                elapsed as f64 / iterations as f64
+            ));
+        }
+    }
+    println!(
+        "REQUEUE_PI_BATCH_BENCH {{\"iterations\":{iterations},\"optimized\":{},{} }}",
+        crate::futex::optimized(),
+        metrics.join(",")
+    );
+}
