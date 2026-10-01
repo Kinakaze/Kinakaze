@@ -95,3 +95,33 @@ delay did not reproduce. Seventeen native snapshots were collected; raw stack
 candidates are not reconstructed call stacks or CPU percentages. This is a
 diagnostic rerun, not an installation measurement. Its evidence is retained
 without replacing the original long verification result.
+
+
+## Third fresh-root run with a stricter launch prerequisite
+
+The same frozen release completed another full installation in
+**207.504 seconds**. The sub-180-second target remains unmet; the best of these three runs is 185.597 seconds.
+Download preparation took 2.874 seconds separately;
+the complete installed-file verification passed in 11.033
+seconds. All eight phases passed, all 357 package names/versions matched the
+reference, and all 59 binary hashes were rechecked without change.
+
+The launch prerequisite additionally prohibited compiler processes throughout
+the 20-second quiet interval. It was satisfied after 89.225
+seconds. Foreign work can still start afterward: 141
+of 205 installation samples contained a compiler and
+0 contained foreign runtime workers.
+Observed consecutive-identity competitor CPU was
+264.516 seconds; median host CPU was
+34.3%. These sampled observations do not prove
+that every intervening instant was idle. The observer and prerequisite checks
+used 0.531 CPU seconds.
+
+Installation Job CPU was 254.375 seconds
+(93.203 user, 161.172 kernel), with
+5,275 processes, 39,702,971 page faults and
+9,596,791 other I/O operations. Maintainer scripts, triggers,
+writeback, fsync, source/binary provenance and the unchanged benchmark harness
+are the same as the preceding two runs. No production code changed between
+these observations, so their wall-time differences are not separate code
+optimization gains. All slower observations are retained above.
