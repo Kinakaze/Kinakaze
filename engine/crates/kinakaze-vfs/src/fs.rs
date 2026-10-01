@@ -3319,37 +3319,18 @@ pub fn rmdir(path: &str) -> Result<(), i32> {
 
 /// The caller resolved links and retains the selected mount's write lease.
 pub(crate) fn remove_host_path(path: &Path, directory: bool) -> Result<(), i32> {
-    if directory && path.is_file() {
-        return Err(ENOTDIR);
-    }
-    if !directory && path.is_dir() {
-        return Err(EISDIR);
-    }
-    let wide_path = wide(path)?;
-    // POSIX disposition detaches the name while cwd/open-directory references
-    // retain the inode. RemoveDirectoryW only requests delayed deletion.
-    let handle = unsafe {
-        CreateFileW(
-            wide_path.as_ptr(),
-            DELETE,
-            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-            ptr::null(),
-            OPEN_EXISTING,
-            FILE_FLAG_OPEN_REPARSE_POINT
-                | if directory {
-                    FILE_FLAG_BACKUP_SEMANTICS
-                } else {
-                    0
-                },
-            ptr::null_mut(),
-        )
-    };
-    if handle.is_null() || handle as isize == -1 {
+    let object = object::Object::open(path, DELETE | FILE_READ_ATTRIBUTES)?;
+    let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
+    if unsafe { GetFileInformationByHandle(object.raw(), &mut info) } == 0 {
         return Err(errno_from_win32(unsafe { GetLastError() }));
     }
-    let result = unlink_inode(handle);
-    unsafe { CloseHandle(handle) };
-    result
+    let is_directory = info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY != 0
+        && (info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT == 0
+            || native_symlink_target_handle(object.raw())?.is_none());
+    if directory != is_directory {
+        return Err(if directory { ENOTDIR } else { EISDIR });
+    }
+    unlink_inode(object.raw())
 }
 
 /// Renames a path with Linux replacement semantics.

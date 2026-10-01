@@ -123,7 +123,17 @@ pub(crate) fn symlink_component(
     {
         return Ok(None);
     }
-    let target = crate::fs::inode::read_path(path)?.symlink;
+    let target = if attributes != INVALID_FILE_ATTRIBUTES
+        && attributes & FILE_ATTRIBUTE_REPARSE_POINT != 0
+    {
+        match crate::fs::read_link_host_path(path) {
+            Ok(target) => Some(target),
+            Err(crate::EINVAL | crate::ENOENT) => None,
+            Err(error) => return Err(error),
+        }
+    } else {
+        crate::fs::inode::read_path(path)?.symlink
+    };
     if target.is_none()
         && must_be_directory
         && attributes != INVALID_FILE_ATTRIBUTES
@@ -908,6 +918,60 @@ mod tests {
             resolve_linux_path_from(&root, "/loop"),
             Err(PathError::TooManySymlinks)
         ));
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn native_symlinks_resolve_dangling_targets_and_directory_components() {
+        let root = temporary_root("native-dangling-link");
+        std::fs::create_dir_all(root.join("real")).unwrap();
+        if let Err(error) = std::os::windows::fs::symlink_file("missing", root.join("alias")) {
+            if error.raw_os_error() == Some(1314) {
+                eprintln!("Native symlink test requires Developer Mode or symbolic-link privilege");
+                std::fs::remove_dir_all(root).unwrap();
+                return;
+            }
+            panic!("Cannot create native symlink: {error}");
+        }
+        assert_eq!(
+            resolve_linux_path_from(&root, "/alias").unwrap(),
+            root.join("missing")
+        );
+        assert_eq!(
+            resolve_linux_path_from_no_follow(&root, "/alias").unwrap(),
+            root.join("alias")
+        );
+        std::os::windows::fs::symlink_dir("real", root.join("directory")).unwrap();
+        assert_eq!(
+            resolve_linux_path_from(&root, "/directory/child").unwrap(),
+            root.join("real/child")
+        );
+        std::os::windows::fs::symlink_file("loop", root.join("loop")).unwrap();
+        assert!(matches!(
+            resolve_linux_path_from(&root, "/loop"),
+            Err(PathError::TooManySymlinks)
+        ));
+        assert_eq!(
+            crate::fs::remove_host_path(&root.join("directory"), true),
+            Err(crate::ENOTDIR)
+        );
+        assert_eq!(
+            crate::fs::remove_host_path(&root.join("real"), false),
+            Err(crate::EISDIR)
+        );
+        std::fs::write(root.join("real/keep"), b"retained target").unwrap();
+        crate::fs::remove_host_path(&root.join("directory"), false).unwrap();
+        assert_eq!(
+            std::fs::read(root.join("real/keep")).unwrap(),
+            b"retained target"
+        );
+        std::os::windows::fs::symlink_dir("missing-directory", root.join("dangling-directory"))
+            .unwrap();
+        crate::fs::remove_host_path(&root.join("dangling-directory"), false).unwrap();
+        crate::fs::remove_host_path(&root.join("alias"), false).unwrap();
+        crate::fs::remove_host_path(&root.join("loop"), false).unwrap();
+        eprintln!("NATIVE_LINK_RESOLVE_AND_UNLINK_OK");
         std::fs::remove_dir_all(root).unwrap();
     }
 }
