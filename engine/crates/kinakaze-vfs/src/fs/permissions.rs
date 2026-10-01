@@ -4,7 +4,7 @@ use windows_sys::Win32::Storage::FileSystem::{
     FILE_BASIC_INFO, FileBasicInfo, GetFileInformationByHandleEx,
 };
 
-/// Check the selected parent before an exclusive create can publish an inode.
+/// Check the selected parent before a create can publish an inode.
 /// The new file's own mode does not authorize creating its directory entry.
 pub(super) fn create_in(parent: &object::Object, metadata: &Stat, leaf: &OsStr) -> Result<(), i32> {
     if crate::user_namespace::capable(1, 1) {

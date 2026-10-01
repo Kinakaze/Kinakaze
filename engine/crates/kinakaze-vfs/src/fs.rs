@@ -1292,38 +1292,58 @@ pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32>
         attributes |= windows_sys::Win32::Storage::FileSystem::FILE_FLAG_DELETE_ON_CLOSE;
     }
 
-    let atomic_creation = exclusive_native_file;
-    // An exclusive native create can install mode/ownership as its initial EA.
+    let mut atomic_creation = exclusive_native_file
+        || disposition == OPEN_ALWAYS && !directory && !is_path && overlay_path.is_none();
+    // A native create can install mode/ownership as its initial EA.
     // This avoids opening and locking the just-created inode repeatedly, and
     // other openers cannot observe a file with partially initialized metadata.
+    let native_open = |disposition| unsafe {
+        CreateFileW(
+            wide_path.as_ptr(),
+            access,
+            // FILE_SHARE_DELETE permits unlinking an open file, as POSIX requires.
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            ptr::null(),
+            disposition,
+            attributes,
+            ptr::null_mut(),
+        )
+    };
     let mut handle = if atomic_creation {
         let parent = object::Object::open(
             resolved.parent().ok_or(EINVAL)?,
             FILE_READ_ATTRIBUTES | FILE_READ_EA | READ_CONTROL,
         )?;
         let stat = stat_metadata_with_query(parent.raw(), &parent, false)?;
-        permissions::create_in(&parent, &stat, resolved.file_name().ok_or(EINVAL)?)?;
-        let record = created_inode_record(&stat, S_IFREG | (mode & 0o7777));
-        parent
-            .create_regular_child_with_inode(resolved.file_name().ok_or(EINVAL)?, access, &record)?
-            .into_raw()
-    } else {
-        unsafe {
-            CreateFileW(
-                wide_path.as_ptr(),
-                access,
-                // FILE_SHARE_DELETE is what lets another descriptor unlink this file
-                // while it is still open, which POSIX requires.
-                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                ptr::null(),
-                disposition,
-                attributes,
-                ptr::null_mut(),
-            )
+        let leaf = resolved.file_name().ok_or(EINVAL)?;
+        let created = permissions::create_in(&parent, &stat, leaf).and_then(|()| {
+            let record = created_inode_record(&stat, S_IFREG | (mode & 0o7777));
+            parent.create_regular_child_with_inode(leaf, access, &record)
+        });
+        match created {
+            Ok(object) => object.into_raw(),
+            Err(crate::EEXIST) if flags & O_EXCL == 0 => {
+                atomic_creation = false;
+                // A denied parent write may still permit opening an existing
+                // leaf. Never use OPEN_ALWAYS here: concurrent unlink must not
+                // turn that authorized open into an unauthorized creation.
+                native_open(OPEN_EXISTING)
+            }
+            Err(error) => return Err(error),
         }
+    } else {
+        native_open(disposition)
     };
     let mut open_status = if atomic_creation {
         0
+    } else if disposition == OPEN_ALWAYS
+        && !directory
+        && !is_path
+        && overlay_path.is_none()
+        && !handle.is_null()
+        && handle as isize != -1
+    {
+        183 // the atomic nonexclusive create selected an existing inode
     } else {
         unsafe { GetLastError() }
     };

@@ -1,4 +1,4 @@
-//! Exclusive creation relative to one freshly pinned native parent directory.
+//! New-file creation relative to one freshly pinned native parent directory.
 //! Only ordinary paths with DAC override bypass the component walker. The
 //! parent and its live setgid record stay local to this single operation.
 use super::{
@@ -10,7 +10,7 @@ use std::{ffi::OsStr, path::Path, sync::OnceLock};
 use windows_sys::Win32::Foundation::{GENERIC_READ, GENERIC_WRITE};
 
 fn eligible_flags(flags: i32) -> bool {
-    flags & (O_CREAT | O_EXCL) == (O_CREAT | O_EXCL)
+    flags & O_CREAT != 0
         && matches!(flags & O_ACCMODE, O_WRONLY | O_RDWR)
         && flags
             & !(O_ACCMODE
@@ -25,6 +25,16 @@ fn eligible_flags(flags: i32) -> bool {
             == 0
 }
 
+#[cfg(test)]
+fn nonexclusive_enabled() -> bool {
+    std::env::var_os("KINAKAZE_TEST_NATIVE_CREATE_NONEXCL").as_deref() != Some(OsStr::new("0"))
+}
+
+#[cfg(not(test))]
+const fn nonexclusive_enabled() -> bool {
+    true
+}
+
 pub(super) fn try_open_at(
     dirfd: i32,
     original: &str,
@@ -32,7 +42,7 @@ pub(super) fn try_open_at(
     flags: i32,
     mode: u32,
 ) -> Result<Option<i32>, i32> {
-    if !eligible_flags(flags) {
+    if !eligible_flags(flags) || flags & O_EXCL == 0 && !nonexclusive_enabled() {
         return Ok(None);
     }
     let Some(path) = super::native_read::candidate_path(dirfd, original, absolute, 0) else {
@@ -89,7 +99,13 @@ pub(super) fn try_open_at(
         } else {
             0
         };
-    let object = parent.create(native.file_name().ok_or(crate::EINVAL)?, access, mode)?;
+    let object = match parent.create(native.file_name().ok_or(crate::EINVAL)?, access, mode) {
+        Ok(object) => object,
+        // FILE_CREATE never changes an existing inode. Leave its permissions,
+        // links, truncation and fs-verity policy to the ordinary open path.
+        Err(crate::EEXIST) if flags & O_EXCL == 0 => return Ok(None),
+        Err(error) => return Err(error),
+    };
     let mut fd_flags = FdFlags::WRITE_ACCESS
         .union(FdFlags::OVERLAPPED)
         .union(FdFlags::SEEKABLE)
