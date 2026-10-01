@@ -1,5 +1,8 @@
 # futex 绝对实时时限
 
+后续已加入过期时限的零等待快捷路径，并按原生对照实测保留生产路线；
+见[路线选择与测量](futex-best-routes-2026-10-01.md)。以下保留初始阶段证据。
+
 此前 raw futex 将绝对 CLOCK_REALTIME 时限一次性换算为单调时长；没有事件
 唤醒时，等待无法随着墙钟调整到期时间。现在复制 timespec 后保留原始绝对
 目标，等待和到期检查共用 Deadline。接入 raw 202 的 WAIT_BITSET、LOCK_PI、

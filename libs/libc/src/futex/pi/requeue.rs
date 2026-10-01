@@ -342,7 +342,9 @@ pub(crate) fn compare_requeue(
         super::tests::crash_at("before-journal");
         move_waiter(transaction, token, target)?;
         moved += 1;
-        if !optimized() || (free && moved == 1) {
+        // The measured release route batches followers. Keep the slower
+        // per-waiter control only in native test builds for paired benchmarks.
+        if (cfg!(test) && !optimized()) || (free && moved == 1) {
             transaction.commit();
             finish_journal(transaction, target, target_address)?;
             priorities(transaction, shared, &mut tasks)?;

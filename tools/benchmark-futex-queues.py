@@ -17,6 +17,7 @@ CASES = {
     'pthread': ('KINAKAZE_PTHREAD_PARK_OPT', 'parking::tests::benchmark_event_parking', 'PTHREAD_PARK_BENCH'),
     'wait2': ('KINAKAZE_FUTEX_OPT', 'sysadmin::futex_scalar::tests::benchmark_wait2_registration', 'WAIT2_BENCH'),
     'legacy-wait': ('KINAKAZE_FUTEX_OPT', 'sysadmin::futex_deadline::tests::benchmark_legacy_wait_registration', 'LEGACY_WAIT_BENCH'),
+    'realtime-expired': ('KINAKAZE_FUTEX_REALTIME_POLL_OPT', 'sysadmin::futex_deadline::clock_tests::benchmark_expired_realtime_entry', 'REALTIME_EXPIRED_BENCH'),
     'futex': ('KINAKAZE_FUTEX_OPT', 'futex::queue_tests::benchmark_shared_queue', 'FUTEX_BENCH'),
     'waitv-background': ('KINAKAZE_FUTEX_OPT', 'sysadmin::futex_vector::batch_tests::benchmark_vector_registration', 'FUTEX_VECTOR_BENCH'),
     'waitv': ('KINAKAZE_FUTEX_OPT', 'sysadmin::futex_vector::tests::benchmark_waitv_registration', 'WAITV_BENCH'),
@@ -42,6 +43,8 @@ def main():
     sysroot = subprocess.check_output(['rustc', '--print', 'sysroot'], text=True).strip()
     environment = dict(os.environ, PATH=str(binary.parent) + os.pathsep + str(Path(sysroot) / 'bin') + os.pathsep + os.environ['PATH'])
     switch, test, marker = CASES[args.case]
+    if args.case == 'realtime-expired':
+        environment['KINAKAZE_FUTEX_OPT'] = '1'
     dependencies = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in binary.parent.glob('*.so*') if path.is_file()}
     report = dict(passed=False, case=args.case, binary=str(binary), sha256=hashlib.sha256(binary.read_bytes()).hexdigest(), dependencies=dependencies, rows=[])
     args.output.parent.mkdir(parents=True, exist_ok=True)

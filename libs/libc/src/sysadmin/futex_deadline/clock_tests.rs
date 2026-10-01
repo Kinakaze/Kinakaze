@@ -176,3 +176,50 @@ fn requeued_future_absolute_timeout_retires_source_binding_and_target_waiter() {
         }
     }
 }
+
+#[test]
+#[ignore = "isolated raw expired realtime entry benchmark"]
+fn benchmark_expired_realtime_entry() {
+    let domain = 0x5254_2026_1001_0001u64 ^ (u64::from(std::process::id()) << 17);
+    kinakaze_runtime::authority::install_helper_domain(domain).unwrap();
+    let word = AtomicU32::new(0);
+    let address = word.as_ptr() as u64;
+    let time = KernelTimespec::default();
+    let timeout = &raw const time as u64;
+    let iterations = 4000;
+    let run = |private: bool, command: i64| {
+        let flag = if private { 128 } else { 0 };
+        let args = if command == 202 {
+            [address, 9 | 256 | flag, 0, timeout, 0, 1]
+        } else {
+            [address, 0, 1, 2 | flag, timeout, 0]
+        };
+        let started = Instant::now();
+        for _ in 0..iterations {
+            assert_eq!(raw(command, args), -i64::from(ETIMEDOUT));
+        }
+        let elapsed = started.elapsed().as_nanos() / iterations;
+        assert_eq!(
+            raw(454, [address, u64::from(u32::MAX), 1, 2 | flag, 0, 0]),
+            0
+        );
+        assert_eq!(
+            crate::futex::total_records_for_test(&[key(&word, private)]),
+            0
+        );
+        elapsed
+    };
+    let legacy_private_ns = run(true, 202);
+    let scalar_private_ns = run(true, 455);
+    let legacy_unflagged_ns = run(false, 202);
+    let scalar_unflagged_ns = run(false, 455);
+    println!(
+        "REALTIME_EXPIRED_BENCH {{\"optimized\":{},\"iterations\":{},\"legacy_private_ns\":{},\"scalar_private_ns\":{},\"legacy_unflagged_ns\":{},\"scalar_unflagged_ns\":{}}}",
+        crate::futex::Deadline::poll_optimized(),
+        iterations,
+        legacy_private_ns,
+        scalar_private_ns,
+        legacy_unflagged_ns,
+        scalar_unflagged_ns
+    );
+}

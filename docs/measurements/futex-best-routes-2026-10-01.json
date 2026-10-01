@@ -1,0 +1,636 @@
+{
+  "date": "2026-10-01",
+  "source_base_commit": "05da3f0bc2422215cd5fa04bf337ca9672e7577f",
+  "source_sha256": {
+    "libs/libc/src/futex/deadline.rs": "6739239905eb904f7461655a67ae6d80da93f6a687d22e88805494a7bd466e90",
+    "libs/libc/src/futex/pi/requeue.rs": "912795121c74342cc679eca2d18e1ef77fc96adbceaf9b75ff508ef6314e2574",
+    "libs/libc/src/sysadmin/futex_deadline/clock_tests.rs": "1d433fbceff2d6a3cb817cf360b5f37c63a6b8ccf869fdfaefa6a6e37f5c40ce",
+    "tools/benchmark-futex-queues.py": "429814b685e71b1ed83c3f8c6cdd4c8f4f4d3c8082c22e93cb6e48c3a3415c42"
+  },
+  "scope": "Production PI batch route selection and private expired absolute realtime raw entry shortcut; native component measurements only",
+  "native": {
+    "passed": true,
+    "image_hashes_unchanged": true,
+    "manifest": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-best-route-native-final\\manifest.json",
+    "rows": [
+      {
+        "crate": "kinakaze_libc",
+        "optimized": false,
+        "realtime_poll": true,
+        "test_filter": "futex",
+        "exit_code": 0,
+        "status": "ok",
+        "passed": 104,
+        "failed": 0,
+        "ignored": 19,
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-best-route-kinakaze_libc-0-1.log",
+        "sha256": "b052611b56b528093dc469fc3c2a6231f7ac8a417a9a7ed0a844f6e89e0f1855"
+      },
+      {
+        "crate": "kinakaze_libpthread",
+        "optimized": false,
+        "realtime_poll": true,
+        "test_filter": "",
+        "exit_code": 0,
+        "status": "ok",
+        "passed": 59,
+        "failed": 0,
+        "ignored": 4,
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-best-route-kinakaze_libpthread-0-1.log",
+        "sha256": "28bd5aa9655fbde4f3935fbcfed77c83c231571c144fb8a7485fd5e111ccd116"
+      },
+      {
+        "crate": "kinakaze_libc",
+        "optimized": true,
+        "realtime_poll": true,
+        "test_filter": "futex",
+        "exit_code": 0,
+        "status": "ok",
+        "passed": 104,
+        "failed": 0,
+        "ignored": 19,
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-best-route-kinakaze_libc-1-1.log",
+        "sha256": "30f8b66d9d5087272437d64608934faa1b0557f489c580334a6b40ac844e2b54"
+      },
+      {
+        "crate": "kinakaze_libpthread",
+        "optimized": true,
+        "realtime_poll": true,
+        "test_filter": "",
+        "exit_code": 0,
+        "status": "ok",
+        "passed": 59,
+        "failed": 0,
+        "ignored": 4,
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-best-route-kinakaze_libpthread-1-1.log",
+        "sha256": "28bd5aa9655fbde4f3935fbcfed77c83c231571c144fb8a7485fd5e111ccd116"
+      },
+      {
+        "crate": "kinakaze_libc",
+        "optimized": true,
+        "realtime_poll": false,
+        "test_filter": "futex::deadline::tests",
+        "exit_code": 0,
+        "status": "ok",
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0,
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-best-route-kinakaze_libc-1-0.log",
+        "sha256": "5bb1ff17959ffbaf5db38629962d514c51502d7ef32cf2bf1752354ecd2bba59"
+      }
+    ]
+  },
+  "native_manifests": {
+    "pi": {
+      "build": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-realtime-native-build-2.jsonl",
+      "build_sha256": "44bcf9d233635b7051e1f94449b53b152cebf0b6b7271398c7c10279ba44e712",
+      "executables": {
+        "kinakaze_libpthread": "kinakaze_libpthread-4d10b58392baf079.exe",
+        "kinakaze_vfs": "kinakaze_vfs-7074f7d5705021ad.exe",
+        "kinakaze_libc": "kinakaze_libc-9b2ff81f74c64496.exe"
+      },
+      "files": {
+        "kinakaze_alloc.so": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_alloc.dll",
+          "sha256": "2d099db6066f9e87353febd2a66c10f5c0e4ef1ed9eee155dc59666e776da6e8"
+        },
+        "serde_derive-ebb234dc8366345c.dll": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\deps\\serde_derive-ebb234dc8366345c.dll",
+          "sha256": "e0805346528b838488002807261a16733e7efcd6f4843a9bd660e2f8c44ff48a"
+        },
+        "kinakaze_elf.so": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_elf.dll",
+          "sha256": "921e390b5f988eece280f6a94cb0bc77906e5e4112c616f321fd0549d28d7e45"
+        },
+        "kinakaze_kernel.so": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_kernel.dll",
+          "sha256": "83ef53f025b9c7ab433c8bf2ac9ae67dfaf3133e59a8e3c37b235b44d307dd6d"
+        },
+        "kinakaze_tls.so": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_tls.dll",
+          "sha256": "484fc5cf0934a36c085910707ab2589432da47d81f9e91014c9200f5ea8a80be"
+        },
+        "libm.so.6": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libm.dll",
+          "sha256": "68c6c6f12c2da4cdb3022a2069f3d901cebcaf93635074ec3a0a097b7598f550"
+        },
+        "kinakaze_vfs.so": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_vfs.dll",
+          "sha256": "2b8096a01faebf5d15bcd6ecf33dac8693070bb78045b1d1647a106d879a11f6"
+        },
+        "libpthread.so.0": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libpthread.dll",
+          "sha256": "03914b8a71bed4e67e93c477d07dd2ed2c2a29685608b6689ef4f3f48eb32ec8"
+        },
+        "ld-linux-x86-64.so.2": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_link.dll",
+          "sha256": "1bb0ff34525773f3ca8fd50b83fef1c0b9ee4a788c3287e91135d13b488b27d5"
+        },
+        "kinakaze_libpthread-4d10b58392baf079.exe": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\deps\\kinakaze_libpthread-4d10b58392baf079.exe",
+          "sha256": "c50d1936753910e75f20fc57e294665c429b68d6a33b55182283170824408e6d"
+        },
+        "kinakaze_vfs-7074f7d5705021ad.exe": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\deps\\kinakaze_vfs-7074f7d5705021ad.exe",
+          "sha256": "91c647bae7e7d49e9ccd2297e63ed617b1b828c64d440ea3316842dbde2639d9"
+        },
+        "kinakaze_libc-9b2ff81f74c64496.exe": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\deps\\kinakaze_libc-9b2ff81f74c64496.exe",
+          "sha256": "b719db543dd54a5cc13b4eee0e0e4aff6d104d88cab82f3f0257c493e3d0cdf7"
+        },
+        "std-0cebe7c42cd80226.dll": {
+          "source": "C:\\Users\\nanaeo\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\std-0cebe7c42cd80226.dll",
+          "sha256": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc"
+        }
+      }
+    },
+    "realtime": {
+      "build": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-best-route-native-build.jsonl",
+      "build_sha256": "90a8f9bdaf87fe4e9c1eedc62b72f6591556d77c16eb73f95d460e007d14570b",
+      "executables": {
+        "kinakaze_libpthread": "kinakaze_libpthread-4d10b58392baf079.exe",
+        "kinakaze_libc": "kinakaze_libc-9b2ff81f74c64496.exe"
+      },
+      "files": {
+        "kinakaze_alloc.so": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_alloc.dll",
+          "sha256": "2d099db6066f9e87353febd2a66c10f5c0e4ef1ed9eee155dc59666e776da6e8"
+        },
+        "serde_derive-ebb234dc8366345c.dll": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\deps\\serde_derive-ebb234dc8366345c.dll",
+          "sha256": "e0805346528b838488002807261a16733e7efcd6f4843a9bd660e2f8c44ff48a"
+        },
+        "kinakaze_elf.so": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_elf.dll",
+          "sha256": "921e390b5f988eece280f6a94cb0bc77906e5e4112c616f321fd0549d28d7e45"
+        },
+        "kinakaze_kernel.so": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_kernel.dll",
+          "sha256": "cb2cd4b69f0c256d9de74649c88a1dc43321f0f85900338e04eec3186d808d8b"
+        },
+        "kinakaze_tls.so": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_tls.dll",
+          "sha256": "419045f3cc9100d755bd6e04535179cb69c447a8b6f2ef656fafe3c34405c5d0"
+        },
+        "libm.so.6": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libm.dll",
+          "sha256": "05300a7456a5c3c44313bf8fdacdaa9ebae998b242d4c28af95ef5dc55fe333a"
+        },
+        "kinakaze_vfs.so": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_vfs.dll",
+          "sha256": "700de9425cc0e561b980171b494924bc24094a17574f316fef947d0915072e2e"
+        },
+        "libpthread.so.0": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libpthread.dll",
+          "sha256": "3fab5458ccec0a162ccae00ec76ffcb817bad27bb46f41c481cbde588890ff0a"
+        },
+        "ld-linux-x86-64.so.2": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_link.dll",
+          "sha256": "b5c4f42a5b9985874d7ea863483a0435bd742a7e251857c2ed6baa15cfcf960c"
+        },
+        "kinakaze_libpthread-4d10b58392baf079.exe": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\deps\\kinakaze_libpthread-4d10b58392baf079.exe",
+          "sha256": "7c7444eb58398ba0d76c32fc6843fb7eec517f1eee5961ff8fcbe3844ef60547"
+        },
+        "kinakaze_libc-9b2ff81f74c64496.exe": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\deps\\kinakaze_libc-9b2ff81f74c64496.exe",
+          "sha256": "dd834cbed7e9dc371e87d075cf6aba0be4b534aafe34d756156f177aee4506ca"
+        },
+        "std-0cebe7c42cd80226.dll": {
+          "source": "C:\\Users\\nanaeo\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\std-0cebe7c42cd80226.dll",
+          "sha256": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc"
+        }
+      }
+    }
+  },
+  "pi_benchmark": {
+    "passed": true,
+    "case": "requeue-pi-batch",
+    "binary": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-realtime-native-final\\kinakaze_libc-9b2ff81f74c64496.exe",
+    "sha256": "b719db543dd54a5cc13b4eee0e0e4aff6d104d88cab82f3f0257c493e3d0cdf7",
+    "dependencies": {
+      "kinakaze_alloc.so": "2d099db6066f9e87353febd2a66c10f5c0e4ef1ed9eee155dc59666e776da6e8",
+      "kinakaze_elf.so": "921e390b5f988eece280f6a94cb0bc77906e5e4112c616f321fd0549d28d7e45",
+      "kinakaze_kernel.so": "83ef53f025b9c7ab433c8bf2ac9ae67dfaf3133e59a8e3c37b235b44d307dd6d",
+      "kinakaze_tls.so": "484fc5cf0934a36c085910707ab2589432da47d81f9e91014c9200f5ea8a80be",
+      "kinakaze_vfs.so": "2b8096a01faebf5d15bcd6ecf33dac8693070bb78045b1d1647a106d879a11f6",
+      "ld-linux-x86-64.so.2": "1bb0ff34525773f3ca8fd50b83fef1c0b9ee4a788c3287e91135d13b488b27d5",
+      "libm.so.6": "68c6c6f12c2da4cdb3022a2069f3d901cebcaf93635074ec3a0a097b7598f550",
+      "libpthread.so.0": "03914b8a71bed4e67e93c477d07dd2ed2c2a29685608b6689ef4f3f48eb32ec8"
+    },
+    "rows": [
+      {
+        "iterations": 8,
+        "unflagged_8_ns": 323725,
+        "unflagged_32_ns": 2912237.5,
+        "unflagged_128_ns": 40648562.5,
+        "private_8_ns": 276262.5,
+        "private_32_ns": 2804962.5,
+        "private_128_ns": 43452637.5,
+        "round": 0,
+        "enabled": false,
+        "warmup": true
+      },
+      {
+        "iterations": 8,
+        "unflagged_8_ns": 188025,
+        "unflagged_32_ns": 325912.5,
+        "unflagged_128_ns": 1287525,
+        "private_8_ns": 94437.5,
+        "private_32_ns": 341600,
+        "private_128_ns": 1537650,
+        "round": 0,
+        "enabled": true,
+        "warmup": true
+      },
+      {
+        "iterations": 8,
+        "unflagged_8_ns": 307875,
+        "unflagged_32_ns": 387612.5,
+        "unflagged_128_ns": 1481325,
+        "private_8_ns": 161100,
+        "private_32_ns": 544912.5,
+        "private_128_ns": 1686600,
+        "round": 1,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 8,
+        "unflagged_8_ns": 324012.5,
+        "unflagged_32_ns": 2723962.5,
+        "unflagged_128_ns": 45125900,
+        "private_8_ns": 250550,
+        "private_32_ns": 2614087.5,
+        "private_128_ns": 46870525,
+        "round": 1,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "iterations": 8,
+        "unflagged_8_ns": 286900,
+        "unflagged_32_ns": 2844512.5,
+        "unflagged_128_ns": 47408625,
+        "private_8_ns": 267900,
+        "private_32_ns": 3076475,
+        "private_128_ns": 41939050,
+        "round": 2,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "iterations": 8,
+        "unflagged_8_ns": 132712.5,
+        "unflagged_32_ns": 299712.5,
+        "unflagged_128_ns": 1247550,
+        "private_8_ns": 85162.5,
+        "private_32_ns": 302550,
+        "private_128_ns": 1153400,
+        "round": 2,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 8,
+        "unflagged_8_ns": 141512.5,
+        "unflagged_32_ns": 321125,
+        "unflagged_128_ns": 1247700,
+        "private_8_ns": 85050,
+        "private_32_ns": 291362.5,
+        "private_128_ns": 1337062.5,
+        "round": 3,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 8,
+        "unflagged_8_ns": 270037.5,
+        "unflagged_32_ns": 2868950,
+        "unflagged_128_ns": 44002237.5,
+        "private_8_ns": 276337.5,
+        "private_32_ns": 2846400,
+        "private_128_ns": 45010125,
+        "round": 3,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "iterations": 8,
+        "unflagged_8_ns": 470337.5,
+        "unflagged_32_ns": 3604462.5,
+        "unflagged_128_ns": 47229937.5,
+        "private_8_ns": 371550,
+        "private_32_ns": 3557950,
+        "private_128_ns": 52648400,
+        "round": 4,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "iterations": 8,
+        "unflagged_8_ns": 136162.5,
+        "unflagged_32_ns": 327337.5,
+        "unflagged_128_ns": 1502737.5,
+        "private_8_ns": 91825,
+        "private_32_ns": 332800,
+        "private_128_ns": 1620750,
+        "round": 4,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 8,
+        "unflagged_8_ns": 136687.5,
+        "unflagged_32_ns": 349900,
+        "unflagged_128_ns": 1537912.5,
+        "private_8_ns": 105037.5,
+        "private_32_ns": 331800,
+        "private_128_ns": 1506012.5,
+        "round": 5,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 8,
+        "unflagged_8_ns": 436625,
+        "unflagged_32_ns": 3978125,
+        "unflagged_128_ns": 48236987.5,
+        "private_8_ns": 382262.5,
+        "private_32_ns": 3555500,
+        "private_128_ns": 46159725,
+        "round": 5,
+        "enabled": false,
+        "warmup": false
+      }
+    ],
+    "medians_ns": {
+      "control": {
+        "unflagged_8_ns": 324012.5,
+        "unflagged_32_ns": 2868950,
+        "unflagged_128_ns": 47229937.5,
+        "private_8_ns": 276337.5,
+        "private_32_ns": 3076475,
+        "private_128_ns": 46159725
+      },
+      "candidate": {
+        "unflagged_8_ns": 136687.5,
+        "unflagged_32_ns": 327337.5,
+        "unflagged_128_ns": 1481325,
+        "private_8_ns": 91825,
+        "private_32_ns": 331800,
+        "private_128_ns": 1506012.5
+      }
+    }
+  },
+  "realtime_benchmark": {
+    "passed": true,
+    "case": "realtime-expired",
+    "binary": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-best-route-native-final\\kinakaze_libc-9b2ff81f74c64496.exe",
+    "sha256": "dd834cbed7e9dc371e87d075cf6aba0be4b534aafe34d756156f177aee4506ca",
+    "dependencies": {
+      "kinakaze_alloc.so": "2d099db6066f9e87353febd2a66c10f5c0e4ef1ed9eee155dc59666e776da6e8",
+      "kinakaze_elf.so": "921e390b5f988eece280f6a94cb0bc77906e5e4112c616f321fd0549d28d7e45",
+      "kinakaze_kernel.so": "cb2cd4b69f0c256d9de74649c88a1dc43321f0f85900338e04eec3186d808d8b",
+      "kinakaze_tls.so": "419045f3cc9100d755bd6e04535179cb69c447a8b6f2ef656fafe3c34405c5d0",
+      "kinakaze_vfs.so": "700de9425cc0e561b980171b494924bc24094a17574f316fef947d0915072e2e",
+      "ld-linux-x86-64.so.2": "b5c4f42a5b9985874d7ea863483a0435bd742a7e251857c2ed6baa15cfcf960c",
+      "libm.so.6": "05300a7456a5c3c44313bf8fdacdaa9ebae998b242d4c28af95ef5dc55fe333a",
+      "libpthread.so.0": "3fab5458ccec0a162ccae00ec76ffcb817bad27bb46f41c481cbde588890ff0a"
+    },
+    "rows": [
+      {
+        "iterations": 4000,
+        "legacy_private_ns": 544000,
+        "scalar_private_ns": 549359,
+        "legacy_unflagged_ns": 10840,
+        "scalar_unflagged_ns": 9542,
+        "round": 0,
+        "enabled": false,
+        "warmup": true
+      },
+      {
+        "iterations": 4000,
+        "legacy_private_ns": 1414,
+        "scalar_private_ns": 1096,
+        "legacy_unflagged_ns": 6638,
+        "scalar_unflagged_ns": 6617,
+        "round": 0,
+        "enabled": true,
+        "warmup": true
+      },
+      {
+        "iterations": 4000,
+        "legacy_private_ns": 1490,
+        "scalar_private_ns": 1191,
+        "legacy_unflagged_ns": 8194,
+        "scalar_unflagged_ns": 6387,
+        "round": 1,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 4000,
+        "legacy_private_ns": 545489,
+        "scalar_private_ns": 546115,
+        "legacy_unflagged_ns": 8143,
+        "scalar_unflagged_ns": 7696,
+        "round": 1,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "iterations": 4000,
+        "legacy_private_ns": 548108,
+        "scalar_private_ns": 542081,
+        "legacy_unflagged_ns": 9700,
+        "scalar_unflagged_ns": 14381,
+        "round": 2,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "iterations": 4000,
+        "legacy_private_ns": 1606,
+        "scalar_private_ns": 1674,
+        "legacy_unflagged_ns": 8824,
+        "scalar_unflagged_ns": 8734,
+        "round": 2,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 4000,
+        "legacy_private_ns": 1549,
+        "scalar_private_ns": 1242,
+        "legacy_unflagged_ns": 7585,
+        "scalar_unflagged_ns": 7424,
+        "round": 3,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 4000,
+        "legacy_private_ns": 544144,
+        "scalar_private_ns": 545344,
+        "legacy_unflagged_ns": 9835,
+        "scalar_unflagged_ns": 10727,
+        "round": 3,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "iterations": 4000,
+        "legacy_private_ns": 553843,
+        "scalar_private_ns": 550141,
+        "legacy_unflagged_ns": 6972,
+        "scalar_unflagged_ns": 6955,
+        "round": 4,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "iterations": 4000,
+        "legacy_private_ns": 1402,
+        "scalar_private_ns": 1083,
+        "legacy_unflagged_ns": 6612,
+        "scalar_unflagged_ns": 6396,
+        "round": 4,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 4000,
+        "legacy_private_ns": 1393,
+        "scalar_private_ns": 1059,
+        "legacy_unflagged_ns": 6439,
+        "scalar_unflagged_ns": 6475,
+        "round": 5,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 4000,
+        "legacy_private_ns": 546698,
+        "scalar_private_ns": 553148,
+        "legacy_unflagged_ns": 7302,
+        "scalar_unflagged_ns": 7994,
+        "round": 5,
+        "enabled": false,
+        "warmup": false
+      }
+    ],
+    "medians_ns": {
+      "control": {
+        "legacy_private_ns": 546698,
+        "scalar_private_ns": 546115,
+        "legacy_unflagged_ns": 8143,
+        "scalar_unflagged_ns": 7994
+      },
+      "candidate": {
+        "legacy_private_ns": 1490,
+        "scalar_private_ns": 1191,
+        "legacy_unflagged_ns": 7585,
+        "scalar_unflagged_ns": 6475
+      }
+    }
+  },
+  "ratios": {
+    "pi": {
+      "unflagged_8_ns": 2.370461819844536,
+      "unflagged_32_ns": 8.764501470195135,
+      "unflagged_128_ns": 31.883575515163788,
+      "private_8_ns": 3.009392866866322,
+      "private_32_ns": 9.272076552139843,
+      "private_128_ns": 30.650293407259237
+    },
+    "realtime": {
+      "legacy_private_ns": 366.9114093959732,
+      "scalar_private_ns": 458.53484466834595,
+      "legacy_unflagged_ns": 1.0735662491760052,
+      "scalar_unflagged_ns": 1.2345945945945946
+    }
+  },
+  "realtime_private_ratios_per_pair": {
+    "1": {
+      "legacy_private_ns": 366.1,
+      "scalar_private_ns": 458.53484466834595
+    },
+    "2": {
+      "legacy_private_ns": 341.28767123287673,
+      "scalar_private_ns": 323.8237753882915
+    },
+    "3": {
+      "legacy_private_ns": 351.2872821174952,
+      "scalar_private_ns": 439.085346215781
+    },
+    "4": {
+      "legacy_private_ns": 395.03780313837376,
+      "scalar_private_ns": 507.97876269621423
+    },
+    "5": {
+      "legacy_private_ns": 392.46087580760945,
+      "scalar_private_ns": 522.3305004721435
+    }
+  },
+  "production_check": {
+    "passed": true,
+    "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-best-route-production-check.log",
+    "sha256": "7ad0ea9e181838429af998abdb8c42cae6d8a050cfeecfdd37af52fb4adfe2ed",
+    "command": "cargo check -p kinakaze-v2-libc -p kinakaze-v2-libpthread --release --features <46-feature windows-sys union>"
+  },
+  "host_snapshots": {
+    "futex-best-route-benchmark-host-start.json": {
+      "time": "2026-10-01T02:07:41.9679673Z",
+      "processes": [
+        {
+          "Id": 4376,
+          "ProcessName": "cargo",
+          "StartTime": "2026-10-01T10:05:13.4207775+08:00"
+        },
+        {
+          "Id": 19000,
+          "ProcessName": "cargo",
+          "StartTime": "2026-10-01T10:05:13.4349334+08:00"
+        },
+        {
+          "Id": 29520,
+          "ProcessName": "rustc",
+          "StartTime": "2026-10-01T10:07:24.4507718+08:00"
+        }
+      ]
+    },
+    "futex-best-route-benchmark-host-end.json": {
+      "time": "2026-10-01T02:09:02.3019375Z",
+      "processes": [
+        {
+          "Id": 4376,
+          "ProcessName": "cargo",
+          "StartTime": "2026-10-01T10:05:13.4207775+08:00"
+        },
+        {
+          "Id": 19000,
+          "ProcessName": "cargo",
+          "StartTime": "2026-10-01T10:05:13.4349334+08:00"
+        },
+        {
+          "Id": 3528,
+          "ProcessName": "rustc",
+          "StartTime": "2026-10-01T10:08:53.8307332+08:00"
+        }
+      ]
+    }
+  },
+  "selection": {
+    "pi": "Release always batches follower publication; per-waiter control gated by cfg(test); free proxy head still commits immediately",
+    "realtime": "Release always polls handles for expired realtime targets; timer reference switch exists only under cfg(test)",
+    "unchanged": "Other futex switches are outside this measurement; unflagged expired paths already short-circuit before native timer creation"
+  },
+  "constraints": [
+    "PI benchmark uses the earlier v5 frozen native graph recorded above; realtime benchmark uses the new source snapshot",
+    "Other compiler processes were present in realtime benchmark start/end snapshots; results describe that concurrent host load",
+    "Unflagged realtime timing variation is not attributed to the shortcut",
+    "No guest JIT throughput, future-deadline wait latency, cross-process throughput or whole-application speedup claim",
+    "Actual wall-clock-step end-to-end test and complete syscall/VFS/I/O path coverage remain unverified"
+  ]
+}

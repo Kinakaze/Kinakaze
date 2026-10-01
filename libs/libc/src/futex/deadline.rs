@@ -12,6 +12,19 @@ pub(crate) struct Deadline {
 }
 
 impl Deadline {
+    #[cfg(test)]
+    pub(crate) fn poll_optimized() -> bool {
+        static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        *ENABLED.get_or_init(|| {
+            std::env::var_os("KINAKAZE_FUTEX_REALTIME_POLL_OPT").is_none_or(|value| value != "0")
+        })
+    }
+
+    #[cfg(not(test))]
+    fn poll_optimized() -> bool {
+        true
+    }
+
     pub(crate) fn relative(duration: Option<Duration>, started: Instant) -> Self {
         Self {
             duration,
@@ -52,6 +65,13 @@ impl Deadline {
     /// The handles must remain valid throughout the native wait.
     pub(crate) unsafe fn wait(&self, handles: &[HANDLE]) -> u32 {
         if let Some(target) = self.realtime {
+            // An expired deadline needs only a wait-any poll. This keeps a
+            // ready wake/signal ahead of timeout without allocating a timer.
+            // A backward clock step is resolved by the caller's next expiry
+            // check, using the original absolute target.
+            if Self::poll_optimized() && self.expired() {
+                return unsafe { kinakaze_vfs::deadline_wait::any(handles, 0) };
+            }
             unsafe { kinakaze_vfs::deadline_wait::any_realtime(handles, target) }
         } else {
             unsafe { kinakaze_vfs::deadline_wait::any(handles, self.milliseconds()) }
@@ -79,5 +99,37 @@ mod tests {
             Deadline::wall_remaining(target, 99, 999_999_999),
             Duration::from_nanos(1)
         );
+    }
+
+    #[test]
+    fn expired_realtime_poll_preserves_ready_source_order_and_handle_count() {
+        use windows_sys::Win32::Foundation::{CloseHandle, WAIT_OBJECT_0, WAIT_TIMEOUT};
+        use windows_sys::Win32::System::Threading::{
+            CreateEventW, GetCurrentProcess, GetProcessHandleCount, SetEvent,
+        };
+        let event = unsafe { CreateEventW(core::ptr::null(), 0, 0, core::ptr::null()) };
+        assert!(!event.is_null());
+        let deadline = Deadline {
+            duration: Some(Duration::ZERO),
+            started: Instant::now(),
+            realtime: Some(0),
+        };
+        assert_ne!(unsafe { SetEvent(event) }, 0);
+        assert_eq!(unsafe { deadline.wait(&[event]) }, WAIT_OBJECT_0);
+        let mut before = 0;
+        assert_ne!(
+            unsafe { GetProcessHandleCount(GetCurrentProcess(), &mut before) },
+            0
+        );
+        for _ in 0..128 {
+            assert_eq!(unsafe { deadline.wait(&[event]) }, WAIT_TIMEOUT);
+        }
+        let mut after = 0;
+        assert_ne!(
+            unsafe { GetProcessHandleCount(GetCurrentProcess(), &mut after) },
+            0
+        );
+        assert_eq!(after, before);
+        assert_ne!(unsafe { CloseHandle(event) }, 0);
     }
 }
