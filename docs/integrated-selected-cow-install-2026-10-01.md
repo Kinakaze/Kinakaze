@@ -1,5 +1,10 @@
 # Selected fork and VFS installation validation
 
+Comparison update: the historical 185.597-second result uses the older seed
+with failed debconf template extraction. It is not a like-for-like baseline
+for the current working-preconfiguration fixture; see the
+[seed comparison](selected-native-open-r13-2026-10-01.md#comparable-installation-fixture).
+
 The frozen production source `2c66b62c92b46048680811fc8e725c828ad2d028` completed a fresh installation
 of the same 357 Node.js/npm packages in **292.443 seconds**.
 All eight phases passed: update, download, plan, installation, Node and npm smoke
