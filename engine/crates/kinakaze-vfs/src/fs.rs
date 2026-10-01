@@ -1302,6 +1302,7 @@ pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32>
             FILE_READ_ATTRIBUTES | FILE_READ_EA | READ_CONTROL,
         )?;
         let stat = stat_metadata_with_query(parent.raw(), &parent, false)?;
+        permissions::create_in(&parent, &stat, resolved.file_name().ok_or(EINVAL)?)?;
         let record = created_inode_record(&stat, S_IFREG | (mode & 0o7777));
         parent
             .create_regular_child_with_inode(resolved.file_name().ok_or(EINVAL)?, access, &record)?

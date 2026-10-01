@@ -152,6 +152,9 @@ EXPORTS
   "pthread_condattr_destroy@GLIBC_2.2.5"=pthread_condattr_destroy PRIVATE
   pthread_condattr_getclock
   "pthread_condattr_getclock"=pthread_condattr_getclock
+  pthread_condattr_getpshared
+  "pthread_condattr_getpshared"=pthread_condattr_getpshared
+  "pthread_condattr_getpshared@GLIBC_2.2.5"=pthread_condattr_getpshared PRIVATE
   pthread_condattr_init
   "pthread_condattr_init"=pthread_condattr_init
   "pthread_condattr_init@GLIBC_2.2.5"=pthread_condattr_init PRIVATE
@@ -384,8 +387,3 @@ EXPORTS
   "waitpid@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_waitpid PRIVATE
   "write"=libc.so.6.kinakaze_abi_write PRIVATE
   "write@GLIBC_2.2.5"=libc.so.6.kinakaze_abi_write PRIVATE
-
-
-  pthread_condattr_getpshared
-  "pthread_condattr_getpshared"=pthread_condattr_getpshared
-  "pthread_condattr_getpshared@GLIBC_2.2.5"=pthread_condattr_getpshared PRIVATE
