@@ -3,7 +3,10 @@
 use super::*;
 use crate::state_codec::{Reader, bytes, word};
 use std::collections::VecDeque;
-use windows_sys::Win32::System::Threading::WaitForSingleObject;
+use windows_sys::Win32::System::Threading::INFINITE;
+mod readiness;
+#[cfg(test)]
+mod tests;
 
 const LIMIT: usize = 212_992;
 #[derive(Clone)]
@@ -20,6 +23,7 @@ struct Queue {
     read_closed: bool,
     write_closed: bool,
     messages: VecDeque<Message>,
+    watches: Vec<readiness::Watch>,
 }
 fn address(r: &mut Reader<'_>) -> Result<UnixAddress, i32> {
     let namespace = match r.word()? {
@@ -47,12 +51,16 @@ impl Queue {
             read_closed: false,
             write_closed: false,
             messages: VecDeque::new(),
+            watches: Vec::new(),
         };
         if input.is_empty() {
             return Ok(queue);
         }
         let mut r = Reader(input);
-        if r.word()? != u64::from_le_bytes(*b"KDGRAM02") {
+        let version = r.word()?;
+        if version != u64::from_le_bytes(*b"KDGRAM02")
+            && version != u64::from_le_bytes(*b"KDGRAM03")
+        {
             return Err(EIO);
         }
         queue.binding = r.text()?;
@@ -76,12 +84,31 @@ impl Queue {
                 },
             });
         }
+        if version == u64::from_le_bytes(*b"KDGRAM03") {
+            let count = r.word()?;
+            if count > readiness::MAX_WATCHES as u64 {
+                return Err(EIO);
+            }
+            for _ in 0..count {
+                let watch = readiness::Watch {
+                    condition: r.word()?,
+                    sender: r.word()?,
+                };
+                if watch.condition > readiness::CLOSED
+                    || (watch.condition > LIMIT as u64 && watch.sender != 0)
+                    || queue.watches.last().is_some_and(|&last| last >= watch)
+                {
+                    return Err(EIO);
+                }
+                queue.watches.push(watch);
+            }
+        }
         r.end()?;
         Ok(queue)
     }
     fn encode(&self) -> Vec<u8> {
         let mut out = Vec::new();
-        word(&mut out, u64::from_le_bytes(*b"KDGRAM02"));
+        word(&mut out, u64::from_le_bytes(*b"KDGRAM03"));
         bytes(&mut out, self.binding.as_bytes());
         word(&mut out, self.peer);
         put_address(&mut out, &self.address);
@@ -97,6 +124,11 @@ impl Queue {
                 rights.write(&mut out);
             }
         }
+        word(&mut out, self.watches.len() as u64);
+        for watch in &self.watches {
+            word(&mut out, watch.condition);
+            word(&mut out, watch.sender);
+        }
         out
     }
 }
@@ -104,11 +136,7 @@ fn update<T>(
     record: &procnet::Record,
     action: impl FnOnce(&mut Queue) -> Result<T, i32>,
 ) -> Result<T, i32> {
-    record.update_data(|input| {
-        let mut queue = Queue::decode(input)?;
-        let result = action(&mut queue)?;
-        Ok((queue.encode(), result))
-    })
+    readiness::update(record, action)
 }
 pub(super) fn selected(fd: i32) -> Result<bool, i32> {
     let socket = snapshot(fd)?;
@@ -165,19 +193,6 @@ pub(super) fn peer(fd: i32) -> Result<UnixAddress, i32> {
     }
     Ok(queue.address)
 }
-fn wait() -> Result<(), i32> {
-    if matches!(signal::deliver_pending(), signal::Delivery::Interrupted) {
-        return Err(EINTR);
-    }
-    let interrupt = crate::interrupt::current();
-    if interrupt.is_null() {
-        return Err(EIO);
-    }
-    unsafe {
-        WaitForSingleObject(interrupt, 10);
-    }
-    Ok(())
-}
 pub(super) unsafe fn send(
     fd: i32,
     buffer: *const u8,
@@ -223,7 +238,11 @@ pub(super) unsafe fn send(
         },
         rights: pending.as_ref().map(rights::Pending::record),
     };
+    let mut wait = None;
     loop {
+        if wait.is_some() && Queue::decode(&socket.record.data()?)?.write_closed {
+            return Err(EPIPE);
+        }
         let result = update(&target, |queue| {
             if queue.read_closed {
                 return Err(ECONNREFUSED);
@@ -256,7 +275,22 @@ pub(super) unsafe fn send(
             }
             return result;
         }
-        wait()?;
+        if readiness::enabled() {
+            let events = match &wait {
+                Some(events) => {
+                    readiness::refresh(&target, len as u64, socket.record.id())?;
+                    readiness::refresh(&socket.record, readiness::CLOSED, 0)?;
+                    events
+                }
+                None => wait.insert([
+                    readiness::prepare(&target, len as u64, socket.record.id())?,
+                    readiness::prepare(&socket.record, readiness::CLOSED, 0)?,
+                ]),
+            };
+            readiness::wait(&[events[0].raw(), events[1].raw()], INFINITE)?;
+        } else {
+            readiness::wait(&[], 10)?;
+        }
     }
 }
 pub(super) unsafe fn recv(
@@ -281,6 +315,7 @@ pub(super) unsafe fn recv(
     }
     let socket = snapshot(fd)?;
     let description = get(fd)?.description_id;
+    let mut wait = None;
     loop {
         let passcred = recvmsg && socket.record.passcred()?;
         // Keep imported descriptors private until the queue transaction commits.
@@ -363,7 +398,20 @@ pub(super) unsafe fn recv(
             Err(EAGAIN)
                 if flags & MSG_DONTWAIT == 0 && !get(fd)?.flags.contains(FdFlags::NONBLOCK) =>
             {
-                wait()?
+                if readiness::enabled() {
+                    let event = match &wait {
+                        Some(event) => {
+                            readiness::refresh(&socket.record, readiness::READ, 0)?;
+                            event
+                        }
+                        None => {
+                            wait.insert(readiness::prepare(&socket.record, readiness::READ, 0)?)
+                        }
+                    };
+                    readiness::wait(&[event.raw()], INFINITE)?;
+                } else {
+                    readiness::wait(&[], 10)?;
+                }
             }
             Err(e) => return Err(e),
         }

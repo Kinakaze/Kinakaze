@@ -14,6 +14,7 @@ import subprocess
 
 
 CASES = {
+    'unix-dgram': ('KINAKAZE_TEST_DGRAM_EVENTS', 'unix::datagram::tests::benchmark_named_datagram_events', 'DGRAM_EVENTS_BENCH'),
     'pthread-pi-store': ('KINAKAZE_TEST_PTHREAD_PI_STORE_OPT', 'futex::pi::pthread::tests::benchmark_pthread_pi_stores', 'PTHREAD_PI_STORE_BENCH'),
     'pthread-pi': ('KINAKAZE_PTHREAD_PI_OPT', 'futex::pi::pthread::tests::benchmark_pthread_pi_pairs', 'PTHREAD_PI_BENCH'),
     'pthread': ('KINAKAZE_PTHREAD_PARK_OPT', 'parking::tests::benchmark_event_parking', 'PTHREAD_PARK_BENCH'),
