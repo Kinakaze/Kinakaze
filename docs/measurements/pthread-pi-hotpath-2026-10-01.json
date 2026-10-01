@@ -2423,5 +2423,218 @@
     "instruction": "快速收尾推送停下",
     "action": "commit, merge published main, push without force, then pause ongoing goal",
     "broader_goal_complete": false
+  },
+  "merged_validation": {
+    "source_commit": "5f2ca537f577b75508646cbbc255653f0edda7f2",
+    "modified_source_since_base_sha256": {
+      "crates/protocol/src/kernel.rs": "763ac5a3b5ad84e868864653a3e0dd547ab8829cf39d931f17eb0ce2b09f792b",
+      "engine/crates/kinakaze-runtime/src/job/fd_link_layout_tests.rs": "168e9c77fde2d0ef1b82bc350980785eaa7dfe86be5dbd47ccf3639cbf53e614",
+      "engine/crates/kinakaze-runtime/src/lib.rs": "67e3a93c75847c4fc9652021542833e109421c764144a78779beaa7351f2448b",
+      "engine/crates/kinakaze-vfs/src/deadline_wait.rs": "35af8a8326ec75fd2a23519725f28a2c74c195529443ee5036eb29b22115d81a",
+      "engine/crates/kinakaze-vfs/src/deadline_wait/tests.rs": "4a71da28a797d21b131604610641ad47fb40363e8217d80aafc0d7e91c05d6eb",
+      "libs/libc/src/futex.rs": "1c74c5960d15184a0fe3a61321a118564fb9eef0dd4520205e32a756ebe70c3c",
+      "libs/libc/src/futex/deadline.rs": "812a61635c3b624b13af7009edb77b0abfbe8fcc02ac30796419a4b599d4cdc5",
+      "libs/libc/src/futex/hybrid.rs": "c5d47be54cbb6c66fc5db87c7782ad8f71c1b1a09a7bc772e7bba9e1367224d8",
+      "libs/libc/src/futex/pi.rs": "10984f9fd458894e780f514df8179f72f738c71c3b8009fc5d07f1d97d33e4a7",
+      "libs/libc/src/futex/pi/pthread.rs": "bc1b1aed46dd94dec2a38e1449e9bef6175a7bc1546e5563e340878684344c43",
+      "libs/libc/src/futex/pi/pthread/tests.rs": "1a0c966c0d026acfd47f1a68c9d7648ccda0afb397bb6d26720255076dba9d9f",
+      "libs/libc/src/futex/pi/requeue/tests.rs": "c97a59623f4e9ebfd04bde12851c1b7d17f5c12af1da291f25b11d3e73ba9e97",
+      "libs/libc/src/sysadmin.rs": "239052fc6e72b590e81d001e883fe38725a594bab0ee2988ce7bb0023f301022",
+      "libs/libc/src/sysadmin/futex_deadline.rs": "c773df68b70c4a960d7f4c0f55de751b9708c0ad45124dd8b719a50932d5fa57",
+      "libs/libc/src/sysadmin/futex_deadline/clock_tests.rs": "17bb8b0950c2590cf37c7247ae3cb0d9a19d6361335014ff050580086ff6fbdc",
+      "libs/libc/src/sysadmin/futex_deadline/tests.rs": "17dfef19460fc5b367f41922f93b366a2101850f7a6e582afed6a9fe3f74af79",
+      "libs/libc/src/sysadmin/futex_pi.rs": "bf569b3baf41ec9713b06bac7b606cd7ca4479e6690d57ed7997dbfc4c58bfbe",
+      "libs/libc/src/sysadmin/futex_requeue_pi.rs": "e5984758bff7b0c4121deae7f9982b8293c1e861118fe35427f31304535de6db",
+      "libs/libc/src/sysadmin/futex_requeue_pi/tests.rs": "36eae280e8fb1338957f12b94212c76e57b29592f15b257e4bb5aea77dc76c0d",
+      "libs/libc/src/sysadmin/futex_scalar.rs": "9922e5af90a823582b56c39e7823523c20c4a6b9bf2cbebb78af9feef9ff7ad8",
+      "libs/libc/src/sysadmin/futex_vector.rs": "745f1569f43b2f0e13f1f8da09831813e609775ffca57d187ad189941e3cf371",
+      "tests/guest/FutexRequeuePiProbe.py": "b97d6882abf4c85bc1a57392ca7a83b47b0acc7fa1d488a00598e8b6cfa1a86b",
+      "tools/benchmark-futex-queues.py": "614772370d834437edc73c0aa6bc62b8da10dd01920a60bb609b0651e63000b2",
+      "tools/test-pthread-event-guest.py": "d5d2bb67b376d6c2e646803762ed0640df71e0ad9ce70305b5a416bcb7499618"
+    },
+    "preserved": [
+      "PI hot path and replay guard",
+      "incoming absolute realtime Deadline integration",
+      "incoming compact shared descriptor-link headers",
+      "both pthread-pi and requeue-pi-batch benchmark cases"
+    ],
+    "native_build": {
+      "path": "F:\\crysoacu2\\artifacts\\pthread-pi-hotpath-20261001\\native-integrated\\manifest.json",
+      "sha256": "8fc32c5fa4997bb504fe2f7b8155092d0711f292a4f2122d554a18a9b1c9f579",
+      "data": {
+        "build": "F:\\crysoacu2\\artifacts\\pthread-pi-hotpath-20261001\\native-integrated-build.jsonl",
+        "build_sha256": "9f4cceaedc76e18d00815a8a10f6e9313236bdea9eff503d8c414ff0a809bc34",
+        "executables": {
+          "kinakaze_libpthread": "kinakaze_libpthread-99976ff151d98c5e.exe",
+          "kinakaze_libc": "kinakaze_libc-fed8053e6a326375.exe"
+        },
+        "files": {
+          "serde_derive-ebb234dc8366345c.dll": {
+            "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\deps\\serde_derive-ebb234dc8366345c.dll",
+            "sha256": "56ccf693065d886c4c94a674222c70974d38f43bcafccc4bec910a5963388d93"
+          },
+          "kinakaze_elf.so": {
+            "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_elf.dll",
+            "sha256": "6bf235d562a17e950b627a0268411f29a5fa7ab2e8654a3ec7df6447cea113dd"
+          },
+          "kinakaze_alloc.so": {
+            "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_alloc.dll",
+            "sha256": "54d64e59b6e78f8f9e2de6d88ac730576ba110c694025a4ef73c1f9380d8ae2e"
+          },
+          "kinakaze_kernel.so": {
+            "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_kernel.dll",
+            "sha256": "a98e815b808957b3e659541383578ae87f7709a76be16c5cd07b055fd649a738"
+          },
+          "kinakaze_tls.so": {
+            "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_tls.dll",
+            "sha256": "fc63364224fc4226b3985256c456b1a80fdbdd0b05eb6a672555f0804a86d0bc"
+          },
+          "libm.so.6": {
+            "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libm.dll",
+            "sha256": "d21b8a7b910fb64b9a12bc03b3d0a92a6b25025e42aa643c6db4744ab1f6336c"
+          },
+          "kinakaze_vfs.so": {
+            "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_vfs.dll",
+            "sha256": "df635283d2f8acd13ab4517f6b385ee2a9cebd3ba66fdca7afab5f85d415923e"
+          },
+          "libpthread.so.0": {
+            "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libpthread.dll",
+            "sha256": "dbbc612080b56fd30ff84a7cbeddaf3cefaee4390cb79f3d6e3990ea30a996f8"
+          },
+          "ld-linux-x86-64.so.2": {
+            "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_link.dll",
+            "sha256": "1ebeb2ed215a7b5c4f5e897c8c88f2b8de1314c8636f90123a40501393a44913"
+          },
+          "kinakaze_libpthread-99976ff151d98c5e.exe": {
+            "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\deps\\kinakaze_libpthread-99976ff151d98c5e.exe",
+            "sha256": "eac254a35714734981d4ad9612990f4c2f1303e8efe43f0913d983979c0d3635"
+          },
+          "kinakaze_libc-fed8053e6a326375.exe": {
+            "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\deps\\kinakaze_libc-fed8053e6a326375.exe",
+            "sha256": "75a6ee587c605dcc3a40e878688351803145497d517ba18fc0a8f1073b75a9de"
+          },
+          "std-0cebe7c42cd80226.dll": {
+            "source": "C:\\Users\\nanaeo\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\std-0cebe7c42cd80226.dll",
+            "sha256": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc"
+          }
+        }
+      }
+    },
+    "build_stderr_sha256": "91f2f7aa25a8e3239040678eceddf76c4eccb92b0e331cd35f992b4c2d71ae2a",
+    "native_results": {
+      "path": "F:\\crysoacu2\\artifacts\\pthread-pi-hotpath-20261001\\native-integrated-results.json",
+      "sha256": "9d3e294d8e9880f5483c65219e801a75835a1476824eab5deede1e02c9e8d375",
+      "data": {
+        "source_commit": "5f2ca537f577b75508646cbbc255653f0edda7f2",
+        "rows": [
+          {
+            "package": "kinakaze_libc",
+            "futex": "0",
+            "pi": "0",
+            "returncode": 0,
+            "summary": "test result: ok. 651 passed; 0 failed; 24 ignored; 0 measured; 0 filtered out; finished in 11.75s",
+            "log": "F:\\crysoacu2\\artifacts\\pthread-pi-hotpath-20261001\\native-integrated-kinakaze_libc-0-0.log",
+            "log_sha256": "d0dea5afbd097a7dfbee144075000b1d5d7e57fa71b3da9720d00787c76e1758",
+            "passed": 651,
+            "failed": 0,
+            "ignored": 24
+          },
+          {
+            "package": "kinakaze_libpthread",
+            "futex": "0",
+            "pi": "0",
+            "returncode": 0,
+            "summary": "test result: ok. 59 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 1.29s",
+            "log": "F:\\crysoacu2\\artifacts\\pthread-pi-hotpath-20261001\\native-integrated-kinakaze_libpthread-0-0.log",
+            "log_sha256": "66aa185c84d8e83c1fbbda2f60148a6048f4fb28651f8a9e98ebd916b340036a",
+            "passed": 59,
+            "failed": 0,
+            "ignored": 4
+          },
+          {
+            "package": "kinakaze_libc",
+            "futex": "0",
+            "pi": "1",
+            "returncode": 0,
+            "summary": "test result: ok. 651 passed; 0 failed; 24 ignored; 0 measured; 0 filtered out; finished in 11.69s",
+            "log": "F:\\crysoacu2\\artifacts\\pthread-pi-hotpath-20261001\\native-integrated-kinakaze_libc-0-1.log",
+            "log_sha256": "0ba66e7b1166196b8a1504552654eb82bee534add4ea24c3f9db8945944e6adf",
+            "passed": 651,
+            "failed": 0,
+            "ignored": 24
+          },
+          {
+            "package": "kinakaze_libpthread",
+            "futex": "0",
+            "pi": "1",
+            "returncode": 0,
+            "summary": "test result: ok. 59 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 1.28s",
+            "log": "F:\\crysoacu2\\artifacts\\pthread-pi-hotpath-20261001\\native-integrated-kinakaze_libpthread-0-1.log",
+            "log_sha256": "30d44d47e5358c595edb496db0cbeeaae593b88265a1316976c46a5659059d25",
+            "passed": 59,
+            "failed": 0,
+            "ignored": 4
+          },
+          {
+            "package": "kinakaze_libc",
+            "futex": "1",
+            "pi": "0",
+            "returncode": 0,
+            "summary": "test result: ok. 651 passed; 0 failed; 24 ignored; 0 measured; 0 filtered out; finished in 11.76s",
+            "log": "F:\\crysoacu2\\artifacts\\pthread-pi-hotpath-20261001\\native-integrated-kinakaze_libc-1-0.log",
+            "log_sha256": "61556000af115d7b12e434df1dd4d03d0be30038f226764e0e277ceafe29a8e1",
+            "passed": 651,
+            "failed": 0,
+            "ignored": 24
+          },
+          {
+            "package": "kinakaze_libpthread",
+            "futex": "1",
+            "pi": "0",
+            "returncode": 0,
+            "summary": "test result: ok. 59 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 1.29s",
+            "log": "F:\\crysoacu2\\artifacts\\pthread-pi-hotpath-20261001\\native-integrated-kinakaze_libpthread-1-0.log",
+            "log_sha256": "66aa185c84d8e83c1fbbda2f60148a6048f4fb28651f8a9e98ebd916b340036a",
+            "passed": 59,
+            "failed": 0,
+            "ignored": 4
+          },
+          {
+            "package": "kinakaze_libc",
+            "futex": "1",
+            "pi": "1",
+            "returncode": 0,
+            "summary": "test result: ok. 651 passed; 0 failed; 24 ignored; 0 measured; 0 filtered out; finished in 11.78s",
+            "log": "F:\\crysoacu2\\artifacts\\pthread-pi-hotpath-20261001\\native-integrated-kinakaze_libc-1-1.log",
+            "log_sha256": "1cac9214c2f36711030d841397dfc6de6e50e1e6ac2cd52b8ef24bcea4e5e452",
+            "passed": 651,
+            "failed": 0,
+            "ignored": 24
+          },
+          {
+            "package": "kinakaze_libpthread",
+            "futex": "1",
+            "pi": "1",
+            "returncode": 0,
+            "summary": "test result: ok. 59 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 1.23s",
+            "log": "F:\\crysoacu2\\artifacts\\pthread-pi-hotpath-20261001\\native-integrated-kinakaze_libpthread-1-1.log",
+            "log_sha256": "3a10ee090cf3e29e6c79e33c3f30297fbccedc8483d31009c3a2894f054d9e62",
+            "passed": 59,
+            "failed": 0,
+            "ignored": 4
+          }
+        ]
+      }
+    },
+    "configurations": 4,
+    "libc_passed_per_configuration": 651,
+    "pthread_passed_per_configuration": 59,
+    "ignored_per_configuration": {
+      "libc": 24,
+      "pthread": 4
+    },
+    "failures": 0,
+    "guest_and_benchmark_scope": "Guest 22-row regression and component benchmark remain the explicitly recorded pre-merge source/binary. Neither is relabeled as a merged build.",
+    "syntax_and_diff_checks": "Python py_compile for modified tools and git diff --check passed"
   }
 }

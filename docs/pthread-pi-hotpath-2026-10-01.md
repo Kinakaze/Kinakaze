@@ -63,6 +63,13 @@ pthread 59 项；另有 libc 22 项、pthread 4 项声明忽略的 helper/测量
 共享 PI 条件、shared/private robust GNU 取消清理各运行两个开关；raw PI、
 PI requeue、scalar、vector、普通 requeue、timeout、signal 各运行两次。
 
+随后正常合并最新 main 的绝对 realtime Deadline 和共享描述符布局更新，
+保留两边实现。合并源码 `5f2ca537f577b75508646cbbc255653f0edda7f2`
+重新完成 libc/pthread release 测试构建并冻结全部原生依赖；四组开关配置
+各通过 libc 651 项、pthread 59 项，零失败，分别忽略 24、4 项。合并后
+原生图和源文件哈希另列于 merged_validation；前述 guest 与性能证据仍
+对应合并前图，没有重新标记或声称合并后 guest/吞吐验证。
+
 本轮保留 [PI 接入记录](pthread-pi-mutex-2026-10-01.md) 的语义边界。完整
 futex 与 syscall/VFS/I/O 优化总目标仍有后续工作；按用户要求，本轮提交
 推送后暂停，不继续开启任务。
