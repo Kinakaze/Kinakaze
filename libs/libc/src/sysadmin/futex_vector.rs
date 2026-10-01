@@ -4,9 +4,9 @@
 
 use super::*;
 use kinakaze_vfs::{EINTR, EIO, interrupt, signal};
+#[cfg(test)]
 use std::time::{Duration, Instant};
 use windows_sys::Win32::Foundation::{WAIT_OBJECT_0, WAIT_TIMEOUT};
-use windows_sys::Win32::System::Threading::INFINITE;
 
 const MAX: usize = 128;
 
@@ -174,16 +174,6 @@ impl Drop for Registration {
     }
 }
 
-fn remaining_ms(duration: Option<Duration>, started: Instant) -> u32 {
-    duration.map_or(INFINITE, |limit| {
-        limit
-            .saturating_sub(started.elapsed())
-            .as_nanos()
-            .div_ceil(1_000_000)
-            .min(u128::from(INFINITE - 1)) as u32
-    })
-}
-
 pub(super) fn waitv(
     address: usize,
     count: u32,
@@ -201,9 +191,8 @@ pub(super) fn waitv(
             return Err(EINVAL);
         }
         'restart: loop {
-            let duration = futex_timeout(timeout, true, i64::from(clock) == CLOCK_REALTIME)
+            let deadline = futex_timeout(timeout, true, i64::from(clock) == CLOCK_REALTIME)
                 .map_err(|error| -error as i32)?;
-            let started = Instant::now();
             let entries = parse(address, count)?;
             loop {
                 let event = interrupt::current();
@@ -220,7 +209,7 @@ pub(super) fn waitv(
                 signal::register_waiter();
                 let status = loop {
                     let pending = signal::interrupt_pending();
-                    let expired = duration.is_some_and(|limit| started.elapsed() >= limit);
+                    let expired = deadline.expired();
                     if pending || expired {
                         break WAIT_OBJECT_0;
                     }
@@ -237,9 +226,7 @@ pub(super) fn waitv(
                     } else {
                         &handles[..2]
                     };
-                    let status = unsafe {
-                        kinakaze_vfs::deadline_wait::any(sources, remaining_ms(duration, started))
-                    };
+                    let status = unsafe { deadline.wait(sources) };
                     if status == WAIT_OBJECT_0 + 1
                         && matches!(
                             super::futex_requeue::selected(
@@ -260,7 +247,7 @@ pub(super) fn waitv(
                 };
                 let selected = registration.finish();
                 signal::unregister_waiter();
-                let expired = duration.is_some_and(|limit| started.elapsed() >= limit);
+                let expired = deadline.expired();
                 // Drop all named handles before running guest handlers, which may
                 // fork or enter a nested wait. Capture no parent-only resources.
                 drop(registration);

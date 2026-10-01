@@ -166,5 +166,112 @@ for occupied in (False, True):
         first.close()
         rows.append(dict(fork_alias=True, occupied=occupied))
 
+# Error precedence uses the actual raw entry, including unmapped PRIVATE
+# destinations which are keys until proxy acquisition touches the target word.
+source = c.c_uint(47)
+zero = Timespec(0, 0)
+assert futex(source, 11, True, 47, c.addressof(zero)) == (-1, errno.ETIMEDOUT)
+assert futex(source, 12, True, 1, 0, None, 48) == (-1, errno.EAGAIN)
+assert futex(source, 12, True, 1, 0, None, 47) == (-1, errno.EFAULT)
+rows.append(dict(private_unmapped_target=True))
+
+with tempfile.TemporaryFile() as file:
+    file.truncate(4096)
+    first = mmap.mmap(file.fileno(), 4096, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)
+    second = mmap.mmap(file.fileno(), 4096, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)
+    source = c.c_uint.from_buffer(first, 0)
+    same = c.c_uint.from_buffer(second, 0)
+    target = c.c_uint.from_buffer(first, 4)
+    source.value = 47
+    assert c.addressof(source) != c.addressof(same)
+    assert futex(source, 11, False, 48, c.addressof(zero), same) == (-1, errno.EAGAIN)
+    assert futex(source, 11, False, 47, c.addressof(zero), same) == (-1, errno.EINVAL)
+    assert futex(source, 12, False, 1, 0, same, 48) == (-1, errno.EINVAL)
+    readonly, error = call(9, 0, 4096, mmap.PROT_READ, mmap.MAP_SHARED, file.fileno(), 0)
+    assert readonly > 0 and error == 0
+    read_target = c.c_uint.from_address(readonly + 4)
+    assert futex(source, 11, False, 48, c.addressof(zero), read_target) == (-1, errno.EFAULT)
+    assert futex(source, 12, False, 1, 0, read_target, 48) == (-1, errno.EFAULT)
+    assert futex(source, 11, True, 47, c.addressof(zero), read_target) == (-1, errno.ETIMEDOUT)
+    assert futex(source, 12, True, 1, 0, read_target, 47) == (0, 0)
+    assert call(11, readonly, 4096) == (0, 0)
+    del source, same, target, read_target
+    first.close()
+    second.close()
+    rows.append(dict(alias_key_precedence=True, readonly_key_precedence=True))
+
+# Protect only the proxy caller's PRIVATE destination after the original wait
+# was published. EFAULT must leave the source registration available to retry.
+page, error = call(9, 0, 4096, mmap.PROT_READ | mmap.PROT_WRITE,
+                   mmap.MAP_PRIVATE | mmap.MAP_ANONYMOUS, -1 & 0xffffffffffffffff, 0)
+assert page > 0 and error == 0
+source, target = c.c_uint(0), c.c_uint.from_address(page)
+result, errors = [], []
+
+
+def protected_waiter():
+    try:
+        limit = deadline()
+        result.append(futex(source, 11, True, 0, c.addressof(limit), target))
+        assert result == [(0, 0)]
+        assert target.value & 0x3fffffff == call(186)[0]
+        assert futex(target, 7, True) == (0, 0)
+    except BaseException as error:
+        errors.append(repr(error))
+
+
+thread = threading.Thread(target=protected_waiter)
+thread.start()
+until(lambda: futex(source, 1, True, 1) == (-1, errno.EINVAL))
+assert call(10, page, 4096, mmap.PROT_READ) == (0, 0)
+assert futex(source, 12, True, 1, 0, target, 0) == (-1, errno.EFAULT)
+assert futex(source, 1, True, 1) == (-1, errno.EINVAL)
+assert target.value == 0 and not result
+assert call(10, page, 4096, mmap.PROT_READ | mmap.PROT_WRITE) == (0, 0)
+assert futex(source, 12, True, 1, 0, target, 0) == (1, 0)
+thread.join(6)
+assert not thread.is_alive() and not errors and result == [(0, 0)], (result, errors)
+assert target.value == 0 and futex(source, 1, True, 1) == (0, 0)
+assert call(11, page, 4096) == (0, 0)
+rows.append(dict(private_proxy_write_fault_retry=True))
+
+# A forked requeuer has a readonly alias while the waiting parent has a live
+# writable alias. The failed child must not consume the parent's source row.
+with tempfile.TemporaryFile() as file:
+    file.truncate(4096)
+    shared = mmap.mmap(file.fileno(), 4096, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)
+    source, target = c.c_uint.from_buffer(shared, 0), c.c_uint.from_buffer(shared, 4)
+    result, errors = [], []
+    # This waiter uses the shared keys instead of the PRIVATE probe above.
+    def shared_waiter():
+        try:
+            limit = deadline()
+            result.append(futex(source, 11, False, 0, c.addressof(limit), target))
+            assert result == [(0, 0)]
+            assert target.value & 0x3fffffff == call(186)[0]
+            assert futex(target, 7, False) == (0, 0)
+        except BaseException as error:
+            errors.append(repr(error))
+    thread = threading.Thread(target=shared_waiter)
+    thread.start()
+    until(lambda: futex(source, 1, False, 1) == (-1, errno.EINVAL))
+    child = os.fork()
+    if child == 0:
+        alias, error = call(9, 0, 4096, mmap.PROT_READ, mmap.MAP_SHARED, file.fileno(), 0)
+        assert alias > 0 and error == 0 and alias != c.addressof(source)
+        a, b = c.c_uint.from_address(alias), c.c_uint.from_address(alias + 4)
+        assert futex(a, 12, False, 1, 0, b, 0) == (-1, errno.EFAULT)
+        os._exit(0)
+    assert os.waitpid(child, 0) == (child, 0)
+    assert not result and target.value == 0
+    assert futex(source, 1, False, 1) == (-1, errno.EINVAL)
+    assert futex(source, 12, False, 1, 0, target, 0) == (1, 0)
+    thread.join(6)
+    assert not thread.is_alive() and not errors and result == [(0, 0)], (result, errors)
+    assert target.value == 0
+    del source, target
+    shared.close()
+    rows.append(dict(fork_readonly_alias_retry=True))
+
 print(json.dumps(rows, sort_keys=True))
 print('FUTEX_REQUEUE_PI_PASS', flush=True)

@@ -2,12 +2,9 @@
 //! Non-timed operations treat the fourth argument as a count or ignore it.
 
 use super::*;
+#[cfg(test)]
 use std::time::{Duration, Instant};
-
-pub(super) struct Prepared {
-    pub duration: Option<Duration>,
-    pub started: Instant,
-}
+pub(super) use crate::futex::Deadline as Prepared;
 
 pub(super) fn legacy(
     command: u32,
@@ -22,16 +19,16 @@ pub(super) fn legacy(
     }
     // LOCK_PI's absolute clock is implicitly realtime. LOCK_PI2, WAIT_BITSET
     // and WAIT_REQUEUE_PI select it with the explicit flag; WAIT is relative.
-    let duration = futex_timeout(
+    let deadline = futex_timeout(
         timeout,
         command != FUTEX_WAIT,
         command == FUTEX_LOCK_PI || flags & FUTEX_CLOCK_REALTIME != 0,
     )?;
-    Ok(Some(Prepared {
-        duration,
-        started: Instant::now(),
-    }))
+    Ok(Some(deadline))
 }
 
 #[cfg(test)]
 pub(super) mod tests;
+
+#[cfg(test)]
+mod clock_tests;

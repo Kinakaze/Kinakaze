@@ -139,7 +139,7 @@ fn copied_timespec_may_be_unaligned_and_retains_clock_and_relative_rules() {
         })
     };
     assert_eq!(
-        futex_timeout(timeout, false, false),
+        futex_timeout(timeout, false, false).map(|deadline| deadline.duration),
         Ok(Some(Duration::from_nanos(123_456_789)))
     );
     let relative = legacy(FUTEX_WAIT, 0, timeout).unwrap().unwrap();

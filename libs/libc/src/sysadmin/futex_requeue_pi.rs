@@ -5,7 +5,6 @@ use super::*;
 use crate::futex::pi::{self, RequeueStatus};
 use kinakaze_vfs::{EIO, interrupt, signal};
 use windows_sys::Win32::Foundation::{WAIT_OBJECT_0, WAIT_TIMEOUT};
-use windows_sys::Win32::System::Threading::INFINITE;
 
 fn write_key(word: *mut c_int, private: bool) -> Result<FutexAddress, i64> {
     let address = FutexAddress::resolve(word, private)?;
@@ -139,9 +138,7 @@ fn attempt(
     signal::register_waiter();
     let outcome = loop {
         let pending = signal::interrupt_pending();
-        let expired = deadline
-            .duration
-            .is_some_and(|duration| deadline.started.elapsed() >= duration);
+        let expired = deadline.expired();
         let (mut transaction, _, _, queues) = match begin(source, target) {
             Ok(value) => value,
             Err(error) => break Err(error),
@@ -191,20 +188,13 @@ fn attempt(
         };
         drop(queues);
         drop(transaction);
-        let milliseconds = deadline.duration.map_or(INFINITE, |duration| {
-            duration
-                .saturating_sub(deadline.started.elapsed())
-                .as_nanos()
-                .div_ceil(1_000_000)
-                .min(u128::from(INFINITE - 1)) as u32
-        });
         let handles = [
             park,
             interrupt,
             owner.as_ref().map_or(park, |owner| owner.raw()),
         ];
         let handles = &handles[..if owner.is_some() { 3 } else { 2 }];
-        let status = unsafe { kinakaze_vfs::deadline_wait::any(handles, milliseconds) };
+        let status = unsafe { deadline.wait(handles) };
         if status != WAIT_TIMEOUT
             && !(WAIT_OBJECT_0..WAIT_OBJECT_0 + handles.len() as u32).contains(&status)
         {

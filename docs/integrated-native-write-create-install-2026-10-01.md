@@ -125,3 +125,38 @@ writeback, fsync, source/binary provenance and the unchanged benchmark harness
 are the same as the preceding two runs. No production code changed between
 these observations, so their wall-time differences are not separate code
 optimization gains. All slower observations are retained above.
+
+
+## Fourth run without observed competing compilation
+
+A 60-second quiet-start interval was satisfied after
+154.353 seconds. The unchanged release completed a new
+357-package installation in **203.003 seconds**.
+All eight phases passed, all versions matched and all 59 binary hashes were
+unchanged. Download preparation took 2.306 seconds;
+complete file verification passed in 10.967 seconds.
+Maintainer scripts, triggers, writeback and durability barriers stayed enabled.
+
+None of the 202 installation samples contained an external compiler
+or guest runtime worker. The tracked foreign Python process consumed only
+0.015625 observed CPU seconds. This observer
+does not classify every Windows service or prove continuous host isolation.
+Median host CPU was 30.3%; Job CPU was
+252.438 seconds (88.766 user and
+163.672 kernel). The Job created 5,275 processes,
+with 39,699,529 page faults and 9,595,414 other I/O operations.
+Observation and prerequisite checks used
+0.703 CPU seconds.
+
+This run is slower than the earlier 185.597-second observation despite the
+absence of observed compilation. Compiler contention therefore does not
+explain all timing variation. The best remains 185.597 seconds and the
+180-second goal remains unmet; no further same-binary repetition is justified
+as a substitute for a measured code improvement.
+
+| Same frozen release | Install | Verify | Job CPU | Samples with compiler |
+| --- | ---: | ---: | ---: | ---: |
+| Run 1 | 206.074 s | 116.269 s | 258.766 s | 116/204 |
+| Run 2 | 185.597 s | 10.601 s | 229.516 s | 26/184 |
+| Run 3 | 207.504 s | 11.033 s | 254.375 s | 141/205 |
+| Run 4 | 203.003 s | 10.967 s | 252.438 s | 0/202 |

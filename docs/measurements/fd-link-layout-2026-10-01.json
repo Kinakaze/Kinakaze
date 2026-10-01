@@ -1,0 +1,300 @@
+{
+  "source": {
+    "base_commit": "458f9d30d489ec1b5a920691db5149c78ba1e65b",
+    "files": {
+      "crates/protocol/src/kernel.rs": "763ac5a3b5ad84e868864653a3e0dd547ab8829cf39d931f17eb0ce2b09f792b",
+      "engine/crates/kinakaze-runtime/src/lib.rs": "67e3a93c75847c4fc9652021542833e109421c764144a78779beaa7351f2448b",
+      "engine/crates/kinakaze-runtime/src/job/fd_link_layout_tests.rs": "168e9c77fde2d0ef1b82bc350980785eaa7dfe86be5dbd47ccf3639cbf53e614"
+    }
+  },
+  "hashes": {
+    "worker.exe": "593afc6ffa200407675f455da16e00fef6f05142c76062815af5cd0c08b398a1",
+    "init.exe": "0daf97be7419455cd6c73bbba92ba5cd26c0dfd5c84bb0c2a83caba1e130a0b0",
+    "rootfs.manifest.json": "65c4c844188db2bd5da8d011fdc4c7577377a973da26f3e1250193d07a2bf6bc",
+    "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+    "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+    "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+    "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+    "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+    "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+    "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+    "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+    "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+    "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+    "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+    "rootfs\\lib\\kinakaze_alloc.so": "529840b23ea8e1d5abf33a8c5b3a564148dd502933d4931acb583e7463d0e4a9",
+    "rootfs\\lib\\kinakaze_elf.so": "a83c8fcfe0a5a7edb54167d54e4683f69cd9917162b83d25f840cfae1da5c22f",
+    "rootfs\\lib\\kinakaze_guest_engine.so": "ea5df5dc75cbe5a05f28f9c6fe9a17073969cdc65cdd6e10ffb56e2976e0844b",
+    "rootfs\\lib\\kinakaze_kernel.so": "f4fe0d88a09aabf4ffb54954cfebcb41c6db1b9cd4c8f07b3218bf04531dbda3",
+    "rootfs\\lib\\kinakaze_tls.so": "1d59e6f3b1ff533677acb07b8ec7d9b852d7966288e7fe2afc836d7129804ba1",
+    "rootfs\\lib\\kinakaze_vfs.so": "f2518621371bd26c47adf06675b04a181b133870ce9c3303348d59caef8beb92",
+    "rootfs\\lib\\ld-linux-x86-64.so.2": "a0b8519b890958efe5bb3409164581d3a3ef22578b788d5f27e6880fa8d69046",
+    "rootfs\\lib\\libasound.so.2": "2e9da1ce4fdba47c147ea8cd07c7160c6245ac67249bf816e062e820e3eb4c72",
+    "rootfs\\lib\\libc.so.6": "fc1605fc57393bd753ce7bd262da7726ec3ba15546a067a68ef130686b282078",
+    "rootfs\\lib\\libcuda.so.1": "9f7fb89e38ba9c83f0cff3661013214a9ffafd4687e0bbf7c6b6c123597285c9",
+    "rootfs\\lib\\libdisplay.so.1": "b385bd1e21569e7f7b41f1775a17677657f3ff8ab0d710bf03f18af9ecb8f77b",
+    "rootfs\\lib\\libdl.so.2": "9b0cf2a805f322c1a1a0c0eaf8378a4bc546e142933e12ee622965abc46faa93",
+    "rootfs\\lib\\libEGL.so.1": "c125f6c440a8f8f47d733a4bdf0a8ae1b3681117c4bddd663e8219c7be8f911c",
+    "rootfs\\lib\\libGL.so.1": "27b3a10f38d8d7f72705fdd5f63607de8ae113869b89ef2f7fc79fe3e1038fcd",
+    "rootfs\\lib\\libGLESv2.so.2": "6e836315cb6a6d663dabb2a09e4e7c92b00c50fbb89e79a7651d28bd3170dfe0",
+    "rootfs\\lib\\libGLX.so.0": "ecf63a7bf1d3a7a1efd0c7b70caed4c005ca464c829867cdc0022f359e64093c",
+    "rootfs\\lib\\libkinakaze-runtime.so.1": "b0f74b29cd5183125fe8da157bbdf91505e749c19ccf4ab2483f50fbba086cf7",
+    "rootfs\\lib\\libm.so.6": "e4a31dbb626e47f7ae396e24424b27ae9e799b8829f193e4086059e7fb7d0cd0",
+    "rootfs\\lib\\libOpenGL.so.0": "90eaef5a918b9ef0b11dcf218ad75bb45b823004fb50e05f4ca68912f74b4d3d",
+    "rootfs\\lib\\libpipewire-0.3.so.0": "592c66d8b264bd9d3102380f1a7580acdf180dce69783281df680c8ff774b617",
+    "rootfs\\lib\\libpthread.so.0": "34b96363e9a3681cbf0e05fcdbce40c2319991a48f68940447733e6ed51cd4e4",
+    "rootfs\\lib\\libpulse.so.0": "470a049465e701c91b550ec4be7123f9e924f532e16e3cfa5bf3fc99182872c5",
+    "rootfs\\lib\\libresolv.so.2": "ff6f8d5dc59e4fcd29123b1a32180e28214bbda305857d865543bc20b9e705d0",
+    "rootfs\\lib\\librt.so.1": "0f961328699821bd31f66cb22dbb6d3b0c1256e5b5d7dc80610143297d662704",
+    "rootfs\\lib\\libvulkan.so.1": "a2da5dd745b6b1afe8f9bc7f1cd039080d9eadd1b9eb0ff5da76ea78cea76ab2",
+    "rootfs\\lib\\libX11-xcb.so.1": "d2d17dfa08e8b62aab360afa969b248215f70c0dc1df80e51250f116aac611a4",
+    "rootfs\\lib\\libX11.so.6": "7671937e65a8f788d39fd1865eb5ad33ed641d6ca0258063bd83b9c35020b295",
+    "rootfs\\lib\\libxcb.so.1": "eef5482274f04ab3fcedd64e8fcf626a013ce1d61e46613229acbefaaccf57fa",
+    "rootfs\\lib\\libXcursor.so.1": "ce722c03aff959f2ec3f9e082a37b61b549563564577083406405a451f4e2e88",
+    "rootfs\\lib\\libXext.so.6": "760181e2a594778ba48f0eaabb1dcfcedb1343f87df4e1e812319f9844930163",
+    "rootfs\\lib\\libXi.so.6": "1f0fe6c30bde2e30d1ef3ceb4f2671a638d0bffb40b98319cc21dd86c5160619",
+    "rootfs\\lib\\libXinerama.so.1": "74d3c86c0cf8ae8cd4c63f908d1cb31ebc28dd5927a348c78ec515e6edb64815",
+    "rootfs\\lib\\libXrandr.so.2": "0cda7fb2abc8d2cb48eb5aa4ce2ff7198e02c339646dcd73f6d9f20c077e321f",
+    "rootfs\\lib\\libXrender.so.1": "f6d7d633916f3a71094b258f71f459bd81471354b311f99cfb8eab85357ac552",
+    "rootfs\\lib\\libXxf86vm.so.1": "0e8f163db924d65436acb385967c2eb432d4c6bf6e86b68476970c0856b994f1",
+    "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+    "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+    "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+    "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+    "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+    "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+    "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+    "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+    "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+    "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+  },
+  "cold_scan_abba": [
+    {
+      "run": 0,
+      "stride": 1040,
+      "views": 500,
+      "ms": 612.6026,
+      "page_faults": 1043008,
+      "kernel_ms": 515.625,
+      "user_ms": 93.75
+    },
+    {
+      "run": 1,
+      "stride": 16,
+      "views": 500,
+      "ms": 19.4938,
+      "page_faults": 17500,
+      "kernel_ms": 31.25,
+      "user_ms": 0
+    },
+    {
+      "run": 2,
+      "stride": 16,
+      "views": 500,
+      "ms": 19.5778,
+      "page_faults": 17500,
+      "kernel_ms": 15.625,
+      "user_ms": 0
+    },
+    {
+      "run": 3,
+      "stride": 1040,
+      "views": 500,
+      "ms": 582.8059,
+      "page_faults": 1043000,
+      "kernel_ms": 453.125,
+      "user_ms": 125
+    }
+  ],
+  "native_job_tests": {
+    "compact_passed": 40,
+    "legacy_passed": 40,
+    "ignored_per_run": 1
+  },
+  "init_protocol_tests": {
+    "passed": 52,
+    "ignored": 2
+  },
+  "exports": {
+    "modules": 29,
+    "guest_exports": 5973
+  },
+  "packaged_guests": [
+    {
+      "probe": "ForkNativeTransferProbe",
+      "status": "passed"
+    },
+    {
+      "probe": "ForkPrewarmPoolProbe",
+      "status": "passed"
+    },
+    {
+      "probe": "ConcurrentVforkProbe",
+      "status": "passed"
+    },
+    {
+      "probe": "ExecPrewarmPoolProbe",
+      "status": "passed"
+    },
+    {
+      "probe": "ProcessExitBoundaryProbe",
+      "status": "passed"
+    },
+    {
+      "probe": "ProcFdCwdExecProbe",
+      "status": "passed"
+    },
+    {
+      "probe": "ProcFdUnlinkProbe",
+      "status": "passed"
+    },
+    {
+      "probe": "ProcFdMkdirProbe",
+      "status": "passed"
+    },
+    {
+      "probe": "ProcInspectionProbe",
+      "status": "passed"
+    },
+    {
+      "probe": "ProcCredentialsProbe",
+      "status": "passed"
+    },
+    {
+      "probe": "NamespaceServicesProbe",
+      "status": "passed"
+    },
+    {
+      "probe": "UnixRightsProbe",
+      "status": "passed"
+    },
+    {
+      "probe": "DatagramRightsProbe",
+      "status": "passed"
+    },
+    {
+      "probe": "FilesystemBoundaryProbe",
+      "status": "passed"
+    },
+    {
+      "probe": "ExclusiveCreatePermissionsProbe",
+      "status": "passed"
+    },
+    {
+      "probe": "NativeExclusiveCreateProbe",
+      "status": "passed"
+    },
+    {
+      "probe": "NativeWriteOpenProbe",
+      "status": "passed"
+    },
+    {
+      "probe": "NativeReadOpenProbe",
+      "status": "passed"
+    },
+    {
+      "probe": "RelativeNativeReadProbe",
+      "status": "passed"
+    },
+    {
+      "probe": "NativeReadCacheProbe",
+      "status": "passed"
+    },
+    {
+      "probe": "PthreadSharedMutexProbe",
+      "status": "passed"
+    },
+    {
+      "probe": "PthreadRobustAliasesProbe",
+      "status": "passed"
+    },
+    {
+      "probe": "FutexPiProbe",
+      "status": "passed"
+    }
+  ],
+  "packaged_idle": {
+    "cpu_ms": 0.0,
+    "active_processes": 7,
+    "stats": {
+      "Stats": {
+        "processes": 2,
+        "clients": 3,
+        "objects": 0,
+        "transactions": 0
+      }
+    },
+    "members": [
+      {
+        "pid": 21568,
+        "parent": 26844,
+        "name": "init.exe",
+        "role": "other",
+        "first_argument": "--pipe"
+      },
+      {
+        "pid": 30100,
+        "parent": 21568,
+        "name": "worker.exe",
+        "role": "native-exec",
+        "first_argument": "--kinakaze-exec-pool"
+      },
+      {
+        "pid": 26408,
+        "parent": 21568,
+        "name": "worker.exe",
+        "role": "native-exec",
+        "first_argument": "--kinakaze-exec-pool"
+      },
+      {
+        "pid": 28592,
+        "parent": 21568,
+        "name": "worker.exe",
+        "role": "native-fork",
+        "first_argument": "--kinakaze-fork"
+      },
+      {
+        "pid": 29848,
+        "parent": 21568,
+        "name": "worker.exe",
+        "role": "command-pool",
+        "first_argument": "guest-pool"
+      },
+      {
+        "pid": 27764,
+        "parent": 21568,
+        "name": "worker.exe",
+        "role": "command-pool",
+        "first_argument": "guest-pool"
+      },
+      {
+        "pid": 29132,
+        "parent": 21568,
+        "name": "worker.exe",
+        "role": "native-fork",
+        "first_argument": "--kinakaze-fork"
+      }
+    ]
+  },
+  "evidence": {
+    "root-fd-layout-native-build.jsonl": "8fadaf4ba8550876ae5ed0a341b7f27b85e5215acfb74527e98ec8a77c6f886a",
+    "root-fd-layout-native-tests.log": "bd39abb2706f4819bdfe334e553c795e85ad1c9e69c1ce0ef7de61694ec9c62c",
+    "root-fd-layout-native-control.log": "008321b165a21842d5c68b919a78d1a7037e001d8d41fca29a10426e10a9f14a",
+    "root-fd-layout-native-abba.log": "77910796a2e8f0ced2263900273910377633b5ed967626099dff39571260ad94",
+    "root-fd-layout-build.jsonl": "89fd1ffc8e45715f28fdcfc8a20e71168bb66dcbe5e2ce30249bb00b81d619de",
+    "root-fd-layout-build.log": "5d549e3bc811bc086baa35b4ce81e54f83e40939708c0ff40b6814c32b13fc13",
+    "root-fd-layout-entry.jsonl": "becacaf4e30eb0da6f8831715af9de643583530cae3e38ef129c504cb603b438",
+    "root-fd-layout-entry.log": "bdc4eceeb0ef6499524301419d7092d53ffbb6d1c1afd846f3f85c38480ed6ce",
+    "root-fd-layout-protocol-init-tests.log": "78287023686a04ca555689d37e365598ea809128005b0a543cace625f2a6c67b",
+    "root-fd-layout-exports.log": "c9000c55abf695a2efa2ff3d6d17d2efa6c5cdc3280f9bbbc6b784aa493aa80d",
+    "root-fd-layout-package.log": "36bbf9bd4615c480cb3c8dc928e7feff0d198745d6dedf61c2af6190a049385a",
+    "root-fd-layout-guests-standalone/results.json": "4da22c90e394098143be058fde53ce205a7693a890f36dea173833842f85050a",
+    "root-fd-layout-guests/results.json": "775dc0b1e90cbd09075a6773656cc06d354bf2ed8ba0a001dce4f6a7b7191b45",
+    "root-fd-layout-guests/session/pool.stderr.log": "5a4b070ce53a6a05f1479e3381bc7f46514f33d00fc033671075ebb506e3838b"
+  },
+  "full_install_measured": false,
+  "sub_180_goal_achieved": false,
+  "previous_best_install_ms": 185596.8295,
+  "invocation_error": "An initial generic guest run invoked ProcessChurnProbe without its required mode/count/gate arguments. The first five probes passed; that probe exited with ValueError before exercising churn. The completed standalone run excludes this host-coordinated probe; no churn coverage is claimed.",
+  "limitations": "Cold-view scans measure only the production fd-link clear operation. Guest runs validate correctness, not installation performance. A fresh control root was prepared but no installation was started before the user requested push and stop."
+}

@@ -1,5 +1,9 @@
 # futex PI 重排队阶段
 
+后续完整 v4 原生/客体图、只读恢复和 raw 批量测量已补齐，见
+[完整图验证阶段](futex-pi-requeue-v4-validation-2026-10-01.md)。下文保留首次
+提交的验证边界；main 后续的 pthread PI/v5 另见其阶段记录。
+
 在 main 已实现的 raw 202 WAIT_REQUEUE_PI（11）和 CMP_REQUEUE_PI（12）
 上，本批补充 Linux 错误顺序、代理 CAS 故障后的源恢复及批量迁移，支持
 PRIVATE 与无标记键。完整 futex 和所有 syscall 路径目标继续保留。

@@ -22,11 +22,10 @@ pub(super) fn wait(
         if !timeout.is_null() && !matches!(i64::from(clock), CLOCK_REALTIME | CLOCK_MONOTONIC) {
             return -i64::from(EINVAL);
         }
-        let duration = match futex_timeout(timeout, true, i64::from(clock) == CLOCK_REALTIME) {
-            Ok(duration) => duration,
+        let deadline = match futex_timeout(timeout, true, i64::from(clock) == CLOCK_REALTIME) {
+            Ok(deadline) => deadline,
             Err(error) => return error,
         };
-        let started = std::time::Instant::now();
         #[cfg(test)]
         tests::pause_after_timeout_copy(address);
         // __futex_wait checks an empty mask after timeout setup, before key lookup.
@@ -40,8 +39,7 @@ pub(super) fn wait(
         match futex_wait_attempt(
             address,
             value as u32 as i32,
-            duration,
-            started,
+            deadline,
             mask as u32,
             crate::futex::RestartPolicy::Reparse,
         ) {

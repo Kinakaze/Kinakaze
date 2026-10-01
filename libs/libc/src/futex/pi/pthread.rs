@@ -178,14 +178,13 @@ fn remaining(time: &libpthread::Timespec, clock: i32) -> Result<Duration, i32> {
         (nanos % 1_000_000_000) as u32,
     ))
 }
-fn milliseconds(time: Option<&libpthread::Timespec>, clock: i32) -> Result<u32, i32> {
-    match time {
-        None => Ok(INFINITE),
-        Some(time) => Ok(remaining(time, clock)?
-            .as_nanos()
-            .div_ceil(1_000_000)
-            .min(u128::from(INFINITE - 1)) as u32),
-    }
+fn prepare(time: &libpthread::Timespec, clock: i32) -> Result<Deadline, i32> {
+    let started = std::time::Instant::now();
+    Ok(Deadline {
+        duration: Some(remaining(time, clock)?),
+        started,
+        realtime: (clock == 0).then_some(i128::from(time.tv_sec) * 1_000_000_000 + i128::from(time.tv_nsec)),
+    })
 }
 fn owned(
     transaction: &mut Transaction,
@@ -304,14 +303,14 @@ fn lock(
                 }
                 token = None;
             }
-            time = Some(crate::ptrace::read_value::<libpthread::Timespec>(
+            time = Some(prepare(&crate::ptrace::read_value::<libpthread::Timespec>(
                 deadline as usize,
-            )?);
+            )?, clock)?);
             // No source token exists on this first busy timed attempt, except
             // immediate robust death recovery handled above.
         }
         if token.is_none() {
-            let wait = milliseconds(time.as_ref(), clock)?;
+            let wait = time.as_ref().map_or(INFINITE, Deadline::milliseconds);
             if wait == 0 {
                 return Err(110);
             }
@@ -325,7 +324,13 @@ fn lock(
             if !self_owned {
                 continue;
             }
-            unsafe { kinakaze_vfs::deadline_wait::any(&[park, interrupt], wait) };
+            let status = unsafe {
+                if let Some(time) = &time { time.wait(&[park, interrupt]) }
+                else { kinakaze_vfs::deadline_wait::any(&[park, interrupt], wait) }
+            };
+            if status != WAIT_TIMEOUT && !(WAIT_OBJECT_0..WAIT_OBJECT_0 + 2).contains(&status) {
+                return Err(EIO);
+            }
             let _ = signal::deliver_pending();
             continue;
         }
@@ -333,17 +338,7 @@ fn lock(
         drop(transaction);
         signal::register_waiter();
         let result = loop {
-            let wait = match milliseconds(time.as_ref(), clock) {
-                Ok(wait) => wait,
-                Err(error) => {
-                    if let Ok((mut transaction, key)) =
-                        crate::sysadmin::futex_pi::transaction(address, private)
-                    {
-                        cancel_error(&mut transaction, key, token);
-                    }
-                    break Err(error);
-                }
-            };
+            let wait = time.as_ref().map_or(INFINITE, Deadline::milliseconds);
             let pending = signal::interrupt_pending();
             let (mut transaction, key) =
                 match crate::sysadmin::futex_pi::transaction(address, private) {
@@ -386,10 +381,9 @@ fn lock(
                 owner.as_ref().map_or(ptr::null_mut(), |owner| owner.raw()),
             ];
             let status = unsafe {
-                kinakaze_vfs::deadline_wait::any(
-                    &handles[..if owner.is_some() { 3 } else { 2 }],
-                    wait,
-                )
+                let sources = &handles[..if owner.is_some() { 3 } else { 2 }];
+                if let Some(time) = &time { time.wait(sources) }
+                else { kinakaze_vfs::deadline_wait::any(sources, wait) }
             };
             if status != WAIT_TIMEOUT
                 && !(WAIT_OBJECT_0..WAIT_OBJECT_0 + if owner.is_some() { 3 } else { 2 })
