@@ -57,11 +57,11 @@ pub(super) fn open(path: &Path, access: u32) -> Result<Object, i32> {
     open_with_options(path, access, 0x0020_4000)
 }
 
-/// Ordinary read access, without backup privileges or directory semantics.
-pub(crate) fn read_file(path: &Path) -> Result<Object, i32> {
+/// Ordinary file access, without backup privileges or directory semantics.
+pub(crate) fn open_file(path: &Path, access: u32) -> Result<Object, i32> {
     open_with_options(
         path,
-        windows_sys::Win32::Foundation::GENERIC_READ,
+        access,
         0x0020_0040, // FILE_OPEN_REPARSE_POINT | FILE_NON_DIRECTORY_FILE.
     )
 }

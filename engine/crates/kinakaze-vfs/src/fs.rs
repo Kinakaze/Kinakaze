@@ -56,6 +56,7 @@ pub use directory::{NativeDirectoryEntry, read_directory_bytes, read_native_dire
 mod install_tests;
 mod native_create;
 mod native_read;
+mod native_write;
 mod permissions;
 pub use allocation::fallocate;
 pub(crate) mod cwd;
@@ -1118,6 +1119,11 @@ pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32>
     }
     if fallback.is_none()
         && let Some(fd) = native_read::try_open_at(dirfd, path, &absolute, flags)?
+    {
+        return Ok(fd);
+    }
+    if fallback.is_none()
+        && let Some(fd) = native_write::try_open(path, flags)?
     {
         return Ok(fd);
     }

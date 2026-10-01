@@ -262,6 +262,13 @@ fn native_junctions_in_ancestors_cannot_bypass_the_guest_walker() {
     assert!(fixture.open("/sub/payload").is_some());
     assert!(fixture.open("/junction/payload").is_none());
     assert!(fixture.open("/junction").is_none());
+    for path in ["/junction/payload", "/junction"] {
+        assert!(
+            open_regular(&fixture.0, "/jail", path, GENERIC_WRITE)
+                .unwrap()
+                .is_none()
+        );
+    }
     std::fs::remove_dir(link).unwrap();
     assert_eq!(std::fs::read(path).unwrap(), b"original");
 }
