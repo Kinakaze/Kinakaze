@@ -11,3 +11,21 @@ The exact tested source was detached `4806716` plus a 32-file delta containing t
 Before continuing, compare the existing Win32 helper against the same hardlink regression; this experiment did not verify baseline behavior. Any candidate must preserve same-inode no-op semantics, no-replace atomicity and inode identity before performance measurement. Handling only no-replace calls would leave the ordinary replacement workload unoptimized. A target identity check must account for replacement races and its own syscall cost; simply treating the successful NT request as a Linux rename is insufficient. Avoid relying on a persistent pathname or metadata cache.
 
 The original 180-second goal remains open. The latest documented accepted integrated observation is 215.415 seconds; the last complete native-create candidate took 253.647 seconds with every installation and validation phase passing. Neither observation proves that this rejected rename design improves installation performance. The user requested a quick wrap-up and push, so this checkpoint records the tested failure without starting a new production build or installation.
+
+
+## Native no-replace follow-up
+
+A direct native API probe tested same-path, different hardlink/same-inode,
+and different-inode targets with flags 0, 1, 2, 3, 0x41 and 0x43. The latter
+matches the current Win32 helper's flags. All six flag combinations succeeded
+and removed the source name for the different-hardlink/same-inode case.
+No-replace rejected a different-inode target with native error 183, but did
+not reject another name of the same inode. All same-path cases retained the
+name. All 18 observations and script hashes are in the measurement JSON.
+
+This rules out the proposed shortcut of trying no-replace first and falling
+back only on a collision: a successful native call can already have removed
+a Linux name that should remain. The probe exercises the matching Windows
+API directly, not a rebuilt Rust helper or a packaged guest. It does not claim
+to fix the baseline or establish a performance gain. Production rename code
+remains unchanged, and the rejected prototype remains unapplied.

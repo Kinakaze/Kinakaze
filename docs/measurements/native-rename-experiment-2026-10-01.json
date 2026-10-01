@@ -146,6 +146,177 @@
     "artifacts\\apt-180-20260930\\native-r15-rename-prototype.log": "4617f5d84d5576c8de6db8c8cbcfbb9ca8eca36332411c2cf3f233343be62c5a",
     "artifacts\\apt-180-20260930\\run-native-r15.py": "bbd5a3e468c4e20f1978e7dbcb5569aad66ab17cd807ed5b97b06143d8a73efe",
     "artifacts\\apt-180-20260930\\record-r15-rename.py": "f7daad7eada69999d1405375c83997225639f91bd622a5be65fbf2fdb6152c24",
-    "docs\\experiments\\native-rename-prototype-2026-10-01.patch": "81c2a084e4deacb50b2afd5bd2ea4fb58bad6bb116242789ee4d84e8657b4650"
+    "docs\\experiments\\native-rename-prototype-2026-10-01.patch": "81c2a084e4deacb50b2afd5bd2ea4fb58bad6bb116242789ee4d84e8657b4650",
+    "artifacts/apt-180-20260930/root-rename-native-semantics.json": "cc2c68579fa6310cd0390d2447dcf1e73ba799183d02cbd6bf9119f3ceee45d9",
+    "artifacts/apt-180-20260930/root-rename-native-semantics.py": "6aad5bbdd168ac15ec9425a57f378e4f5dcee13a8f5702fe582b9447babdc386"
+  },
+  "native_api_probe": {
+    "rows": [
+      {
+        "flags": 0,
+        "kind": "same-path",
+        "ok": true,
+        "error": 0,
+        "source_exists": true,
+        "target_exists": true,
+        "target_payload": "source"
+      },
+      {
+        "flags": 0,
+        "kind": "same-inode",
+        "ok": true,
+        "error": 0,
+        "source_exists": false,
+        "target_exists": true,
+        "target_payload": "source"
+      },
+      {
+        "flags": 0,
+        "kind": "different-inode",
+        "ok": false,
+        "error": 183,
+        "source_exists": true,
+        "target_exists": true,
+        "target_payload": "target"
+      },
+      {
+        "flags": 1,
+        "kind": "same-path",
+        "ok": true,
+        "error": 0,
+        "source_exists": true,
+        "target_exists": true,
+        "target_payload": "source"
+      },
+      {
+        "flags": 1,
+        "kind": "same-inode",
+        "ok": true,
+        "error": 0,
+        "source_exists": false,
+        "target_exists": true,
+        "target_payload": "source"
+      },
+      {
+        "flags": 1,
+        "kind": "different-inode",
+        "ok": true,
+        "error": 0,
+        "source_exists": false,
+        "target_exists": true,
+        "target_payload": "source"
+      },
+      {
+        "flags": 2,
+        "kind": "same-path",
+        "ok": true,
+        "error": 0,
+        "source_exists": true,
+        "target_exists": true,
+        "target_payload": "source"
+      },
+      {
+        "flags": 2,
+        "kind": "same-inode",
+        "ok": true,
+        "error": 0,
+        "source_exists": false,
+        "target_exists": true,
+        "target_payload": "source"
+      },
+      {
+        "flags": 2,
+        "kind": "different-inode",
+        "ok": false,
+        "error": 183,
+        "source_exists": true,
+        "target_exists": true,
+        "target_payload": "target"
+      },
+      {
+        "flags": 3,
+        "kind": "same-path",
+        "ok": true,
+        "error": 0,
+        "source_exists": true,
+        "target_exists": true,
+        "target_payload": "source"
+      },
+      {
+        "flags": 3,
+        "kind": "same-inode",
+        "ok": true,
+        "error": 0,
+        "source_exists": false,
+        "target_exists": true,
+        "target_payload": "source"
+      },
+      {
+        "flags": 3,
+        "kind": "different-inode",
+        "ok": true,
+        "error": 0,
+        "source_exists": false,
+        "target_exists": true,
+        "target_payload": "source"
+      },
+      {
+        "flags": 65,
+        "kind": "same-path",
+        "ok": true,
+        "error": 0,
+        "source_exists": true,
+        "target_exists": true,
+        "target_payload": "source"
+      },
+      {
+        "flags": 65,
+        "kind": "same-inode",
+        "ok": true,
+        "error": 0,
+        "source_exists": false,
+        "target_exists": true,
+        "target_payload": "source"
+      },
+      {
+        "flags": 65,
+        "kind": "different-inode",
+        "ok": true,
+        "error": 0,
+        "source_exists": false,
+        "target_exists": true,
+        "target_payload": "source"
+      },
+      {
+        "flags": 67,
+        "kind": "same-path",
+        "ok": true,
+        "error": 0,
+        "source_exists": true,
+        "target_exists": true,
+        "target_payload": "source"
+      },
+      {
+        "flags": 67,
+        "kind": "same-inode",
+        "ok": true,
+        "error": 0,
+        "source_exists": false,
+        "target_exists": true,
+        "target_payload": "source"
+      },
+      {
+        "flags": 67,
+        "kind": "different-inode",
+        "ok": true,
+        "error": 0,
+        "source_exists": false,
+        "target_exists": true,
+        "target_payload": "source"
+      }
+    ],
+    "accepted_optimization": false,
+    "scope": "Direct SetFileInformationByHandle(FileRenameInfoEx) calls on disposable native files; flags 0x43 match the production Win32 helper. This is not a packaged guest regression.",
+    "conclusion": "Both replace and no-replace flag combinations remove the source hardlink when the destination is another name of the same inode. A speculative no-replace request is not a safe way to assume any existing destination yields EEXIST."
   }
 }
