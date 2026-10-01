@@ -2759,7 +2759,10 @@ fn futex_timeout(
     realtime: bool,
 ) -> Result<crate::futex::Deadline, i64> {
     if timeout.is_null() {
-        return Ok(crate::futex::Deadline::relative(None, std::time::Instant::now()));
+        return Ok(crate::futex::Deadline::relative(
+            None,
+            std::time::Instant::now(),
+        ));
     }
     // Copy into a local before interpreting it. Kernel timespec pointers need
     // not be aligned, and a concurrent unmap must report EFAULT rather than
@@ -3011,12 +3014,7 @@ fn futex_wait(
         Ok(deadline) => deadline,
         Err(error) => return error,
     };
-    futex_wait_prepared(
-        address,
-        expected,
-        deadline,
-        bitset,
-    )
+    futex_wait_prepared(address, expected, deadline, bitset)
 }
 
 /// One syscall attempt uses a copied timeout budget, including key resolution.
@@ -3181,7 +3179,12 @@ fn futex_syscall_attempt(
     if deadline.is_some() {
         futex_deadline::tests::pause_after_copy(uaddr as usize);
     }
-    if flags & FUTEX_CLOCK_REALTIME != 0 && !matches!(cmd, FUTEX_WAIT_BITSET | FUTEX_WAIT_REQUEUE_PI | FUTEX_LOCK_PI2) {
+    if flags & FUTEX_CLOCK_REALTIME != 0
+        && !matches!(
+            cmd,
+            FUTEX_WAIT_BITSET | FUTEX_WAIT_REQUEUE_PI | FUTEX_LOCK_PI2
+        )
+    {
         return -i64::from(ENOSYS);
     }
     if !matches!(
@@ -3211,11 +3214,23 @@ fn futex_syscall_attempt(
         return -i64::from(EINVAL);
     }
     let private = flags & FUTEX_PRIVATE_FLAG != 0;
-    if cmd == FUTEX_UNLOCK_PI { return futex_pi::unlock(uaddr, private); }
-    if cmd == FUTEX_WAIT_REQUEUE_PI { return futex_requeue_pi::wait(uaddr, uaddr2, private, val, deadline.expect("timed command was prepared")); }
+    if cmd == FUTEX_UNLOCK_PI {
+        return futex_pi::unlock(uaddr, private);
+    }
+    if cmd == FUTEX_WAIT_REQUEUE_PI {
+        return futex_requeue_pi::wait(
+            uaddr,
+            uaddr2,
+            private,
+            val,
+            deadline.expect("timed command was prepared"),
+        );
+    }
     if cmd == FUTEX_CMP_REQUEUE_PI {
         let count = timeout as usize as u32;
-        if val != 1 || (count as i32) < 0 || uaddr == uaddr2 { return -i64::from(EINVAL); }
+        if val != 1 || (count as i32) < 0 || uaddr == uaddr2 {
+            return -i64::from(EINVAL);
+        }
         return futex_requeue_pi::compare(uaddr, uaddr2, private, val3, count);
     }
     let address = match FutexAddress::resolve(uaddr, private) {
@@ -3223,7 +3238,13 @@ fn futex_syscall_attempt(
         Err(error) => return error,
     };
     match cmd {
-        FUTEX_LOCK_PI | FUTEX_TRYLOCK_PI | FUTEX_LOCK_PI2 => futex_pi::lock(address, cmd == FUTEX_TRYLOCK_PI, deadline.unwrap_or_else(|| crate::futex::Deadline::relative(None, std::time::Instant::now()))),
+        FUTEX_LOCK_PI | FUTEX_TRYLOCK_PI | FUTEX_LOCK_PI2 => futex_pi::lock(
+            address,
+            cmd == FUTEX_TRYLOCK_PI,
+            deadline.unwrap_or_else(|| {
+                crate::futex::Deadline::relative(None, std::time::Instant::now())
+            }),
+        ),
         FUTEX_WAIT | FUTEX_WAIT_BITSET => {
             let deadline = deadline.expect("timed command was prepared before key resolution");
             futex_wait_prepared(

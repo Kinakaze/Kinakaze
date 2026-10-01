@@ -402,7 +402,9 @@ impl Shared {
     fn token(&self) -> u64 {
         loop {
             let token = self.header().next_token.fetch_add(1, Ordering::Relaxed);
-            if token != 0 { return token; }
+            if token != 0 {
+                return token;
+            }
         }
     }
 
@@ -465,14 +467,25 @@ impl Shared {
                 *cursor = cursor.wrapping_add(1);
                 let record = records[index];
                 if record.pi_source() && record.dead() {
-                    records.retain(|other| !(other.token == record.token && (other.pi_source() || other.reserved & pi::TARGET != 0)));
+                    records.retain(|other| {
+                        !(other.token == record.token
+                            && (other.pi_source() || other.reserved & pi::TARGET != 0))
+                    });
                 } else if !record.metadata() && !record.special_wait() && record.dead() {
                     records.remove(index);
                 }
             }
         } else {
-            let dead_sources: Vec<u64> = records.iter().filter(|record| record.pi_source() && record.dead()).map(|record| record.token).collect();
-            records.retain(|record| !(dead_sources.contains(&record.token) && (record.pi_source() || record.reserved & pi::TARGET != 0)) && (record.metadata() || record.special_wait() || !record.dead()));
+            let dead_sources: Vec<u64> = records
+                .iter()
+                .filter(|record| record.pi_source() && record.dead())
+                .map(|record| record.token)
+                .collect();
+            records.retain(|record| {
+                !(dead_sources.contains(&record.token)
+                    && (record.pi_source() || record.reserved & pi::TARGET != 0))
+                    && (record.metadata() || record.special_wait() || !record.dead())
+            });
         }
         if records.len().saturating_add(count) > CAPACITY {
             Err(ENOMEM)
@@ -501,7 +514,10 @@ impl Shared {
         let mut index = 0;
         while index < records.len() && selected < count {
             let record = records[index];
-            if record.metadata() || record.key != key || (!record.special_wait() && record.bitset & bitset == 0) {
+            if record.metadata()
+                || record.key != key
+                || (!record.special_wait() && record.bitset & bitset == 0)
+            {
                 index += 1;
                 continue;
             }
@@ -697,7 +713,12 @@ pub(crate) fn count_for_test(key: Key) -> usize {
 pub(crate) fn total_records_for_test(keys: &[Key]) -> usize {
     let shared = shared().unwrap();
     let _guard = shared.acquire().unwrap();
-    shared.records().unwrap().iter().filter(|record| keys.contains(&record.key)).count()
+    shared
+        .records()
+        .unwrap()
+        .iter()
+        .filter(|record| keys.contains(&record.key))
+        .count()
 }
 
 #[cfg(test)]
@@ -717,7 +738,12 @@ pub(crate) fn requeue(
     if comparison.is_some_and(|(word, expected)| word.load(Ordering::SeqCst) != expected) {
         return Err(EAGAIN);
     }
-    if optimized() && !shared.records()?.iter().any(|record| record.key == key && !record.metadata()) {
+    if optimized()
+        && !shared
+            .records()?
+            .iter()
+            .any(|record| record.key == key && !record.metadata())
+    {
         return Ok(0);
     }
     let mut transaction = Transaction::from_guard(shared, guard)?;
@@ -856,7 +882,14 @@ pub(crate) fn wait_started(
     } else {
         RestartPolicy::Keep
     };
-    wait_attempt(expected, Deadline::relative(duration, started), bitset, restart, load).map(|_| ())
+    wait_attempt(
+        expected,
+        Deadline::relative(duration, started),
+        bitset,
+        restart,
+        load,
+    )
+    .map(|_| ())
 }
 
 #[derive(Clone, Copy)]

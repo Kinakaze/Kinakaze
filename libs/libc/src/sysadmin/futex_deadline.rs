@@ -2,9 +2,9 @@
 //! Non-timed operations treat the fourth argument as a count or ignore it.
 
 use super::*;
+pub(super) use crate::futex::Deadline as Prepared;
 #[cfg(test)]
 use std::time::{Duration, Instant};
-pub(super) use crate::futex::Deadline as Prepared;
 
 pub(super) fn legacy(
     command: u32,

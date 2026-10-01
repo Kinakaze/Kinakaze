@@ -640,7 +640,9 @@ pub fn install_priority_base_hook(hook: extern "sysv64" fn(u32, i32) -> i32) {
 }
 
 #[cfg(all(windows, target_arch = "x86_64"))]
-pub fn install_pi_mutex_backend(backend: pi_mutex::Backend) { pi_mutex::install(backend); }
+pub fn install_pi_mutex_backend(backend: pi_mutex::Backend) {
+    pi_mutex::install(backend);
+}
 
 #[cfg(all(windows, target_arch = "x86_64"))]
 #[unsafe(no_mangle)]
@@ -1748,17 +1750,29 @@ pub unsafe extern "sysv64" fn pthread_mutex_init(
     } else {
         unsafe { (*attr).kind }
     };
-    if flags & !(robust::ATTR_ROBUST | shared::ATTR_PSHARED | PTHREAD_MUTEX_KIND_MASK | pi_mutex::ATTR_MASK) != 0 {
+    if flags
+        & !(robust::ATTR_ROBUST
+            | shared::ATTR_PSHARED
+            | PTHREAD_MUTEX_KIND_MASK
+            | pi_mutex::ATTR_MASK)
+        != 0
+    {
         return EINVAL;
     }
     let kind = flags & PTHREAD_MUTEX_KIND_MASK;
     if flags & pi_mutex::ATTR_MASK != 0 {
-        if flags & pi_mutex::ATTR_MASK != pi_mutex::ATTR_INHERIT { return 95; }
-        let result=unsafe {pi_mutex::call(0,mutex,0,core::ptr::null(),flags)};
-        if result==0 {
-            unsafe {robust::forget(mutex)};
-            let mut records=mutex_records().lock().unwrap_or_else(PoisonError::into_inner);
-            if records.remove(&(mutex as usize)).is_some() { TYPED_MUTEXES.fetch_sub(1,Ordering::AcqRel); }
+        if flags & pi_mutex::ATTR_MASK != pi_mutex::ATTR_INHERIT {
+            return 95;
+        }
+        let result = unsafe { pi_mutex::call(0, mutex, 0, core::ptr::null(), flags) };
+        if result == 0 {
+            unsafe { robust::forget(mutex) };
+            let mut records = mutex_records()
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner);
+            if records.remove(&(mutex as usize)).is_some() {
+                TYPED_MUTEXES.fetch_sub(1, Ordering::AcqRel);
+            }
         }
         return result;
     }
@@ -1850,7 +1864,9 @@ pub extern "sysv64" fn pthread_mutex_destroy(mutex: *mut usize) -> i32 {
     if mutex.is_null() {
         return EINVAL;
     }
-    if unsafe {pi_mutex::is_mutex(mutex)} {return unsafe {pi_mutex::call(5,mutex,0,core::ptr::null(),0)};}
+    if unsafe { pi_mutex::is_mutex(mutex) } {
+        return unsafe { pi_mutex::call(5, mutex, 0, core::ptr::null(), 0) };
+    }
     if unsafe { shared::is_mutex(mutex) } {
         return unsafe { shared::destroy(mutex) };
     }
@@ -1885,7 +1901,9 @@ pub unsafe extern "sysv64" fn pthread_mutex_lock(mutex: *mut usize) -> i32 {
     if mutex.is_null() {
         return EINVAL;
     }
-    if unsafe {pi_mutex::is_mutex(mutex)} {return unsafe {pi_mutex::call(1,mutex,0,core::ptr::null(),0)};}
+    if unsafe { pi_mutex::is_mutex(mutex) } {
+        return unsafe { pi_mutex::call(1, mutex, 0, core::ptr::null(), 0) };
+    }
     if unsafe { shared::is_mutex(mutex) } {
         return unsafe { shared::acquire(mutex, None, false) };
     }
@@ -1960,7 +1978,9 @@ pub unsafe extern "sysv64" fn pthread_mutex_clocklock(
     if mutex.is_null() || deadline.is_null() {
         return EINVAL;
     }
-    if unsafe {pi_mutex::is_mutex(mutex)} {return unsafe {pi_mutex::call(3,mutex,clock_id,deadline,0)};}
+    if unsafe { pi_mutex::is_mutex(mutex) } {
+        return unsafe { pi_mutex::call(3, mutex, clock_id, deadline, 0) };
+    }
     if unsafe { shared::is_mutex(mutex) } {
         return unsafe { shared::acquire(mutex, Some((&*deadline, clock_id)), false) };
     }
@@ -2018,7 +2038,9 @@ pub unsafe extern "sysv64" fn pthread_mutex_trylock(mutex: *mut usize) -> i32 {
     if mutex.is_null() {
         return EINVAL;
     }
-    if unsafe {pi_mutex::is_mutex(mutex)} {return unsafe {pi_mutex::call(2,mutex,0,core::ptr::null(),0)};}
+    if unsafe { pi_mutex::is_mutex(mutex) } {
+        return unsafe { pi_mutex::call(2, mutex, 0, core::ptr::null(), 0) };
+    }
     if unsafe { shared::is_mutex(mutex) } {
         return unsafe { shared::acquire(mutex, None, true) };
     }
@@ -2053,7 +2075,9 @@ pub unsafe extern "sysv64" fn pthread_mutex_unlock(mutex: *mut usize) -> i32 {
     if mutex.is_null() {
         return EINVAL;
     }
-    if unsafe {pi_mutex::is_mutex(mutex)} {return unsafe {pi_mutex::call(4,mutex,0,core::ptr::null(),0)};}
+    if unsafe { pi_mutex::is_mutex(mutex) } {
+        return unsafe { pi_mutex::call(4, mutex, 0, core::ptr::null(), 0) };
+    }
     if unsafe { shared::is_mutex(mutex) } {
         return unsafe { shared::unlock(mutex) };
     }
@@ -2106,8 +2130,10 @@ pub unsafe extern "sysv64" fn pthread_mutexattr_setprotocol(
     if attr.is_null() || !(0..=2).contains(&protocol) {
         return EINVAL;
     }
-    if protocol == 2 { return 95; }
-    unsafe {(*attr).kind=((*attr).kind & !pi_mutex::ATTR_MASK) | (protocol << 28)};
+    if protocol == 2 {
+        return 95;
+    }
+    unsafe { (*attr).kind = ((*attr).kind & !pi_mutex::ATTR_MASK) | (protocol << 28) };
     0
 }
 
@@ -2201,7 +2227,9 @@ pub unsafe extern "sysv64" fn pthread_mutex_consistent(mutex: *mut usize) -> i32
     if mutex.is_null() {
         return EINVAL;
     }
-    if unsafe {pi_mutex::is_mutex(mutex)} {return unsafe {pi_mutex::call(6,mutex,0,core::ptr::null(),0)};}
+    if unsafe { pi_mutex::is_mutex(mutex) } {
+        return unsafe { pi_mutex::call(6, mutex, 0, core::ptr::null(), 0) };
+    }
     if unsafe { shared::is_mutex(mutex) } {
         return unsafe { shared::consistent(mutex) };
     }
@@ -2417,7 +2445,10 @@ pub unsafe extern "sysv64" fn pthread_cond_wait(cond: *mut usize, mutex: *mut us
     }
     if parking::enabled()
         || unsafe {
-            shared::condition::is_cond(cond) || pi_mutex::is_mutex(mutex) || shared::is_mutex(mutex) || robust::is_mutex(mutex)
+            shared::condition::is_cond(cond)
+                || pi_mutex::is_mutex(mutex)
+                || shared::is_mutex(mutex)
+                || robust::is_mutex(mutex)
         }
     {
         return unsafe { parking::condition(cond, mutex, None) };
@@ -2533,7 +2564,10 @@ unsafe fn cond_wait_deadline(
 ) -> i32 {
     if parking::enabled()
         || unsafe {
-            shared::condition::is_cond(cond) || pi_mutex::is_mutex(mutex) || shared::is_mutex(mutex) || robust::is_mutex(mutex)
+            shared::condition::is_cond(cond)
+                || pi_mutex::is_mutex(mutex)
+                || shared::is_mutex(mutex)
+                || robust::is_mutex(mutex)
         }
     {
         return unsafe { parking::condition(cond, mutex, Some((deadline, clock_id))) };

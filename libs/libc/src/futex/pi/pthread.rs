@@ -201,7 +201,8 @@ fn prepare(time: &libpthread::Timespec, clock: i32) -> Result<Deadline, i32> {
     Ok(Deadline {
         duration: Some(remaining(time, clock)?),
         started,
-        realtime: (clock == 0).then_some(i128::from(time.tv_sec) * 1_000_000_000 + i128::from(time.tv_nsec)),
+        realtime: (clock == 0)
+            .then_some(i128::from(time.tv_sec) * 1_000_000_000 + i128::from(time.tv_nsec)),
     })
 }
 fn owned(
@@ -321,9 +322,10 @@ fn lock(
                 }
                 token = None;
             }
-            time = Some(prepare(&crate::ptrace::read_value::<libpthread::Timespec>(
-                deadline as usize,
-            )?, clock)?);
+            time = Some(prepare(
+                &crate::ptrace::read_value::<libpthread::Timespec>(deadline as usize)?,
+                clock,
+            )?);
             // No source token exists on this first busy timed attempt, except
             // immediate robust death recovery handled above.
         }
@@ -343,8 +345,11 @@ fn lock(
                 continue;
             }
             let status = unsafe {
-                if let Some(time) = &time { time.wait(&[park, interrupt]) }
-                else { kinakaze_vfs::deadline_wait::any(&[park, interrupt], wait) }
+                if let Some(time) = &time {
+                    time.wait(&[park, interrupt])
+                } else {
+                    kinakaze_vfs::deadline_wait::any(&[park, interrupt], wait)
+                }
             };
             if status != WAIT_TIMEOUT && !(WAIT_OBJECT_0..WAIT_OBJECT_0 + 2).contains(&status) {
                 return Err(EIO);
@@ -400,8 +405,11 @@ fn lock(
             ];
             let status = unsafe {
                 let sources = &handles[..if owner.is_some() { 3 } else { 2 }];
-                if let Some(time) = &time { time.wait(sources) }
-                else { kinakaze_vfs::deadline_wait::any(sources, wait) }
+                if let Some(time) = &time {
+                    time.wait(sources)
+                } else {
+                    kinakaze_vfs::deadline_wait::any(sources, wait)
+                }
             };
             if status != WAIT_TIMEOUT
                 && !(WAIT_OBJECT_0..WAIT_OBJECT_0 + if owner.is_some() { 3 } else { 2 })

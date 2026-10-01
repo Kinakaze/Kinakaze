@@ -3169,7 +3169,13 @@ pub mod job {
     /// # Safety
     /// `record` must address an fd-link record, the mutex must be held and the
     /// target length must not exceed [`FD_LINK_TARGET_CAPACITY`].
-    unsafe fn write_fd_link_record(base: *mut u8, record: *mut u8, pid: u32, fd: u32, target: &[u8]) {
+    unsafe fn write_fd_link_record(
+        base: *mut u8,
+        record: *mut u8,
+        pid: u32,
+        fd: u32,
+        target: &[u8],
+    ) {
         unsafe {
             // Keep the record unpublished until every field is complete.
             store32(record, FD_LINK_STATE, FD_LINK_TOMBSTONE);
@@ -3178,11 +3184,7 @@ pub mod job {
             store32(record, FD_LINK_LENGTH, target.len() as u32);
             let destination = fd_link_target(base, record);
             core::ptr::write_bytes(destination, 0, FD_LINK_TARGET_CAPACITY);
-            core::ptr::copy_nonoverlapping(
-                target.as_ptr(),
-                destination,
-                target.len(),
-            );
+            core::ptr::copy_nonoverlapping(target.as_ptr(), destination, target.len());
             store32(record, FD_LINK_STATE, FD_LINK_OCCUPIED);
         }
     }
