@@ -1,0 +1,628 @@
+{
+  "source": {
+    "base_commit": "9007a9d88fbcc15a8d0a396acec978111be61511",
+    "file": "engine/crates/kinakaze-runtime/src/cow.rs",
+    "original_sha256": "f77c77ed2e576ffbe8546668085f8acbaf71b1d7dcbadde7cf8820dfa124d475",
+    "candidate_sha256": "54ac1fc5e6bb7d23c05a0819e2e62396073ea63f91a0bc6aa0b58e75767303dc",
+    "instrumented_sha256": "a856c939c5268c106f008b88bf226865b11394d6473b1a511608c46cca7eb19a",
+    "reference_sha256": "7bda54178937e82b6891ce0954b42a117d88651637c6f60d6c12c71eed4e9f6f",
+    "limitations": "The frozen source adds a test-only copy of the exact prior copy_pages implementation and an ignored native diagnostic. Production candidate has only the coalesced implementation. This component benchmark does not measure complete installation or fork/exec latency.",
+    "initial_instrumented_sha256": "5a85626367850bcf1315bd69a6824781d6e2c811ffbba8683cb755edccdd32a8",
+    "additional_controls": "64 KiB and 1 MiB: both implementations make one copy call."
+  },
+  "production_source_raw_sha256": "54ac1fc5e6bb7d23c05a0819e2e62396073ea63f91a0bc6aa0b58e75767303dc",
+  "selected_route": "coalesced contiguous private runs across query batches",
+  "native_tests": {
+    "passed": 29,
+    "passed_executions": 31,
+    "test_names": [
+      "anonymous_cow::tests::initialized_anonymous_snapshot_preserves_protection_and_private_generations",
+      "anonymous_cow::tests::rejects_active_stack_and_partial_view_before_unmapping",
+      "cow::tests::dirty_pages_are_preserved_and_both_writers_remain_private",
+      "cow::tests::nonresident_clean_and_dirty_pages_are_rechecked_after_read_faults",
+      "cow::tests::private_ranges_cross_query_batches_without_merging_clean_gaps",
+      "sparse_copy::tests::sparse_dense_unaligned_and_tail_bytes_survive",
+      "sparse_copy::tests::sparse_edges_trim_pages_without_amplifying_scattered_writes",
+      "sparse_copy::tests::zero_runs_need_no_writes_and_errors_stop_copying",
+      "windows::fork_mapping_tests::active_snapshot_stacks_receive_private_copied_backings",
+      "windows::fork_mapping_tests::adjacent_section_views_install_low_to_high_with_one_terminal_suffix",
+      "windows::fork_mapping_tests::copied_stack_can_later_be_frozen_without_losing_new_writes",
+      "windows::fork_mapping_tests::final_section_page_joins_the_following_host_envelope",
+      "windows::fork_mapping_tests::installation_order_is_top_down_between_gaps_and_bottom_up_when_touching",
+      "windows::fork_mapping_tests::interior_ordinary_pages_share_one_private_host_reservation",
+      "windows::fork_mapping_tests::mapped_suffix_is_installed_before_a_private_prefix",
+      "windows::fork_mapping_tests::omitted_mappings_do_not_expand_a_placeholder_component",
+      "windows::fork_mapping_tests::ordinary_copies_translate_section_cow_protection_without_losing_modifiers",
+      "windows::fork_mapping_tests::page_granular_private_reserve_view_commits_at_its_exact_address",
+      "windows::fork_mapping_tests::placeholder_plan_absorbs_ordinary_pages_in_the_same_host_envelope",
+      "windows::fork_mapping_tests::private_allocation_replaces_one_split_placeholder",
+      "windows::fork_mapping_tests::private_prefix_installs_before_a_page_granular_section_with_a_suffix",
+      "windows::fork_mapping_tests::retained_cow_protection_never_becomes_a_shared_writer",
+      "windows::fork_mapping_tests::retained_file_final_partial_page_maps_without_expanding_read_only_section",
+      "windows::fork_mapping_tests::retained_section_does_not_allocate_a_private_backing",
+      "windows::fork_mapping_tests::section_plan_scales_with_the_registered_address_space",
+      "windows::fork_mapping_tests::section_view_at_a_host_envelope_end_uses_the_reserved_suffix",
+      "windows::fork_mapping_tests::terminal_ordinary_page_in_a_mixed_group_keeps_a_view_suffix",
+      "windows::wait_tests::an_exit_report_is_not_observable_before_the_process_object_is_signalled",
+      "windows::wait_tests::registered_child_completion_signals_the_exact_activity_event"
+    ],
+    "repeated_tests": "cow::tests also matches anonymous_cow::tests; those two tests run twice",
+    "failed": 0,
+    "ignored_diagnostic": 1,
+    "filters": [
+      {
+        "filter": "cow::tests",
+        "exit_code": 0
+      },
+      {
+        "filter": "anonymous_cow::tests",
+        "exit_code": 0
+      },
+      {
+        "filter": "sparse_copy::tests",
+        "exit_code": 0
+      },
+      {
+        "filter": "windows::fork_mapping_tests",
+        "exit_code": 0
+      },
+      {
+        "filter": "windows::wait_tests",
+        "exit_code": 0
+      }
+    ]
+  },
+  "benchmark": {
+    "iterations_per_sample": 32,
+    "order": "three ABBA rounds after two warmup pairs",
+    "samples": [
+      {
+        "legacy": true,
+        "length": 65536,
+        "round": 0,
+        "repeat": 32,
+        "nanos": 151100,
+        "calls": 32
+      },
+      {
+        "legacy": false,
+        "length": 65536,
+        "round": 0,
+        "repeat": 32,
+        "nanos": 131800,
+        "calls": 32
+      },
+      {
+        "legacy": false,
+        "length": 65536,
+        "round": 0,
+        "repeat": 32,
+        "nanos": 131900,
+        "calls": 32
+      },
+      {
+        "legacy": true,
+        "length": 65536,
+        "round": 0,
+        "repeat": 32,
+        "nanos": 134000,
+        "calls": 32
+      },
+      {
+        "legacy": true,
+        "length": 65536,
+        "round": 1,
+        "repeat": 32,
+        "nanos": 130100,
+        "calls": 32
+      },
+      {
+        "legacy": false,
+        "length": 65536,
+        "round": 1,
+        "repeat": 32,
+        "nanos": 131800,
+        "calls": 32
+      },
+      {
+        "legacy": false,
+        "length": 65536,
+        "round": 1,
+        "repeat": 32,
+        "nanos": 132300,
+        "calls": 32
+      },
+      {
+        "legacy": true,
+        "length": 65536,
+        "round": 1,
+        "repeat": 32,
+        "nanos": 133300,
+        "calls": 32
+      },
+      {
+        "legacy": true,
+        "length": 65536,
+        "round": 2,
+        "repeat": 32,
+        "nanos": 132400,
+        "calls": 32
+      },
+      {
+        "legacy": false,
+        "length": 65536,
+        "round": 2,
+        "repeat": 32,
+        "nanos": 131600,
+        "calls": 32
+      },
+      {
+        "legacy": false,
+        "length": 65536,
+        "round": 2,
+        "repeat": 32,
+        "nanos": 131100,
+        "calls": 32
+      },
+      {
+        "legacy": true,
+        "length": 65536,
+        "round": 2,
+        "repeat": 32,
+        "nanos": 187400,
+        "calls": 32
+      },
+      {
+        "legacy": true,
+        "length": 1048576,
+        "round": 0,
+        "repeat": 32,
+        "nanos": 2144300,
+        "calls": 32
+      },
+      {
+        "legacy": false,
+        "length": 1048576,
+        "round": 0,
+        "repeat": 32,
+        "nanos": 2267500,
+        "calls": 32
+      },
+      {
+        "legacy": false,
+        "length": 1048576,
+        "round": 0,
+        "repeat": 32,
+        "nanos": 2124700,
+        "calls": 32
+      },
+      {
+        "legacy": true,
+        "length": 1048576,
+        "round": 0,
+        "repeat": 32,
+        "nanos": 2122700,
+        "calls": 32
+      },
+      {
+        "legacy": true,
+        "length": 1048576,
+        "round": 1,
+        "repeat": 32,
+        "nanos": 2262300,
+        "calls": 32
+      },
+      {
+        "legacy": false,
+        "length": 1048576,
+        "round": 1,
+        "repeat": 32,
+        "nanos": 2074500,
+        "calls": 32
+      },
+      {
+        "legacy": false,
+        "length": 1048576,
+        "round": 1,
+        "repeat": 32,
+        "nanos": 2066900,
+        "calls": 32
+      },
+      {
+        "legacy": true,
+        "length": 1048576,
+        "round": 1,
+        "repeat": 32,
+        "nanos": 2162200,
+        "calls": 32
+      },
+      {
+        "legacy": true,
+        "length": 1048576,
+        "round": 2,
+        "repeat": 32,
+        "nanos": 2134700,
+        "calls": 32
+      },
+      {
+        "legacy": false,
+        "length": 1048576,
+        "round": 2,
+        "repeat": 32,
+        "nanos": 2146000,
+        "calls": 32
+      },
+      {
+        "legacy": false,
+        "length": 1048576,
+        "round": 2,
+        "repeat": 32,
+        "nanos": 2175000,
+        "calls": 32
+      },
+      {
+        "legacy": true,
+        "length": 1048576,
+        "round": 2,
+        "repeat": 32,
+        "nanos": 2022800,
+        "calls": 32
+      },
+      {
+        "legacy": true,
+        "length": 2129920,
+        "round": 0,
+        "repeat": 32,
+        "nanos": 4665400,
+        "calls": 96
+      },
+      {
+        "legacy": false,
+        "length": 2129920,
+        "round": 0,
+        "repeat": 32,
+        "nanos": 4526300,
+        "calls": 32
+      },
+      {
+        "legacy": false,
+        "length": 2129920,
+        "round": 0,
+        "repeat": 32,
+        "nanos": 4358200,
+        "calls": 32
+      },
+      {
+        "legacy": true,
+        "length": 2129920,
+        "round": 0,
+        "repeat": 32,
+        "nanos": 4417700,
+        "calls": 96
+      },
+      {
+        "legacy": true,
+        "length": 2129920,
+        "round": 1,
+        "repeat": 32,
+        "nanos": 4394700,
+        "calls": 96
+      },
+      {
+        "legacy": false,
+        "length": 2129920,
+        "round": 1,
+        "repeat": 32,
+        "nanos": 4306900,
+        "calls": 32
+      },
+      {
+        "legacy": false,
+        "length": 2129920,
+        "round": 1,
+        "repeat": 32,
+        "nanos": 4286700,
+        "calls": 32
+      },
+      {
+        "legacy": true,
+        "length": 2129920,
+        "round": 1,
+        "repeat": 32,
+        "nanos": 4608300,
+        "calls": 96
+      },
+      {
+        "legacy": true,
+        "length": 2129920,
+        "round": 2,
+        "repeat": 32,
+        "nanos": 4564300,
+        "calls": 96
+      },
+      {
+        "legacy": false,
+        "length": 2129920,
+        "round": 2,
+        "repeat": 32,
+        "nanos": 4312200,
+        "calls": 32
+      },
+      {
+        "legacy": false,
+        "length": 2129920,
+        "round": 2,
+        "repeat": 32,
+        "nanos": 4453200,
+        "calls": 32
+      },
+      {
+        "legacy": true,
+        "length": 2129920,
+        "round": 2,
+        "repeat": 32,
+        "nanos": 4432600,
+        "calls": 96
+      },
+      {
+        "legacy": true,
+        "length": 4194304,
+        "round": 0,
+        "repeat": 32,
+        "nanos": 9455500,
+        "calls": 128
+      },
+      {
+        "legacy": false,
+        "length": 4194304,
+        "round": 0,
+        "repeat": 32,
+        "nanos": 8952700,
+        "calls": 32
+      },
+      {
+        "legacy": false,
+        "length": 4194304,
+        "round": 0,
+        "repeat": 32,
+        "nanos": 9357900,
+        "calls": 32
+      },
+      {
+        "legacy": true,
+        "length": 4194304,
+        "round": 0,
+        "repeat": 32,
+        "nanos": 9914500,
+        "calls": 128
+      },
+      {
+        "legacy": true,
+        "length": 4194304,
+        "round": 1,
+        "repeat": 32,
+        "nanos": 10037200,
+        "calls": 128
+      },
+      {
+        "legacy": false,
+        "length": 4194304,
+        "round": 1,
+        "repeat": 32,
+        "nanos": 9087300,
+        "calls": 32
+      },
+      {
+        "legacy": false,
+        "length": 4194304,
+        "round": 1,
+        "repeat": 32,
+        "nanos": 8587000,
+        "calls": 32
+      },
+      {
+        "legacy": true,
+        "length": 4194304,
+        "round": 1,
+        "repeat": 32,
+        "nanos": 9173300,
+        "calls": 128
+      },
+      {
+        "legacy": true,
+        "length": 4194304,
+        "round": 2,
+        "repeat": 32,
+        "nanos": 9148800,
+        "calls": 128
+      },
+      {
+        "legacy": false,
+        "length": 4194304,
+        "round": 2,
+        "repeat": 32,
+        "nanos": 8537100,
+        "calls": 32
+      },
+      {
+        "legacy": false,
+        "length": 4194304,
+        "round": 2,
+        "repeat": 32,
+        "nanos": 9023800,
+        "calls": 32
+      },
+      {
+        "legacy": true,
+        "length": 4194304,
+        "round": 2,
+        "repeat": 32,
+        "nanos": 9391500,
+        "calls": 128
+      },
+      {
+        "legacy": true,
+        "length": 16777216,
+        "round": 0,
+        "repeat": 32,
+        "nanos": 98811700,
+        "calls": 512
+      },
+      {
+        "legacy": false,
+        "length": 16777216,
+        "round": 0,
+        "repeat": 32,
+        "nanos": 71710500,
+        "calls": 32
+      },
+      {
+        "legacy": false,
+        "length": 16777216,
+        "round": 0,
+        "repeat": 32,
+        "nanos": 71335800,
+        "calls": 32
+      },
+      {
+        "legacy": true,
+        "length": 16777216,
+        "round": 0,
+        "repeat": 32,
+        "nanos": 82877200,
+        "calls": 512
+      },
+      {
+        "legacy": true,
+        "length": 16777216,
+        "round": 1,
+        "repeat": 32,
+        "nanos": 76235600,
+        "calls": 512
+      },
+      {
+        "legacy": false,
+        "length": 16777216,
+        "round": 1,
+        "repeat": 32,
+        "nanos": 63212600,
+        "calls": 32
+      },
+      {
+        "legacy": false,
+        "length": 16777216,
+        "round": 1,
+        "repeat": 32,
+        "nanos": 67527200,
+        "calls": 32
+      },
+      {
+        "legacy": true,
+        "length": 16777216,
+        "round": 1,
+        "repeat": 32,
+        "nanos": 79895300,
+        "calls": 512
+      },
+      {
+        "legacy": true,
+        "length": 16777216,
+        "round": 2,
+        "repeat": 32,
+        "nanos": 76053200,
+        "calls": 512
+      },
+      {
+        "legacy": false,
+        "length": 16777216,
+        "round": 2,
+        "repeat": 32,
+        "nanos": 64979500,
+        "calls": 32
+      },
+      {
+        "legacy": false,
+        "length": 16777216,
+        "round": 2,
+        "repeat": 32,
+        "nanos": 65186000,
+        "calls": 32
+      },
+      {
+        "legacy": true,
+        "length": 16777216,
+        "round": 2,
+        "repeat": 32,
+        "nanos": 75606600,
+        "calls": 512
+      }
+    ],
+    "medians": [
+      {
+        "length": 65536,
+        "before_us": 4.1765625,
+        "after_us": 4.11875,
+        "reduction_percent": 1.3842124953236021,
+        "before_calls": 1,
+        "after_calls": 1
+      },
+      {
+        "length": 1048576,
+        "before_us": 66.859375,
+        "after_us": 66.7296875,
+        "reduction_percent": 0.19397055386773035,
+        "before_calls": 1,
+        "after_calls": 1
+      },
+      {
+        "length": 2129920,
+        "before_us": 140.57656250000002,
+        "after_us": 135.475,
+        "reduction_percent": 3.6290277762340555,
+        "before_calls": 3,
+        "after_calls": 1
+      },
+      {
+        "length": 4194304,
+        "before_us": 294.484375,
+        "after_us": 280.8828125,
+        "reduction_percent": 4.618772218390195,
+        "before_calls": 4,
+        "after_calls": 1
+      },
+      {
+        "length": 16777216,
+        "before_us": 2439.5453125000004,
+        "after_us": 2073.64375,
+        "reduction_percent": 14.998760655321918,
+        "before_calls": 16,
+        "after_calls": 1
+      }
+    ],
+    "frozen_native_hashes": {
+      "kinakaze_alloc.so": "9a2ed5b56d427af6a98bba21997e9a9fb0d05cb6721565b01cb85972571f8dd1",
+      "kinakaze_kernel-0d9aa08685ee4511.exe": "5e2264ddbc410f5505a1131a417f3cc806ca4f60d0f53144e2437627c5aa63cd",
+      "serde_derive-ebb234dc8366345c.dll": "385536645987e2edc1b229458b6fd9a72884d9232f6029b8f6c05ac35a7efb11",
+      "std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc"
+    }
+  },
+  "evidence": {
+    "r16-cow-source.json": "24511a3b3213a28d36b8a645348c44660eb07c58d47b12eb7c3a58881fecac16",
+    "r16-cow-controls-source.json": "c9033548df8ad4e06c33b570725f45b8c2ca660b7a25b2a90108d564a66e4909",
+    "native-r16-cow.json": "85fee44cbc0ab57d63fe72955cd7e89865c8076de3c8215e0f86abb2a57127fa",
+    "native-r16-cow.log": "3f493b40cca1e2eb796e1b51296a15e1ba18dcb008653193072178ffb0fed64a",
+    "native-r16-cow-benchmark.json": "d5310a6d5f1dc150f184db8451e9e8e141e4619b0a81b851adbdca9453624dbd",
+    "native-r16-cow-controls-benchmark.json": "644ebd32221874463386678761f63f4a0be613e700d5b22b604539470b583485",
+    "native-r16-cow-controls-benchmark.log": "55d5d6b9d6864791402cc5d692fb6e3ef02d308d04005030da78d2092c574d86",
+    "r16-cow-controls-build.jsonl": "f2c79b58207a83f2fd8512d27c67f6972efe0bd937c42b3b295cbe5a82850cdf",
+    "native-r16-cow-controls-frozen.json": "2a935329ccad80bff677357b299f244b7b1b117e10d93ec59239f49f873f0b56",
+    "prepare-r16-cow.py": "fe2b4962c6855d073eb3e0e10b7a1034d45ec9eab636ff85065eb17a519f285f",
+    "prepare-r16-cow-controls.py": "b8932ab444373ae6132632c0db3fdccb66e13a507a297f2d89da071efc12b3b2",
+    "run-native-r16-cow.py": "78adaed8afc234faddfad9c4e4c14c87a685cf2eb2adcdb0b494f10dcbe3f40d",
+    "benchmark-r16-cow.py": "403d70c854e70780bcee996ce9bff84bbc35e69b5638768eb380491854dc4d6e",
+    "benchmark-r16-cow-controls.py": "c6d4edeeb9ef4f9ee2d8a9f30eb3dc0525df8baa32fbc1b898485645ff5a91f7"
+  },
+  "sub_180_goal_achieved": false,
+  "full_install_measured": false,
+  "limitations": "Native cfg(test) copy component only, using real WriteProcessMemory into another COW view in this process. Source ranges contain one modified byte per page. Small-range differences are noise-sized. No complete fork/exec or installation speedup is claimed; host was not continuously isolated. The baseline exists only in the frozen diagnostic source, not the production implementation."
+}

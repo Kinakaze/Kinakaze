@@ -63,6 +63,9 @@ unsafe fn copy_pages<E>(
     }; BATCH];
     let mut stats = CopyStats::default();
     let mut offset = 0;
+    // Query batches bound stack usage, not copy ranges. Keep a contiguous
+    // private run open across them while the caller has frozen its writers.
+    let mut run = None;
     while offset < length {
         let count = ((length - offset) / PAGE_SIZE).min(BATCH);
         for (index, page) in pages[..count].iter_mut().enumerate() {
@@ -97,25 +100,28 @@ unsafe fn copy_pages<E>(
                 )
             } != 0;
         }
-        let mut run = None;
-        for index in 0..=count {
-            let private =
-                index < count && (!queried || pages[index].flags & VALID_SHARED != VALID_SHARED);
+        for (index, page) in pages[..count].iter().enumerate() {
+            let position = offset + index * PAGE_SIZE;
+            let private = !queried || page.flags & VALID_SHARED != VALID_SHARED;
             if private {
-                run.get_or_insert(index);
+                run.get_or_insert(position);
             } else {
                 if let Some(start) = run.take() {
-                    let bytes = (index - start) * PAGE_SIZE;
-                    copy(offset + start * PAGE_SIZE, bytes)?;
+                    let bytes = position - start;
+                    copy(start, bytes)?;
                     stats.copied += bytes;
                     stats.calls += 1;
                 }
-                if index < count {
-                    stats.shared += PAGE_SIZE;
-                }
+                stats.shared += PAGE_SIZE;
             }
         }
         offset += count * PAGE_SIZE;
+    }
+    if let Some(start) = run {
+        let bytes = length - start;
+        copy(start, bytes)?;
+        stats.copied += bytes;
+        stats.calls += 1;
     }
     Ok(stats)
 }
@@ -133,6 +139,84 @@ mod tests {
             },
         },
     };
+
+    #[test]
+    fn private_ranges_cross_query_batches_without_merging_clean_gaps() {
+        const PAGE_SIZE: usize = 4096;
+        const PAGES: usize = 3 * 256 + 7;
+        let cases: &[&[(usize, usize)]] = &[
+            &[],
+            &[(0, PAGES)],
+            &[(254, 515)],
+            &[(254, 256), (257, 259)],
+            &[(254, 256), (PAGES - 2, PAGES)],
+        ];
+        for ranges in cases {
+            unsafe {
+                let length = PAGES * PAGE_SIZE;
+                let section = CreateFileMappingW(
+                    INVALID_HANDLE_VALUE,
+                    core::ptr::null(),
+                    PAGE_READWRITE,
+                    0,
+                    length as u32,
+                    core::ptr::null(),
+                );
+                assert!(!section.is_null());
+                let parent = MapViewOfFile(section, FILE_MAP_COPY, 0, 0, length);
+                let child = MapViewOfFile(section, FILE_MAP_COPY, 0, 0, length);
+                assert!(!parent.Value.is_null() && !child.Value.is_null());
+                for &(start, end) in *ranges {
+                    for page in start..end {
+                        parent
+                            .Value
+                            .cast::<u8>()
+                            .add(page * PAGE_SIZE)
+                            .write_volatile(71);
+                    }
+                }
+                let mut copied = Vec::new();
+                let stats =
+                    copy_readable_private_pages(parent.Value as usize, length, |offset, bytes| {
+                        let mut written = 0;
+                        assert_ne!(
+                            WriteProcessMemory(
+                                GetCurrentProcess(),
+                                child.Value.byte_add(offset),
+                                parent.Value.byte_add(offset),
+                                bytes,
+                                &mut written,
+                            ),
+                            0,
+                            "{}",
+                            std::io::Error::last_os_error(),
+                        );
+                        assert_eq!(written, bytes);
+                        copied.push((offset, bytes));
+                        Ok::<_, ()>(())
+                    })
+                    .unwrap();
+                let expected: Vec<_> = ranges
+                    .iter()
+                    .map(|&(start, end)| (start * PAGE_SIZE, (end - start) * PAGE_SIZE))
+                    .collect();
+                assert_eq!(copied, expected);
+                assert_eq!(stats.calls, expected.len());
+                assert_eq!(
+                    stats.copied,
+                    expected.iter().map(|row| row.1).sum::<usize>()
+                );
+                assert_eq!(stats.shared + stats.copied, length);
+                assert_eq!(
+                    core::slice::from_raw_parts(parent.Value.cast::<u8>(), length),
+                    core::slice::from_raw_parts(child.Value.cast::<u8>(), length),
+                );
+                UnmapViewOfFile(child);
+                UnmapViewOfFile(parent);
+                CloseHandle(section);
+            }
+        }
+    }
 
     #[test]
     fn dirty_pages_are_preserved_and_both_writers_remain_private() {
