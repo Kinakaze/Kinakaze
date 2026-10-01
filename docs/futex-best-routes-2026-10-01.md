@@ -53,3 +53,10 @@ KINAKAZE_FUTEX_REALTIME_POLL_OPT 不影响生产构建。
 真实墙钟跳变端到端试验及完整 syscall/VFS/I/O 的路径验证继续保留。
 冻结图、源码哈希、原始样本和生产检查见
 [证据索引](measurements/futex-best-routes-2026-10-01.json)。
+
+随后合入 main 21643ef 的 pthread PI 热路径、XCHG 字段写入及退出恢复。
+合并源树 de559f9 重新冻结完整原生依赖图；两种配置下 futex 各 108 项、
+pthread 各 59 项通过，另有 2 项时限对照检查，共 336 项、零失败。
+分别忽略 22、4 项助手/性能项；合并图生产 release 检查通过。新队列/任务
+协议为 v6/v5；前述性能数字保留其合并前固定 v5 图边界，没有重新标为
+v6 图的性能测量。该集成证据列于索引的 merged_validation。

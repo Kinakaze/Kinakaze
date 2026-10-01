@@ -632,5 +632,157 @@
     "Unflagged realtime timing variation is not attributed to the shortcut",
     "No guest JIT throughput, future-deadline wait latency, cross-process throughput or whole-application speedup claim",
     "Actual wall-clock-step end-to-end test and complete syscall/VFS/I/O path coverage remain unverified"
-  ]
+  ],
+  "merged_validation": {
+    "source_commit": "de559f9b58f444e5c728de2e6d77743442ec88ad",
+    "merged_main_commit": "21643ef",
+    "source_sha256": {
+      "libs/libc/src/futex.rs": "1c74c5960d15184a0fe3a61321a118564fb9eef0dd4520205e32a756ebe70c3c",
+      "libs/libc/src/futex/atomic_word.rs": "e4a341fb07d0f892384b8efb66710f30ea642ff68e85e153863d828cfd0d7358",
+      "libs/libc/src/futex/deadline.rs": "6739239905eb904f7461655a67ae6d80da93f6a687d22e88805494a7bd466e90",
+      "libs/libc/src/futex/hybrid.rs": "c5d47be54cbb6c66fc5db87c7782ad8f71c1b1a09a7bc772e7bba9e1367224d8",
+      "libs/libc/src/futex/pi.rs": "cca499ecfc595ab3f348e8a25125db264ae1efd071f8e5075b510dd3dcb9cff8",
+      "libs/libc/src/futex/pi/pthread.rs": "fe336d49f19bef71df9f62023beeaee28e760dfa8ed66fe124f11e892d14f421",
+      "libs/libc/src/futex/pi/pthread/tests.rs": "71ab706ef8e24b3820f8eddde1173b5f9fd7699da2ef5b4c43b1d2d8d6a716a4",
+      "libs/libc/src/futex/pi/requeue.rs": "912795121c74342cc679eca2d18e1ef77fc96adbceaf9b75ff508ef6314e2574",
+      "libs/libc/src/sysadmin/futex_deadline/clock_tests.rs": "1d433fbceff2d6a3cb817cf360b5f37c63a6b8ccf869fdfaefa6a6e37f5c40ce",
+      "tools/benchmark-futex-queues.py": "a871c45ff9cfd82c0784a50345ce3dbd89cbbebd82473129c2f1bb087551fdb9"
+    },
+    "native": {
+      "passed": true,
+      "image_hashes_unchanged": true,
+      "manifest": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-best-route-merged-native-final\\manifest.json",
+      "rows": [
+        {
+          "crate": "kinakaze_libc",
+          "optimized": false,
+          "realtime_poll": true,
+          "test_filter": "futex",
+          "exit_code": 0,
+          "status": "ok",
+          "passed": 108,
+          "failed": 0,
+          "ignored": 22,
+          "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-best-route-merged-kinakaze_libc-0-1.log",
+          "sha256": "8e45ae9bdfe46ef5fbe4b6301eb3421d0c71cea380b66d78963d2eb318f6d232"
+        },
+        {
+          "crate": "kinakaze_libpthread",
+          "optimized": false,
+          "realtime_poll": true,
+          "test_filter": "",
+          "exit_code": 0,
+          "status": "ok",
+          "passed": 59,
+          "failed": 0,
+          "ignored": 4,
+          "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-best-route-merged-kinakaze_libpthread-0-1.log",
+          "sha256": "160cb9d8e586f13bc5514fb1c0b550d2c3af36687ef49cfad310d65e24628710"
+        },
+        {
+          "crate": "kinakaze_libc",
+          "optimized": true,
+          "realtime_poll": true,
+          "test_filter": "futex",
+          "exit_code": 0,
+          "status": "ok",
+          "passed": 108,
+          "failed": 0,
+          "ignored": 22,
+          "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-best-route-merged-kinakaze_libc-1-1.log",
+          "sha256": "bb44dc95e1574931203012109d31267f1b6e4391bdd3814a9d1d7b59c055f801"
+        },
+        {
+          "crate": "kinakaze_libpthread",
+          "optimized": true,
+          "realtime_poll": true,
+          "test_filter": "",
+          "exit_code": 0,
+          "status": "ok",
+          "passed": 59,
+          "failed": 0,
+          "ignored": 4,
+          "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-best-route-merged-kinakaze_libpthread-1-1.log",
+          "sha256": "3c025ba118a2bc9e842967a03cd9898dd50fdb8fbc54858e1c669442791a2396"
+        },
+        {
+          "crate": "kinakaze_libc",
+          "optimized": true,
+          "realtime_poll": false,
+          "test_filter": "futex::deadline::tests",
+          "exit_code": 0,
+          "status": "ok",
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0,
+          "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-best-route-merged-kinakaze_libc-1-0.log",
+          "sha256": "2134e4383b9eee8741fdaa61fef02c900ebf34e77e6eb7f1a43d61818d417962"
+        }
+      ]
+    },
+    "native_manifest": {
+      "build": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-best-route-merged-native-build.jsonl",
+      "build_sha256": "c639caa0f7b6c69868a7389f671b77d1cd820d80051e7b59bc31d77b61d69616",
+      "executables": {
+        "kinakaze_libpthread": "kinakaze_libpthread-4d10b58392baf079.exe",
+        "kinakaze_libc": "kinakaze_libc-9b2ff81f74c64496.exe"
+      },
+      "files": {
+        "kinakaze_alloc.so": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_alloc.dll",
+          "sha256": "2d099db6066f9e87353febd2a66c10f5c0e4ef1ed9eee155dc59666e776da6e8"
+        },
+        "serde_derive-ebb234dc8366345c.dll": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\deps\\serde_derive-ebb234dc8366345c.dll",
+          "sha256": "e0805346528b838488002807261a16733e7efcd6f4843a9bd660e2f8c44ff48a"
+        },
+        "kinakaze_elf.so": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_elf.dll",
+          "sha256": "921e390b5f988eece280f6a94cb0bc77906e5e4112c616f321fd0549d28d7e45"
+        },
+        "kinakaze_kernel.so": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_kernel.dll",
+          "sha256": "cb2cd4b69f0c256d9de74649c88a1dc43321f0f85900338e04eec3186d808d8b"
+        },
+        "kinakaze_tls.so": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_tls.dll",
+          "sha256": "419045f3cc9100d755bd6e04535179cb69c447a8b6f2ef656fafe3c34405c5d0"
+        },
+        "kinakaze_vfs.so": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_vfs.dll",
+          "sha256": "700de9425cc0e561b980171b494924bc24094a17574f316fef947d0915072e2e"
+        },
+        "libm.so.6": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libm.dll",
+          "sha256": "05300a7456a5c3c44313bf8fdacdaa9ebae998b242d4c28af95ef5dc55fe333a"
+        },
+        "libpthread.so.0": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libpthread.dll",
+          "sha256": "3fab5458ccec0a162ccae00ec76ffcb817bad27bb46f41c481cbde588890ff0a"
+        },
+        "ld-linux-x86-64.so.2": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_link.dll",
+          "sha256": "b5c4f42a5b9985874d7ea863483a0435bd742a7e251857c2ed6baa15cfcf960c"
+        },
+        "kinakaze_libpthread-4d10b58392baf079.exe": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\deps\\kinakaze_libpthread-4d10b58392baf079.exe",
+          "sha256": "7c7444eb58398ba0d76c32fc6843fb7eec517f1eee5961ff8fcbe3844ef60547"
+        },
+        "kinakaze_libc-9b2ff81f74c64496.exe": {
+          "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\deps\\kinakaze_libc-9b2ff81f74c64496.exe",
+          "sha256": "a8db8f6efa0ab5b47167977d25eded9765d7e87d88cb87b77f32145df921b4b8"
+        },
+        "std-0cebe7c42cd80226.dll": {
+          "source": "C:\\Users\\nanaeo\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\std-0cebe7c42cd80226.dll",
+          "sha256": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc"
+        }
+      }
+    },
+    "production_check": {
+      "passed": true,
+      "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-best-route-merged-production-check.log",
+      "sha256": "77d7d424d3e7f925dd5bc166025fdd4ca384962cf8e6bfe126d2ed2c62112e63"
+    },
+    "performance_boundary": "Earlier numerical performance measurements retain their frozen v5 graphs; merged source includes v6/v5 PI hotpath and XCHG metadata changes and receives native correctness plus production check here, without relabeling old timings as v6 timings"
+  }
 }
