@@ -4,6 +4,35 @@ use windows_sys::Win32::Storage::FileSystem::{
     FILE_BASIC_INFO, FileBasicInfo, GetFileInformationByHandleEx,
 };
 
+/// Check the selected parent before an exclusive create can publish an inode.
+/// The new file's own mode does not authorize creating its directory entry.
+pub(super) fn create_in(parent: &object::Object, metadata: &Stat, leaf: &OsStr) -> Result<(), i32> {
+    if crate::user_namespace::capable(1, 1) {
+        return Ok(());
+    }
+    let caller = crate::credentials::filesystem();
+    let available = if caller.uid == metadata.st_uid {
+        metadata.st_mode >> 6
+    } else if crate::credentials::group_member(metadata.st_gid) {
+        metadata.st_mode >> 3
+    } else {
+        metadata.st_mode
+    } & 7;
+    if available & 1 == 0 && !crate::user_namespace::capable(1, 2) {
+        return Err(EACCES);
+    }
+    if available & 2 != 0 {
+        return Ok(());
+    }
+    // A searchable existing leaf selects EEXIST before creation permission.
+    // Only this denied-write branch needs an extra, non-mutating lookup.
+    match parent.child(leaf, FILE_READ_ATTRIBUTES) {
+        Ok(_) => Err(crate::EEXIST),
+        Err(ENOENT) => Err(EACCES),
+        Err(error) => Err(error),
+    }
+}
+
 pub(super) fn check(handle: HANDLE, flags: i32) -> Result<(), i32> {
     if flags & O_PATH != 0 || crate::user_namespace::capable(1, 1) {
         return Ok(());

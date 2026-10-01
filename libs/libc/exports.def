@@ -2909,6 +2909,10 @@ EXPORTS
   "pthread_condattr_destroy@GLIBC_2.2.5"=kinakaze_abi_pthread_condattr_destroy PRIVATE
   kinakaze_abi_pthread_condattr_getclock
   "pthread_condattr_getclock"=kinakaze_abi_pthread_condattr_getclock PRIVATE
+  kinakaze_abi_pthread_condattr_getpshared
+  "pthread_condattr_getpshared"=kinakaze_abi_pthread_condattr_getpshared PRIVATE
+  "pthread_condattr_getpshared@GLIBC_2.2.5"=kinakaze_abi_pthread_condattr_getpshared PRIVATE
+  "pthread_condattr_getpshared@GLIBC_2.34"=kinakaze_abi_pthread_condattr_getpshared PRIVATE
   kinakaze_abi_pthread_condattr_init
   "pthread_condattr_init"=kinakaze_abi_pthread_condattr_init PRIVATE
   "pthread_condattr_init@GLIBC_2.2.5"=kinakaze_abi_pthread_condattr_init PRIVATE
@@ -2917,6 +2921,7 @@ EXPORTS
   "pthread_condattr_setclock@GLIBC_2.34"=kinakaze_abi_pthread_condattr_setclock PRIVATE
   kinakaze_abi_pthread_condattr_setpshared
   "pthread_condattr_setpshared"=kinakaze_abi_pthread_condattr_setpshared PRIVATE
+  "pthread_condattr_setpshared@GLIBC_2.2.5"=kinakaze_abi_pthread_condattr_setpshared PRIVATE
   "pthread_condattr_setpshared@GLIBC_2.34"=kinakaze_abi_pthread_condattr_setpshared PRIVATE
   kinakaze_abi_pthread_create
   "pthread_create"=kinakaze_abi_pthread_create PRIVATE
@@ -4484,10 +4489,3 @@ EXPORTS
   kinakaze_abi_xprt_unregister
   "xprt_unregister"=kinakaze_abi_xprt_unregister PRIVATE
   "xprt_unregister@GLIBC_2.2.5"=kinakaze_abi_xprt_unregister PRIVATE
-
-
-  kinakaze_abi_pthread_condattr_getpshared
-  "pthread_condattr_getpshared"=kinakaze_abi_pthread_condattr_getpshared PRIVATE
-  "pthread_condattr_getpshared@GLIBC_2.2.5"=kinakaze_abi_pthread_condattr_getpshared PRIVATE
-  "pthread_condattr_getpshared@GLIBC_2.34"=kinakaze_abi_pthread_condattr_getpshared PRIVATE
-  "pthread_condattr_setpshared@GLIBC_2.2.5"=kinakaze_abi_pthread_condattr_setpshared PRIVATE

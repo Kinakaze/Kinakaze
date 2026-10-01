@@ -1,0 +1,996 @@
+{
+  "source": {
+    "base_commit": "48067166ec504b4d9ff032ad24970252d6418928",
+    "files": {
+      "engine/crates/kinakaze-vfs/src/fs.rs": "b4dfc5cadfc082637482cb29c29db59a14c642cf2b8a6c94ad0e47fdce9304d6",
+      "engine/crates/kinakaze-vfs/src/fs/permissions.rs": "96ba03b8f5297339e512c91d5741947bcb7f0f43f7c99d943dae0bcca670169c",
+      "tests/guest/ExclusiveCreatePermissionsProbe.py": "783a4fb3fc2dd1cb0abe33ef8505b779da8af63e89c0789384d3bbe22f3fee3d",
+      "libs/libc/exports.def": "2ee10dcfc57f6bd102265a2881a207e00f55f4ba7b88c8a0e70d3a9fe20c4ce6",
+      "libs/libpthread/exports.def": "7be56c7bfde532b996dc359988d3a43ce0309772c3b658afb9cef070e8be7f37"
+    }
+  },
+  "enabled_guests": [
+    {
+      "pid": 1,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-480ba0eb0b3643eb83c7f0b89bb6f27f/ExclusiveCreatePermissionsProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.4636,
+      "request_to_exit_ms": 583.0588,
+      "activation_to_exit_ms": 582.5952,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 78.125,
+        "kernel_ms": 93.75,
+        "total_cpu_ms": 171.875,
+        "cycles": 652633449,
+        "page_faults": 22658
+      },
+      "prepared_working_set_bytes": 11997184,
+      "cpu_metrics": {
+        "user_ms": 500.0,
+        "kernel_ms": 312.5,
+        "total_cpu_ms": 812.5,
+        "processes": 15,
+        "active_processes": 2,
+        "page_faults": 95089,
+        "read_bytes": 8964400,
+        "write_bytes": 92704,
+        "read_ops": 1020,
+        "write_ops": 841,
+        "other_ops": 23269,
+        "other_bytes": 1023491
+      },
+      "probe": "ExclusiveCreatePermissionsProbe"
+    },
+    {
+      "pid": 2,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-480ba0eb0b3643eb83c7f0b89bb6f27f/NativeExclusiveCreateProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3761,
+      "request_to_exit_ms": 112.2843,
+      "activation_to_exit_ms": 111.9082,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 31.25,
+        "kernel_ms": 78.125,
+        "total_cpu_ms": 109.375,
+        "cycles": 277563957,
+        "page_faults": 10134
+      },
+      "prepared_working_set_bytes": 13770752,
+      "cpu_metrics": {
+        "user_ms": 31.25,
+        "kernel_ms": 78.125,
+        "total_cpu_ms": 109.375,
+        "processes": 0,
+        "active_processes": -1,
+        "page_faults": 10139,
+        "read_bytes": 1070875,
+        "write_bytes": 4211,
+        "read_ops": 180,
+        "write_ops": 59,
+        "other_ops": 10172,
+        "other_bytes": 430594
+      },
+      "probe": "NativeExclusiveCreateProbe"
+    },
+    {
+      "pid": 3,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-480ba0eb0b3643eb83c7f0b89bb6f27f/NativeWriteOpenProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 2.4293,
+      "request_to_exit_ms": 386.5618,
+      "activation_to_exit_ms": 384.1325,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 62.5,
+        "kernel_ms": 93.75,
+        "total_cpu_ms": 156.25,
+        "cycles": 380616914,
+        "page_faults": 15988
+      },
+      "prepared_working_set_bytes": 11988992,
+      "cpu_metrics": {
+        "user_ms": 171.875,
+        "kernel_ms": 281.25,
+        "total_cpu_ms": 453.125,
+        "processes": 6,
+        "active_processes": 1,
+        "page_faults": 76358,
+        "read_bytes": 16107980,
+        "write_bytes": 35807,
+        "read_ops": 689,
+        "write_ops": 372,
+        "other_ops": 25824,
+        "other_bytes": 1117803
+      },
+      "probe": "NativeWriteOpenProbe"
+    },
+    {
+      "pid": 16,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-480ba0eb0b3643eb83c7f0b89bb6f27f/NativeReadOpenProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3985,
+      "request_to_exit_ms": 101.0951,
+      "activation_to_exit_ms": 100.6966,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 0.0,
+        "kernel_ms": 93.75,
+        "total_cpu_ms": 93.75,
+        "cycles": 263165954,
+        "page_faults": 10523
+      },
+      "prepared_working_set_bytes": 13225984,
+      "cpu_metrics": {
+        "user_ms": 0.0,
+        "kernel_ms": 93.75,
+        "total_cpu_ms": 93.75,
+        "processes": 0,
+        "active_processes": -1,
+        "page_faults": 10535,
+        "read_bytes": 1069139,
+        "write_bytes": 4160,
+        "read_ops": 185,
+        "write_ops": 57,
+        "other_ops": 9845,
+        "other_bytes": 394167
+      },
+      "probe": "NativeReadOpenProbe"
+    },
+    {
+      "pid": 19,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-480ba0eb0b3643eb83c7f0b89bb6f27f/RelativeNativeReadProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 1.8446,
+      "request_to_exit_ms": 103.9972,
+      "activation_to_exit_ms": 102.1526,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 15.625,
+        "kernel_ms": 93.75,
+        "total_cpu_ms": 109.375,
+        "cycles": 258714848,
+        "page_faults": 10122
+      },
+      "prepared_working_set_bytes": 13205504,
+      "cpu_metrics": {
+        "user_ms": 31.25,
+        "kernel_ms": 93.75,
+        "total_cpu_ms": 125.0,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 13506,
+        "read_bytes": 1069737,
+        "write_bytes": 5111,
+        "read_ops": 198,
+        "write_ops": 68,
+        "other_ops": 10649,
+        "other_bytes": 442586
+      },
+      "probe": "RelativeNativeReadProbe"
+    },
+    {
+      "pid": 20,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-480ba0eb0b3643eb83c7f0b89bb6f27f/NativeReadCacheProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.4042,
+      "request_to_exit_ms": 300.073,
+      "activation_to_exit_ms": 299.6688,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 15.625,
+        "kernel_ms": 93.75,
+        "total_cpu_ms": 109.375,
+        "cycles": 385870477,
+        "page_faults": 20389
+      },
+      "prepared_working_set_bytes": 13205504,
+      "cpu_metrics": {
+        "user_ms": 93.75,
+        "kernel_ms": 203.125,
+        "total_cpu_ms": 296.875,
+        "processes": 7,
+        "active_processes": 0,
+        "page_faults": 81854,
+        "read_bytes": 13668184,
+        "write_bytes": 111311,
+        "read_ops": 682,
+        "write_ops": 446,
+        "other_ops": 19841,
+        "other_bytes": 914879
+      },
+      "probe": "NativeReadCacheProbe"
+    },
+    {
+      "pid": 21,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-480ba0eb0b3643eb83c7f0b89bb6f27f/FilesystemBoundaryProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.4987,
+      "request_to_exit_ms": 1830.9,
+      "activation_to_exit_ms": 1830.4013,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 1390.625,
+        "kernel_ms": 312.5,
+        "total_cpu_ms": 1703.125,
+        "cycles": 5078047784,
+        "page_faults": 208065
+      },
+      "prepared_working_set_bytes": 13205504,
+      "cpu_metrics": {
+        "user_ms": 1406.25,
+        "kernel_ms": 312.5,
+        "total_cpu_ms": 1718.75,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 211414,
+        "read_bytes": 1370648,
+        "write_bytes": 40770,
+        "read_ops": 633,
+        "write_ops": 494,
+        "other_ops": 21146,
+        "other_bytes": 652260
+      },
+      "probe": "FilesystemBoundaryProbe"
+    },
+    {
+      "pid": 27,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-480ba0eb0b3643eb83c7f0b89bb6f27f/ProcCredentialsProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.6306,
+      "request_to_exit_ms": 312.8099,
+      "activation_to_exit_ms": 312.1793,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 31.25,
+        "kernel_ms": 46.875,
+        "total_cpu_ms": 78.125,
+        "cycles": 298716545,
+        "page_faults": 15361
+      },
+      "prepared_working_set_bytes": 13201408,
+      "cpu_metrics": {
+        "user_ms": 109.375,
+        "kernel_ms": 234.375,
+        "total_cpu_ms": 343.75,
+        "processes": 4,
+        "active_processes": 0,
+        "page_faults": 69215,
+        "read_bytes": 17697245,
+        "write_bytes": 25723,
+        "read_ops": 708,
+        "write_ops": 293,
+        "other_ops": 28712,
+        "other_bytes": 1228777
+      },
+      "probe": "ProcCredentialsProbe"
+    },
+    {
+      "pid": 28,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-480ba0eb0b3643eb83c7f0b89bb6f27f/NamespaceServicesProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.6774,
+      "request_to_exit_ms": 230.5289,
+      "activation_to_exit_ms": 229.8515,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 78.125,
+        "kernel_ms": 46.875,
+        "total_cpu_ms": 125.0,
+        "cycles": 382216269,
+        "page_faults": 17267
+      },
+      "prepared_working_set_bytes": 13209600,
+      "cpu_metrics": {
+        "user_ms": 140.625,
+        "kernel_ms": 109.375,
+        "total_cpu_ms": 250.0,
+        "processes": 3,
+        "active_processes": -1,
+        "page_faults": 47068,
+        "read_bytes": 2153491,
+        "write_bytes": 45412,
+        "read_ops": 622,
+        "write_ops": 398,
+        "other_ops": 14598,
+        "other_bytes": 622822
+      },
+      "probe": "NamespaceServicesProbe"
+    },
+    {
+      "pid": 30,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-480ba0eb0b3643eb83c7f0b89bb6f27f/ForkNativeTransferProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 1.691,
+      "request_to_exit_ms": 261.3264,
+      "activation_to_exit_ms": 259.6354,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 46.875,
+        "kernel_ms": 62.5,
+        "total_cpu_ms": 109.375,
+        "cycles": 330846055,
+        "page_faults": 14592
+      },
+      "prepared_working_set_bytes": 13193216,
+      "cpu_metrics": {
+        "user_ms": 109.375,
+        "kernel_ms": 140.625,
+        "total_cpu_ms": 250.0,
+        "processes": 4,
+        "active_processes": 0,
+        "page_faults": 58539,
+        "read_bytes": 8776489,
+        "write_bytes": 30774,
+        "read_ops": 503,
+        "write_ops": 273,
+        "other_ops": 17502,
+        "other_bytes": 770473
+      },
+      "probe": "ForkNativeTransferProbe"
+    },
+    {
+      "pid": 33,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-480ba0eb0b3643eb83c7f0b89bb6f27f/ForkPrewarmPoolProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.362,
+      "request_to_exit_ms": 953.7075,
+      "activation_to_exit_ms": 953.3455,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 78.125,
+        "kernel_ms": 203.125,
+        "total_cpu_ms": 281.25,
+        "cycles": 788701847,
+        "page_faults": 30275
+      },
+      "prepared_working_set_bytes": 13197312,
+      "cpu_metrics": {
+        "user_ms": 453.125,
+        "kernel_ms": 781.25,
+        "total_cpu_ms": 1234.375,
+        "processes": 33,
+        "active_processes": 0,
+        "page_faults": 243028,
+        "read_bytes": 2177945,
+        "write_bytes": 210410,
+        "read_ops": 2224,
+        "write_ops": 1985,
+        "other_ops": 37831,
+        "other_bytes": 1934903
+      },
+      "probe": "ForkPrewarmPoolProbe"
+    },
+    {
+      "pid": 36,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-480ba0eb0b3643eb83c7f0b89bb6f27f/ConcurrentVforkProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.4266,
+      "request_to_exit_ms": 697.4124,
+      "activation_to_exit_ms": 696.9858,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 156.25,
+        "kernel_ms": 421.875,
+        "total_cpu_ms": 578.125,
+        "cycles": 1348087981,
+        "page_faults": 68141
+      },
+      "prepared_working_set_bytes": 13221888,
+      "cpu_metrics": {
+        "user_ms": 1265.625,
+        "kernel_ms": 1953.125,
+        "total_cpu_ms": 3218.75,
+        "processes": 97,
+        "active_processes": 0,
+        "page_faults": 665936,
+        "read_bytes": 3298304,
+        "write_bytes": 535271,
+        "read_ops": 6047,
+        "write_ops": 5545,
+        "other_ops": 89266,
+        "other_bytes": 4505512
+      },
+      "probe": "ConcurrentVforkProbe"
+    },
+    {
+      "pid": 40,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-480ba0eb0b3643eb83c7f0b89bb6f27f/ExecPrewarmPoolProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.212,
+      "request_to_exit_ms": 2848.6798,
+      "activation_to_exit_ms": 2848.4678,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 46.875,
+        "kernel_ms": 62.5,
+        "total_cpu_ms": 109.375,
+        "cycles": 297161823,
+        "page_faults": 17485
+      },
+      "prepared_working_set_bytes": 13217792,
+      "cpu_metrics": {
+        "user_ms": 1312.5,
+        "kernel_ms": 1859.375,
+        "total_cpu_ms": 3171.875,
+        "processes": 26,
+        "active_processes": 0,
+        "page_faults": 574508,
+        "read_bytes": 202243368,
+        "write_bytes": 194408,
+        "read_ops": 6278,
+        "write_ops": 2336,
+        "other_ops": 250481,
+        "other_bytes": 10801161
+      },
+      "probe": "ExecPrewarmPoolProbe"
+    },
+    {
+      "pid": 81,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-480ba0eb0b3643eb83c7f0b89bb6f27f/FutexPiProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3463,
+      "request_to_exit_ms": 310.9877,
+      "activation_to_exit_ms": 310.6414,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 109.375,
+        "kernel_ms": 46.875,
+        "total_cpu_ms": 156.25,
+        "cycles": 445466549,
+        "page_faults": 16454
+      },
+      "prepared_working_set_bytes": 13189120,
+      "cpu_metrics": {
+        "user_ms": 156.25,
+        "kernel_ms": 46.875,
+        "total_cpu_ms": 203.125,
+        "processes": 2,
+        "active_processes": 0,
+        "page_faults": 26328,
+        "read_bytes": 1285541,
+        "write_bytes": 16064,
+        "read_ops": 329,
+        "write_ops": 178,
+        "other_ops": 11115,
+        "other_bytes": 486821
+      },
+      "probe": "FutexPiProbe"
+    },
+    {
+      "pid": 115,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-480ba0eb0b3643eb83c7f0b89bb6f27f/FutexSignalRestartProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.2337,
+      "request_to_exit_ms": 165.6894,
+      "activation_to_exit_ms": 165.4557,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 31.25,
+        "kernel_ms": 140.625,
+        "total_cpu_ms": 171.875,
+        "cycles": 354321646,
+        "page_faults": 12466
+      },
+      "prepared_working_set_bytes": 13185024,
+      "cpu_metrics": {
+        "user_ms": 31.25,
+        "kernel_ms": 140.625,
+        "total_cpu_ms": 171.875,
+        "processes": 0,
+        "active_processes": -1,
+        "page_faults": 12472,
+        "read_bytes": 934665,
+        "write_bytes": 6436,
+        "read_ops": 196,
+        "write_ops": 80,
+        "other_ops": 7832,
+        "other_bytes": 333180
+      },
+      "probe": "FutexSignalRestartProbe"
+    },
+    {
+      "pid": 116,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-480ba0eb0b3643eb83c7f0b89bb6f27f/PthreadSharedMutexProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 1.7944,
+      "request_to_exit_ms": 1763.9081,
+      "activation_to_exit_ms": 1762.1137,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 62.5,
+        "kernel_ms": 500.0,
+        "total_cpu_ms": 562.5,
+        "cycles": 1815590999,
+        "page_faults": 82456
+      },
+      "prepared_working_set_bytes": 13193216,
+      "cpu_metrics": {
+        "user_ms": 1171.875,
+        "kernel_ms": 1562.5,
+        "total_cpu_ms": 2734.375,
+        "processes": 104,
+        "active_processes": 0,
+        "page_faults": 590759,
+        "read_bytes": 1722366,
+        "write_bytes": 671756,
+        "read_ops": 6078,
+        "write_ops": 5856,
+        "other_ops": 77767,
+        "other_bytes": 4286778
+      },
+      "probe": "PthreadSharedMutexProbe"
+    },
+    {
+      "pid": 118,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-480ba0eb0b3643eb83c7f0b89bb6f27f/PthreadSharedCondProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3087,
+      "request_to_exit_ms": 327.7611,
+      "activation_to_exit_ms": 327.4524,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 62.5,
+        "kernel_ms": 125.0,
+        "total_cpu_ms": 187.5,
+        "cycles": 531367225,
+        "page_faults": 24203
+      },
+      "prepared_working_set_bytes": 13213696,
+      "cpu_metrics": {
+        "user_ms": 156.25,
+        "kernel_ms": 328.125,
+        "total_cpu_ms": 484.375,
+        "processes": 17,
+        "active_processes": 0,
+        "page_faults": 106387,
+        "read_bytes": 1157846,
+        "write_bytes": 109404,
+        "read_ops": 1105,
+        "write_ops": 974,
+        "other_ops": 19688,
+        "other_bytes": 990750
+      },
+      "probe": "PthreadSharedCondProbe"
+    },
+    {
+      "pid": 129,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-480ba0eb0b3643eb83c7f0b89bb6f27f/PthreadRobustProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3141,
+      "request_to_exit_ms": 207.3242,
+      "activation_to_exit_ms": 207.0101,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 62.5,
+        "kernel_ms": 62.5,
+        "total_cpu_ms": 125.0,
+        "cycles": 345150649,
+        "page_faults": 18128
+      },
+      "prepared_working_set_bytes": 13209600,
+      "cpu_metrics": {
+        "user_ms": 78.125,
+        "kernel_ms": 78.125,
+        "total_cpu_ms": 156.25,
+        "processes": 5,
+        "active_processes": 0,
+        "page_faults": 39328,
+        "read_bytes": 1076746,
+        "write_bytes": 30722,
+        "read_ops": 409,
+        "write_ops": 288,
+        "other_ops": 10710,
+        "other_bytes": 494262
+      },
+      "probe": "PthreadRobustProbe"
+    },
+    {
+      "pid": 235,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-480ba0eb0b3643eb83c7f0b89bb6f27f/PthreadRobustAliasesProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.2603,
+      "request_to_exit_ms": 64.7936,
+      "activation_to_exit_ms": 64.5333,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 15.625,
+        "kernel_ms": 46.875,
+        "total_cpu_ms": 62.5,
+        "cycles": 180738877,
+        "page_faults": 9503
+      },
+      "prepared_working_set_bytes": 13201408,
+      "cpu_metrics": {
+        "user_ms": 15.625,
+        "kernel_ms": 46.875,
+        "total_cpu_ms": 62.5,
+        "processes": 0,
+        "active_processes": -1,
+        "page_faults": 11972,
+        "read_bytes": 432454,
+        "write_bytes": 4674,
+        "read_ops": 136,
+        "write_ops": 57,
+        "other_ops": 6885,
+        "other_bytes": 310755
+      },
+      "probe": "PthreadRobustAliasesProbe"
+    },
+    {
+      "pid": 244,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-480ba0eb0b3643eb83c7f0b89bb6f27f/AllocationGrowthProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 1.6505,
+      "request_to_exit_ms": 186.5511,
+      "activation_to_exit_ms": 184.9006,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 62.5,
+        "kernel_ms": 125.0,
+        "total_cpu_ms": 187.5,
+        "cycles": 578603512,
+        "page_faults": 19596
+      },
+      "prepared_working_set_bytes": 13221888,
+      "cpu_metrics": {
+        "user_ms": 62.5,
+        "kernel_ms": 140.625,
+        "total_cpu_ms": 203.125,
+        "processes": 2,
+        "active_processes": 0,
+        "page_faults": 29533,
+        "read_bytes": 1643055,
+        "write_bytes": 13410,
+        "read_ops": 291,
+        "write_ops": 142,
+        "other_ops": 10655,
+        "other_bytes": 470898
+      },
+      "probe": "AllocationGrowthProbe"
+    }
+  ],
+  "disabled_guests": [
+    {
+      "pid": 1,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-4146031e49db4c0a88973041ab59db85/ExclusiveCreatePermissionsProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.6055,
+      "request_to_exit_ms": 370.2303,
+      "activation_to_exit_ms": 369.6248,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 78.125,
+        "kernel_ms": 140.625,
+        "total_cpu_ms": 218.75,
+        "cycles": 642170978,
+        "page_faults": 22728
+      },
+      "prepared_working_set_bytes": 11960320,
+      "cpu_metrics": {
+        "user_ms": 250.0,
+        "kernel_ms": 281.25,
+        "total_cpu_ms": 531.25,
+        "processes": 15,
+        "active_processes": 2,
+        "page_faults": 96780,
+        "read_bytes": 8964505,
+        "write_bytes": 92810,
+        "read_ops": 1020,
+        "write_ops": 841,
+        "other_ops": 23688,
+        "other_bytes": 1025689
+      },
+      "probe": "ExclusiveCreatePermissionsProbe"
+    },
+    {
+      "pid": 2,
+      "command": [
+        "/usr/bin/python3.11",
+        "/tmp/native-fork-pool-4146031e49db4c0a88973041ab59db85/NativeExclusiveCreateProbe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3187,
+      "request_to_exit_ms": 110.5975,
+      "activation_to_exit_ms": 110.2788,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 31.25,
+        "kernel_ms": 78.125,
+        "total_cpu_ms": 109.375,
+        "cycles": 285634859,
+        "page_faults": 10122
+      },
+      "prepared_working_set_bytes": 11960320,
+      "cpu_metrics": {
+        "user_ms": 31.25,
+        "kernel_ms": 62.5,
+        "total_cpu_ms": 93.75,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 10781,
+        "read_bytes": 1070878,
+        "write_bytes": 4215,
+        "read_ops": 180,
+        "write_ops": 59,
+        "other_ops": 10232,
+        "other_bytes": 430100
+      },
+      "probe": "NativeExclusiveCreateProbe"
+    }
+  ],
+  "hashes": {
+    "worker.exe": "ef70ffdaa565eb5d3ef7be2476362fde9b1913c97b91c28608f8f843d0c54400",
+    "init.exe": "49a8913b9e5a286c0ef2056df661428617ca7f3085a2fa61b820e4714ef0bdfa",
+    "rootfs.manifest.json": "14905978ccf97543bdc6cda4155879fd87c57243a972137beecd83adf7d2e60f",
+    "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+    "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+    "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+    "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+    "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+    "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+    "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+    "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+    "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+    "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+    "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+    "rootfs\\lib\\kinakaze_alloc.so": "82d9513103539d61a7fb98c678920a9f0ae701d0e54d5400d2677132e66d2a6c",
+    "rootfs\\lib\\kinakaze_elf.so": "6640b177f98d59c75d4e627c915f19dd6b8d8affa55eefaa41516e9a51211bcc",
+    "rootfs\\lib\\kinakaze_guest_engine.so": "b7d86b53fa1ea30edea7e5cddd44945bf8b20b06df076b3ba2ba267525737d51",
+    "rootfs\\lib\\kinakaze_kernel.so": "901e3a414e8f3b14ec4a46c5a6c50039e28e784113d3fa0ca8a504f626d1bfc7",
+    "rootfs\\lib\\kinakaze_tls.so": "eb122aeba697d9ba4117f294fa7b4d363bcf297b7c5511a51f6869fb419aa39f",
+    "rootfs\\lib\\kinakaze_vfs.so": "dca1a04b876914bc63ed8f183ff0d8eb03f9bede8196bf14560e1c91dd2ff40a",
+    "rootfs\\lib\\ld-linux-x86-64.so.2": "1b04c852d8993a1bce7f69e2b48be785f47f86200a2384887fdf0e27b9e5986a",
+    "rootfs\\lib\\libasound.so.2": "85ecd5e59c8d8dccbe4a34e17d0cd0e064d16f3be69a7ddc48de39d1580ee2e1",
+    "rootfs\\lib\\libc.so.6": "dbc9fd4cd9004035b062d15eea4262f8a39e94df97885f7d9a2bcda8978ba10c",
+    "rootfs\\lib\\libcuda.so.1": "5baf728ed88ec2f574b5d7426b77210e86ee78de13b2a7f53fd8129cb5a2fd03",
+    "rootfs\\lib\\libdisplay.so.1": "5375c944c7250cf3224542bcdc0493001b2b8035715bd469be8565ffe9b12165",
+    "rootfs\\lib\\libdl.so.2": "aad3290b3aa69a8b27e7e0404cfe60c48bf28e1e39145cd575b7f12f2fd7383e",
+    "rootfs\\lib\\libEGL.so.1": "a31ad7c8f6d18315366781d3bad8dbc0a74968e10f1208c1e8405c0e9840cd83",
+    "rootfs\\lib\\libGL.so.1": "312bebf3f22253b76120f0fc55887851d8d9ca01e834d80032c06b61eb427d0a",
+    "rootfs\\lib\\libGLESv2.so.2": "6198b219f6d1d4ec9d12f9699b1894460a160523cc4083b7ca699bedaf817f27",
+    "rootfs\\lib\\libGLX.so.0": "36bc2b1127d247da56b9c77ab3d74f8be43230c742c27718f101e044b5ec36c3",
+    "rootfs\\lib\\libkinakaze-runtime.so.1": "2cedc1bfe696ac46c456245ef10788cef7c8bdacfbedeea80bbd4f94e36e4779",
+    "rootfs\\lib\\libm.so.6": "3c62f565437c406b02006008f7f2909792abba7af5ff79463da1f494ce1d391e",
+    "rootfs\\lib\\libOpenGL.so.0": "47c46e4e2a242e4cfe984b6ae098f2050f3addf83430a17abc4375b76352497f",
+    "rootfs\\lib\\libpipewire-0.3.so.0": "cece9c29f97c7047409244e8198fc3c987b795101344833ed17f15fe1c7bbdeb",
+    "rootfs\\lib\\libpthread.so.0": "db2e14485fbb3e989d6f307411e1e5f4766a67111bc9a1fc7a2d62ab0e348292",
+    "rootfs\\lib\\libpulse.so.0": "c337da067dec9c4f635a96514b6514113fbde2dce2c1974309b0efbc1b73e140",
+    "rootfs\\lib\\libresolv.so.2": "b705b12a66a3ae4219dda86f24cf5c173f0a2725d8bf65b1f828bc2258074edf",
+    "rootfs\\lib\\librt.so.1": "a26ecd6f1a1e26ef2dd0b1ceff31e435de59eebe463f03dad99e6c71887aabc5",
+    "rootfs\\lib\\libvulkan.so.1": "14b76f5d106793d1a65853d0c37ba190b1274e21f51b05979cf8d86b6f9531ad",
+    "rootfs\\lib\\libX11-xcb.so.1": "64731dd7eb4c2e1fa2b5a88a8c3d55f709e087cf106e90cd42cf546174855215",
+    "rootfs\\lib\\libX11.so.6": "ab87e1e7e00fbbe5a4d28964f8934ac531c033892ed8a31bd633a582a76641f7",
+    "rootfs\\lib\\libxcb.so.1": "fd502da6999cb2ed62f2c61a19c5aabd7ebe239d3d7578fc9cffd7d7f2978afc",
+    "rootfs\\lib\\libXcursor.so.1": "2b49b89329834373c28c291bc569e30e811a8d67bb85daede4821b80968bf27d",
+    "rootfs\\lib\\libXext.so.6": "aa5c27d6d04535551b3a47d48bc108c7edce0aa0d020a4bf66d372fe2253434e",
+    "rootfs\\lib\\libXi.so.6": "30654264899d7f655da6735c100721555d2f0269ccace228f803aea2042cb848",
+    "rootfs\\lib\\libXinerama.so.1": "02b7635bdff6bad628b00616a646a53684528c77fa8ce0dffeddd6d3679a0bb2",
+    "rootfs\\lib\\libXrandr.so.2": "2d39348cad32add0f3957beaffd6ccf556eda64fe69d1f05de3dbd49437adc48",
+    "rootfs\\lib\\libXrender.so.1": "7cfb115b2191be8ba4b0f0b28352bf2970894663f9d21ce2fc10a66dc208ead3",
+    "rootfs\\lib\\libXxf86vm.so.1": "cf8989dcd683cf8cc82f9375f0f5ca7ca1c52cb8f1f8638d5ef3b395c03507db",
+    "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+    "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+    "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+    "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+    "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+    "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+    "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+    "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+    "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+    "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+  },
+  "idle": {
+    "cpu_ms": 0.0,
+    "active_processes": 7,
+    "stats": {
+      "Stats": {
+        "processes": 2,
+        "clients": 3,
+        "objects": 0,
+        "transactions": 0
+      }
+    },
+    "members": [
+      {
+        "pid": 1388,
+        "parent": 24672,
+        "name": "init.exe",
+        "role": "other",
+        "first_argument": "--pipe"
+      },
+      {
+        "pid": 20396,
+        "parent": 1388,
+        "name": "worker.exe",
+        "role": "native-exec",
+        "first_argument": "--kinakaze-exec-pool"
+      },
+      {
+        "pid": 14668,
+        "parent": 1388,
+        "name": "worker.exe",
+        "role": "native-exec",
+        "first_argument": "--kinakaze-exec-pool"
+      },
+      {
+        "pid": 3884,
+        "parent": 1388,
+        "name": "worker.exe",
+        "role": "native-fork",
+        "first_argument": "--kinakaze-fork"
+      },
+      {
+        "pid": 25016,
+        "parent": 1388,
+        "name": "worker.exe",
+        "role": "command-pool",
+        "first_argument": "guest-pool"
+      },
+      {
+        "pid": 19808,
+        "parent": 1388,
+        "name": "worker.exe",
+        "role": "native-fork",
+        "first_argument": "--kinakaze-fork"
+      },
+      {
+        "pid": 11828,
+        "parent": 1388,
+        "name": "worker.exe",
+        "role": "command-pool",
+        "first_argument": "guest-pool"
+      }
+    ]
+  },
+  "export_generator_tests": 25,
+  "native_modules": 29,
+  "guest_exports": 5973,
+  "evidence": {
+    "artifacts/apt-180-20260930/root-create-permissions-build.jsonl": "cc8f64ece79a804ebaa5f47e44826c8f8acd2f2e583845e8787ec0a1a0bd0f13",
+    "artifacts/apt-180-20260930/root-create-permissions-build.log": "8a5f1a5101f2cc23595349776df07dcf5a7c5eb66f4ad2326360f442cc2cbd1a",
+    "artifacts/apt-180-20260930/root-create-permissions-exports.log": "c9000c55abf695a2efa2ff3d6d17d2efa6c5cdc3280f9bbbc6b784aa493aa80d",
+    "artifacts/apt-180-20260930/root-create-permissions-package.log": "8a1a818ee445de9a74e15a9281cc74519b76df514b2a5ebf3db5e57dd79568e3",
+    "artifacts/apt-180-20260930/root-create-permissions-export-tests.log": "4b1ff0efee61458df0ea08e39b9f180c676428b45c0c0e3bd6f26fa35f916a67",
+    "artifacts/apt-180-20260930/root-create-permissions-export-equivalence.json": "892d3cf1df2a8de83732d97bbd295847d785431b96d7eca0cad34290962bda5c",
+    "artifacts/apt-180-20260930/root-create-permissions-regenerate-exports.log": "be81118b14c2df2f01de1ee718865ca756366aeba8691bec3d2667b0be05addf",
+    "artifacts/apt-180-20260930/root-create-permissions-guests/results.json": "55aad5090342571a59463a5839707ed365a2e4ff234116db5c98060434952cb1",
+    "artifacts/apt-180-20260930/root-create-permissions-control-guests/results.json": "15dc6cccaef70b420290ce4f22d58ba87acdb2df8de84fc0a68677f217646750",
+    "artifacts/apt-180-20260930/root-native-create-guests/results.json": "bdfd2cba22d7c27ad0e2cd4e1af9f4509dec32a25dbee61ea7dc079d3f310251",
+    "artifacts/apt-180-20260930/root-native-create-control-guests/results.json": "354c7e8b1352fbae744b8ff7cd4bb23713456183e9b2a1c70e2aeb0182c87745",
+    "artifacts/apt-180-20260930/root-native-create-guests/session/pool.stderr.log": "f2152397ba419aa96d7df809595241f74e019a622c9598021213f1c795c0fbd3",
+    "artifacts/apt-180-20260930/root-native-create-control-guests/session/pool.stderr.log": "a2f56f33fdc09a17cc4f1129231da9b7801a00bb485b8765198ba932a8770fc9"
+  },
+  "full_install_best_ms": 204887.0722,
+  "sub_180_second_goal_met": false
+}
