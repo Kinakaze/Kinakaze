@@ -159,5 +159,13 @@
   "discarded_evidence": [
     "Earlier default-only targeted runs used a different environment variable; final publish report uses KINAKAZE_FUTEX_OPT explicitly.",
     "First publish reporter rejected multiline subprocess output although all 636 tests passed; the corrected report preserves that original successful log."
-  ]
+  ],
+  "post_commit_integration": {
+    "merge_commit": "0965bd3294c95dba569fc9bdd875a4fa7f43e8d3",
+    "remote_main": "b06a7a419f351ec20359dff939924fba5fcdbaae",
+    "production_check_exit_code": 0,
+    "production_check_log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-merged-release-check.log",
+    "production_check_sha256": "37706824f06ff05b7548a234b759225cab109bb593441a80543217a59d215af1",
+    "native_suite_rerun_after_release_merge": false
+  }
 }
