@@ -59,10 +59,12 @@ at the isolated experiment's start and end. No dedicated-host or complete
 Both reference and selected routes passed seven new functional cases. Together
 with pread, pipe-vector, native capability lifetime, positional, verity, native
 open and device/Unix routing regressions, the frozen suites passed **80 tests**,
-with zero failures. Eight diagnostic benchmarks were ignored in the functional
-runs and run separately where applicable. Production release build/check also
+with zero failures. Eight diagnostic/helper cases were ignored in the functional
+runs; the two new benchmarks were measured separately. Production release build/check also
 passed. The measurements use base `98b3312` plus the recorded source hashes;
 later main integrations are tracked separately, not added to these timings.
+The merged graph `427f466` also passed the production release check in 23.00 s;
+its incoming datagram changes are outside these frozen file-vector timings.
 
 [Complete rows, hashes and limitations](measurements/file-vector-throughput-2026-10-01.json)
 identify both frozen cohorts, native logs, the production binary, source archive

@@ -947,5 +947,14 @@
     "Five alternating measured pairs plus one warmup pair per cohort; unchanged scalar/MiB rows quantify substantial host/order variation.",
     "Foreign compilation observed at isolated small-file start and end; no dedicated host or continuous quiet guarantee.",
     "No complete npm i, packaged guest or full installation speedup claim."
-  ]
+  ],
+  "integration": {
+    "source": "427f466541994bf66510995b11293f27991bc591",
+    "production_check": {
+      "path": "artifacts/syscall-all-paths-20261001/file-vector-merged-production-check.log",
+      "sha256": "6a4232bfffc01819ff6f9210ea8250a9ff755918f3008c4853d66777c280a08a"
+    },
+    "passed": true,
+    "scope": "Incoming Unix datagram changes and both benchmark cases preserved; native and timing evidence stays bound to its frozen pre-merge graph."
+  }
 }
