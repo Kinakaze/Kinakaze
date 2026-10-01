@@ -1123,7 +1123,7 @@ pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32>
         return Ok(fd);
     }
     if fallback.is_none()
-        && let Some(fd) = native_write::try_open(path, flags)?
+        && let Some(fd) = native_write::try_open_at(dirfd, path, &absolute, flags)?
     {
         return Ok(fd);
     }

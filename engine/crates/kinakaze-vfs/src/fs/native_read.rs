@@ -3,7 +3,6 @@
 use super::{O_CLOEXEC, O_NOFOLLOW, O_NONBLOCK, S_IFMT, S_IFREG, inode, object::Object};
 use crate::{FdFlags, FdKind};
 use std::path::Path;
-use std::sync::OnceLock;
 use windows_sys::Win32::Storage::FileSystem::{
     FILE_ATTRIBUTE_REPARSE_POINT, FILE_ATTRIBUTE_TAG_INFO, FileAttributeTagInfo,
     GetFileInformationByHandleEx,
@@ -48,22 +47,7 @@ pub(super) fn try_open_at(
     let Some(path) = candidate_path(dirfd, original, absolute, flags) else {
         return Ok(None);
     };
-    static RELATIVE_ENABLED: OnceLock<bool> = OnceLock::new();
-    if !original.starts_with('/')
-        && !*RELATIVE_ENABLED.get_or_init(|| {
-            std::env::var_os("KINAKAZE_NATIVE_READ_RELATIVE").as_deref()
-                != Some(std::ffi::OsStr::new("0"))
-        })
-    {
-        return Ok(None);
-    }
-    static ENABLED: OnceLock<bool> = OnceLock::new();
-    if !eligible(path, flags)
-        || !*ENABLED.get_or_init(|| {
-            std::env::var_os("KINAKAZE_NATIVE_READ_OPEN").as_deref()
-                != Some(std::ffi::OsStr::new("0"))
-        })
-        || !crate::user_namespace::capable(1, 1)
+    if !crate::user_namespace::capable(1, 1)
         || crate::path::overlay_root().is_some()
         || crate::mount::api::tree_reference(path).is_some()
         || crate::tmpfs::owns(path)

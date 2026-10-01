@@ -1,0 +1,468 @@
+{
+  "source_base": {
+    "git_head": "9007a9d88fbcc15a8d0a396acec978111be61511",
+    "files": 1914,
+    "archive_sha256": "dfe1be3040aea461fe8e3abc42126fd18c0aa1cb4c12b8a77b2a4a5ea7602781"
+  },
+  "source_changes": {
+    "engine/crates/kinakaze-vfs/src/fs.rs": "77aad2633129027b1d63782e338e6549905d557e01720f803609c96e43d840fe",
+    "engine/crates/kinakaze-vfs/src/fs/native_read.rs": "052a23f619e0be902942b42f6cb89ab6652d847a1c6b8bf652b1cfa4dfbc7afe",
+    "engine/crates/kinakaze-vfs/src/fs/native_write.rs": "de237d0c3c8517c78cf060cb1d6af6936fb40fd911cf8c2c6d3a7da1c6a6f2ec",
+    "engine/crates/kinakaze-vfs/src/fs/native_write/tests.rs": "5286a6e8ed8b95529eb6ff625fe4f5a6d511e6a52ab6f0dd7b76c9e2029046e2",
+    "tests/guest/RelativeNativeWriteProbe.py": "addcd51e8e5de653c246a363799915b3de5ea75d6de95c5ba691f0b37ef065c0"
+  },
+  "pair_source_diff": [
+    "engine/crates/kinakaze-vfs/src/fs.rs",
+    "engine/crates/kinakaze-vfs/src/fs/native_read.rs",
+    "engine/crates/kinakaze-vfs/src/fs/native_write.rs",
+    "engine/crates/kinakaze-vfs/src/fs/native_write/tests.rs",
+    "tests/guest/RelativeNativeWriteProbe.py"
+  ],
+  "native_passed": 111,
+  "native_ignored": 3,
+  "guest_checks": 57,
+  "comparison": {
+    "absolute_repeated": {
+      "control_ms": 1263.2651999999998,
+      "selected_ms": 1161.42075,
+      "reduction_percent": 8.062000758035593
+    },
+    "absolute_varied": {
+      "control_ms": 1236.5749,
+      "selected_ms": 1226.78575,
+      "reduction_percent": 0.7916342147976652
+    },
+    "absolute_varied_write": {
+      "control_ms": 2536.54435,
+      "selected_ms": 2365.27675,
+      "reduction_percent": 6.752004947203072
+    },
+    "relative_repeated": {
+      "control_ms": 2688.10135,
+      "selected_ms": 1516.3669,
+      "reduction_percent": 43.58966785236724
+    },
+    "relative_varied": {
+      "control_ms": 2515.78495,
+      "selected_ms": 1685.2439,
+      "reduction_percent": 33.01319733230776
+    },
+    "relative_varied_write": {
+      "control_ms": 4072.883,
+      "selected_ms": 2571.1325500000003,
+      "reduction_percent": 36.87192708457374
+    }
+  },
+  "rows": [
+    {
+      "pid": 1,
+      "command": [
+        "/usr/bin/python3",
+        "/var/tmp/goal180-r13-open-comparison/probe.py",
+        "/var/tmp/goal180-r13-open-comparison"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.397,
+      "request_to_exit_ms": 15293.7796,
+      "activation_to_exit_ms": 15293.3826,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 1671.875,
+        "kernel_ms": 13328.125,
+        "total_cpu_ms": 15000.0,
+        "cycles": 43816336378,
+        "page_faults": 8224
+      },
+      "prepared_working_set_bytes": 11960320,
+      "cpu_metrics": {
+        "user_ms": 1687.5,
+        "kernel_ms": 13328.125,
+        "total_cpu_ms": 15015.625,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 14273,
+        "read_bytes": 7647071,
+        "write_bytes": 128317,
+        "read_ops": 1199,
+        "write_ops": 17008,
+        "other_ops": 2030533,
+        "other_bytes": 40769902
+      },
+      "label": "r13-control",
+      "loops": {
+        "absolute_repeated": {
+          "iterations": 8192,
+          "ms": 1260.7421
+        },
+        "absolute_varied": {
+          "iterations": 8192,
+          "ms": 1241.7094
+        },
+        "absolute_varied_write": {
+          "iterations": 8192,
+          "ms": 3036.2352
+        },
+        "relative_repeated": {
+          "iterations": 8192,
+          "ms": 2660.2912
+        },
+        "relative_varied": {
+          "iterations": 8192,
+          "ms": 2471.1261
+        },
+        "relative_varied_write": {
+          "iterations": 8192,
+          "ms": 3987.4248
+        }
+      }
+    },
+    {
+      "pid": 1,
+      "command": [
+        "/usr/bin/python3",
+        "/var/tmp/goal180-r13-open-comparison/probe.py",
+        "/var/tmp/goal180-r13-open-comparison"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.4506,
+      "request_to_exit_ms": 10860.3316,
+      "activation_to_exit_ms": 10859.881,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 1671.875,
+        "kernel_ms": 8984.375,
+        "total_cpu_ms": 10656.25,
+        "cycles": 31137266970,
+        "page_faults": 8290
+      },
+      "prepared_working_set_bytes": 11939840,
+      "cpu_metrics": {
+        "user_ms": 1687.5,
+        "kernel_ms": 9031.25,
+        "total_cpu_ms": 10718.75,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 13237,
+        "read_bytes": 7647063,
+        "write_bytes": 128309,
+        "read_ops": 1199,
+        "write_ops": 17008,
+        "other_ops": 1415620,
+        "other_bytes": 29781923
+      },
+      "label": "r13",
+      "loops": {
+        "absolute_repeated": {
+          "iterations": 8192,
+          "ms": 1166.2003
+        },
+        "absolute_varied": {
+          "iterations": 8192,
+          "ms": 1221.4755
+        },
+        "absolute_varied_write": {
+          "iterations": 8192,
+          "ms": 2627.8497
+        },
+        "relative_repeated": {
+          "iterations": 8192,
+          "ms": 1413.7623
+        },
+        "relative_varied": {
+          "iterations": 8192,
+          "ms": 1541.5704
+        },
+        "relative_varied_write": {
+          "iterations": 8192,
+          "ms": 2371.0084
+        }
+      }
+    },
+    {
+      "pid": 1,
+      "command": [
+        "/usr/bin/python3",
+        "/var/tmp/goal180-r13-open-comparison/probe.py",
+        "/var/tmp/goal180-r13-open-comparison"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3493,
+      "request_to_exit_ms": 11235.6273,
+      "activation_to_exit_ms": 11235.278,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 1453.125,
+        "kernel_ms": 9671.875,
+        "total_cpu_ms": 11125.0,
+        "cycles": 32289893586,
+        "page_faults": 8311
+      },
+      "prepared_working_set_bytes": 11931648,
+      "cpu_metrics": {
+        "user_ms": 1468.75,
+        "kernel_ms": 9671.875,
+        "total_cpu_ms": 11140.625,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 13257,
+        "read_bytes": 7647057,
+        "write_bytes": 128301,
+        "read_ops": 1199,
+        "write_ops": 17008,
+        "other_ops": 1415616,
+        "other_bytes": 29682549
+      },
+      "label": "r13",
+      "loops": {
+        "absolute_repeated": {
+          "iterations": 8192,
+          "ms": 1156.6412
+        },
+        "absolute_varied": {
+          "iterations": 8192,
+          "ms": 1232.096
+        },
+        "absolute_varied_write": {
+          "iterations": 8192,
+          "ms": 2102.7038
+        },
+        "relative_repeated": {
+          "iterations": 8192,
+          "ms": 1618.9715
+        },
+        "relative_varied": {
+          "iterations": 8192,
+          "ms": 1828.9174
+        },
+        "relative_varied_write": {
+          "iterations": 8192,
+          "ms": 2771.2567
+        }
+      }
+    },
+    {
+      "pid": 1,
+      "command": [
+        "/usr/bin/python3",
+        "/var/tmp/goal180-r13-open-comparison/probe.py",
+        "/var/tmp/goal180-r13-open-comparison"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3292,
+      "request_to_exit_ms": 14522.383,
+      "activation_to_exit_ms": 14522.0538,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 1828.125,
+        "kernel_ms": 12609.375,
+        "total_cpu_ms": 14437.5,
+        "cycles": 41802467350,
+        "page_faults": 8274
+      },
+      "prepared_working_set_bytes": 11968512,
+      "cpu_metrics": {
+        "user_ms": 1828.125,
+        "kernel_ms": 12656.25,
+        "total_cpu_ms": 14484.375,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 16715,
+        "read_bytes": 7647071,
+        "write_bytes": 128317,
+        "read_ops": 1199,
+        "write_ops": 17008,
+        "other_ops": 2030428,
+        "other_bytes": 40765881
+      },
+      "label": "r13-control",
+      "loops": {
+        "absolute_repeated": {
+          "iterations": 8192,
+          "ms": 1265.7883
+        },
+        "absolute_varied": {
+          "iterations": 8192,
+          "ms": 1231.4404
+        },
+        "absolute_varied_write": {
+          "iterations": 8192,
+          "ms": 2036.8535
+        },
+        "relative_repeated": {
+          "iterations": 8192,
+          "ms": 2715.9115
+        },
+        "relative_varied": {
+          "iterations": 8192,
+          "ms": 2560.4438
+        },
+        "relative_varied_write": {
+          "iterations": 8192,
+          "ms": 4158.3412
+        }
+      }
+    }
+  ],
+  "distribution_hashes": {
+    "r13-control": {
+      "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "init.exe": "36a7de6199dd4d0a1ac2272bf4b6267ad753628479b50a0a4ed6974964225c91",
+      "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "rootfs.manifest.json": "65c4c844188db2bd5da8d011fdc4c7577377a973da26f3e1250193d07a2bf6bc",
+      "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+      "worker.exe": "20eabf0d423e9dea106068e7191ab6090ffea5b0d34139925753846ba7909588",
+      "rootfs/lib/concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "rootfs/lib/kinakaze_alloc.so": "accedfe08f93f16c768084486dc96f9207498f08bc2ed7a1da46f311aca61e78",
+      "rootfs/lib/kinakaze_elf.so": "46d95d9ca4a2fc508bbf682152a78230d972cbdfcffb099855a7d7e28c931ede",
+      "rootfs/lib/kinakaze_guest_engine.so": "10e727227e5fc4c9327eb8ee25e75b54c798afcfdf63e7c9e925f175b2b4f8eb",
+      "rootfs/lib/kinakaze_kernel.so": "fd4f7e0f8f703c4c24be10f81db8e2fa28161e1c441511b8da237cf64c7a889a",
+      "rootfs/lib/kinakaze_tls.so": "5e6f412afa2c1813069770044067532db85d6501ef86ce2d93f22b0845b2212f",
+      "rootfs/lib/kinakaze_vfs.so": "cfc669c121dfa1772a9471c57dddc26c5b1ee8d981a5a97bd5b55bb4c6a16dd8",
+      "rootfs/lib/ld-linux-x86-64.so.2": "178a508e45bb5b0981ddb501ab36064523996a29243bfba806d8a54f81da4d5a",
+      "rootfs/lib/libasound.so.2": "be71c028c88c3f0f45a8e718b0cf88e58c740096512a13665e4bb53fcda17a73",
+      "rootfs/lib/libc.so.6": "8463a34b7687ffb6b981c4c6eabe5c5cd8103eb8c96fc9f7d54f5783176793f5",
+      "rootfs/lib/libcuda.so.1": "b954710e3cb3b62e66f23bb9dada892efddb7c3d91c6366934d1941843befe27",
+      "rootfs/lib/libdisplay.so.1": "ae8653a4fa0f16e6fdb1be1bd29a3ee67a83d3c8773ef6c509d9e5e9ec858e5c",
+      "rootfs/lib/libdl.so.2": "aef5f938a53e5277f14450f5f234bef43242b22b0574c9c435f4482e819f673a",
+      "rootfs/lib/libEGL.so.1": "724d422528bc2d8f36803df7826cb7241f342c2ead9c628b1415a1b42cde5914",
+      "rootfs/lib/libGL.so.1": "49b398c44e841fb062c15e71da0e9eb2fec731c8b495d2cb497d6c8dd2d233b2",
+      "rootfs/lib/libGLESv2.so.2": "c7c9af7d5a40a281de27986363d830bd880a1611d0e870b28b5ed523bf119bf1",
+      "rootfs/lib/libGLX.so.0": "c5a34ff02e28bcf2b46c8f8ae6d3867984be01992f4895838ebe3a3066934808",
+      "rootfs/lib/libkinakaze-runtime.so.1": "efb88d284d599ece01f8c51420fb5c6999c5d9edfb38bfd2aeb8337c8cc25278",
+      "rootfs/lib/libm.so.6": "e7c5abfb4a221acd25427897240e49e9587c5039b064e56a503ca2686140a74d",
+      "rootfs/lib/libOpenGL.so.0": "abb732847d16f9d4821bab2f3a826601215fd4a14818f537c4d0847ca3ef922d",
+      "rootfs/lib/libpipewire-0.3.so.0": "e84857076bf9c2b4f20bb58f0ac1b6838f87a01018c4227f28e4f8482d781873",
+      "rootfs/lib/libpthread.so.0": "e3fdb02dd4a12c56be5c96985006a74121f3fd7bfb791cfe3add6dfcce0383cb",
+      "rootfs/lib/libpulse.so.0": "cc455ac875acbb502719d343546a2837f8abaaf95f6813a919f3b73f1b8c2065",
+      "rootfs/lib/libresolv.so.2": "e0f709dbcecbafb3ecd3dabcb5b22abe9b3f5ffb31fe3eebfacad509dc2341ab",
+      "rootfs/lib/librt.so.1": "ab3e58282e2854eb42f1be2a470f8b59a60457cef09652de7ef3046876bf534c",
+      "rootfs/lib/libvulkan.so.1": "01ce3c1436d6e73518416bb7516c22a1b2348901b66f5cb95ea0542adcc24f22",
+      "rootfs/lib/libX11-xcb.so.1": "4bb9c142c483bf271568777fa1f89a1f0f4a98fba20d3a6fd7481003f95ca45f",
+      "rootfs/lib/libX11.so.6": "33cf346413b97a74989cf4cd2a2a080ae17b17224e07c4d60a75f0214575b561",
+      "rootfs/lib/libxcb.so.1": "32c727cbfb9752b947193bcef2176847ff79a3ace0d8f7aa9eca1fbd06b30fcc",
+      "rootfs/lib/libXcursor.so.1": "2ce20242bf48628985af56614bc8d36d33f691b50b3b590a52516dbe7745229d",
+      "rootfs/lib/libXext.so.6": "dda07b1cdb06fe0c9d760a8d16241f4b044a744e49d73bbc9a8eea4b374fe1f3",
+      "rootfs/lib/libXi.so.6": "6d537c1f8fe88bbce7c2529afdafb846d14df8de8f1143ce066cdd0f5d632f72",
+      "rootfs/lib/libXinerama.so.1": "688399a0f7cf349be1e9b6ef6c5c36db617f630dd2fcddaa4c6f2fa90dc56a9c",
+      "rootfs/lib/libXrandr.so.2": "5b20f3024727269dfa7705a391c97819b3936aeb0a663850f5ceea4021283de7",
+      "rootfs/lib/libXrender.so.1": "b1ed59c6e4b9439758ec55b45b4c7efa647baa799276b96509363111ceb7c355",
+      "rootfs/lib/libXxf86vm.so.1": "5508a75f998fe5dff4c375fc48cedbaafcc3d9ddfd4c758d4c266c64f3c4a694",
+      "rootfs/lib/msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "rootfs/lib/msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "rootfs/lib/msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "rootfs/lib/msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "rootfs/lib/msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "rootfs/lib/std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+      "rootfs/lib/vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "rootfs/lib/vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "rootfs/lib/vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "rootfs/lib/vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+      "rootfs/usr/share/doc/kinakaze-libc/copyright": "a16d883c5eddfa9fc7b8621d526ac2af038b10b06d4f792a918c501097119deb",
+      "rootfs/usr/share/doc/kinakaze-libm/copyright": "3fee3d0eadff95f51a6bc34d6f3818b8b8b71ea99732737233259b0dbb884631"
+    },
+    "r13": {
+      "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "init.exe": "36a7de6199dd4d0a1ac2272bf4b6267ad753628479b50a0a4ed6974964225c91",
+      "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "rootfs.manifest.json": "65c4c844188db2bd5da8d011fdc4c7577377a973da26f3e1250193d07a2bf6bc",
+      "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+      "worker.exe": "20eabf0d423e9dea106068e7191ab6090ffea5b0d34139925753846ba7909588",
+      "rootfs/lib/concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "rootfs/lib/kinakaze_alloc.so": "1222deddb4db28c335ba8630ee2aefb31532097f96d7cf476da58ebe3ebfa89f",
+      "rootfs/lib/kinakaze_elf.so": "46d95d9ca4a2fc508bbf682152a78230d972cbdfcffb099855a7d7e28c931ede",
+      "rootfs/lib/kinakaze_guest_engine.so": "082e0df5f0ffc2672b121f756232d3ac7660692ee08902ae6061a71977986bbe",
+      "rootfs/lib/kinakaze_kernel.so": "848ff9221db964d6d1b87c72141d09306933020fa6a863a185a8e7f0661c5afd",
+      "rootfs/lib/kinakaze_tls.so": "7318a378f878970c33fdc5970e17f8a2dedf1ae5f7278e2ed0af6cf08178a364",
+      "rootfs/lib/kinakaze_vfs.so": "8cdb1dd20d75eb27c562ffba3d4c2400810e30682aa4c776c131e7e8d80fac01",
+      "rootfs/lib/ld-linux-x86-64.so.2": "214c2ea077a5235679636c57e61ffc20aa0b4b09d6bc792fb318ae9cb23eb576",
+      "rootfs/lib/libasound.so.2": "72d93104b1954a4364a40fc105a33b1f4b49f8ad383fd020420384d30c7c12cd",
+      "rootfs/lib/libc.so.6": "3772590fe65def96e884e0e38f882aa603d65332dc46fa50452090f6d87d5363",
+      "rootfs/lib/libcuda.so.1": "e398cc420bec60f3335a08512599a689670c8e708b7e535767ba20876af7cc49",
+      "rootfs/lib/libdisplay.so.1": "e2fdd1332be6ff77beff47649331104e379b0ce04b4509859c278da51d57bcc8",
+      "rootfs/lib/libdl.so.2": "aef5f938a53e5277f14450f5f234bef43242b22b0574c9c435f4482e819f673a",
+      "rootfs/lib/libEGL.so.1": "724d422528bc2d8f36803df7826cb7241f342c2ead9c628b1415a1b42cde5914",
+      "rootfs/lib/libGL.so.1": "becf8a4733634d049929ff069680f6c10fc3890c1caab820c75a00f3dedb65ab",
+      "rootfs/lib/libGLESv2.so.2": "c7c9af7d5a40a281de27986363d830bd880a1611d0e870b28b5ed523bf119bf1",
+      "rootfs/lib/libGLX.so.0": "c5a34ff02e28bcf2b46c8f8ae6d3867984be01992f4895838ebe3a3066934808",
+      "rootfs/lib/libkinakaze-runtime.so.1": "eee3dda9e000e3a2def4373324b01220b5c1875862622ca3a14770607d3eeff3",
+      "rootfs/lib/libm.so.6": "d9d9d065c88c53c653916eb96b9a07355abff0934afbe27db079358e5c7c9566",
+      "rootfs/lib/libOpenGL.so.0": "abb732847d16f9d4821bab2f3a826601215fd4a14818f537c4d0847ca3ef922d",
+      "rootfs/lib/libpipewire-0.3.so.0": "5c01641923e1f52780e491ce3fa94cfabd26ed99dc0dd032a18a3d5914cbdb8f",
+      "rootfs/lib/libpthread.so.0": "8199cc85ca6cce845a9c23abc99b90ba5345f7b4ec9a62c35cab93dd2d732da5",
+      "rootfs/lib/libpulse.so.0": "d04880748c21da2f79ee6b2109df4bb9e4a2078f2b20110f87f3c3bc65a71a04",
+      "rootfs/lib/libresolv.so.2": "f5654dfc71bfae3713d22b7f6d285d48fd90d0a531b5cfca9054700d3f4b3786",
+      "rootfs/lib/librt.so.1": "e5c1b98011e5743edfb0a9667313a3f080af82dced5bf7980049c97c74ff8ad4",
+      "rootfs/lib/libvulkan.so.1": "7efcdcc32769a94161dba4b18f44fc4c93d658651fb527007751ee8fa3193abc",
+      "rootfs/lib/libX11-xcb.so.1": "4bb9c142c483bf271568777fa1f89a1f0f4a98fba20d3a6fd7481003f95ca45f",
+      "rootfs/lib/libX11.so.6": "b756b766213a0547c6bff4c0be863de96d697961e975480c2235b1250d19d8a6",
+      "rootfs/lib/libxcb.so.1": "3c809af64ec08a57e3f0ccb08895ecc5491296093ed3473bf1d1a1e1425dde02",
+      "rootfs/lib/libXcursor.so.1": "2ce20242bf48628985af56614bc8d36d33f691b50b3b590a52516dbe7745229d",
+      "rootfs/lib/libXext.so.6": "47600ce57698278d68017d8523e9cb761113022dfd15923e8de8d01009689cb0",
+      "rootfs/lib/libXi.so.6": "79419d004426cec7b362003b6059b2165ac126620762ce656576900c8ecabcba",
+      "rootfs/lib/libXinerama.so.1": "688399a0f7cf349be1e9b6ef6c5c36db617f630dd2fcddaa4c6f2fa90dc56a9c",
+      "rootfs/lib/libXrandr.so.2": "a69ea6b98e381bf4b257dea8bee489dcbeda1c3234534146c8450861c97018d7",
+      "rootfs/lib/libXrender.so.1": "b1ed59c6e4b9439758ec55b45b4c7efa647baa799276b96509363111ceb7c355",
+      "rootfs/lib/libXxf86vm.so.1": "5508a75f998fe5dff4c375fc48cedbaafcc3d9ddfd4c758d4c266c64f3c4a694",
+      "rootfs/lib/msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "rootfs/lib/msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "rootfs/lib/msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "rootfs/lib/msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "rootfs/lib/msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "rootfs/lib/std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+      "rootfs/lib/vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "rootfs/lib/vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "rootfs/lib/vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "rootfs/lib/vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+      "rootfs/usr/share/doc/kinakaze-libc/copyright": "a16d883c5eddfa9fc7b8621d526ac2af038b10b06d4f792a918c501097119deb",
+      "rootfs/usr/share/doc/kinakaze-libm/copyright": "3fee3d0eadff95f51a6bc34d6f3818b8b8b71ea99732737233259b0dbb884631"
+    }
+  },
+  "evidence": {
+    "r13-source-capture.json": "4fa328a982609502239b3353ac55d1a20ce2ff3b408794a24ff46575c2aee670",
+    "r13-control-source.json": "0bd3ca754f7272e53413e9d791db0db55d0f97b51bb0354c9aebec828f3fecf5",
+    "r13-source.json": "f923a4deac9dc6b3329e77645bf65db793ce9083703091a72e38314ceb91e1a8",
+    "r13-pair-source-diff.json": "4e0a81873ebcfe801f0f023a8b13dc2f45a1034e3fc2c565f7d845fd87931b4a",
+    "r13-control-build.log": "301323b9987deb0845fe01652326ebc8494272be9ff669c85e0e234d810640f9",
+    "r13-build.log": "3d41a14976125122e6461239356886397f79993e0932fb1431a623796ac87191",
+    "r13-control-dist.json": "70c381e93a60bdec55beb49084740ee2102ea8baf1d64371138604ab3b41e61f",
+    "r13-dist.json": "db020ba88a0c2fe9fc0541b4f052b924511790cf450817eef79b54ce6b8becf3",
+    "r13-final-tests.json": "5c866871db82d50e84eac9077b9042775b6da7cb87dde002a73e99e408f8a269",
+    "r13-final-guest/report.json": "8788395ff2e377eda5a7f0ec7333061aeb60d01f57b330acf36c17bf44c64b8c",
+    "r13-open-comparison/report.json": "9e35317352eefdb4dd74201a2d3f68246b72430391b882398c6a13a836ccf068",
+    "build-r13-pair.py": "20d6e9f4b5c9c005b577f3f03a3080e922c384024624c71fb52853c936919827",
+    "run-r13-tests.py": "b41a84263dbe424411b5a7423ea4a935987b3327fc45a23456a778de9ff4532e",
+    "run-r13-guest.py": "e8bf396b6a67b12f170ac562331c6971eda8465504d8af23c08afbc6ba330376",
+    "compare-r13-write-open.py": "da093883b5cd752d76267c22ee10f145dd26d097014c849714b396c8cb22d7ce",
+    "capture-r13-rebuild.py": "ad1a26d102c9e48862a6c6a93c8f52bda605815bdf85ed418bed7a45780c45c0",
+    "r13-unrebuilt-dist.json": "70c381e93a60bdec55beb49084740ee2102ea8baf1d64371138604ab3b41e61f",
+    "r13-unrebuilt-build.log": "8e464de9e53a600b86d163694c58e42daada72ed9e126ab6f8f34f21355f65e2"
+  },
+  "rejected_build": "An initial candidate restore preserved older mtimes and Cargo reused the baseline binary. Identical VFS hashes rejected it before guest/performance measurements; the corrected rebuild touched changed inputs and verified a distinct VFS binary. The interrupted native build supplied no accepted test results.",
+  "full_install": null
+}
