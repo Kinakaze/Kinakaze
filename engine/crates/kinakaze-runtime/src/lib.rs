@@ -2518,9 +2518,12 @@ pub mod job {
     const SLOTS_OFFSET: usize = NAMESPACE_INDEX_OFFSET + INDEX_CAPACITY * INDEX_ENTRY_SIZE;
     const FD_LINK_CAPACITY: usize = 8192;
     const FD_LINK_TARGET_CAPACITY: usize = 1024;
-    const FD_LINK_SIZE: usize = 16 + FD_LINK_TARGET_CAPACITY;
+    const FD_LINK_SIZE: usize = 16;
+    const FD_LINK_LEGACY_SIZE: usize = FD_LINK_SIZE + FD_LINK_TARGET_CAPACITY;
     const FD_LINKS_OFFSET: usize = SLOTS_OFFSET + CAPACITY * SLOT_SIZE;
-    const PID_NAMESPACES_OFFSET: usize = FD_LINKS_OFFSET + FD_LINK_CAPACITY * FD_LINK_SIZE;
+    const FD_LINK_TARGETS_OFFSET: usize = FD_LINKS_OFFSET + FD_LINK_CAPACITY * FD_LINK_SIZE;
+    const PID_NAMESPACES_OFFSET: usize =
+        FD_LINK_TARGETS_OFFSET + FD_LINK_CAPACITY * FD_LINK_TARGET_CAPACITY;
     const SECTION_SIZE: usize = PID_NAMESPACES_OFFSET + namespaces::TABLE_SIZE;
 
     // Header field offsets.
@@ -2534,6 +2537,7 @@ pub mod job {
     const HEADER_FD_LINK_CAPACITY: usize = 32;
     const HEADER_FD_LINK_TARGET_CAPACITY: usize = 36;
     const HEADER_NEXT_DESCRIPTION: usize = 40;
+    const HEADER_FD_LINK_STRIDE: usize = 48;
     const FIRST_NAMESPACE_PID: u32 = 1;
 
     // Cross-process `/proc/<pid>/fd` magic-link record offsets. The record is
@@ -2544,7 +2548,6 @@ pub mod job {
     const FD_LINK_PID: usize = 4;
     const FD_LINK_FD: usize = 8;
     const FD_LINK_LENGTH: usize = 12;
-    const FD_LINK_TARGET: usize = 16;
     const FD_LINK_EMPTY: u32 = 0;
     const FD_LINK_OCCUPIED: u32 = 1;
     const FD_LINK_TOMBSTONE: u32 = 2;
@@ -2830,8 +2833,8 @@ pub mod job {
 
         let epoch = Some(super::authority::domain_id()).filter(|epoch| *epoch != 0);
         let guard_name = wide(&epoch.map_or_else(
-            || "Local\\kinakaze.pidns.lock.v15".to_owned(),
-            |epoch| format!("Local\\kinakaze.v2.pidns.{epoch:016x}.lock.v15"),
+            || "Local\\kinakaze.pidns.lock.v16".to_owned(),
+            |epoch| format!("Local\\kinakaze.v2.pidns.{epoch:016x}.lock.v16"),
         ));
         // SAFETY: a null attribute pointer requests the default descriptor and
         // the name is a live NUL-terminated buffer for the duration of the call.
@@ -2841,7 +2844,7 @@ pub mod job {
         }
 
         let section_name = wide(&epoch.map_or_else(
-            || "Local\\kinakaze.pidns.v15".to_owned(),
+            || "Local\\kinakaze.pidns.v16".to_owned(),
             |epoch| kinakaze_v2_protocol::kernel::ObjectKey::ProcessTable.name(epoch),
         ));
         // SAFETY: INVALID_HANDLE_VALUE requests a pagefile-backed section, and
@@ -2916,6 +2919,17 @@ pub mod job {
                     HEADER_FD_LINK_TARGET_CAPACITY,
                     FD_LINK_TARGET_CAPACITY as u32,
                 );
+                // The first creator selects the layout for the whole domain.
+                // Later processes follow this header, not their environment.
+                // Retain the interleaved layout for same-binary comparisons.
+                let stride = if std::env::var_os("KINAKAZE_COMPACT_FD_LINKS")
+                    .is_some_and(|value| value == "0")
+                {
+                    FD_LINK_LEGACY_SIZE
+                } else {
+                    FD_LINK_SIZE
+                };
+                store32(base, HEADER_FD_LINK_STRIDE, stride as u32);
                 // The magic is published last so a concurrent opener never sees
                 // it set over a half-written header.
                 store64(base, HEADER_MAGIC, MAGIC);
@@ -2932,6 +2946,10 @@ pub mod job {
                 && load32(base, HEADER_INDEX_CAPACITY) == INDEX_CAPACITY as u32
                 && load32(base, HEADER_FD_LINK_CAPACITY) == FD_LINK_CAPACITY as u32
                 && load32(base, HEADER_FD_LINK_TARGET_CAPACITY) == FD_LINK_TARGET_CAPACITY as u32
+                && matches!(
+                    load32(base, HEADER_FD_LINK_STRIDE) as usize,
+                    FD_LINK_SIZE | FD_LINK_LEGACY_SIZE
+                )
         };
         // PID allocation and namespace records belong to the init session,
         // including intervals with no worker holding a mapping handle.
@@ -3078,8 +3096,32 @@ pub mod job {
     /// [`FD_LINK_CAPACITY`].
     unsafe fn fd_link_slot(base: *mut u8, index: usize) -> *mut u8 {
         // SAFETY: forwarded from this function's contract.
-        unsafe { base.add(FD_LINKS_OFFSET + index * FD_LINK_SIZE) }
+        let stride = if unsafe { load32(base, HEADER_FD_LINK_STRIDE) } as usize
+            == FD_LINK_LEGACY_SIZE
+        {
+            FD_LINK_LEGACY_SIZE
+        } else {
+            FD_LINK_SIZE
+        };
+        unsafe { base.add(FD_LINKS_OFFSET + index * stride) }
     }
+
+    /// Keep scan/hash headers dense: most process operations need no pathname
+    /// bytes. Separating targets avoids faulting two thousand shared pages in
+    /// every newly mapped process merely to scan 8192 short records.
+    ///
+    /// # Safety
+    /// `base` is a validated mapping and `record` is one of its fd-link slots.
+    unsafe fn fd_link_target(base: *mut u8, record: *mut u8) -> *mut u8 {
+        if unsafe { load32(base, HEADER_FD_LINK_STRIDE) } as usize == FD_LINK_LEGACY_SIZE {
+            return unsafe { record.add(FD_LINK_SIZE) };
+        }
+        let index = (record as usize - base as usize - FD_LINKS_OFFSET) / FD_LINK_SIZE;
+        unsafe { base.add(FD_LINK_TARGETS_OFFSET + index * FD_LINK_TARGET_CAPACITY) }
+    }
+
+    #[cfg(test)]
+    mod fd_link_layout_tests;
 
     fn fd_link_hash(pid: u32, fd: u32) -> usize {
         let mut value = (u64::from(pid) << 32) | u64::from(fd);
@@ -3127,7 +3169,7 @@ pub mod job {
                 && unsafe { load32(record, FD_LINK_PID) } == pid
                 && unsafe { load32(record, FD_LINK_FD) } == fd
             {
-                unsafe { write_fd_link_record(record, pid, fd, target) };
+                unsafe { write_fd_link_record(base, record, pid, fd, target) };
                 return true;
             }
             if state == FD_LINK_TOMBSTONE && first_tombstone.is_none() {
@@ -3135,12 +3177,12 @@ pub mod job {
             }
             if state == FD_LINK_EMPTY {
                 let destination = first_tombstone.unwrap_or(record);
-                unsafe { write_fd_link_record(destination, pid, fd, target) };
+                unsafe { write_fd_link_record(base, destination, pid, fd, target) };
                 return true;
             }
         }
         if let Some(destination) = first_tombstone {
-            unsafe { write_fd_link_record(destination, pid, fd, target) };
+            unsafe { write_fd_link_record(base, destination, pid, fd, target) };
             return true;
         }
         false
@@ -3149,17 +3191,18 @@ pub mod job {
     /// # Safety
     /// `record` must address an fd-link record, the mutex must be held and the
     /// target length must not exceed [`FD_LINK_TARGET_CAPACITY`].
-    unsafe fn write_fd_link_record(record: *mut u8, pid: u32, fd: u32, target: &[u8]) {
+    unsafe fn write_fd_link_record(base: *mut u8, record: *mut u8, pid: u32, fd: u32, target: &[u8]) {
         unsafe {
             // Keep the record unpublished until every field is complete.
             store32(record, FD_LINK_STATE, FD_LINK_TOMBSTONE);
             store32(record, FD_LINK_PID, pid);
             store32(record, FD_LINK_FD, fd);
             store32(record, FD_LINK_LENGTH, target.len() as u32);
-            core::ptr::write_bytes(record.add(FD_LINK_TARGET), 0, FD_LINK_TARGET_CAPACITY);
+            let destination = fd_link_target(base, record);
+            core::ptr::write_bytes(destination, 0, FD_LINK_TARGET_CAPACITY);
             core::ptr::copy_nonoverlapping(
                 target.as_ptr(),
-                record.add(FD_LINK_TARGET),
+                destination,
                 target.len(),
             );
             store32(record, FD_LINK_STATE, FD_LINK_OCCUPIED);
@@ -3208,7 +3251,7 @@ pub mod job {
                 return false;
             }
             let target =
-                unsafe { core::slice::from_raw_parts(record.add(FD_LINK_TARGET), len).to_vec() };
+                unsafe { core::slice::from_raw_parts(fd_link_target(base, record), len).to_vec() };
             links.push((fd, target));
         }
         unsafe { clear_fd_links(base, child) };
@@ -4168,7 +4211,7 @@ pub mod job {
             if len > FD_LINK_TARGET_CAPACITY {
                 return Err(FdLinkError::CorruptRecord);
             }
-            let bytes = unsafe { core::slice::from_raw_parts(record.add(FD_LINK_TARGET), len) };
+            let bytes = unsafe { core::slice::from_raw_parts(fd_link_target(base, record), len) };
             let target = core::str::from_utf8(bytes)
                 .map_err(|_| FdLinkError::CorruptRecord)?
                 .to_owned();
