@@ -651,8 +651,7 @@ fn copy_spec(spec: &Spec) -> Spec {
 
 fn emit_string<S: Sink>(sink: &mut S, spec: &Spec, text: *const c_char) {
     if text.is_null() {
-        // Printing "(null)" matches glibc and avoids dereferencing null.
-        spec.pad(sink, None, b"", b"(null)");
+        emit_null_string(sink, spec);
         return;
     }
     // A precision caps the number of bytes taken from the string.
@@ -686,7 +685,7 @@ fn encode_wchar(value: i32) -> ([u8; 4], usize) {
 
 fn emit_wide_string<S: Sink>(sink: &mut S, spec: &Spec, text: *const i32) {
     if text.is_null() {
-        spec.pad(sink, None, b"", b"(null)");
+        emit_null_string(sink, spec);
         return;
     }
 
@@ -719,6 +718,19 @@ fn emit_wide_string<S: Sink>(sink: &mut S, spec: &Spec, text: *const i32) {
     if spec.left_align {
         write_repeated(sink, b' ', padding);
     }
+}
+
+fn emit_null_string<S: Sink>(sink: &mut S, spec: &Spec) {
+    let body: &[u8] = if spec.precision.is_some_and(|precision| precision < 6) {
+        b""
+    } else {
+        b"(null)"
+    };
+    let spec = Spec {
+        zero_pad: false,
+        ..*spec
+    };
+    spec.pad(sink, None, b"", body);
 }
 
 fn emit_float<S: Sink>(sink: &mut S, spec: &Spec, value: c_double) {

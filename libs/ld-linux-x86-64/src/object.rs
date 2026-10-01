@@ -561,7 +561,7 @@ fn count_symbols(elf: ElfFile<'_>, info: &DynamicInfo) -> Result<u32, LinkError>
         && let Ok(table) = GnuHash::parse(elf, location)
         && let Ok(count) = table.symbol_count()
     {
-        return Ok(count);
+        return Ok(count.max(relocation_symbol_count(elf, info)?));
     }
     if let Some(location) = info.sysv_hash
         && let Ok(table) = SysvHash::parse(elf, location)
@@ -584,6 +584,30 @@ fn count_symbols(elf: ElfFile<'_>, info: &DynamicInfo) -> Result<u32, LinkError>
     .min()
     .unwrap_or(elf.bytes().len());
     Ok(((limit.saturating_sub(start)) / entry_size.max(1)) as u32)
+}
+
+fn relocation_symbol_count(elf: ElfFile<'_>, info: &DynamicInfo) -> Result<u32, LinkError> {
+    let mut symbol_count = 0u32;
+    for table in [info.rela, info.jmprel].into_iter().flatten() {
+        let entry_size = usize::try_from(table.entry_size.unwrap_or(24).max(24))
+            .map_err(|_| LinkError::AddressOverflow)?;
+        let Some(count) = table.count() else {
+            continue;
+        };
+        let length = usize::try_from(count)
+            .ok()
+            .and_then(|count| count.checked_mul(entry_size))
+            .ok_or(LinkError::AddressOverflow)?;
+        for entry in elf
+            .slice(table.file_offset, length)?
+            .chunks_exact(entry_size)
+        {
+            let index = u32::from_le_bytes([entry[12], entry[13], entry[14], entry[15]]);
+            symbol_count =
+                symbol_count.max(index.checked_add(1).ok_or(LinkError::AddressOverflow)?);
+        }
+    }
+    Ok(symbol_count)
 }
 
 /// Chooses the name this object is known by in the scope.

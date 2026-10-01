@@ -5,6 +5,8 @@ from pathlib import Path
 from init_pool import InitPool, distribution_hashes
 
 CASES = {
+    'null-string-format': ('NullStringFormatProbe', 'NULL_STRING_PRECISION_WIDTH_CHECKPOINT_FORMAT_OK'),
+    'empty-gnu-hash': ('EmptyGnuHashProbe', 'EMPTY_GNU_HASH_IMPORTS_OK'),
     'ioctl-request-width': ('IoctlRequestWidthProbe', 'IOCTL_REQUEST_WIDTH_PTY_OK'),
     'raw-termios-layout': ('RawTermiosLayoutProbe', 'RAW_TERMIOS_LAYOUT_GUARD_SPEEDS_OK'),
     'proc-fd-cwd-exec': ('ProcFdCwdExecProbe', 'PROC_FD_CWD_CLOSE_RENAME_EXEC_OK'),
