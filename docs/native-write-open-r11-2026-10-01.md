@@ -1,5 +1,10 @@
 # R11 native write-open performance
 
+Current production now uses the selected native paths without the experimental
+read/write switches described below. See the
+[route selection](selected-native-open-r13-2026-10-01.md); these measurements
+and switches refer to the historical frozen release.
+
 The frozen R11 Release completed the complete 357-package Node.js/npm installation
 in **224.236 seconds**. Node.js, npm, dpkg audit and complete installed-file
 verification passed. Verification took a separate 12.819 seconds.

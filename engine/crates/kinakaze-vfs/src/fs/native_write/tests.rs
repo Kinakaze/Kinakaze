@@ -185,3 +185,37 @@ fn creation_truncation_append_and_complex_names_keep_full_resolution() {
         b"original"
     );
 }
+
+#[test]
+fn cwd_relative_write_retains_inode_and_rejects_dirfd_or_dot_resolution() {
+    let fixture = Fixture::new();
+    let writer = Fd(
+        try_open_at(fs::AT_FDCWD, "payload", "/payload", O_RDWR | O_CLOEXEC)
+            .unwrap()
+            .unwrap(),
+    );
+    let reader = Fd(fs::open("/payload", fs::O_RDONLY, 0).unwrap());
+    std::fs::rename(
+        fixture.path.join("jail/payload"),
+        fixture.path.join("jail/old"),
+    )
+    .unwrap();
+    std::fs::write(fixture.path.join("jail/payload"), b"replacement").unwrap();
+    assert_eq!(crate::write(writer.0, b"retained"), Ok(8));
+    let mut bytes = [0; 8];
+    assert_eq!(crate::read(reader.0, &mut bytes), Ok(8));
+    assert_eq!(&bytes, b"retained");
+    for (dirfd, original) in [
+        (123, "payload"),
+        (fs::AT_FDCWD, "./payload"),
+        (fs::AT_FDCWD, "sub/../payload"),
+        (fs::AT_FDCWD, "payload/"),
+        (fs::AT_FDCWD, ""),
+    ] {
+        assert_eq!(try_open_at(dirfd, original, "/payload", O_WRONLY), Ok(None));
+    }
+    assert_eq!(
+        std::fs::read(fixture.path.join("jail/payload")).unwrap(),
+        b"replacement"
+    );
+}

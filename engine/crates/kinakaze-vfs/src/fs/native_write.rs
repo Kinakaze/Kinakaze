@@ -2,27 +2,27 @@
 //! Creation, truncation, special inodes and complex names keep the full resolver.
 use super::{O_ACCMODE, O_CLOEXEC, O_NOFOLLOW, O_NONBLOCK, O_RDWR, O_WRONLY};
 use crate::{FdFlags, FdKind};
-use std::sync::OnceLock;
 use windows_sys::Win32::Foundation::{GENERIC_READ, GENERIC_WRITE};
 use windows_sys::Win32::Storage::FileSystem::{FILE_READ_ATTRIBUTES, FILE_READ_EA};
 
-fn eligible(path: &str, flags: i32) -> bool {
+fn eligible_flags(flags: i32) -> bool {
     matches!(flags & O_ACCMODE, O_WRONLY | O_RDWR)
         && flags & !(O_ACCMODE | O_CLOEXEC | O_NONBLOCK | O_NOFOLLOW | 0o100000) == 0
-        && path.starts_with('/')
-        && !path.ends_with('/')
-        && !path.contains('\0')
-        && !path.split('/').any(|part| part == "." || part == "..")
 }
 
-pub(super) fn try_open(path: &str, flags: i32) -> Result<Option<i32>, i32> {
-    static ENABLED: OnceLock<bool> = OnceLock::new();
-    if !eligible(path, flags)
-        || !*ENABLED.get_or_init(|| {
-            std::env::var_os("KINAKAZE_NATIVE_WRITE_OPEN").as_deref()
-                != Some(std::ffi::OsStr::new("0"))
-        })
-        || !crate::user_namespace::capable(1, 1)
+pub(super) fn try_open_at(
+    dirfd: i32,
+    original: &str,
+    absolute: &str,
+    flags: i32,
+) -> Result<Option<i32>, i32> {
+    if !eligible_flags(flags) {
+        return Ok(None);
+    }
+    let Some(path) = super::native_read::candidate_path(dirfd, original, absolute, 0) else {
+        return Ok(None);
+    };
+    if !crate::user_namespace::capable(1, 1)
         || crate::path::overlay_root().is_some()
         || crate::mount::api::tree_reference(path).is_some()
         || crate::tmpfs::owns(path)
@@ -87,3 +87,8 @@ pub(super) fn try_open(path: &str, flags: i32) -> Result<Option<i32>, i32> {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+fn try_open(path: &str, flags: i32) -> Result<Option<i32>, i32> {
+    try_open_at(super::AT_FDCWD, path, path, flags)
+}

@@ -1,5 +1,10 @@
 # Native read-only file opening
 
+Current production now uses the selected native paths without the experimental
+read/write switches described below. See the
+[route selection](selected-native-open-r13-2026-10-01.md); these measurements
+and switches refer to the historical frozen release.
+
 Ordinary read-only native files now use one retained data handle instead of
 walking every path component and reopening the selected file. The same path
 also accepts simple names relative to the current working directory. Live inode
