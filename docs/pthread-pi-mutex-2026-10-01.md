@@ -1,5 +1,8 @@
 # pthread PI mutex 接入
 
+后续无竞争路径优化、v6/v5 共享段代际与新验证见
+[热路径记录](pthread-pi-hotpath-2026-10-01.md)。本文保留本次接入的历史构建证据。
+
 `pthread_mutexattr_setprotocol(PTHREAD_PRIO_INHERIT)` 现在保存属性，并通过
 libc 安装的回调进入已有 futex PI 后端。普通、递归、ERRORCHECK、ADAPTIVE
 四种 mutex 均支持 private/shared 与 stalled/robust 组合；PRIO_PROTECT

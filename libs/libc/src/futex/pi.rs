@@ -26,7 +26,7 @@ const OWNER_DIED: u32 = 1 << 30;
 const TID_MASK: u32 = OWNER_DIED - 1;
 const ESRCH: i32 = 3;
 const TASK_CAPACITY: usize = 4096;
-const TASK_MAGIC: u64 = u64::from_le_bytes(*b"CYFPI004");
+const TASK_MAGIC: u64 = u64::from_le_bytes(*b"CYFPI005");
 pub(crate) mod requeue;
 pub(crate) use requeue::{
     RequeueStatus, compare_requeue, enqueue_requeue, poll_requeue, retire_requeue,
@@ -200,7 +200,7 @@ impl Tasks {
                 PAGE_READWRITE,
                 0,
                 TASK_SIZE as u32,
-                wide(&format!(r"Local\kinakaze.futex.pi.tasks.v4.{domain:016x}")).as_ptr(),
+                wide(&format!(r"Local\kinakaze.futex.pi.tasks.v5.{domain:016x}")).as_ptr(),
             )
         })?;
         let view = unsafe { MapViewOfFile(section.0, FILE_MAP_ALL_ACCESS, 0, 0, TASK_SIZE) };
@@ -241,6 +241,10 @@ impl Tasks {
         }
     }
     fn load(&self) -> Result<Vec<Task>, i32> {
+        Ok(self.entries()?.to_vec())
+    }
+    /// Caller holds the domain guard; no bank reference survives publication.
+    fn entries(&self) -> Result<&[Task], i32> {
         let active = self.header().active.load(Ordering::Acquire);
         if active > 1 {
             return Err(EIO);
@@ -252,8 +256,14 @@ impl Tasks {
         }
         Ok(unsafe {
             std::slice::from_raw_parts(ptr::addr_of!((*bank).tasks).cast::<Task>(), count)
-        }
-        .to_vec())
+        })
+    }
+    fn reconciled(&self) -> Result<bool, i32> {
+        // Task headers do not allocate queue tokens. This atomic is a durable
+        // scheduler replay marker, set before intent publication and cleared
+        // only after every native update succeeds.
+        Ok(self.header().next_token.load(Ordering::Acquire) == 0
+            && self.entries()?.iter().all(|task| task.applied == task.base))
     }
     fn commit(&self, tasks: &[Task]) {
         assert!(tasks.len() <= TASK_CAPACITY);
@@ -354,9 +364,18 @@ pub(crate) fn exit_current() {
 }
 
 fn notify(record: Record, domain: u64) -> Result<(), i32> {
-    let event = Handle::new(unsafe {
-        OpenEventW(EVENT_MODIFY_STATE, 0, record.event_name(domain).as_ptr())
-    })?;
+    let raw = unsafe { OpenEventW(EVENT_MODIFY_STATE, 0, record.event_name(domain).as_ptr()) };
+    if raw.is_null() {
+        let error = unsafe { GetLastError() };
+        // A thread can exit and close its park after the caller's liveness
+        // check. Publish the journal for a proven-dead recipient; a missing
+        // event for a live or inaccessible identity remains an error.
+        if error == windows_sys::Win32::Foundation::ERROR_FILE_NOT_FOUND && record.dead() {
+            return Ok(());
+        }
+        return Err(errno_from_win32(error));
+    }
+    let event = Handle(raw);
     if unsafe { SetEvent(event.0) } == 0 {
         return Err(errno_from_win32(unsafe { GetLastError() }));
     }
@@ -421,6 +440,7 @@ fn retire(task: Registered) {
 }
 
 fn priorities(transaction: &Transaction, shared: &Tasks, tasks: &mut [Task]) -> Result<(), i32> {
+    shared.header().next_token.store(1, Ordering::Release);
     let mut effective: Vec<i32> = tasks.iter().map(|task| task.absolute(task.base)).collect();
     // Fixed-point propagation covers nested PI locks in either enqueue order.
     for _ in 0..tasks.len() {
@@ -474,7 +494,19 @@ fn priorities(transaction: &Transaction, shared: &Tasks, tasks: &mut [Task]) -> 
             _ => return Err(EPERM),
         }
     }
+    shared.header().next_token.store(0, Ordering::Release);
     Ok(())
+}
+
+fn priority_graph_reconciled(transaction: &Transaction) -> Result<bool, i32> {
+    if transaction
+        .records
+        .iter()
+        .any(|row| row.pi_wait() || row.reserved & JOURNAL != 0)
+    {
+        return Ok(false);
+    }
+    Tasks::shared()?.reconciled()
 }
 
 extern "sysv64" fn priority_base(thread: u32, base: i32) -> i32 {
@@ -624,6 +656,15 @@ fn prune(transaction: &mut Transaction, key: Key) {
 /// lose its selected waiter: the next caller completes the recorded transition
 /// through its own alias and signals the already-existing named park event.
 fn finish_journal(transaction: &mut Transaction, key: Key, address: usize) -> Result<(), i32> {
+    finish_journal_policy(transaction, key, address, true)
+}
+
+fn finish_journal_policy(
+    transaction: &mut Transaction,
+    key: Key,
+    address: usize,
+    notify_selected: bool,
+) -> Result<(), i32> {
     let Some(journal) = transaction
         .records
         .iter()
@@ -674,7 +715,7 @@ fn finish_journal(transaction: &mut Transaction, key: Key, address: usize) -> Re
     }
     #[cfg(test)]
     tests::crash_at("after-cas");
-    if !waiter.dead() {
+    if notify_selected && !waiter.dead() {
         notify(waiter, transaction.shared.domain)?;
     }
     for record in transaction.records.iter().filter(|record| {
@@ -712,6 +753,17 @@ fn grant(
     old: u32,
     waiter: Record,
 ) -> Result<(), i32> {
+    grant_policy(transaction, key, address, old, waiter, true)
+}
+
+fn grant_policy(
+    transaction: &mut Transaction,
+    key: Key,
+    address: usize,
+    old: u32,
+    waiter: Record,
+    notify_selected: bool,
+) -> Result<(), i32> {
     #[cfg(test)]
     tests::crash_at("before-journal");
     transaction.reserve(1)?;
@@ -720,7 +772,7 @@ fn grant(
         .push(Identity::from(waiter).record(key, waiter.token, old, JOURNAL));
     transaction.dirty = true;
     transaction.commit();
-    finish_journal(transaction, key, address)
+    finish_journal_policy(transaction, key, address, notify_selected)
 }
 
 pub(crate) enum Acquisition {
@@ -861,6 +913,11 @@ pub(crate) fn unlock(
     address: usize,
     tid: u32,
 ) -> Result<(), i32> {
+    // Inspect before pruning: a dead donor may still have raised its owner.
+    let fast = pthread::optimized()
+        && state(transaction, key)
+            .is_some_and(|row| row.reserved & (PINNED | DEAD) == PINNED && row.token == 0)
+        && priority_graph_reconciled(transaction)?;
     finish_journal(transaction, key, address)?;
     prune(transaction, key);
     let old = atomic_word::read(address)?;
@@ -890,7 +947,7 @@ pub(crate) fn unlock(
         transaction.dirty = true;
         transaction.commit();
     }
-    if had_state {
+    if had_state && !fast {
         let shared = Tasks::shared()?;
         let mut tasks = shared.load()?;
         priorities(transaction, shared, &mut tasks)?;

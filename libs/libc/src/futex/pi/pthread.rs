@@ -14,6 +14,24 @@ const NOT_RECOVERABLE: u32 = INCONSISTENT - 1;
 const EBUSY: i32 = 16;
 const EOWNERDEAD: i32 = 130;
 const ENOTRECOVERABLE: i32 = 131;
+// Production uses the measured winner. Legacy selection exists only in the
+// native test executable; graph-dependent recovery still selects its full path.
+#[cfg(not(test))]
+pub(super) const fn optimized() -> bool {
+    true
+}
+#[cfg(test)]
+pub(super) fn optimized() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| std::env::var_os("KINAKAZE_PTHREAD_PI_OPT").is_none_or(|v| v != "0"))
+}
+#[cfg(test)]
+fn store_optimized() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var_os("KINAKAZE_TEST_PTHREAD_PI_STORE_OPT").is_none_or(|v| v != "0")
+    })
+}
 #[derive(Clone, Copy)]
 struct Held {
     address: usize,
@@ -80,14 +98,18 @@ pub(crate) fn install() {
 }
 
 fn put(address: usize, value: u32) -> Result<(), i32> {
-    let mut old = atomic_word::read(address)?;
-    loop {
-        let observed = atomic_word::compare_exchange(address, old, value)?;
-        if observed == old {
-            return Ok(());
+    #[cfg(test)]
+    if !store_optimized() {
+        let mut old = atomic_word::read(address)?;
+        loop {
+            let observed = atomic_word::compare_exchange(address, old, value)?;
+            if observed == old {
+                return Ok(());
+            }
+            old = observed;
         }
-        old = observed;
     }
+    atomic_word::write(address, value)
 }
 fn first(
     transaction: &mut Transaction,
@@ -102,6 +124,7 @@ fn first(
     loop {
         let old = atomic_word::read(address)?;
         if top(transaction, key).is_none() && old & TID_MASK == 0 {
+            let fast = optimized() && priority_graph_reconciled(transaction)?;
             transaction.reserve(3)?;
             // Reserve the zero-owner word against user-space CAS before
             // publishing an ownership journal. A killed claimant leaves no TID.
@@ -123,15 +146,33 @@ fn first(
                 .find(|row| row.pi_wait() && row.token == token)
                 .copied()
                 .unwrap();
-            grant(transaction, key, address, old | WAITERS, waiter)?;
-            assert!(poll_policy(
-                transaction,
-                key,
-                address,
-                token,
-                false,
-                robust
-            )?);
+            grant_policy(transaction, key, address, old | WAITERS, waiter, !fast)?;
+            if fast {
+                if state(transaction, key).is_none_or(|row| row.token != token || row.bitset != tid)
+                {
+                    return Err(EINVAL);
+                }
+                transaction.cancel(token);
+                let row = transaction
+                    .records
+                    .iter_mut()
+                    .find(|row| row.key == key && row.reserved & STATE != 0)
+                    .ok_or(EINVAL)?;
+                row.token = 0;
+                // owned() publishes the consumed token with the pthread fields.
+                // The already committed owner/journal survives a killed caller.
+            } else {
+                assert!(poll_policy(
+                    transaction,
+                    key,
+                    address,
+                    token,
+                    false,
+                    robust
+                )?);
+            }
+            #[cfg(test)]
+            super::tests::crash_at("after-self-consume");
             return Ok(Acquisition::Owned);
         }
         let dead = robust
@@ -202,8 +243,10 @@ fn owned(
         .iter_mut()
         .find(|row| row.key == key && row.reserved & STATE != 0)
     {
-        row.reserved |= PINNED;
-        transaction.dirty = true;
+        if !optimized() || row.reserved & PINNED == 0 {
+            row.reserved |= PINNED;
+            transaction.dirty = true;
+        }
     }
     transaction.commit();
     Ok(if died { EOWNERDEAD } else { 0 })

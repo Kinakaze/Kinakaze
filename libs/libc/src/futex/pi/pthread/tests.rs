@@ -4,6 +4,112 @@ use windows_sys::Win32::System::Threading::{
     GetCurrentThread, GetThreadPriority, SetThreadPriority,
 };
 
+#[test]
+#[ignore = "isolated release PI mutex pairs with live idle PI participants"]
+fn benchmark_pthread_pi_pairs() {
+    benchmark_pairs("PTHREAD_PI_BENCH", super::optimized());
+}
+
+#[test]
+#[ignore = "isolated release PI metadata write comparison"]
+fn benchmark_pthread_pi_stores() {
+    assert!(
+        super::optimized(),
+        "hold the previously winning PI path constant"
+    );
+    benchmark_pairs("PTHREAD_PI_STORE_BENCH", super::store_optimized());
+}
+
+fn benchmark_pairs(marker: &str, enabled: bool) {
+    const ITERATIONS: u32 = 500;
+    super::install();
+    crate::fsextra::kinakaze_abi_gettid();
+    let mut metrics = Vec::new();
+    for background in [0, 32] {
+        let barrier = Arc::new(std::sync::Barrier::new(background + 1));
+        let (ready, received) = mpsc::channel();
+        let threads: Vec<_> = (0..background)
+            .map(|_| {
+                let barrier = barrier.clone();
+                let ready = ready.clone();
+                std::thread::spawn(move || {
+                    crate::fsextra::kinakaze_abi_gettid();
+                    ready.send(()).unwrap();
+                    barrier.wait();
+                })
+            })
+            .collect();
+        for _ in 0..background {
+            received.recv_timeout(Duration::from_secs(5)).unwrap();
+        }
+        {
+            let transaction = Transaction::begin().unwrap();
+            let tasks = Tasks::shared().unwrap().load().unwrap();
+            assert!(
+                !tasks
+                    .iter()
+                    .any(|task| task.identity.host != std::process::id()
+                        && !task.identity.record(Key([0; 5]), 0, 0, 0).dead()),
+                "foreign PI participants would change the benchmark"
+            );
+            assert!(
+                transaction.records.is_empty(),
+                "unrelated futex rows would change the benchmark"
+            );
+        }
+        for (name, shared, robust) in [
+            ("private_stalled", false, false),
+            ("shared_stalled", true, false),
+            ("private_robust", false, true),
+            ("shared_robust", true, true),
+        ] {
+            let mut mutex = [0; 5];
+            init(&mut mutex, 0, shared, robust);
+            let address = mutex.as_ptr() as usize;
+            for _ in 0..16 {
+                assert_eq!(lock(address), 0);
+                assert_eq!(unlock(address), 0);
+            }
+            let start = Instant::now();
+            for _ in 0..ITERATIONS {
+                assert_eq!(lock(address), 0);
+                assert_eq!(unlock(address), 0);
+            }
+            metrics.push(format!(
+                "\"{name}_{background}_ns\":{}",
+                start.elapsed().as_nanos() / u128::from(ITERATIONS)
+            ));
+            assert_eq!(libpthread::pthread_mutex_destroy(address as _), 0);
+        }
+        barrier.wait();
+        for thread in threads {
+            thread.join().unwrap();
+        }
+    }
+    println!(
+        "{marker} {{\"optimized\":{},\"iterations\":{ITERATIONS},{}}}",
+        enabled,
+        metrics.join(",")
+    );
+}
+
+#[test]
+fn pthread_pi_missing_park_rechecks_death_and_preserves_live_failure() {
+    let key = Key::anonymous(new_backing_id().unwrap(), 0);
+    let token = Transaction::begin().unwrap().shared.token();
+    let live = Identity::current().unwrap().record(key, token, 1, WAIT);
+    let domain = kinakaze_runtime::authority::domain_id();
+    // This fresh numerical token has no event. A live identity must still
+    // report ENOENT, rather than fabricate a wake or consume its journal.
+    assert_eq!(notify(live, domain), Err(2));
+    let dead = std::thread::spawn(move || Identity::current().unwrap().record(key, token, 1, WAIT))
+        .join()
+        .unwrap();
+    assert!(dead.dead());
+    // Model exit after the journal caller's earlier liveness check.
+    assert_eq!(notify(dead, domain), Ok(()));
+}
+
 fn init(mutex: &mut [usize; 5], kind: i32, shared: bool, robust: bool) {
     let mut attr = 0u32;
     let ptr = (&raw mut attr).cast();
@@ -66,6 +172,149 @@ fn queued(address: usize, private: bool, expected: usize) {
         assert!(start.elapsed() < Duration::from_secs(5));
         std::thread::yield_now();
     }
+}
+
+#[test]
+fn pthread_pi_free_lock_replays_interrupted_priority_restoration() {
+    super::install();
+    assert_ne!(unsafe { SetThreadPriority(GetCurrentThread(), -2) }, 0);
+    crate::fsextra::kinakaze_abi_gettid();
+    for pending in [false, true] {
+        let mut mutex = [0; 5];
+        init(&mut mutex, 0, false, false);
+        {
+            let _transaction = Transaction::begin().unwrap();
+            let shared = Tasks::shared().unwrap();
+            let mut tasks = shared.load().unwrap();
+            let identity = Identity::current().unwrap();
+            let task = tasks
+                .iter_mut()
+                .find(|task| task.identity == identity)
+                .unwrap();
+            task.base = -2;
+            // Model either cancellation before recomputing intent, or intent
+            // published before the native restore. Both must force replay.
+            task.applied = if pending { -2 } else { 2 };
+            shared.commit(&tasks);
+            shared
+                .header()
+                .next_token
+                .store(u64::from(pending), Ordering::Release);
+            assert_ne!(unsafe { SetThreadPriority(GetCurrentThread(), 2) }, 0);
+        }
+        let address = mutex.as_ptr() as usize;
+        assert_eq!(lock(address), 0);
+        assert_eq!(unsafe { GetThreadPriority(GetCurrentThread()) }, -2);
+        {
+            let _transaction = Transaction::begin().unwrap();
+            assert_eq!(
+                Tasks::shared()
+                    .unwrap()
+                    .header()
+                    .next_token
+                    .load(Ordering::Acquire),
+                0
+            );
+        }
+        assert_eq!(unlock(address), 0);
+        assert_eq!(libpthread::pthread_mutex_destroy(address as _), 0);
+    }
+    assert_ne!(unsafe { SetThreadPriority(GetCurrentThread(), 0) }, 0);
+}
+
+#[test]
+#[ignore = "native helper: holds a PI donation until TerminateProcess"]
+fn pthread_pi_dead_donor_child() {
+    let name = std::env::var("KINAKAZE_PI_MAPPING").unwrap();
+    let values: Vec<u64> = std::env::var("KINAKAZE_PI_KEY")
+        .unwrap()
+        .split(',')
+        .map(|part| part.parse().unwrap())
+        .collect();
+    let key = Key(values.try_into().unwrap());
+    let (_section, view) = super::super::tests::mapping(&name);
+    assert_ne!(unsafe { SetThreadPriority(GetCurrentThread(), 2) }, 0);
+    let tid = crate::fsextra::kinakaze_abi_gettid() as u32;
+    register_current(tid as i32).unwrap();
+    let park = park().unwrap();
+    let mut transaction = Transaction::begin().unwrap();
+    assert!(matches!(
+        acquire(&mut transaction, key, view.Value as usize, tid, false),
+        Ok(Acquisition::Queued(_))
+    ));
+    drop(transaction);
+    loop {
+        unsafe { WaitForSingleObject(park, u32::MAX) };
+    }
+}
+
+#[test]
+fn pthread_pi_unlock_restores_base_after_noncooperative_donor_death() {
+    use std::os::windows::{io::AsRawHandle, process::CommandExt};
+    assert_ne!(unsafe { SetThreadPriority(GetCurrentThread(), -2) }, 0);
+    let tid = crate::fsextra::kinakaze_abi_gettid() as u32;
+    register_current(tid as i32).unwrap();
+    park().unwrap();
+    let backing = new_backing_id().unwrap();
+    let key = Key::anonymous(backing, 0);
+    let name = format!(
+        r"Local\kinakaze.pthread.pi.donor.{}.{}.{}",
+        backing[0], backing[1], backing[2]
+    );
+    let (_section, view) = super::super::tests::mapping(&name);
+    let address = view.Value as usize;
+    let kind = INHERIT | SHARED;
+    put(address + 16, kind).unwrap();
+    {
+        let mut transaction = Transaction::begin().unwrap();
+        assert!(matches!(
+            first(&mut transaction, key, address, tid, false, false),
+            Ok(Acquisition::Owned)
+        ));
+        assert_eq!(owned(&mut transaction, key, address, tid, kind), Ok(0));
+    }
+    let mut child = std::process::Command::new(std::env::current_exe().unwrap())
+        .args([
+            "--exact",
+            "futex::pi::pthread::tests::pthread_pi_dead_donor_child",
+            "--ignored",
+            "--nocapture",
+        ])
+        .env("KINAKAZE_PI_MAPPING", &name)
+        .env(
+            "KINAKAZE_PI_KEY",
+            key.0.map(|part| part.to_string()).join(","),
+        )
+        .creation_flags(0x0800_0000)
+        .spawn()
+        .unwrap();
+    let start = Instant::now();
+    while count_for_test(key) != 1 {
+        assert!(start.elapsed() < Duration::from_secs(5));
+        std::thread::yield_now();
+    }
+    assert_eq!(unsafe { GetThreadPriority(GetCurrentThread()) }, 2);
+    assert_ne!(
+        unsafe {
+            windows_sys::Win32::System::Threading::TerminateProcess(child.as_raw_handle(), 77)
+        },
+        0
+    );
+    assert_eq!(child.wait().unwrap().code(), Some(77));
+    {
+        let mut transaction = Transaction::begin().unwrap();
+        assert!(
+            transaction
+                .records
+                .iter()
+                .any(|row| row.key == key && row.pi_wait() && row.dead())
+        );
+        super::super::unlock(&mut transaction, key, address, tid).unwrap();
+    }
+    unheld(address);
+    assert_eq!(unsafe { GetThreadPriority(GetCurrentThread()) }, -2);
+    unsafe { UnmapViewOfFile(view) };
+    assert_ne!(unsafe { SetThreadPriority(GetCurrentThread(), 0) }, 0);
 }
 
 #[test]
@@ -335,6 +584,7 @@ fn pthread_pi_uncontended_noncooperative_exit_and_claim_crash_recovery() {
                 "before-cas",
                 "after-cas",
                 "after-publication",
+                "after-self-consume",
                 "owned",
             ]
         } else {
