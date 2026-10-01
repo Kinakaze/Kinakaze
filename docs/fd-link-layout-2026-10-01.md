@@ -1,5 +1,10 @@
 # Compact shared descriptor-link headers
 
+Comparison update: the historical 185.597-second result uses the older seed
+with failed debconf template extraction. It is not a like-for-like baseline
+for the current working-preconfiguration fixture; see the
+[seed comparison](selected-native-open-r13-2026-10-01.md#comparable-installation-fixture).
+
 Production now retains only the compact layout; the legacy route and
 environment switch described in this historical comparison were removed.
 See the [selection and full-install measurements](fd-link-layout-selection-2026-10-01.md).

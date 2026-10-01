@@ -1,0 +1,268 @@
+{
+  "passed": true,
+  "scope": "named AF_UNIX datagram blocking waits; native component measurements",
+  "artifact_root": "F:\\crysoacu2\\artifacts\\unix-dgram-events-20261001",
+  "integration": {
+    "component_base": "21643ef3c175d1ef688a37c8ddbe76bf5a0ff48d",
+    "integration_base": "b0c29a2a6bcb54345706b4e3eb619fe083c7aca0",
+    "native_tested_source_sha256": {
+      "engine/crates/kinakaze-vfs/src/unix/datagram.rs": "118bbcc5d03466d444ac0509659b8ad01362f98a7997921b6c44f297da9f3386",
+      "engine/crates/kinakaze-vfs/src/unix/procnet.rs": "7b2f07323f54626c195e8e7e6cae4afdb678371ac5ac254cffa7e31d5e00442d",
+      "tools/benchmark-futex-queues.py": "0502eed162b7e7ffc16dff4550602c6bd70d8aefc48501a94df79daa21b395cd",
+      "engine/crates/kinakaze-vfs/src/unix/datagram/readiness.rs": "83a95a8048bf909d652c656559c80260b10ba5356a7727ea7072ce94c0ff43d5",
+      "engine/crates/kinakaze-vfs/src/unix/datagram/tests.rs": "fe781d72a18213e20145ac093265d6174ce4b36dfbeb597cd85003f9aaf7bfb4",
+      "tests/guest/UnixDatagramEventsProbe.py": "a0b9873410ca38f9960c6c9a2eddcf28d09ed44ed1619cad19a0cd529d6f5c58",
+      "tools/test-unix-datagram-events-guest.py": "c46c4cbad3a4605b80e837b6c84a9a364256cc497e971df936ea76eefd720386"
+    },
+    "final_integration_base": "98b3312947b5e43d0acc83b3ce6476550765417b",
+    "late_merge_scope": "runtime compact FD-link route selection; default layout unchanged; no datagram source changes"
+  },
+  "production_route": "shared predicate events; 10ms control and crash hooks compiled only in cfg(test)",
+  "benchmark": {
+    "passed": true,
+    "case": "unix-dgram",
+    "binary": "F:\\crysoacu2\\artifacts\\unix-dgram-events-20261001\\native-final\\kinakaze_vfs-b7d3ab419a68d335.exe",
+    "sha256": "90dceb28234eadac4c722c97e58970bb695787cdccd8426c5599cd6314a5eecb",
+    "dependencies": {
+      "kinakaze_alloc.so": "a28f8f9ceb82637a544f1dafbded66e0240bb44fc152fb9ff11cc5a052bd0574",
+      "kinakaze_kernel.so": "6b08ea6755dd20f3568eb59b8851d098d3d76e6316fb768e743e49acb2e6119f",
+      "kinakaze_tls.so": "6077a01e339b887e9cac47f40336dc9a448761c99c3a55e4ff4af79442f44ec5",
+      "kinakaze_vfs.so": "a7ac6c95681b11913adce8afb9c2c2a990923effe896abff87839b0f82536e4a"
+    },
+    "rows": [
+      {
+        "receive_wake_ns": 13408528,
+        "send_wake_ns": 9654156,
+        "unblocked_pair_ns": 57531,
+        "round": 0,
+        "enabled": false,
+        "warmup": true
+      },
+      {
+        "receive_wake_ns": 129903,
+        "send_wake_ns": 105781,
+        "unblocked_pair_ns": 62223,
+        "round": 0,
+        "enabled": true,
+        "warmup": true
+      },
+      {
+        "receive_wake_ns": 130806,
+        "send_wake_ns": 126337,
+        "unblocked_pair_ns": 63906,
+        "round": 1,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "receive_wake_ns": 13080228,
+        "send_wake_ns": 10935150,
+        "unblocked_pair_ns": 54738,
+        "round": 1,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "receive_wake_ns": 13183959,
+        "send_wake_ns": 11156628,
+        "unblocked_pair_ns": 50865,
+        "round": 2,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "receive_wake_ns": 136678,
+        "send_wake_ns": 116584,
+        "unblocked_pair_ns": 61043,
+        "round": 2,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "receive_wake_ns": 137590,
+        "send_wake_ns": 120746,
+        "unblocked_pair_ns": 55263,
+        "round": 3,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "receive_wake_ns": 13255609,
+        "send_wake_ns": 9956075,
+        "unblocked_pair_ns": 60849,
+        "round": 3,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "receive_wake_ns": 13418159,
+        "send_wake_ns": 10122221,
+        "unblocked_pair_ns": 57083,
+        "round": 4,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "receive_wake_ns": 119381,
+        "send_wake_ns": 110881,
+        "unblocked_pair_ns": 53886,
+        "round": 4,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "receive_wake_ns": 132693,
+        "send_wake_ns": 97943,
+        "unblocked_pair_ns": 51953,
+        "round": 5,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "receive_wake_ns": 13347106,
+        "send_wake_ns": 10245925,
+        "unblocked_pair_ns": 60278,
+        "round": 5,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "receive_wake_ns": 13073556,
+        "send_wake_ns": 10136190,
+        "unblocked_pair_ns": 59821,
+        "round": 6,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "receive_wake_ns": 121581,
+        "send_wake_ns": 101393,
+        "unblocked_pair_ns": 55238,
+        "round": 6,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "receive_wake_ns": 199081,
+        "send_wake_ns": 102315,
+        "unblocked_pair_ns": 52128,
+        "round": 7,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "receive_wake_ns": 13595271,
+        "send_wake_ns": 10126953,
+        "unblocked_pair_ns": 51016,
+        "round": 7,
+        "enabled": false,
+        "warmup": false
+      }
+    ],
+    "medians_ns": {
+      "control": {
+        "receive_wake_ns": 13255609,
+        "send_wake_ns": 10136190,
+        "unblocked_pair_ns": 57083
+      },
+      "candidate": {
+        "receive_wake_ns": 132693,
+        "send_wake_ns": 110881,
+        "unblocked_pair_ns": 55238
+      }
+    }
+  },
+  "native_full": {
+    "passed": true,
+    "rows": [
+      {
+        "optimized": false,
+        "exit_code": 0,
+        "summary": [
+          "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 915 filtered out; finished in 0.06s",
+          "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 915 filtered out; finished in 0.06s",
+          "test result: ok. 897 passed; 0 failed; 19 ignored; 0 measured; 0 filtered out; finished in 35.48s"
+        ],
+        "log": "F:\\crysoacu2\\artifacts\\unix-dgram-events-20261001\\native-full-0.log"
+      },
+      {
+        "optimized": true,
+        "exit_code": 0,
+        "summary": [
+          "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 915 filtered out; finished in 0.05s",
+          "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 915 filtered out; finished in 0.05s",
+          "test result: ok. 897 passed; 0 failed; 19 ignored; 0 measured; 0 filtered out; finished in 23.61s"
+        ],
+        "log": "F:\\crysoacu2\\artifacts\\unix-dgram-events-20261001\\native-full-1.log"
+      }
+    ]
+  },
+  "guest": [
+    {
+      "probe": "UnixDatagramEventsProbe",
+      "status": "passed",
+      "request_to_exit_ms": 1498.8847
+    },
+    {
+      "probe": "UnixBlockingProbe",
+      "status": "passed",
+      "request_to_exit_ms": 428.4074
+    },
+    {
+      "probe": "UnixReadinessProbe",
+      "status": "passed",
+      "request_to_exit_ms": 156.7906
+    },
+    {
+      "probe": "UnixPeekProbe",
+      "status": "passed",
+      "request_to_exit_ms": 554.2673
+    },
+    {
+      "probe": "UnixCredentialsProbe",
+      "status": "passed",
+      "request_to_exit_ms": 715.2102
+    },
+    {
+      "probe": "UnixSocketOptionsProbe",
+      "status": "passed",
+      "request_to_exit_ms": 971.3011
+    },
+    {
+      "probe": "DatagramRightsProbe",
+      "status": "passed",
+      "request_to_exit_ms": 3009.5226
+    }
+  ],
+  "rights_cases": {
+    "passed": 26,
+    "total": 26
+  },
+  "production_check": {
+    "file": "F:\\crysoacu2\\artifacts\\unix-dgram-events-20261001\\candidate\\rootfs\\lib\\kinakaze_vfs.so",
+    "sha256": "cf52fbe49246f7e507ec672643609618c5d21972710d54edaac69d0f3dbcb600",
+    "test_flags_absent": {
+      "KINAKAZE_TEST_DGRAM_EVENTS": true,
+      "KINAKAZE_TEST_DGRAM_PUBLISH_FAULT": true,
+      "KINAKAZE_TEST_DGRAM_RECORD": true,
+      "KINAKAZE_TEST_DGRAM_DEAD_WAITER": true
+    }
+  },
+  "artifact_sha256": {
+    "native-final-build.jsonl": "ed263e66c4d5597448cec16b0c4481713e8d4689a7ffb53ad243760464eaa373",
+    "workspace-build.jsonl": "ac9a66f541c9362d36e8e67a06f22a997c2e56f8df599d433619a140296df191",
+    "native-final/manifest.json": "148228c14905cceed77db7d2e2dee3e7d98162ad291fb9dd0f30fda1d93abe90",
+    "paired-final.json": "96b011f58bdc0a7f36f3e3d3a5919dd93eb8ba896d4a47b1798bf737c82cc097",
+    "native-full-0.log": "88e06e5d2532d8847dab1c4a7c26c86171d3d5b4cbf9b4e6c7fcf662a167eac0",
+    "native-full-1.log": "895b0b1c01982c92ca9da8df0e37a55c99c34a5a12d9c20d6a18206899764476",
+    "guest-new/report.json": "e7c79d7d3e73ac93affabd5a76305868bd568d6e5fb1eddfb58b89946f917fb9",
+    "guest-regression/report.json": "7234d0be4170028980c95eeb00f5e69a3f6cfd190337872214503cca3a1a34cc",
+    "staged.json": "608f725a765727513ec5a003a9ac280cb11f9899a4954c7812979a31985c8702",
+    "production-check.json": "34f61eb745a140fb590eba68b5ef6fbdcff310e8453cfc2dd96df39f7e1555e3",
+    "integration.json": "61f97f5899a937d29f2ad088255839fcb98daa0c6895db06199539a7d8f40350"
+  },
+  "final_integration_vfs_check": {
+    "passed": true,
+    "build_sha256": "466488d426073bf7648650751c0cc3bf922520cc362d96bc7029eb70ee7fb4ea"
+  }
+}

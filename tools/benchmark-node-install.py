@@ -223,6 +223,13 @@ def main():
         assert not verification.strip(), 'dpkg verify: ' + verification[:2000]
         report['installed'] = installed_packages(root, report['packages'])
         report['dpkg_timings'] = dpkg_timings(root)
+        stderr = (output / 'session/pool.stderr.log').read_text(encoding='utf-8', errors='replace')
+        report['debconf_preconfiguration_errors'] = sorted({
+            line for line in stderr.splitlines()
+            if 'Cannot get debconf version' in line or 'apt-extracttemplates failed:' in line
+        })
+        assert not report['debconf_preconfiguration_errors'], (
+            'debconf preconfiguration failed: ' + '; '.join(report['debconf_preconfiguration_errors']))
         report['passed'] = True
     except Exception as error:
         report['error'] = f'{type(error).__name__}: {str(error)[:2000]}'

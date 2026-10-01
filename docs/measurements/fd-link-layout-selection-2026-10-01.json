@@ -2662,5 +2662,11 @@
     },
     "limitations": "Fresh roots use the original seed and identical 59-file distribution; downloads and verification are reported separately. Own setup, compilation and other benchmarks do not overlap installation. Foreign CPU sampling can miss short-lived processes. A single sequential pair alone cannot quantify timing variance."
   },
-  "best_verified_install_ms": 185596.8295
+  "best_verified_install_ms": 185596.8295,
+  "acceptance_correction": {
+    "historical_full_installs_accepted": false,
+    "reason": "Legacy seed fails debconf preconfiguration; raw historical measurements retained.",
+    "component_comparison_unchanged": true,
+    "corrected_integration": "selected-routes-full-install-2026-10-01.json"
+  }
 }

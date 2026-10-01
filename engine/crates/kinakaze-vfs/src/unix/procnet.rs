@@ -104,17 +104,23 @@ impl Record {
         self.store
             .read_with(|bytes| Ok(bytes[data_start(bytes)?..].to_vec()))
     }
-    pub(super) fn update_data<T>(
+    /// Queue notifications share the record's publisher lock. The callback may
+    /// signal native handles, but must not reenter this record or guest code.
+    pub(super) fn update_data_notified<T>(
         &self,
         update: impl FnOnce(&[u8]) -> Result<(Vec<u8>, T), i32>,
+        notify: impl FnOnce(),
     ) -> Result<T, i32> {
-        self.store.update(|bytes| {
-            let start = data_start(bytes)?;
-            let (data, result) = update(&bytes[start..])?;
-            let mut bytes = bytes[..start].to_vec();
-            bytes.extend_from_slice(&data);
-            Ok((bytes, result))
-        })
+        self.store.update_notified(
+            |bytes| {
+                let start = data_start(bytes)?;
+                let (data, result) = update(&bytes[start..])?;
+                let mut bytes = bytes[..start].to_vec();
+                bytes.extend_from_slice(&data);
+                Ok((bytes, result))
+            },
+            |_| notify(),
+        )
     }
     fn write(
         &self,

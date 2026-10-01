@@ -1,0 +1,1445 @@
+{
+  "source": {
+    "commit": "2c66b62c92b46048680811fc8e725c828ad2d028",
+    "archive_sha256": "16892e61291d567405ecc8b77ebcfafea904b9361978c77dfbbf1fa41c4277ec",
+    "cow_sha256": "54ac1fc5e6bb7d23c05a0819e2e62396073ea63f91a0bc6aa0b58e75767303dc",
+    "production_only": true,
+    "cargo_graph": [
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/engine/crates/kinakaze-alloc#1.1.0",
+        "target": "kinakaze_alloc",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_alloc.dll",
+        "targets": [
+          "kinakaze_alloc.dll",
+          "kinakaze_alloc.so"
+        ],
+        "sha256": "84f7e9c0783ea7b50a85dd7233682c9f1bc5f0af9fc997f6def0b222f2f2f0b7"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/engine/crates/kinakaze-alloc#1.1.0",
+        "target": "kinakaze_alloc",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_alloc.dll.lib",
+        "targets": [
+          "kinakaze_alloc.dll.lib"
+        ],
+        "sha256": "f49230058028537ac93cfafdf7b8eaac314291990cb3f8c5733c6bb535a1c155"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/engine/crates/kinakaze-elf#1.1.0",
+        "target": "kinakaze_elf",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_elf.dll",
+        "targets": [
+          "kinakaze_elf.dll",
+          "kinakaze_elf.so"
+        ],
+        "sha256": "fd6537ec7d4aa51361dc32a3017fb4de21b75ec65767f859b68f912e89295b74"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/engine/crates/kinakaze-elf#1.1.0",
+        "target": "kinakaze_elf",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_elf.dll.lib",
+        "targets": [
+          "kinakaze_elf.dll.lib"
+        ],
+        "sha256": "0ced82c952a4340f668e097f33323852f46ca3310f38161bf603d58857cacce8"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "registry+https://github.com/rust-lang/crates.io-index#serde_derive@1.0.229",
+        "target": "serde_derive",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\deps\\serde_derive-ebb234dc8366345c.dll",
+        "targets": [
+          "serde_derive-ebb234dc8366345c.dll"
+        ],
+        "sha256": "616e2f0a3996892b726b0ae5e9174a9026210613be6b39da7284065d2812fed2"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "registry+https://github.com/rust-lang/crates.io-index#serde_derive@1.0.229",
+        "target": "serde_derive",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\deps\\serde_derive-ebb234dc8366345c.dll.lib",
+        "targets": [
+          "serde_derive-ebb234dc8366345c.dll.lib"
+        ],
+        "sha256": "175ced2298d66ab349e5af186971468a66dff647cc91b41708807464a253bd85"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "registry+https://github.com/rust-lang/crates.io-index#windows-implement@0.60.2",
+        "target": "windows_implement",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\deps\\windows_implement-3d688ed3c7035c00.dll",
+        "targets": [
+          "windows_implement-3d688ed3c7035c00.dll"
+        ],
+        "sha256": "a4b16e2c5fb37bbd6618c359269f6e3d8d365bd0d64f1e15c43b76415a77ce88"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "registry+https://github.com/rust-lang/crates.io-index#windows-implement@0.60.2",
+        "target": "windows_implement",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\deps\\windows_implement-3d688ed3c7035c00.dll.lib",
+        "targets": [
+          "windows_implement-3d688ed3c7035c00.dll.lib"
+        ],
+        "sha256": "1cc113d25fddabee3880422778aa35feca53c205e338c1d7c8aceb2952277936"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "registry+https://github.com/rust-lang/crates.io-index#windows-interface@0.59.3",
+        "target": "windows_interface",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\deps\\windows_interface-b92b7867c5262d0a.dll",
+        "targets": [
+          "windows_interface-b92b7867c5262d0a.dll"
+        ],
+        "sha256": "f9058fe4c29eb33166f3cbc4c285c04e8ea71f3c354fdca5e1557e2f160e07a1"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "registry+https://github.com/rust-lang/crates.io-index#windows-interface@0.59.3",
+        "target": "windows_interface",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\deps\\windows_interface-b92b7867c5262d0a.dll.lib",
+        "targets": [
+          "windows_interface-b92b7867c5262d0a.dll.lib"
+        ],
+        "sha256": "fb9723d4c8dbc993e4fa6537fdf7c9cf0e9b4e5ac1319e6629aeef246ccbf760"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/engine/crates/kinakaze-runtime#kinakaze-kernel@1.1.0",
+        "target": "kinakaze_kernel",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_kernel.dll",
+        "targets": [
+          "kinakaze_kernel.dll",
+          "kinakaze_kernel.so"
+        ],
+        "sha256": "5a3b7e39aab9d866009406e2c722048ece76f8f67979fc4f456cea0d186c3fd7"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/engine/crates/kinakaze-runtime#kinakaze-kernel@1.1.0",
+        "target": "kinakaze_kernel",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_kernel.dll.lib",
+        "targets": [
+          "kinakaze_kernel.dll.lib"
+        ],
+        "sha256": "ad49898d40e8aee8badc9465c078d66ff2240781c91483862346a8e099c14bab"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/engine/crates/kinakaze-tls#1.1.0",
+        "target": "kinakaze_tls",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_tls.dll",
+        "targets": [
+          "kinakaze_tls.dll",
+          "kinakaze_tls.so"
+        ],
+        "sha256": "a3a29d5553d023a7402f95f14e18577a1edcc1e35f36970d58ef3f20abea30df"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/engine/crates/kinakaze-tls#1.1.0",
+        "target": "kinakaze_tls",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_tls.dll.lib",
+        "targets": [
+          "kinakaze_tls.dll.lib"
+        ],
+        "sha256": "33290bca888a1497b583ad19173fb824c862a14c6833b50c47e2ef1000612bd4"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libdisplay#kinakaze-v2-libdisplay@1.1.0",
+        "target": "kinakaze_libdisplay",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libdisplay.dll",
+        "targets": [
+          "kinakaze_libdisplay.dll",
+          "libdisplay.so.1"
+        ],
+        "sha256": "f5aaa74f8d811863d821bfb83b88d4f90f3efd5d9e6b119664f325d39e52733e"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libdisplay#kinakaze-v2-libdisplay@1.1.0",
+        "target": "kinakaze_libdisplay",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libdisplay.dll.lib",
+        "targets": [
+          "kinakaze_libdisplay.dll.lib"
+        ],
+        "sha256": "664552d03d83a413b4dfbee10667a1a40307504e7749e1247c5ce7657d5619bc"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libXcursor#kinakaze-v2-libxcursor@1.1.0",
+        "target": "kinakaze_libXcursor",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libXcursor.dll",
+        "targets": [
+          "kinakaze_libXcursor.dll",
+          "libXcursor.so.1"
+        ],
+        "sha256": "95c14eb18d9eb2bd2ba292df4aec3f3916b48bf58fdfbb136e785e187acc8159"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libXcursor#kinakaze-v2-libxcursor@1.1.0",
+        "target": "kinakaze_libXcursor",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libXcursor.dll.lib",
+        "targets": [
+          "kinakaze_libXcursor.dll.lib"
+        ],
+        "sha256": "ac8ab807068f18b17a70520e863f5c625d68bced91392d2c41c01994fe28e09c"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/apps/worker#kinakaze-v2-worker@1.1.0",
+        "target": "worker",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\worker.exe",
+        "targets": [
+          "worker.exe"
+        ],
+        "sha256": "30578e2471962190e9babf609a85056afb22c634bece45a9a35aaaba65a0c546"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/apps/init#kinakaze-v2-init@1.1.0",
+        "target": "init",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\init.exe",
+        "targets": [
+          "init.exe"
+        ],
+        "sha256": "7a870c63dc42166cd2ff1bcf332f06d1b56853451d2fb08a8127d4ad1b5bd294"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libdl#kinakaze-v2-libdl@1.1.0",
+        "target": "kinakaze_libdl",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libdl.dll",
+        "targets": [
+          "kinakaze_libdl.dll",
+          "libdl.so.2"
+        ],
+        "sha256": "e55b7729a8f8dbe460277aba127a6059bc552493fe7c956babdac9fc8ed070f1"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libdl#kinakaze-v2-libdl@1.1.0",
+        "target": "kinakaze_libdl",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libdl.dll.lib",
+        "targets": [
+          "kinakaze_libdl.dll.lib"
+        ],
+        "sha256": "1d60192e7c321dd120d362fa2443889aa0b4ddea6fbd00bad5922977dfacd698"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libOpenGL#kinakaze-v2-libopengl@1.1.0",
+        "target": "kinakaze_libOpenGL",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libOpenGL.dll",
+        "targets": [
+          "kinakaze_libOpenGL.dll",
+          "libOpenGL.so.0"
+        ],
+        "sha256": "618235ecf17e5733670b554c8586ab21b63f198291f82a474b61a23533c1c04a"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libOpenGL#kinakaze-v2-libopengl@1.1.0",
+        "target": "kinakaze_libOpenGL",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libOpenGL.dll.lib",
+        "targets": [
+          "kinakaze_libOpenGL.dll.lib"
+        ],
+        "sha256": "3aebd15ba41bc466963dd37136194f15ee3846cb3d7d7c4af3e30ed4f35db836"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libX11-xcb#kinakaze-v2-libx11-xcb@1.1.0",
+        "target": "kinakaze_libX11_xcb",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libX11_xcb.dll",
+        "targets": [
+          "kinakaze_libX11_xcb.dll",
+          "libX11-xcb.so.1"
+        ],
+        "sha256": "610abfb870ba0295072d1bdc61c56f430d58b309b8571d1461a1f505c5801e04"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libX11-xcb#kinakaze-v2-libx11-xcb@1.1.0",
+        "target": "kinakaze_libX11_xcb",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libX11_xcb.dll.lib",
+        "targets": [
+          "kinakaze_libX11_xcb.dll.lib"
+        ],
+        "sha256": "2d7d3fd140ae9e1aec75f67fcb384a5f9e2c0a164dabc464b40be2f57b0bd176"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libEGL#kinakaze-v2-libegl@1.1.0",
+        "target": "kinakaze_libEGL",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libEGL.dll",
+        "targets": [
+          "kinakaze_libEGL.dll",
+          "libEGL.so.1"
+        ],
+        "sha256": "d023aeb7a37c01d2906c25445d7de084a666d837ee081390753ee74f3ed185af"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libEGL#kinakaze-v2-libegl@1.1.0",
+        "target": "kinakaze_libEGL",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libEGL.dll.lib",
+        "targets": [
+          "kinakaze_libEGL.dll.lib"
+        ],
+        "sha256": "acc156ddfd14e373ad4ce31d00bdf60b7a7538be83ecddc51c87657d7ab9263d"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libXrender#kinakaze-v2-libxrender@1.1.0",
+        "target": "kinakaze_libXrender",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libXrender.dll",
+        "targets": [
+          "kinakaze_libXrender.dll",
+          "libXrender.so.1"
+        ],
+        "sha256": "54a90484c236076bb1a9a22cb3a5329fbaae510a5c3afba5501cb5536281b6e1"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libXrender#kinakaze-v2-libxrender@1.1.0",
+        "target": "kinakaze_libXrender",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libXrender.dll.lib",
+        "targets": [
+          "kinakaze_libXrender.dll.lib"
+        ],
+        "sha256": "60dd2705a2c66698a1c753c959d2fc0bef9c1271c54f389932fa76cbd32c4cd7"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libXxf86vm#kinakaze-v2-libxxf86vm@1.1.0",
+        "target": "kinakaze_libXxf86vm",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libXxf86vm.dll",
+        "targets": [
+          "kinakaze_libXxf86vm.dll",
+          "libXxf86vm.so.1"
+        ],
+        "sha256": "f2ade032f90e7df5d98c57c9b2acdac97409d2c4aadf0f7e176afcf6b6bce69b"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libXxf86vm#kinakaze-v2-libxxf86vm@1.1.0",
+        "target": "kinakaze_libXxf86vm",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libXxf86vm.dll.lib",
+        "targets": [
+          "kinakaze_libXxf86vm.dll.lib"
+        ],
+        "sha256": "c108af52f30f6baae16ac6b69017db1827746d5da0b53a7b452fa4b41a719399"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libXinerama#kinakaze-v2-libxinerama@1.1.0",
+        "target": "kinakaze_libXinerama",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libXinerama.dll",
+        "targets": [
+          "kinakaze_libXinerama.dll",
+          "libXinerama.so.1"
+        ],
+        "sha256": "d2e90f0f3c16d770d12b1357f38def058a91322c755f4f46b4dc17fe181da2dc"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libXinerama#kinakaze-v2-libxinerama@1.1.0",
+        "target": "kinakaze_libXinerama",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libXinerama.dll.lib",
+        "targets": [
+          "kinakaze_libXinerama.dll.lib"
+        ],
+        "sha256": "bb97ea38bd71636add6645fbefa760e1a6e92d06e540a2279e366f7d90778580"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libm#kinakaze-v2-libm@1.1.0",
+        "target": "kinakaze_libm",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libm.dll",
+        "targets": [
+          "kinakaze_libm.dll",
+          "libm.so.6"
+        ],
+        "sha256": "f04611d304353df0debfe5e406b5f681d3063ccb17c44b4c5bcb704f371f5632"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libm#kinakaze-v2-libm@1.1.0",
+        "target": "kinakaze_libm",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libm.dll.lib",
+        "targets": [
+          "kinakaze_libm.dll.lib"
+        ],
+        "sha256": "3a2daaa280cdab1d647e5696cb811d04f7cc9f6a1c2e0efc7860b670bdf1d708"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libGLESv2#kinakaze-v2-libglesv2@1.1.0",
+        "target": "kinakaze_libGLESv2",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libGLESv2.dll",
+        "targets": [
+          "kinakaze_libGLESv2.dll",
+          "libGLESv2.so.2"
+        ],
+        "sha256": "1382b6d621a128bb220be7bdd73ed6b1967a5d8a6cd51e3321b0e4b0e2d004a0"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libGLESv2#kinakaze-v2-libglesv2@1.1.0",
+        "target": "kinakaze_libGLESv2",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libGLESv2.dll.lib",
+        "targets": [
+          "kinakaze_libGLESv2.dll.lib"
+        ],
+        "sha256": "c3450d5524372622b0e797aa912e8af75c70925bc6e6a56aa7e1eff28076a2e4"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libGLX#kinakaze-v2-libglx@1.1.0",
+        "target": "kinakaze_libGLX",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libGLX.dll",
+        "targets": [
+          "kinakaze_libGLX.dll",
+          "libGLX.so.0"
+        ],
+        "sha256": "a9ceadf9d936437f9bd47705f36549f0b0f192dc17517c8838314c2c710cc090"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libGLX#kinakaze-v2-libglx@1.1.0",
+        "target": "kinakaze_libGLX",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libGLX.dll.lib",
+        "targets": [
+          "kinakaze_libGLX.dll.lib"
+        ],
+        "sha256": "38cb097ce02a62ccdbae4b6428c0ef6fa0470b850a483aa624d8d34d6aa82c7c"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/tools/packager#kinakaze-v2-packager@1.1.0",
+        "target": "kinakaze-packager",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze-packager.exe",
+        "targets": [
+          "kinakaze-packager.exe"
+        ],
+        "sha256": "73fa7241f94e494717bc22b9b3bf30976ea44c8c278230842cb281e5bc319c7e"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/engine/crates/kinakaze-vfs#1.1.0",
+        "target": "kinakaze_vfs",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_vfs.dll",
+        "targets": [
+          "kinakaze_vfs.dll",
+          "kinakaze_vfs.so"
+        ],
+        "sha256": "c0e6a8d9750fd0a872370ad097fb14947cd0cd34ef035129f9ef99a4d711f705"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/engine/crates/kinakaze-vfs#1.1.0",
+        "target": "kinakaze_vfs",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_vfs.dll.lib",
+        "targets": [
+          "kinakaze_vfs.dll.lib"
+        ],
+        "sha256": "ffb6038de99d7baf7972de0537afd4bfb80264be22d03d536299ece56263c807"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libcuda#kinakaze-v2-libcuda@1.1.0",
+        "target": "kinakaze_libcuda",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libcuda.dll",
+        "targets": [
+          "kinakaze_libcuda.dll",
+          "libcuda.so.1"
+        ],
+        "sha256": "eef8859aaf322939e15bc9d65f7713e523f2518229212c3fedc34271c35849da"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libcuda#kinakaze-v2-libcuda@1.1.0",
+        "target": "kinakaze_libcuda",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libcuda.dll.lib",
+        "targets": [
+          "kinakaze_libcuda.dll.lib"
+        ],
+        "sha256": "08a2be8e7095c91fda69ae5228face969acc16979db4245a8a6b84ebd6209d77"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libpthread#kinakaze-v2-libpthread@1.1.0",
+        "target": "kinakaze_libpthread",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libpthread.dll",
+        "targets": [
+          "kinakaze_libpthread.dll",
+          "libpthread.so.0"
+        ],
+        "sha256": "39d6d227a2ea42f1ab4798502dc2ff2a188d412e6c300f3bdea83825c50785aa"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libpthread#kinakaze-v2-libpthread@1.1.0",
+        "target": "kinakaze_libpthread",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libpthread.dll.lib",
+        "targets": [
+          "kinakaze_libpthread.dll.lib"
+        ],
+        "sha256": "e12b5346b01c4018499f105a2ce326f2f5cf0fda68f1d424ca1307e9a032c6d9"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/ld-linux-x86-64#kinakaze-link@1.1.0",
+        "target": "kinakaze_link",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_link.dll",
+        "targets": [
+          "kinakaze_link.dll",
+          "ld-linux-x86-64.so.2"
+        ],
+        "sha256": "112ea3099a0dcf61dcbb2831952367fcb5e752a938943cbe62bc9248a6ae095e"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/ld-linux-x86-64#kinakaze-link@1.1.0",
+        "target": "kinakaze_link",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_link.dll.lib",
+        "targets": [
+          "kinakaze_link.dll.lib"
+        ],
+        "sha256": "2dc409a9a8ab5e980ff58716ad16c3fa9595b43d2f047ff88c51167eab69cf36"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libc#kinakaze-v2-libc@1.1.0",
+        "target": "kinakaze_libc",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libc.dll",
+        "targets": [
+          "kinakaze_libc.dll",
+          "libc.so.6"
+        ],
+        "sha256": "5f8fafcf6d5253250e52aa6255462afce713483b36135390e00d5661f6bcd673"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libc#kinakaze-v2-libc@1.1.0",
+        "target": "kinakaze_libc",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libc.dll.lib",
+        "targets": [
+          "kinakaze_libc.dll.lib"
+        ],
+        "sha256": "be81b39de250187894ebf44fc0f48840e5a47f12f1b1040fa33399326bbf61ac"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libresolv#kinakaze-v2-libresolv@1.1.0",
+        "target": "kinakaze_libresolv",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libresolv.dll",
+        "targets": [
+          "kinakaze_libresolv.dll",
+          "libresolv.so.2"
+        ],
+        "sha256": "f598deaf03923f924358fbbd0bd73559aaec92a462b0b8db7a81beb9f253d1bc"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libresolv#kinakaze-v2-libresolv@1.1.0",
+        "target": "kinakaze_libresolv",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libresolv.dll.lib",
+        "targets": [
+          "kinakaze_libresolv.dll.lib"
+        ],
+        "sha256": "55f2e178227b5d40141a1cbee857fc20d7ec85bc6ee6dfc1c5eb452c07ae5e5b"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/librt#kinakaze-v2-librt@1.1.0",
+        "target": "kinakaze_librt",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_librt.dll",
+        "targets": [
+          "kinakaze_librt.dll",
+          "librt.so.1"
+        ],
+        "sha256": "365579517e605d431d351aa66c88511fdeffb3e2b0b1714ffb02f8b04530794a"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/librt#kinakaze-v2-librt@1.1.0",
+        "target": "kinakaze_librt",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_librt.dll.lib",
+        "targets": [
+          "kinakaze_librt.dll.lib"
+        ],
+        "sha256": "f3177bf530eb348edb5006e79b36ff56eb67cc814fac0b67952b11511c242518"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libpipewire#kinakaze-v2-libpipewire@1.1.0",
+        "target": "kinakaze_libpipewire",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libpipewire.dll",
+        "targets": [
+          "kinakaze_libpipewire.dll",
+          "libpipewire-0.3.so.0"
+        ],
+        "sha256": "605e87893158d4b328e86b7012fad01035a634c29c68f636f2725bc214e05001"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libpipewire#kinakaze-v2-libpipewire@1.1.0",
+        "target": "kinakaze_libpipewire",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libpipewire.dll.lib",
+        "targets": [
+          "kinakaze_libpipewire.dll.lib"
+        ],
+        "sha256": "31bec16f9cfbe957f212da62d5826dc0fd4bd4af5e5c8ccf9d2bbb8aef864244"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libpulse#kinakaze-v2-libpulse@1.1.0",
+        "target": "kinakaze_libpulse",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libpulse.dll",
+        "targets": [
+          "kinakaze_libpulse.dll",
+          "libpulse.so.0"
+        ],
+        "sha256": "bffcfffad4ad9d6259b53cd2df327b98950b4cdac4d42316048c88c3019810c5"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libpulse#kinakaze-v2-libpulse@1.1.0",
+        "target": "kinakaze_libpulse",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libpulse.dll.lib",
+        "targets": [
+          "kinakaze_libpulse.dll.lib"
+        ],
+        "sha256": "3c6d206ba2053c16b3645ece1f917d545878caf9bfee430b808c0a7fdca3fbb9"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libasound#kinakaze-v2-libasound@1.1.0",
+        "target": "kinakaze_libasound",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libasound.dll",
+        "targets": [
+          "kinakaze_libasound.dll",
+          "libasound.so.2"
+        ],
+        "sha256": "507543c371520eee2f05616440ffa757d7f187085b8c19cca8842177dc038908"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libasound#kinakaze-v2-libasound@1.1.0",
+        "target": "kinakaze_libasound",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libasound.dll.lib",
+        "targets": [
+          "kinakaze_libasound.dll.lib"
+        ],
+        "sha256": "e46fe51c386a39f9f6a420fe5f52c0750e8478a50b8bedb587e855d31be45ccf"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/engine/crates/guest-engine#kinakaze-guest-engine@1.1.0",
+        "target": "kinakaze_guest_engine",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_guest_engine.dll",
+        "targets": [
+          "kinakaze_guest_engine.dll",
+          "kinakaze_guest_engine.so"
+        ],
+        "sha256": "7105385e8185091656f56564f7d5bcaa7c8e2f1c453bd2bfdeb9fb5a343914c1"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/engine/crates/guest-engine#kinakaze-guest-engine@1.1.0",
+        "target": "kinakaze_guest_engine",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_guest_engine.dll.lib",
+        "targets": [
+          "kinakaze_guest_engine.dll.lib"
+        ],
+        "sha256": "22e5ed582c48567bf4e7ab100d5aca2eb384d0d6878b7477ad64e8d0a45cc871"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/crates/runtime#kinakaze-v2-runtime@1.1.0",
+        "target": "kinakaze_runtime",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_runtime.dll",
+        "targets": [
+          "kinakaze_runtime.dll"
+        ],
+        "sha256": "a1c780d5af7b8a7734b827e449834c1b200fde0da319cb5f74151fe8e8e0a4c7"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/crates/runtime#kinakaze-v2-runtime@1.1.0",
+        "target": "kinakaze_runtime",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_runtime.dll.lib",
+        "targets": [
+          "kinakaze_runtime.dll.lib"
+        ],
+        "sha256": "385c8f948a1968cc22b15dbf0179e5ed3536c413b530119de174315b42151255"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libX11#kinakaze-v2-libx11@1.1.0",
+        "target": "kinakaze_libX11",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libX11.dll",
+        "targets": [
+          "kinakaze_libX11.dll",
+          "libX11.so.6"
+        ],
+        "sha256": "cf280b795e2b356bc5cb0c15fc19b60b1e6b6fd46208d93c4984b5db7dc7e2a4"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libX11#kinakaze-v2-libx11@1.1.0",
+        "target": "kinakaze_libX11",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libX11.dll.lib",
+        "targets": [
+          "kinakaze_libX11.dll.lib"
+        ],
+        "sha256": "848d94fbba0225162c93271bb96c99816964f4deb8fdef60b11f75158218a23f"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libXrandr#kinakaze-v2-libxrandr@1.1.0",
+        "target": "kinakaze_libXrandr",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libXrandr.dll",
+        "targets": [
+          "kinakaze_libXrandr.dll",
+          "libXrandr.so.2"
+        ],
+        "sha256": "2191fdbc169b4a9a0b586ff3c14787d10ce55d09eaa7f5def954cd7480fb7b35"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libXrandr#kinakaze-v2-libxrandr@1.1.0",
+        "target": "kinakaze_libXrandr",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libXrandr.dll.lib",
+        "targets": [
+          "kinakaze_libXrandr.dll.lib"
+        ],
+        "sha256": "f08e97a55cbeb41235e8020cde36848b1f8777a36ff34050099b242a693d13b0"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libXext#kinakaze-v2-libxext@1.1.0",
+        "target": "kinakaze_libXext",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libXext.dll",
+        "targets": [
+          "kinakaze_libXext.dll",
+          "libXext.so.6"
+        ],
+        "sha256": "ea9ad8f97104edff9c52e056116271bb833d52ef6c564dcb7caf9ad08c950496"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libXext#kinakaze-v2-libxext@1.1.0",
+        "target": "kinakaze_libXext",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libXext.dll.lib",
+        "targets": [
+          "kinakaze_libXext.dll.lib"
+        ],
+        "sha256": "3e90c26f96991756c9558ccb5b9a5c454e403c7511d97dee8f6097403b95930c"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libGL#kinakaze-v2-libgl@1.1.0",
+        "target": "kinakaze_libGL",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libGL.dll",
+        "targets": [
+          "kinakaze_libGL.dll",
+          "libGL.so.1"
+        ],
+        "sha256": "657b47ce828d678ca711bcaeedba22d461479d483a3d1bd1ce26606be17c9b18"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libGL#kinakaze-v2-libgl@1.1.0",
+        "target": "kinakaze_libGL",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libGL.dll.lib",
+        "targets": [
+          "kinakaze_libGL.dll.lib"
+        ],
+        "sha256": "e9adc4372296946b5337db9a2928c322f5b770816878b8a6d7533fa75468cc63"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libXi#kinakaze-v2-libxi@1.1.0",
+        "target": "kinakaze_libXi",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libXi.dll",
+        "targets": [
+          "kinakaze_libXi.dll",
+          "libXi.so.6"
+        ],
+        "sha256": "dbc11c39555d21ab87e31e0776dc12cb723f794f1b9088bca04fa6c556788eb1"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libXi#kinakaze-v2-libxi@1.1.0",
+        "target": "kinakaze_libXi",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libXi.dll.lib",
+        "targets": [
+          "kinakaze_libXi.dll.lib"
+        ],
+        "sha256": "ab9143889b2034b1097578e8ee3a54765bbd9705fa2b1a80e8620e519fe8f42e"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libxcb#kinakaze-v2-libxcb@1.1.0",
+        "target": "kinakaze_libxcb",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libxcb.dll",
+        "targets": [
+          "kinakaze_libxcb.dll",
+          "libxcb.so.1"
+        ],
+        "sha256": "6c83852c1c29e88be43058c536e22d3cd21b3a1a782f1f45a8b2d5fad019b88e"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libxcb#kinakaze-v2-libxcb@1.1.0",
+        "target": "kinakaze_libxcb",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libxcb.dll.lib",
+        "targets": [
+          "kinakaze_libxcb.dll.lib"
+        ],
+        "sha256": "0bc2aa0ba6b897c5a716fbbf20a1ef6ee543690ebd919931b6c33b7cbf1578bc"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libvulkan#kinakaze-v2-libvulkan@1.1.0",
+        "target": "kinakaze_libvulkan",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libvulkan.dll",
+        "targets": [
+          "kinakaze_libvulkan.dll",
+          "libvulkan.so.1"
+        ],
+        "sha256": "603fae2ff68cd8e512a15ee1cc7bda4d60dda9a1a78abfb5f6d858fb419d27b3"
+      },
+      {
+        "stage": "r18-cow-integrated-workspace",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/libs/libvulkan#kinakaze-v2-libvulkan@1.1.0",
+        "target": "kinakaze_libvulkan",
+        "path": "F:\\crysoacu2\\target\\fork-commit\\release\\kinakaze_libvulkan.dll.lib",
+        "targets": [
+          "kinakaze_libvulkan.dll.lib"
+        ],
+        "sha256": "26c5db462712b0b3c4678263400b02d34809f901556024b65262cb1047ede8e5"
+      },
+      {
+        "stage": "r18-cow-integrated-entry",
+        "package": "registry+https://github.com/rust-lang/crates.io-index#serde_derive@1.0.229",
+        "target": "serde_derive",
+        "path": "F:\\crysoacu2\\target\\fork-commit-entry\\release\\deps\\serde_derive-2e9d0d586f9f9d0f.dll",
+        "targets": [
+          "serde_derive-2e9d0d586f9f9d0f.dll"
+        ],
+        "sha256": "26a48730db71464e28076e18ae622869fc6c5112716cbbcc9cbfc1326bf702e4"
+      },
+      {
+        "stage": "r18-cow-integrated-entry",
+        "package": "registry+https://github.com/rust-lang/crates.io-index#serde_derive@1.0.229",
+        "target": "serde_derive",
+        "path": "F:\\crysoacu2\\target\\fork-commit-entry\\release\\deps\\serde_derive-2e9d0d586f9f9d0f.dll.lib",
+        "targets": [
+          "serde_derive-2e9d0d586f9f9d0f.dll.lib"
+        ],
+        "sha256": "6621d2b50e9099c670847ef3d53b9ba72344bb374187d7b60fa6640b31988ed4"
+      },
+      {
+        "stage": "r18-cow-integrated-entry",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/apps/init#kinakaze-v2-init@1.1.0",
+        "target": "init",
+        "path": "F:\\crysoacu2\\target\\fork-commit-entry\\release\\init.exe",
+        "targets": [
+          "init.exe"
+        ],
+        "sha256": "f83ccd02d53fce2ff048e57afb684769f0a7501adcb3ad0091b131a01f84aaa7"
+      },
+      {
+        "stage": "r18-cow-integrated-entry",
+        "package": "path+file:///F:/crysoacu2/artifacts/apt-180-20260930/source-r17-cow-integrated/apps/worker#kinakaze-v2-worker@1.1.0",
+        "target": "worker",
+        "path": "F:\\crysoacu2\\target\\fork-commit-entry\\release\\worker.exe",
+        "targets": [
+          "worker.exe"
+        ],
+        "sha256": "21699962d131b354cf0108fe790fe2f84df2560935842fd5605e983a93b7ee6f"
+      }
+    ],
+    "frozen_images": {
+      "init.exe": "f83ccd02d53fce2ff048e57afb684769f0a7501adcb3ad0091b131a01f84aaa7",
+      "kinakaze-packager.exe": "73fa7241f94e494717bc22b9b3bf30976ea44c8c278230842cb281e5bc319c7e",
+      "kinakaze_alloc.dll": "84f7e9c0783ea7b50a85dd7233682c9f1bc5f0af9fc997f6def0b222f2f2f0b7",
+      "kinakaze_alloc.dll.lib": "f49230058028537ac93cfafdf7b8eaac314291990cb3f8c5733c6bb535a1c155",
+      "kinakaze_alloc.so": "84f7e9c0783ea7b50a85dd7233682c9f1bc5f0af9fc997f6def0b222f2f2f0b7",
+      "kinakaze_elf.dll": "fd6537ec7d4aa51361dc32a3017fb4de21b75ec65767f859b68f912e89295b74",
+      "kinakaze_elf.dll.lib": "0ced82c952a4340f668e097f33323852f46ca3310f38161bf603d58857cacce8",
+      "kinakaze_elf.so": "fd6537ec7d4aa51361dc32a3017fb4de21b75ec65767f859b68f912e89295b74",
+      "kinakaze_guest_engine.dll": "7105385e8185091656f56564f7d5bcaa7c8e2f1c453bd2bfdeb9fb5a343914c1",
+      "kinakaze_guest_engine.dll.lib": "22e5ed582c48567bf4e7ab100d5aca2eb384d0d6878b7477ad64e8d0a45cc871",
+      "kinakaze_guest_engine.so": "7105385e8185091656f56564f7d5bcaa7c8e2f1c453bd2bfdeb9fb5a343914c1",
+      "kinakaze_kernel.dll": "5a3b7e39aab9d866009406e2c722048ece76f8f67979fc4f456cea0d186c3fd7",
+      "kinakaze_kernel.dll.lib": "ad49898d40e8aee8badc9465c078d66ff2240781c91483862346a8e099c14bab",
+      "kinakaze_kernel.so": "5a3b7e39aab9d866009406e2c722048ece76f8f67979fc4f456cea0d186c3fd7",
+      "kinakaze_libasound.dll": "507543c371520eee2f05616440ffa757d7f187085b8c19cca8842177dc038908",
+      "kinakaze_libasound.dll.lib": "e46fe51c386a39f9f6a420fe5f52c0750e8478a50b8bedb587e855d31be45ccf",
+      "kinakaze_libc.dll": "5f8fafcf6d5253250e52aa6255462afce713483b36135390e00d5661f6bcd673",
+      "kinakaze_libc.dll.lib": "be81b39de250187894ebf44fc0f48840e5a47f12f1b1040fa33399326bbf61ac",
+      "kinakaze_libcuda.dll": "eef8859aaf322939e15bc9d65f7713e523f2518229212c3fedc34271c35849da",
+      "kinakaze_libcuda.dll.lib": "08a2be8e7095c91fda69ae5228face969acc16979db4245a8a6b84ebd6209d77",
+      "kinakaze_libdisplay.dll": "f5aaa74f8d811863d821bfb83b88d4f90f3efd5d9e6b119664f325d39e52733e",
+      "kinakaze_libdisplay.dll.lib": "664552d03d83a413b4dfbee10667a1a40307504e7749e1247c5ce7657d5619bc",
+      "kinakaze_libdl.dll": "e55b7729a8f8dbe460277aba127a6059bc552493fe7c956babdac9fc8ed070f1",
+      "kinakaze_libdl.dll.lib": "1d60192e7c321dd120d362fa2443889aa0b4ddea6fbd00bad5922977dfacd698",
+      "kinakaze_libEGL.dll": "d023aeb7a37c01d2906c25445d7de084a666d837ee081390753ee74f3ed185af",
+      "kinakaze_libEGL.dll.lib": "acc156ddfd14e373ad4ce31d00bdf60b7a7538be83ecddc51c87657d7ab9263d",
+      "kinakaze_libGL.dll": "657b47ce828d678ca711bcaeedba22d461479d483a3d1bd1ce26606be17c9b18",
+      "kinakaze_libGL.dll.lib": "e9adc4372296946b5337db9a2928c322f5b770816878b8a6d7533fa75468cc63",
+      "kinakaze_libGLESv2.dll": "1382b6d621a128bb220be7bdd73ed6b1967a5d8a6cd51e3321b0e4b0e2d004a0",
+      "kinakaze_libGLESv2.dll.lib": "c3450d5524372622b0e797aa912e8af75c70925bc6e6a56aa7e1eff28076a2e4",
+      "kinakaze_libGLX.dll": "a9ceadf9d936437f9bd47705f36549f0b0f192dc17517c8838314c2c710cc090",
+      "kinakaze_libGLX.dll.lib": "38cb097ce02a62ccdbae4b6428c0ef6fa0470b850a483aa624d8d34d6aa82c7c",
+      "kinakaze_libm.dll": "f04611d304353df0debfe5e406b5f681d3063ccb17c44b4c5bcb704f371f5632",
+      "kinakaze_libm.dll.lib": "3a2daaa280cdab1d647e5696cb811d04f7cc9f6a1c2e0efc7860b670bdf1d708",
+      "kinakaze_libOpenGL.dll": "618235ecf17e5733670b554c8586ab21b63f198291f82a474b61a23533c1c04a",
+      "kinakaze_libOpenGL.dll.lib": "3aebd15ba41bc466963dd37136194f15ee3846cb3d7d7c4af3e30ed4f35db836",
+      "kinakaze_libpipewire.dll": "605e87893158d4b328e86b7012fad01035a634c29c68f636f2725bc214e05001",
+      "kinakaze_libpipewire.dll.lib": "31bec16f9cfbe957f212da62d5826dc0fd4bd4af5e5c8ccf9d2bbb8aef864244",
+      "kinakaze_libpthread.dll": "39d6d227a2ea42f1ab4798502dc2ff2a188d412e6c300f3bdea83825c50785aa",
+      "kinakaze_libpthread.dll.lib": "e12b5346b01c4018499f105a2ce326f2f5cf0fda68f1d424ca1307e9a032c6d9",
+      "kinakaze_libpulse.dll": "bffcfffad4ad9d6259b53cd2df327b98950b4cdac4d42316048c88c3019810c5",
+      "kinakaze_libpulse.dll.lib": "3c6d206ba2053c16b3645ece1f917d545878caf9bfee430b808c0a7fdca3fbb9",
+      "kinakaze_libresolv.dll": "f598deaf03923f924358fbbd0bd73559aaec92a462b0b8db7a81beb9f253d1bc",
+      "kinakaze_libresolv.dll.lib": "55f2e178227b5d40141a1cbee857fc20d7ec85bc6ee6dfc1c5eb452c07ae5e5b",
+      "kinakaze_librt.dll": "365579517e605d431d351aa66c88511fdeffb3e2b0b1714ffb02f8b04530794a",
+      "kinakaze_librt.dll.lib": "f3177bf530eb348edb5006e79b36ff56eb67cc814fac0b67952b11511c242518",
+      "kinakaze_libvulkan.dll": "603fae2ff68cd8e512a15ee1cc7bda4d60dda9a1a78abfb5f6d858fb419d27b3",
+      "kinakaze_libvulkan.dll.lib": "26c5db462712b0b3c4678263400b02d34809f901556024b65262cb1047ede8e5",
+      "kinakaze_libX11.dll": "cf280b795e2b356bc5cb0c15fc19b60b1e6b6fd46208d93c4984b5db7dc7e2a4",
+      "kinakaze_libX11.dll.lib": "848d94fbba0225162c93271bb96c99816964f4deb8fdef60b11f75158218a23f",
+      "kinakaze_libX11_xcb.dll": "610abfb870ba0295072d1bdc61c56f430d58b309b8571d1461a1f505c5801e04",
+      "kinakaze_libX11_xcb.dll.lib": "2d7d3fd140ae9e1aec75f67fcb384a5f9e2c0a164dabc464b40be2f57b0bd176",
+      "kinakaze_libxcb.dll": "6c83852c1c29e88be43058c536e22d3cd21b3a1a782f1f45a8b2d5fad019b88e",
+      "kinakaze_libxcb.dll.lib": "0bc2aa0ba6b897c5a716fbbf20a1ef6ee543690ebd919931b6c33b7cbf1578bc",
+      "kinakaze_libXcursor.dll": "95c14eb18d9eb2bd2ba292df4aec3f3916b48bf58fdfbb136e785e187acc8159",
+      "kinakaze_libXcursor.dll.lib": "ac8ab807068f18b17a70520e863f5c625d68bced91392d2c41c01994fe28e09c",
+      "kinakaze_libXext.dll": "ea9ad8f97104edff9c52e056116271bb833d52ef6c564dcb7caf9ad08c950496",
+      "kinakaze_libXext.dll.lib": "3e90c26f96991756c9558ccb5b9a5c454e403c7511d97dee8f6097403b95930c",
+      "kinakaze_libXi.dll": "dbc11c39555d21ab87e31e0776dc12cb723f794f1b9088bca04fa6c556788eb1",
+      "kinakaze_libXi.dll.lib": "ab9143889b2034b1097578e8ee3a54765bbd9705fa2b1a80e8620e519fe8f42e",
+      "kinakaze_libXinerama.dll": "d2e90f0f3c16d770d12b1357f38def058a91322c755f4f46b4dc17fe181da2dc",
+      "kinakaze_libXinerama.dll.lib": "bb97ea38bd71636add6645fbefa760e1a6e92d06e540a2279e366f7d90778580",
+      "kinakaze_libXrandr.dll": "2191fdbc169b4a9a0b586ff3c14787d10ce55d09eaa7f5def954cd7480fb7b35",
+      "kinakaze_libXrandr.dll.lib": "f08e97a55cbeb41235e8020cde36848b1f8777a36ff34050099b242a693d13b0",
+      "kinakaze_libXrender.dll": "54a90484c236076bb1a9a22cb3a5329fbaae510a5c3afba5501cb5536281b6e1",
+      "kinakaze_libXrender.dll.lib": "60dd2705a2c66698a1c753c959d2fc0bef9c1271c54f389932fa76cbd32c4cd7",
+      "kinakaze_libXxf86vm.dll": "f2ade032f90e7df5d98c57c9b2acdac97409d2c4aadf0f7e176afcf6b6bce69b",
+      "kinakaze_libXxf86vm.dll.lib": "c108af52f30f6baae16ac6b69017db1827746d5da0b53a7b452fa4b41a719399",
+      "kinakaze_link.dll": "112ea3099a0dcf61dcbb2831952367fcb5e752a938943cbe62bc9248a6ae095e",
+      "kinakaze_link.dll.lib": "2dc409a9a8ab5e980ff58716ad16c3fa9595b43d2f047ff88c51167eab69cf36",
+      "kinakaze_runtime.dll": "a1c780d5af7b8a7734b827e449834c1b200fde0da319cb5f74151fe8e8e0a4c7",
+      "kinakaze_runtime.dll.lib": "385c8f948a1968cc22b15dbf0179e5ed3536c413b530119de174315b42151255",
+      "kinakaze_tls.dll": "a3a29d5553d023a7402f95f14e18577a1edcc1e35f36970d58ef3f20abea30df",
+      "kinakaze_tls.dll.lib": "33290bca888a1497b583ad19173fb824c862a14c6833b50c47e2ef1000612bd4",
+      "kinakaze_tls.so": "a3a29d5553d023a7402f95f14e18577a1edcc1e35f36970d58ef3f20abea30df",
+      "kinakaze_vfs.dll": "c0e6a8d9750fd0a872370ad097fb14947cd0cd34ef035129f9ef99a4d711f705",
+      "kinakaze_vfs.dll.lib": "ffb6038de99d7baf7972de0537afd4bfb80264be22d03d536299ece56263c807",
+      "kinakaze_vfs.so": "c0e6a8d9750fd0a872370ad097fb14947cd0cd34ef035129f9ef99a4d711f705",
+      "ld-linux-x86-64.so.2": "112ea3099a0dcf61dcbb2831952367fcb5e752a938943cbe62bc9248a6ae095e",
+      "libasound.so.2": "507543c371520eee2f05616440ffa757d7f187085b8c19cca8842177dc038908",
+      "libc.so.6": "5f8fafcf6d5253250e52aa6255462afce713483b36135390e00d5661f6bcd673",
+      "libcuda.so.1": "eef8859aaf322939e15bc9d65f7713e523f2518229212c3fedc34271c35849da",
+      "libdisplay.so.1": "f5aaa74f8d811863d821bfb83b88d4f90f3efd5d9e6b119664f325d39e52733e",
+      "libdl.so.2": "e55b7729a8f8dbe460277aba127a6059bc552493fe7c956babdac9fc8ed070f1",
+      "libEGL.so.1": "d023aeb7a37c01d2906c25445d7de084a666d837ee081390753ee74f3ed185af",
+      "libGL.so.1": "657b47ce828d678ca711bcaeedba22d461479d483a3d1bd1ce26606be17c9b18",
+      "libGLESv2.so.2": "1382b6d621a128bb220be7bdd73ed6b1967a5d8a6cd51e3321b0e4b0e2d004a0",
+      "libGLX.so.0": "a9ceadf9d936437f9bd47705f36549f0b0f192dc17517c8838314c2c710cc090",
+      "libm.so.6": "f04611d304353df0debfe5e406b5f681d3063ccb17c44b4c5bcb704f371f5632",
+      "libOpenGL.so.0": "618235ecf17e5733670b554c8586ab21b63f198291f82a474b61a23533c1c04a",
+      "libpipewire-0.3.so.0": "605e87893158d4b328e86b7012fad01035a634c29c68f636f2725bc214e05001",
+      "libpthread.so.0": "39d6d227a2ea42f1ab4798502dc2ff2a188d412e6c300f3bdea83825c50785aa",
+      "libpulse.so.0": "bffcfffad4ad9d6259b53cd2df327b98950b4cdac4d42316048c88c3019810c5",
+      "libresolv.so.2": "f598deaf03923f924358fbbd0bd73559aaec92a462b0b8db7a81beb9f253d1bc",
+      "librt.so.1": "365579517e605d431d351aa66c88511fdeffb3e2b0b1714ffb02f8b04530794a",
+      "libvulkan.so.1": "603fae2ff68cd8e512a15ee1cc7bda4d60dda9a1a78abfb5f6d858fb419d27b3",
+      "libX11-xcb.so.1": "610abfb870ba0295072d1bdc61c56f430d58b309b8571d1461a1f505c5801e04",
+      "libX11.so.6": "cf280b795e2b356bc5cb0c15fc19b60b1e6b6fd46208d93c4984b5db7dc7e2a4",
+      "libxcb.so.1": "6c83852c1c29e88be43058c536e22d3cd21b3a1a782f1f45a8b2d5fad019b88e",
+      "libXcursor.so.1": "95c14eb18d9eb2bd2ba292df4aec3f3916b48bf58fdfbb136e785e187acc8159",
+      "libXext.so.6": "ea9ad8f97104edff9c52e056116271bb833d52ef6c564dcb7caf9ad08c950496",
+      "libXi.so.6": "dbc11c39555d21ab87e31e0776dc12cb723f794f1b9088bca04fa6c556788eb1",
+      "libXinerama.so.1": "d2e90f0f3c16d770d12b1357f38def058a91322c755f4f46b4dc17fe181da2dc",
+      "libXrandr.so.2": "2191fdbc169b4a9a0b586ff3c14787d10ce55d09eaa7f5def954cd7480fb7b35",
+      "libXrender.so.1": "54a90484c236076bb1a9a22cb3a5329fbaae510a5c3afba5501cb5536281b6e1",
+      "libXxf86vm.so.1": "f2ade032f90e7df5d98c57c9b2acdac97409d2c4aadf0f7e176afcf6b6bce69b",
+      "serde_derive-2e9d0d586f9f9d0f.dll": "26a48730db71464e28076e18ae622869fc6c5112716cbbcc9cbfc1326bf702e4",
+      "serde_derive-2e9d0d586f9f9d0f.dll.lib": "6621d2b50e9099c670847ef3d53b9ba72344bb374187d7b60fa6640b31988ed4",
+      "serde_derive-ebb234dc8366345c.dll": "616e2f0a3996892b726b0ae5e9174a9026210613be6b39da7284065d2812fed2",
+      "serde_derive-ebb234dc8366345c.dll.lib": "175ced2298d66ab349e5af186971468a66dff647cc91b41708807464a253bd85",
+      "std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+      "windows_implement-3d688ed3c7035c00.dll": "a4b16e2c5fb37bbd6618c359269f6e3d8d365bd0d64f1e15c43b76415a77ce88",
+      "windows_implement-3d688ed3c7035c00.dll.lib": "1cc113d25fddabee3880422778aa35feca53c205e338c1d7c8aceb2952277936",
+      "windows_interface-b92b7867c5262d0a.dll": "f9058fe4c29eb33166f3cbc4c285c04e8ea71f3c354fdca5e1557e2f160e07a1",
+      "windows_interface-b92b7867c5262d0a.dll.lib": "fb9723d4c8dbc993e4fa6537fdf7c9cf0e9b4e5ac1319e6629aeef246ccbf760",
+      "worker.exe": "21699962d131b354cf0108fe790fe2f84df2560935842fd5605e983a93b7ee6f"
+    }
+  },
+  "source_changes": [
+    "selected native absolute and relative read/write routes",
+    "compact descriptor-link headers",
+    "selected PI metadata path",
+    "coalesced COW copies"
+  ],
+  "setup": {
+    "seed": "F:\\crysoacu2\\artifacts\\node-install-20260930\\seed",
+    "seed_manifest_sha256": "378a7dec2872441a4d1e8e5db1947ed24df1201e4ae0926d7f094296cb9aeb07",
+    "root": "F:\\crysoacu2\\artifacts\\node-install-20260930\\r18-cow-integrated-root",
+    "dist": "F:\\crysoacu2\\artifacts\\apt-180-20260930\\r18-cow-integrated-dist",
+    "command": [
+      "F:\\crysoacu2\\artifacts\\apt-180-20260930\\r18-cow-integrated-dist\\worker.exe",
+      "setup",
+      "--root",
+      "F:\\crysoacu2\\artifacts\\node-install-20260930\\r18-cow-integrated-root",
+      "--dist",
+      "F:\\crysoacu2\\artifacts\\node-install-20260930\\seed"
+    ],
+    "exit_code": 0,
+    "initial_status_sha256": "24bcc6ba2871eaa963404032caf723f7bc1ec4e1896ac44b352d67dd5c2ae1ae",
+    "seed_manifest_unchanged": true
+  },
+  "passed": false,
+  "target_met": false,
+  "install_ms": 292442.581,
+  "download_ms": 2563.5602,
+  "verify_ms": 21726.5945,
+  "package_names_and_versions_equal": true,
+  "installed_package_records_sha256": "727de4f64f68e875397639c1884633c34d0c59904c0a17f16508eb9914657589",
+  "dpkg_timings": {
+    "installed_packages": 357,
+    "unpack_seconds": 279.0,
+    "configure_seconds": 9.0,
+    "resolution_seconds": 1
+  },
+  "guest_checks": {
+    "passed": 13,
+    "probes": [
+      {
+        "probe": "SparseForkStackProbe",
+        "status": "passed",
+        "seconds": 0.8161259000007703
+      },
+      {
+        "probe": "WriteWatchStackProbe",
+        "status": "passed",
+        "seconds": 0.3652235000008659
+      },
+      {
+        "probe": "ForkNativeTransferProbe",
+        "status": "passed",
+        "seconds": 0.40934520000155317
+      },
+      {
+        "probe": "ForkPrewarmPoolProbe",
+        "status": "passed",
+        "seconds": 1.4987973000024795
+      },
+      {
+        "probe": "ForkNativeFallbackProbe",
+        "status": "passed",
+        "seconds": 0.19862250000005588
+      },
+      {
+        "probe": "ExecPrewarmPoolProbe",
+        "status": "passed",
+        "seconds": 3.2934824999974808
+      },
+      {
+        "probe": "ConcurrentVforkProbe",
+        "status": "passed",
+        "seconds": 1.5443219999979192
+      },
+      {
+        "probe": "ForkProviderMetadataProbe",
+        "status": "passed",
+        "seconds": 0.25980779999736114
+      },
+      {
+        "probe": "NativeLookupProbe",
+        "status": "passed",
+        "seconds": 0.24040749999767286
+      },
+      {
+        "probe": "NativeReadCacheProbe",
+        "status": "passed",
+        "seconds": 0.5238910000007309
+      },
+      {
+        "probe": "PthreadRobustProbe",
+        "status": "passed",
+        "seconds": 0.33700080000198795
+      },
+      {
+        "probe": "FutexRequeueProbe",
+        "status": "passed",
+        "seconds": 0.4888100999996823
+      }
+    ],
+    "cross_batch_16_mib_nested_fork": {
+      "pid": 1,
+      "command": [
+        "/usr/bin/python3.11",
+        "-c",
+        "\nimport mmap, os, tempfile\nP = 4096\nN = 4096 * P\nwith tempfile.TemporaryDirectory(prefix='cow-cross-batch-') as d:\n    fd = os.open(d + '/backing', os.O_CREAT | os.O_RDWR | os.O_EXCL, 0o600)\n    os.ftruncate(fd, N)\n    area = mmap.mmap(fd, N, flags=mmap.MAP_PRIVATE, prot=mmap.PROT_READ | mmap.PROT_WRITE)\n    ranges = [(254*P, 515*P), (1024*P, 2048*P), (4094*P, N)]\n    for start, end in ranges:\n        area[start:end] = b'7' * (end-start)\n    expected = bytes(area)\n    child = os.fork()\n    if child == 0:\n        try:\n            assert area[:] == expected\n            area[0:P] = b'C' * P\n            nested = os.fork()\n            if nested == 0:\n                assert area[0:P] == b'C' * P and area[P:] == expected[P:]\n                area[254*P] = 99\n                os._exit(0)\n            assert os.waitpid(nested, 0) == (nested, 0)\n            assert area[254*P] == 55\n            area[254*P] = 88\n            os._exit(0)\n        except BaseException:\n            os._exit(42)\n    assert os.waitpid(child, 0) == (child, 0)\n    assert area[:] == expected\n    area.close()\n    assert os.pread(fd, N, 0) == bytes(N)\n    os.close(fd)\nprint('COW_COPY_BATCH_BOUNDARIES_OK', flush=True)\n"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3297,
+      "request_to_exit_ms": 264.5677,
+      "activation_to_exit_ms": 264.238,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 93.75,
+        "kernel_ms": 93.75,
+        "total_cpu_ms": 187.5,
+        "cycles": 474601902,
+        "page_faults": 31998
+      },
+      "prepared_working_set_bytes": 11972608,
+      "cpu_metrics": {
+        "user_ms": 203.125,
+        "kernel_ms": 187.5,
+        "total_cpu_ms": 390.625,
+        "processes": 5,
+        "active_processes": 2,
+        "page_faults": 88756,
+        "read_bytes": 24983934,
+        "write_bytes": 23995,
+        "read_ops": 319,
+        "write_ops": 234,
+        "other_ops": 11007,
+        "other_bytes": 446132
+      }
+    }
+  },
+  "phases": [
+    {
+      "phase": "update",
+      "status": "passed",
+      "exit_code": 0,
+      "request_to_exit_ms": 910.005,
+      "cpu_metrics": {
+        "user_ms": 640.625,
+        "kernel_ms": 531.25,
+        "total_cpu_ms": 1171.875,
+        "processes": 13,
+        "active_processes": 2,
+        "page_faults": 121219,
+        "read_bytes": 18553897,
+        "write_bytes": 4747579,
+        "read_ops": 1137,
+        "write_ops": 986,
+        "other_ops": 21215,
+        "other_bytes": 1052644
+      },
+      "start_unix_ns": 1790821935725317400,
+      "end_unix_ns": 1790821936636050600
+    },
+    {
+      "phase": "download",
+      "status": "passed",
+      "exit_code": 0,
+      "request_to_exit_ms": 2563.5602,
+      "cpu_metrics": {
+        "user_ms": 1109.375,
+        "kernel_ms": 2031.25,
+        "total_cpu_ms": 3140.625,
+        "processes": 9,
+        "active_processes": 0,
+        "page_faults": 85438,
+        "read_bytes": 9477258,
+        "write_bytes": 26064825,
+        "read_ops": 3835,
+        "write_ops": 4261,
+        "other_ops": 122509,
+        "other_bytes": 12216752
+      },
+      "start_unix_ns": 1790821936639221100,
+      "end_unix_ns": 1790821939203090700
+    },
+    {
+      "phase": "plan",
+      "status": "passed",
+      "exit_code": 0,
+      "request_to_exit_ms": 503.4677,
+      "cpu_metrics": {
+        "user_ms": 296.875,
+        "kernel_ms": 265.625,
+        "total_cpu_ms": 562.5,
+        "processes": 5,
+        "active_processes": 0,
+        "page_faults": 46151,
+        "read_bytes": 7947522,
+        "write_bytes": 98204,
+        "read_ops": 731,
+        "write_ops": 1264,
+        "other_ops": 27846,
+        "other_bytes": 1104256
+      },
+      "start_unix_ns": 1790821939203563100,
+      "end_unix_ns": 1790821939707240700
+    },
+    {
+      "phase": "install",
+      "status": "passed",
+      "exit_code": 0,
+      "request_to_exit_ms": 292442.581,
+      "cpu_metrics": {
+        "user_ms": 125406.25,
+        "kernel_ms": 239734.375,
+        "total_cpu_ms": 365140.625,
+        "processes": 5275,
+        "active_processes": 0,
+        "page_faults": 34258628,
+        "read_bytes": 767597928,
+        "write_bytes": 392183607,
+        "read_ops": 564699,
+        "write_ops": 363085,
+        "other_ops": 9608815,
+        "other_bytes": 346139739
+      },
+      "start_unix_ns": 1790821939707801300,
+      "end_unix_ns": 1790822232150702000
+    },
+    {
+      "phase": "node-smoke",
+      "status": "passed",
+      "exit_code": 0,
+      "request_to_exit_ms": 1052.3932,
+      "cpu_metrics": {
+        "user_ms": 890.625,
+        "kernel_ms": 312.5,
+        "total_cpu_ms": 1203.125,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 100481,
+        "read_bytes": 91740225,
+        "write_bytes": 53527,
+        "read_ops": 351,
+        "write_ops": 108,
+        "other_ops": 3097,
+        "other_bytes": 99094
+      },
+      "start_unix_ns": 1790822232151734300,
+      "end_unix_ns": 1790822233204508200
+    },
+    {
+      "phase": "npm-smoke",
+      "status": "passed",
+      "exit_code": 0,
+      "request_to_exit_ms": 2174.1572,
+      "cpu_metrics": {
+        "user_ms": 1171.875,
+        "kernel_ms": 1171.875,
+        "total_cpu_ms": 2343.75,
+        "processes": 2,
+        "active_processes": 0,
+        "page_faults": 72464,
+        "read_bytes": 3505910,
+        "write_bytes": 16097,
+        "read_ops": 1222,
+        "write_ops": 199,
+        "other_ops": 80958,
+        "other_bytes": 1398731
+      },
+      "start_unix_ns": 1790822233205425400,
+      "end_unix_ns": 1790822235379875100
+    },
+    {
+      "phase": "audit",
+      "status": "passed",
+      "exit_code": 0,
+      "request_to_exit_ms": 196.4886,
+      "cpu_metrics": {
+        "user_ms": 31.25,
+        "kernel_ms": 203.125,
+        "total_cpu_ms": 234.375,
+        "processes": 4,
+        "active_processes": -1,
+        "page_faults": 20157,
+        "read_bytes": 795110,
+        "write_bytes": 15973,
+        "read_ops": 203,
+        "write_ops": 175,
+        "other_ops": 10989,
+        "other_bytes": 425064
+      },
+      "start_unix_ns": 1790822235380487700,
+      "end_unix_ns": 1790822235577286200
+    },
+    {
+      "phase": "verify",
+      "status": "passed",
+      "exit_code": 0,
+      "request_to_exit_ms": 21726.5945,
+      "cpu_metrics": {
+        "user_ms": 4687.5,
+        "kernel_ms": 16265.625,
+        "total_cpu_ms": 20953.125,
+        "processes": 3,
+        "active_processes": 0,
+        "page_faults": 24479,
+        "read_bytes": 603914085,
+        "write_bytes": 17877,
+        "read_ops": 135119,
+        "write_ops": 193,
+        "other_ops": 1320966,
+        "other_bytes": 35551273
+      },
+      "start_unix_ns": 1790822235578208900,
+      "end_unix_ns": 1790822257305207800
+    }
+  ],
+  "hashes": {
+    "worker.exe": "21699962d131b354cf0108fe790fe2f84df2560935842fd5605e983a93b7ee6f",
+    "init.exe": "f83ccd02d53fce2ff048e57afb684769f0a7501adcb3ad0091b131a01f84aaa7",
+    "rootfs.manifest.json": "65c4c844188db2bd5da8d011fdc4c7577377a973da26f3e1250193d07a2bf6bc",
+    "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+    "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+    "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+    "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+    "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+    "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+    "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+    "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+    "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+    "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+    "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+    "rootfs\\lib\\kinakaze_alloc.so": "84f7e9c0783ea7b50a85dd7233682c9f1bc5f0af9fc997f6def0b222f2f2f0b7",
+    "rootfs\\lib\\kinakaze_elf.so": "fd6537ec7d4aa51361dc32a3017fb4de21b75ec65767f859b68f912e89295b74",
+    "rootfs\\lib\\kinakaze_guest_engine.so": "7105385e8185091656f56564f7d5bcaa7c8e2f1c453bd2bfdeb9fb5a343914c1",
+    "rootfs\\lib\\kinakaze_kernel.so": "5a3b7e39aab9d866009406e2c722048ece76f8f67979fc4f456cea0d186c3fd7",
+    "rootfs\\lib\\kinakaze_tls.so": "a3a29d5553d023a7402f95f14e18577a1edcc1e35f36970d58ef3f20abea30df",
+    "rootfs\\lib\\kinakaze_vfs.so": "c0e6a8d9750fd0a872370ad097fb14947cd0cd34ef035129f9ef99a4d711f705",
+    "rootfs\\lib\\ld-linux-x86-64.so.2": "112ea3099a0dcf61dcbb2831952367fcb5e752a938943cbe62bc9248a6ae095e",
+    "rootfs\\lib\\libasound.so.2": "507543c371520eee2f05616440ffa757d7f187085b8c19cca8842177dc038908",
+    "rootfs\\lib\\libc.so.6": "5f8fafcf6d5253250e52aa6255462afce713483b36135390e00d5661f6bcd673",
+    "rootfs\\lib\\libcuda.so.1": "eef8859aaf322939e15bc9d65f7713e523f2518229212c3fedc34271c35849da",
+    "rootfs\\lib\\libdisplay.so.1": "f5aaa74f8d811863d821bfb83b88d4f90f3efd5d9e6b119664f325d39e52733e",
+    "rootfs\\lib\\libdl.so.2": "e55b7729a8f8dbe460277aba127a6059bc552493fe7c956babdac9fc8ed070f1",
+    "rootfs\\lib\\libEGL.so.1": "d023aeb7a37c01d2906c25445d7de084a666d837ee081390753ee74f3ed185af",
+    "rootfs\\lib\\libGL.so.1": "657b47ce828d678ca711bcaeedba22d461479d483a3d1bd1ce26606be17c9b18",
+    "rootfs\\lib\\libGLESv2.so.2": "1382b6d621a128bb220be7bdd73ed6b1967a5d8a6cd51e3321b0e4b0e2d004a0",
+    "rootfs\\lib\\libGLX.so.0": "a9ceadf9d936437f9bd47705f36549f0b0f192dc17517c8838314c2c710cc090",
+    "rootfs\\lib\\libkinakaze-runtime.so.1": "a1c780d5af7b8a7734b827e449834c1b200fde0da319cb5f74151fe8e8e0a4c7",
+    "rootfs\\lib\\libm.so.6": "f04611d304353df0debfe5e406b5f681d3063ccb17c44b4c5bcb704f371f5632",
+    "rootfs\\lib\\libOpenGL.so.0": "618235ecf17e5733670b554c8586ab21b63f198291f82a474b61a23533c1c04a",
+    "rootfs\\lib\\libpipewire-0.3.so.0": "605e87893158d4b328e86b7012fad01035a634c29c68f636f2725bc214e05001",
+    "rootfs\\lib\\libpthread.so.0": "39d6d227a2ea42f1ab4798502dc2ff2a188d412e6c300f3bdea83825c50785aa",
+    "rootfs\\lib\\libpulse.so.0": "bffcfffad4ad9d6259b53cd2df327b98950b4cdac4d42316048c88c3019810c5",
+    "rootfs\\lib\\libresolv.so.2": "f598deaf03923f924358fbbd0bd73559aaec92a462b0b8db7a81beb9f253d1bc",
+    "rootfs\\lib\\librt.so.1": "365579517e605d431d351aa66c88511fdeffb3e2b0b1714ffb02f8b04530794a",
+    "rootfs\\lib\\libvulkan.so.1": "603fae2ff68cd8e512a15ee1cc7bda4d60dda9a1a78abfb5f6d858fb419d27b3",
+    "rootfs\\lib\\libX11-xcb.so.1": "610abfb870ba0295072d1bdc61c56f430d58b309b8571d1461a1f505c5801e04",
+    "rootfs\\lib\\libX11.so.6": "cf280b795e2b356bc5cb0c15fc19b60b1e6b6fd46208d93c4984b5db7dc7e2a4",
+    "rootfs\\lib\\libxcb.so.1": "6c83852c1c29e88be43058c536e22d3cd21b3a1a782f1f45a8b2d5fad019b88e",
+    "rootfs\\lib\\libXcursor.so.1": "95c14eb18d9eb2bd2ba292df4aec3f3916b48bf58fdfbb136e785e187acc8159",
+    "rootfs\\lib\\libXext.so.6": "ea9ad8f97104edff9c52e056116271bb833d52ef6c564dcb7caf9ad08c950496",
+    "rootfs\\lib\\libXi.so.6": "dbc11c39555d21ab87e31e0776dc12cb723f794f1b9088bca04fa6c556788eb1",
+    "rootfs\\lib\\libXinerama.so.1": "d2e90f0f3c16d770d12b1357f38def058a91322c755f4f46b4dc17fe181da2dc",
+    "rootfs\\lib\\libXrandr.so.2": "2191fdbc169b4a9a0b586ff3c14787d10ce55d09eaa7f5def954cd7480fb7b35",
+    "rootfs\\lib\\libXrender.so.1": "54a90484c236076bb1a9a22cb3a5329fbaae510a5c3afba5501cb5536281b6e1",
+    "rootfs\\lib\\libXxf86vm.so.1": "f2ade032f90e7df5d98c57c9b2acdac97409d2c4aadf0f7e176afcf6b6bce69b",
+    "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+    "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+    "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+    "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+    "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+    "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+    "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+    "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+    "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+    "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+  },
+  "hashes_unchanged": true,
+  "driver": {
+    "exit_code": 0,
+    "report": "F:\\crysoacu2\\artifacts\\node-install-20260930\\r18-cow-integrated-install\\report.json",
+    "quiet_prerequisite": false,
+    "no_compiler_at_start": false,
+    "observer_errors": [],
+    "controller_cpu_seconds": 3.578125,
+    "observer_cpu_seconds": 2.0,
+    "controller_cpu_includes_benchmark": true,
+    "foreign_runtime_workers_tracked": true,
+    "transfer": true,
+    "fork_pool": true,
+    "exec_pool": true,
+    "native_catalog": true,
+    "descriptor_metadata": true,
+    "native_read_open": true,
+    "native_read_relative": true,
+    "native_exclusive_create": true,
+    "native_write_open": true,
+    "diagnostics": false,
+    "foreign_membership_rechecked": true,
+    "harness_hashes": {
+      "benchmark-node-install.py": "858040187be730dbe2dfa77a4f785d3bff8651a0597b451fc74456df25437f88",
+      "init_pool.py": "5d0789ffe19fd1044127e2dba740f507ee3510ae484f713bbbd9ca83715d8187",
+      "init_controller.py": "8e28cba17d242b5fc62262aa72818bd28e41ae29c3374ab713de5c640e50838a",
+      "session_process.py": "cb68810e9f0f62299345991226f32d93eabececf145d49dfd5787942b94d4d10",
+      "process_sample.py": "69fc63a9f5fc5a0fbbedb212b01bad560af702680d9f6ec30321b7470fb83ded"
+    },
+    "harness_unchanged": true
+  },
+  "host": {
+    "samples": 288,
+    "median_cpu_percent": 51.5,
+    "samples_with_compiler": 288,
+    "samples_with_foreign_runtime": 283,
+    "observed_competitor_cpu_seconds": 736.890625
+  },
+  "evidence": {
+    "build-r18-cow-integrated.py": "3ea6af9203b04898b445fa81867adb765ffad39118be1717cd6169a3c268774e",
+    "prepare-r18-cow-integrated.py": "de68a783e29608374455f059483cee76b29de68cec98ed67a90604c5a8dcdd7f",
+    "r18-cow-integrated-build.json": "1b42fc52b87c07234b7019dfbe4821962994bf0d071f60cb15f0fdfeef5ff54a",
+    "r18-cow-integrated-source.zip": "16892e61291d567405ecc8b77ebcfafea904b9361978c77dfbbf1fa41c4277ec",
+    "r18-cow-integrated-workspace.jsonl": "1d071771a66420cc1b8437ee4364102693e38dbcb12b9002ee4d89f210e76cad",
+    "r18-cow-integrated-workspace.log": "e77850862505034e05f94b329d07b790c35b71400cad64b11deca30afe730b5f",
+    "r18-cow-integrated-entry.jsonl": "8f38f2fd0746dfc57d5b714ecbff28e00d2f8cb004d9129bae1adf7a32e1edea",
+    "r18-cow-integrated-entry.log": "a58a7822e22f5f9a949095cf5e2189dcdded99435193789598a16b73f325b4b1",
+    "r18-cow-integrated-exports.jsonl": "c9000c55abf695a2efa2ff3d6d17d2efa6c5cdc3280f9bbbc6b784aa493aa80d",
+    "r18-cow-integrated-package.jsonl": "79d02b686aa0ee61e7e9502bf8a1ba96e6194c1a160c7e20877c1bcea9120f22",
+    "r18-cow-integrated-setup.json": "dded06140a0542c3220682e934ff3247067e66d0188ff7c32c3b4731b388057f",
+    "r18-cow-integrated-setup.log": "aec85bc0000a2a62977a8fdec2cc3cecd62d3ae1ebc9d4327bd1e87df0fbcaf2",
+    "check-r18-cow-guests.py": "944bfea1d38315792a2ad195b52759116e90c333c2f5d238cfab4abff11d8689",
+    "r18-cow-guest-results.json": "d048ed63329d6ac89498bafe72851076f6a5bfbaace6f0443c5ea3e481c8bc57",
+    "r18-cow-guests/results.json": "e69f15fed7d738a3df383989f36eb8a6097157138ef42a8ddffb7d5fa29a696f",
+    "r18-cow-integrated-install.py": "1ff778b82df9a294caf25842a039de802f4c1d2b055e3f42bf542dfa95335c67",
+    "r18-cow-integrated-install.json": "a64cd0b88c9da618615279375b79d80643a61e9f059a6770ef235ff408bd3234",
+    "r18-cow-integrated-quiet.json": "c2bddd3c0dbe31eb4c658b872155cebcce0070ea97bae62ba8523e9ecbc3b2da",
+    "r18-cow-integrated-host.jsonl": "19a857b7bf71795a0d8fe75b436e02a3ef24563b5d637aaefdebf7877885cfb7",
+    "record-r18-cow-integrated.py": "43d46c14c45a5e381fece1f768ecf7cb19d14d1c65bb06cc08b1a6e421d2fda6",
+    "correct-r18-r19-debconf-acceptance.py": "206e33228e47456ad6dfcb325eb05c4e1440248fc23042d65728b5ea07100c24"
+  },
+  "raw_report_sha256": "9b9963cce92ea86989f07c97705040fc7464bc685efd81e25a28add6cc8e2dc8",
+  "limitations": "One complete integrated observation, not a same-source isolated attribution or a guarantee across host states. Downloads and verification are separate. All package scripts, triggers and synchronization are enabled. Own builds, setup and probes finish before the timed installation. Foreign process sampling can miss short-lived work. The preceding R17 package attempt omitted import libraries and failed before publication; R18 freezes its complete Cargo DLL/import-library graph before packaging.",
+  "historical_harness_passed": true,
+  "current_acceptance_passed": false,
+  "debconf_preconfiguration_errors": [
+    "E: Cannot get debconf version. Is debconf installed?",
+    "debconf: apt-extracttemplates failed: Inappropriate ioctl for device"
+  ],
+  "debconf_stderr_sha256": "4bf17335b950fa7726b0a6161a0b173e0e9a54d8f8db06326c7df5f1e7421f78",
+  "historical_non_equivalent_best_install_ms": 185596.8295,
+  "best_verified_working_preconfiguration_reference": "goal180-r10-integrated-2026-10-01.json",
+  "acceptance_update": "The frozen original seed failed debconf template extraction. The historical harness did not reject those errors. Installation phases, Node/npm, audit and installed-file checks passed, but this observation does not pass the current working-preconfiguration acceptance criterion. Its raw report is unchanged. The historical 185.597-second result uses the same failing seed and is not a comparable complete-work baseline.",
+  "acceptance_update_commit": "f084697cfc03a3b7c414d4cdf517ab80e98108e3",
+  "best_verified_working_preconfiguration_install_ms": 215414.9167
+}
