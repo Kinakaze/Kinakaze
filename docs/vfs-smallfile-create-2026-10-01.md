@@ -56,3 +56,9 @@ python tools/benchmark-npm-smallfiles.py --root <已安装 Node/npm 的 guest ro
 ```
 
 原始构建、冻结分发、逐轮报告和 guest 日志保存在 `artifacts/vfs-smallfile-create-20261001/`。版本化摘要及报告摘要哈希见 [测量记录](measurements/vfs-smallfile-create-2026-10-01.json)。
+
+## 与最新 main 的集成验证
+
+集成源码图 `ae46ed7` 合入 main `bc98351`，保留双方的 benchmark 入口。完整 workspace release 构建通过并冻结全部 38 项构件；在该构建上再次通过六个 guest 回归。普通创建回归新增新建文件的 `readv/writev`、dup 共享偏移、rename/unlink 后继续读写的组合检查，均通过。
+
+集成构建还使用相同 256 个 tarball 完成一次独立 npm 安装，8,704 文件哈希、256 个 lockfile 条目及 postinstall 标记全部正确。该次仅验证兼容性，不计入前面的新旧性能对照；前述五轮测量仍明确属于 `4720b46` 加本轮改动的冻结队列。集成生产映像未检出新创建或向量 I/O 的测试开关字符串。

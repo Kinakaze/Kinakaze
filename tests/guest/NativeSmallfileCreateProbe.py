@@ -50,6 +50,21 @@ try:
     os.close(descriptor)
     assert open('payload', 'rb').read() == b'truncated+appended'
 
+    descriptor = os.open('vector-created', flags | os.O_TRUNC, 0o600)
+    assert os.writev(descriptor, [b'left', bytearray(b'center'), memoryview(b'!right')[1:]]) == 15
+    duplicate = os.dup(descriptor)
+    os.lseek(duplicate, 0, os.SEEK_SET)
+    buffers = [bytearray(4), bytearray(6), bytearray(5)]
+    assert os.readv(descriptor, buffers) == 15
+    assert b''.join(buffers) == b'leftcenterright'
+    assert os.lseek(duplicate, 0, os.SEEK_CUR) == 15
+    os.rename('vector-created', 'vector-moved')
+    os.unlink('vector-moved')
+    assert os.writev(duplicate, [b'+', b'retained']) == 9
+    assert os.pread(descriptor, 32, 0) == b'leftcenterright+retained'
+    os.close(duplicate)
+    os.close(descriptor)
+
     os.symlink('payload', 'existing-link')
     descriptor = os.open('existing-link', flags | os.O_TRUNC, 0o777)
     os.write(descriptor, b'followed')

@@ -656,5 +656,68 @@
     "smallfile-0253.tgz": "1946af45b68240f8ef157286763595b2d0dd977d795035eaa72cd8c0defb09a1",
     "smallfile-0254.tgz": "84f984ca9678d353ece2f49ff03819676563afc64f6413e340a1c758e5645af5",
     "smallfile-0255.tgz": "7c6be873b8b62b74823e947275cb97e7ee024657a346ec756d08c973e3dbd912"
+  },
+  "integration": {
+    "source": "ae46ed732495dfdfa66a00ae50db4fb0a44f6d4a",
+    "parents": [
+      "b77d25d",
+      "bc98351"
+    ],
+    "production": {
+      "kinakaze_vfs.so": {
+        "KINAKAZE_TEST_NATIVE_CREATE_NONEXCL": false,
+        "SMALLFILE_CREATE_BENCH": false
+      },
+      "libc.so.6": {
+        "KINAKAZE_TEST_FILE_VECTOR_OPT": false
+      }
+    },
+    "staged": 38,
+    "guest": [
+      {
+        "probe": "NativeSmallfileCreateProbe",
+        "status": "passed",
+        "exit_code": 0
+      },
+      {
+        "probe": "NativeExclusiveCreateProbe",
+        "status": "passed",
+        "exit_code": 0
+      },
+      {
+        "probe": "ExclusiveCreatePermissionsProbe",
+        "status": "passed",
+        "exit_code": 0
+      },
+      {
+        "probe": "NativeWriteOpenProbe",
+        "status": "passed",
+        "exit_code": 0
+      },
+      {
+        "probe": "RelativeNativeWriteProbe",
+        "status": "passed",
+        "exit_code": 0
+      },
+      {
+        "probe": "NativePermissionProbe",
+        "status": "passed",
+        "exit_code": 0
+      }
+    ],
+    "npm": {
+      "passed": true,
+      "verified_files": 8704,
+      "lifecycle_scripts": true,
+      "wall_ms": 42138.9466,
+      "used_in_comparison": false
+    },
+    "reports_sha256": {
+      "integrated-build.jsonl": "9d53ca6f165f94ef2728c679761865d49fff7c15252b8915bd737b7d01c0158c",
+      "integrated-stage.json": "d41439ad9a52a45927ff7911c64bf47dee6044f59badfcf9e5015d4882279468",
+      "guest-integrated/report.json": "93a8745ea51789d8fda80ea6fefb78264852de8d36e6c8853c7ff0154d69dadc",
+      "npm-integrated.json": "5c22f9948db950d6cb70a4b6e01bca402dbfd39dd334907707a195f5c7509e35",
+      "integrated-production-check.json": "0ce374249192d25b7e5f489257fae03a2a3c00de336bacc0da9ea44ab633f203"
+    }
   }
 }
