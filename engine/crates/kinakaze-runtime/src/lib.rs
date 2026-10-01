@@ -2519,7 +2519,6 @@ pub mod job {
     const FD_LINK_CAPACITY: usize = 8192;
     const FD_LINK_TARGET_CAPACITY: usize = 1024;
     const FD_LINK_SIZE: usize = 16;
-    const FD_LINK_LEGACY_SIZE: usize = FD_LINK_SIZE + FD_LINK_TARGET_CAPACITY;
     const FD_LINKS_OFFSET: usize = SLOTS_OFFSET + CAPACITY * SLOT_SIZE;
     const FD_LINK_TARGETS_OFFSET: usize = FD_LINKS_OFFSET + FD_LINK_CAPACITY * FD_LINK_SIZE;
     const PID_NAMESPACES_OFFSET: usize =
@@ -2919,17 +2918,9 @@ pub mod job {
                     HEADER_FD_LINK_TARGET_CAPACITY,
                     FD_LINK_TARGET_CAPACITY as u32,
                 );
-                // The first creator selects the layout for the whole domain.
-                // Later processes follow this header, not their environment.
-                // Retain the interleaved layout for same-binary comparisons.
-                let stride = if std::env::var_os("KINAKAZE_COMPACT_FD_LINKS")
-                    .is_some_and(|value| value == "0")
-                {
-                    FD_LINK_LEGACY_SIZE
-                } else {
-                    FD_LINK_SIZE
-                };
-                store32(base, HEADER_FD_LINK_STRIDE, stride as u32);
+                // Reject the former interleaved experimental layout before
+                // any descriptor-link slot can be accessed.
+                store32(base, HEADER_FD_LINK_STRIDE, FD_LINK_SIZE as u32);
                 // The magic is published last so a concurrent opener never sees
                 // it set over a half-written header.
                 store64(base, HEADER_MAGIC, MAGIC);
@@ -2946,10 +2937,7 @@ pub mod job {
                 && load32(base, HEADER_INDEX_CAPACITY) == INDEX_CAPACITY as u32
                 && load32(base, HEADER_FD_LINK_CAPACITY) == FD_LINK_CAPACITY as u32
                 && load32(base, HEADER_FD_LINK_TARGET_CAPACITY) == FD_LINK_TARGET_CAPACITY as u32
-                && matches!(
-                    load32(base, HEADER_FD_LINK_STRIDE) as usize,
-                    FD_LINK_SIZE | FD_LINK_LEGACY_SIZE
-                )
+                && load32(base, HEADER_FD_LINK_STRIDE) == FD_LINK_SIZE as u32
         };
         // PID allocation and namespace records belong to the init session,
         // including intervals with no worker holding a mapping handle.
@@ -3096,14 +3084,7 @@ pub mod job {
     /// [`FD_LINK_CAPACITY`].
     unsafe fn fd_link_slot(base: *mut u8, index: usize) -> *mut u8 {
         // SAFETY: forwarded from this function's contract.
-        let stride = if unsafe { load32(base, HEADER_FD_LINK_STRIDE) } as usize
-            == FD_LINK_LEGACY_SIZE
-        {
-            FD_LINK_LEGACY_SIZE
-        } else {
-            FD_LINK_SIZE
-        };
-        unsafe { base.add(FD_LINKS_OFFSET + index * stride) }
+        unsafe { base.add(FD_LINKS_OFFSET + index * FD_LINK_SIZE) }
     }
 
     /// Keep scan/hash headers dense: most process operations need no pathname
@@ -3113,9 +3094,6 @@ pub mod job {
     /// # Safety
     /// `base` is a validated mapping and `record` is one of its fd-link slots.
     unsafe fn fd_link_target(base: *mut u8, record: *mut u8) -> *mut u8 {
-        if unsafe { load32(base, HEADER_FD_LINK_STRIDE) } as usize == FD_LINK_LEGACY_SIZE {
-            return unsafe { record.add(FD_LINK_SIZE) };
-        }
         let index = (record as usize - base as usize - FD_LINKS_OFFSET) / FD_LINK_SIZE;
         unsafe { base.add(FD_LINK_TARGETS_OFFSET + index * FD_LINK_TARGET_CAPACITY) }
     }

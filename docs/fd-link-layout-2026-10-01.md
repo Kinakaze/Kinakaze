@@ -1,5 +1,9 @@
 # Compact shared descriptor-link headers
 
+Production now retains only the compact layout; the legacy route and
+environment switch described in this historical comparison were removed.
+See the [selection and full-install measurements](fd-link-layout-selection-2026-10-01.md).
+
 The process table now keeps its 8,192 descriptor-link headers contiguous,
 with the existing 1,024-byte pathname slots in a separate region. A newly
 mapped process can scan 128 KiB of headers without touching the pathname
