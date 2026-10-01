@@ -89,6 +89,9 @@ print(json.dumps({"ssl":ssl.OPENSSL_VERSION}))' ''')
     add('sysusers', 'systemd-sysusers --dry-run basic.conf systemd-journal.conf '
         'systemd-network.conf', ['/bin/systemd-sysusers'])
     add('process-limits', 'python3 ProcessLimitsProbe.py')
+    add('process-priority', 'python3 ProcessPriorityProbe.py')
+    add('scanf-allocation', 'gcc -O2 ScanfAllocationProbe.c -o scanf-allocation; '
+        './scanf-allocation | grep -q SCANF_ALLOCATION_OK', ['/usr/bin/gcc'])
     add('child-signals', 'python3 ChildSignalProbe.py')
     add('shared-listener', 'python3 SharedListenerProbe.py')
     add('shared-socket-waits', 'python3 SharedSocketWaitProbe.py')
@@ -280,7 +283,7 @@ if(json_decode(json_encode(["x"=>42]),true)["x"]!=42) exit(2); echo "PHP_OK\\n";
                 guest = '/tmp/common-workloads-' + uuid.uuid4().hex
                 stage = root / guest.lstrip('/')
                 stage.mkdir(parents=True)
-                for fixture in ('InterpreterCommandProbe.py', 'CompilerRuntimeProbe.c', 'AbortStatusProbe.c', 'PosixSemaphoreProbe.c', 'DeepBindProbe.c', 'ExecutableTlsProbe.c', 'StatfsBoundaryProbe.py', 'StandardHandleLifetimeProbe.py', 'NativePermissionProbe.py', 'DirectoryTypeProbe.py', 'DirectoryCursorProbe.py', 'MetadataPathProbe.py', 'ProcessLimitsProbe.py', 'ChildSignalProbe.py', 'SharedListenerProbe.py', 'SharedSocketWaitProbe.py', 'PamRuntimeProbe.py', 'NodeRuntimeProbe.js',
+                for fixture in ('InterpreterCommandProbe.py', 'CompilerRuntimeProbe.c', 'ScanfAllocationProbe.c', 'AbortStatusProbe.c', 'PosixSemaphoreProbe.c', 'DeepBindProbe.c', 'ExecutableTlsProbe.c', 'StatfsBoundaryProbe.py', 'StandardHandleLifetimeProbe.py', 'DirectoryTypeProbe.py', 'NativePermissionProbe.py', 'DirectoryCursorProbe.py', 'MetadataPathProbe.py', 'ProcessLimitsProbe.py', 'ProcessPriorityProbe.py', 'ChildSignalProbe.py', 'SharedListenerProbe.py', 'SharedSocketWaitProbe.py', 'PamRuntimeProbe.py', 'NodeRuntimeProbe.js',
                                 'BunAgentFilesystemProbe.js', 'BunAgentSubprocessProbe.js', 'SysvProcProbe.py', 'CondReacquireNotifyProbe.c', 'CppFutureProbe.cpp', 'RawEpollCreateProbe.py', 'MariadbRuntimeProbe.py', 'SqliteProcessBoundaryProbe.py', 'FfmpegRuntimeProbe.py', 'JavaRuntimeProbe.java',
                                 'NamedSemaphoreProbe.c', 'MultiprocessingProbe.py', 'ForkDlopenProbe.c', 'IgnoredSignalIoProbe.c', 'PpollSignalProbe.c', 'AccountForkProbe.c', 'AccountStreamProbe.c', 'PathAccessProbe.py', 'PathReferenceProbe.py', 'RootResolutionProbe.py', 'GlobCallbackProbe.c', 'TmpfilesProbe.py', 'XattrLifetimeProbe.py',
                                 'NginxRuntimeProbe.py', 'RedisRuntimeProbe.py', 'PostgresqlRuntimeProbe.py', 'DescriptorDuplicationProbe.py', 'DatagramRightsProbe.py', 'UnixListenerCustodyProbe.py', 'UnixSocketOptionsProbe.py', 'TmpfsMappingProbe.py', 'TmpfsEofProbe.c', 'NamespaceServicesProbe.py'):

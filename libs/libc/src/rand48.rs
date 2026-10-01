@@ -375,17 +375,21 @@ unsafe extern "system" fn fork_child(input: *const u8, length: usize) -> i32 {
 }
 
 extern "C" fn register_fork_state() {
-    let _ = unsafe { kinakaze_runtime::register_fork_participant_without_inherited_handles(kinakaze_runtime::ForkParticipant {
-        abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
-        // User pthread prepare handlers (1000) run first; parent/child random
-        // state is released/restored before those user callbacks run again.
-        priority: 500,
-        key: FORK_MAGIC,
-        prepare: Some(fork_prepare),
-        snapshot: Some(fork_snapshot),
-        parent: Some(fork_parent),
-        child: Some(fork_child),
-    }) };
+    let _ = unsafe {
+        kinakaze_runtime::register_fork_participant_without_inherited_handles(
+            kinakaze_runtime::ForkParticipant {
+                abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
+                // User pthread prepare handlers (1000) run first; parent/child random
+                // state is released/restored before those user callbacks run again.
+                priority: 500,
+                key: FORK_MAGIC,
+                prepare: Some(fork_prepare),
+                snapshot: Some(fork_snapshot),
+                parent: Some(fork_parent),
+                child: Some(fork_child),
+            },
+        )
+    };
 }
 
 #[used]

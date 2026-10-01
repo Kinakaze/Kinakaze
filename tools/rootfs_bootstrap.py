@@ -44,6 +44,18 @@ def configure_service_dispatch(files):
         files[path] = files[path].replace(b'`basename $0`', b'${0##*/}')
 
 
+def preserve_debconf_extractor(files, overlays):
+    # The manifest supplies the adapted entry point; preserve Debian's ELF
+    # before configuration overlays replace the public command.
+    path = 'usr/bin/apt-extracttemplates'
+    original = 'usr/lib/kinakaze/apt-extracttemplates'
+    if path not in overlays:
+        return
+    if original in files or not files.get(path, b'').startswith(b'\x7fELF'):
+        raise ValueError('unexpected apt-extracttemplates payload')
+    files[original] = files[path]
+
+
 def configure_standard(files, links, preset):
     configure_pam(files)
     configure_service_dispatch(files)

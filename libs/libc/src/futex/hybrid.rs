@@ -26,7 +26,7 @@ thread_local! {
 
 pub(super) fn park_name(domain: u64, host: u32, thread: u32, born: u64) -> Vec<u16> {
     wide(&format!(
-        r"Local\kinakaze.futex.park.v4.{domain:016x}.{host:08x}.{thread:08x}.{born:016x}"
+        r"Local\kinakaze.futex.park.v5.{domain:016x}.{host:08x}.{thread:08x}.{born:016x}"
     ))
 }
 
@@ -150,7 +150,7 @@ impl Transaction {
                     continue;
                 }
                 let record = self.records[index];
-                if record.pi_wait() {
+                if record.special_wait() {
                     self.records.extend(transfers);
                     return Err(kinakaze_vfs::EINVAL);
                 }
@@ -173,7 +173,7 @@ impl Transaction {
             if error.is_some() || moved >= count || record.metadata() || record.key != source {
                 return true;
             }
-            if record.pi_wait() {
+            if record.special_wait() {
                 error = Some(kinakaze_vfs::EINVAL);
                 return true;
             }
@@ -196,9 +196,8 @@ impl Transaction {
     /// true: removed a still-queued token; false: a wake already selected it.
     pub(crate) fn cancel(&mut self, token: u64) -> bool {
         let length = self.records.len();
-        self.records.retain(|record| {
-            (record.metadata() && record.reserved & pi::LINK == 0) || record.token != token
-        });
+        self.records
+            .retain(|record| record.metadata() || record.token != token);
         let removed = self.records.len() != length;
         self.dirty |= removed;
         removed

@@ -13,18 +13,24 @@ use windows_sys::Win32::System::Threading::{
 pub(super) const WAIT: u32 = 1 << 30;
 pub(super) const STATE: u32 = 1 << 29;
 pub(super) const JOURNAL: u32 = 1 << 28;
-pub(super) const SOURCE: u32 = 1 << 26;
-pub(super) const LINK: u32 = 1 << 25;
+pub(super) const REQUEUE: u32 = 1 << 26;
+pub(super) const TARGET: u32 = 1 << 25;
+pub(super) const SOURCE_JOURNAL: u32 = 1 << 23;
+pub(crate) const RETRY: i32 = i32::MAX;
+const NO_WAITERS: u32 = 1 << 24;
 pub(crate) mod pthread;
-pub(crate) mod requeue;
-const PINNED: u32 = 1 << 24;
+const PINNED: u32 = 1 << 22;
 const DEAD: u32 = 1 << 27;
 const WAITERS: u32 = 1 << 31;
 const OWNER_DIED: u32 = 1 << 30;
 const TID_MASK: u32 = OWNER_DIED - 1;
 const ESRCH: i32 = 3;
 const TASK_CAPACITY: usize = 4096;
-const TASK_MAGIC: u64 = u64::from_le_bytes(*b"CYFPI003");
+const TASK_MAGIC: u64 = u64::from_le_bytes(*b"CYFPI004");
+pub(crate) mod requeue;
+pub(crate) use requeue::{
+    RequeueStatus, compare_requeue, enqueue_requeue, poll_requeue, retire_requeue,
+};
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -194,7 +200,7 @@ impl Tasks {
                 PAGE_READWRITE,
                 0,
                 TASK_SIZE as u32,
-                wide(&format!(r"Local\kinakaze.futex.pi.tasks.v3.{domain:016x}")).as_ptr(),
+                wide(&format!(r"Local\kinakaze.futex.pi.tasks.v4.{domain:016x}")).as_ptr(),
             )
         })?;
         let view = unsafe { MapViewOfFile(section.0, FILE_MAP_ALL_ACCESS, 0, 0, TASK_SIZE) };
@@ -373,7 +379,7 @@ fn retire(task: Registered) {
         .map(|row| row.token)
         .collect();
     transaction.records.retain(|record| {
-        !((record.pi_wait() || record.reserved & LINK != 0)
+        !((record.special_wait() || record.reserved & TARGET != 0)
             && Identity::from(*record) == task.identity
             && !journal_tokens.contains(&record.token))
     });
@@ -548,10 +554,11 @@ fn top(transaction: &Transaction, key: Key) -> Option<Record> {
         .records
         .iter()
         .copied()
-        .find(|record| record.key == key && !record.metadata() && !record.dead())
-    // All admitted guest scheduling policies are OTHER/0. Linux clamps
-    // non-RT futex queue priorities to the same band and keeps FIFO order.
-    // Native donation below does not invent Linux FIFO/RR admission.
+        .filter(|record| record.key == key && !record.metadata() && !record.dead())
+        // All admitted guest scheduling policies are OTHER/0. Linux clamps
+        // non-RT futex queue priorities to the same band and keeps FIFO order.
+        // Native donation below does not invent Linux FIFO/RR admission.
+        .next()
 }
 
 fn cycle(transaction: &Transaction, waiting: Identity, mut owner: Identity) -> bool {
@@ -597,6 +604,7 @@ fn prune(transaction: &mut Transaction, key: Key) {
         .iter()
         .find(|record| record.key == key && record.reserved & JOURNAL != 0)
         .map(|record| record.token);
+    let before = transaction.records.len();
     let dead: Vec<u64> = transaction
         .records
         .iter()
@@ -605,9 +613,9 @@ fn prune(transaction: &mut Transaction, key: Key) {
         })
         .map(|record| record.token)
         .collect();
-    let before = transaction.records.len();
     transaction.records.retain(|record| {
-        !((record.pi_wait() || record.reserved & LINK != 0) && dead.contains(&record.token))
+        !(record.key == key && record.pi_wait() && dead.contains(&record.token))
+            && !(record.reserved & TARGET != 0 && dead.contains(&record.token))
     });
     transaction.dirty |= before != transaction.records.len();
 }
@@ -636,12 +644,32 @@ fn finish_journal(transaction: &mut Transaction, key: Key, address: usize) -> Re
         } else {
             0
         }
-        | WAITERS
+        | if journal.reserved & NO_WAITERS == 0 {
+            WAITERS
+        } else {
+            0
+        }
         | waiter.bitset;
     #[cfg(test)]
     tests::crash_at("before-cas");
-    let observed = atomic_word::compare_exchange(address, journal.bitset, desired)?;
+    let proxy = transaction
+        .records
+        .iter()
+        .any(|record| record.token == journal.token && record.reserved & SOURCE_JOURNAL != 0);
+    let observed = match atomic_word::compare_exchange(address, journal.bitset, desired) {
+        Ok(value) => value,
+        Err(error) => {
+            if proxy {
+                requeue::rollback_proxy(transaction, key, journal.token);
+            }
+            return Err(error);
+        }
+    };
     if observed != journal.bitset && observed != desired {
+        if proxy {
+            requeue::rollback_proxy(transaction, key, journal.token);
+            return Err(RETRY);
+        }
         return Err(EINVAL);
     }
     #[cfg(test)]
@@ -666,9 +694,10 @@ fn finish_journal(transaction: &mut Transaction, key: Key, address: usize) -> Re
     if !found {
         return Err(EINVAL);
     }
-    transaction
-        .records
-        .retain(|record| !(record.key == key && record.reserved & JOURNAL != 0));
+    transaction.records.retain(|record| {
+        !(record.key == key && record.reserved & JOURNAL != 0)
+            && !(record.token == journal.token && record.reserved & SOURCE_JOURNAL != 0)
+    });
     transaction.dirty = true;
     transaction.commit();
     #[cfg(test)]
@@ -751,7 +780,7 @@ pub(crate) fn acquire(
             return Err(EDEADLK);
         }
         let queued = top(transaction, key);
-        if queued.is_some_and(|record| !record.pi_wait() || record.reserved & SOURCE != 0) {
+        if queued.is_some_and(|record| !record.pi_wait()) {
             return Err(EINVAL);
         }
         if queued.is_none() {
@@ -841,7 +870,7 @@ pub(crate) fn unlock(
     let had_state = state(transaction, key).is_some();
     let queued = top(transaction, key);
     if let Some(next) = queued {
-        if !next.pi_wait() || next.reserved & SOURCE != 0 {
+        if !next.pi_wait() {
             return Err(EINVAL);
         }
         let state = state(transaction, key).ok_or(EINVAL)?;

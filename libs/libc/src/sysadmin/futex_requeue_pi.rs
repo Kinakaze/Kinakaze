@@ -1,25 +1,30 @@
-//! The source sleep and PI destination share one domain guard. A source signal
-//! restarts with freshly copied arguments; after migration it returns EAGAIN.
+//! WAIT_REQUEUE_PI/CMP_REQUEUE_PI entry and signal boundaries. Source and
+//! destination queues use one domain transaction before the local queue lock.
+
 use super::*;
-use crate::futex::{
-    Key, Transaction,
-    pi::{
-        self,
-        requeue::{self, Progress},
-    },
-};
+use crate::futex::pi::{self, RequeueStatus};
 use kinakaze_vfs::{EIO, interrupt, signal};
 use windows_sys::Win32::Foundation::{WAIT_OBJECT_0, WAIT_TIMEOUT};
 use windows_sys::Win32::System::Threading::INFINITE;
+
+fn write_key(word: *mut c_int, private: bool) -> Result<FutexAddress, i64> {
+    let address = FutexAddress::resolve(word, private)?;
+    // Linux PRIVATE keys use access_ok and alignment, not a mapped-page/write
+    // probe. Shared keys pin the destination for write before any value check.
+    if !private {
+        futex_access(word as usize, 4, true)?;
+    }
+    Ok(address)
+}
 
 fn begin(
     source: FutexAddress,
     target: FutexAddress,
 ) -> Result<
     (
-        Transaction,
-        Key,
-        Key,
+        crate::futex::Transaction,
+        crate::futex::Key,
+        crate::futex::Key,
         std::sync::MutexGuard<'static, FutexQueue>,
     ),
     i32,
@@ -29,7 +34,7 @@ fn begin(
     if source.shared.is_none() || target.shared.is_none() {
         FUTEX_PRIVATE_BRIDGED.store(true, Ordering::Release);
     }
-    let mut transaction = Transaction::begin()?;
+    let mut transaction = crate::futex::Transaction::begin()?;
     let mut queues = futex_queues().lock().unwrap_or_else(|e| e.into_inner());
     let count = [source, target]
         .into_iter()
@@ -45,36 +50,68 @@ fn begin(
     Ok((transaction, source_key, target_key, queues))
 }
 
-pub(super) fn transfer(
-    source: FutexAddress,
-    target: FutexAddress,
+pub(super) fn compare(
+    source: *mut c_int,
+    target: *mut c_int,
+    private: bool,
     expected: u32,
     count: u32,
 ) -> i64 {
     let result = (|| {
-        let (mut transaction, source_key, target_key, _queues) = begin(source, target)?;
-        // The mandatory first waiter moves even when the extra count is zero.
-        requeue::transfer(
+        let source = FutexAddress::resolve(source, private).map_err(|error| -error as i32)?;
+        let target = write_key(target, private).map_err(|error| -error as i32)?;
+        let (mut transaction, key, target_key, _queues) = begin(source, target)?;
+        pi::compare_requeue(
             &mut transaction,
-            source_key,
-            target_key,
+            key,
             source.word as usize,
+            target_key,
             target.word as usize,
             expected,
-            count + 1,
+            count,
         )
     })();
-    result.map_or_else(|error| -i64::from(error), i64::from)
+    result.map_or_else(
+        |error| {
+            if error == pi::RETRY {
+                futex_pi::RESTART
+            } else {
+                -i64::from(error)
+            }
+        },
+        i64::from,
+    )
 }
 
 pub(super) fn wait(
-    source: FutexAddress,
-    target: FutexAddress,
+    source: *mut c_int,
+    target: *mut c_int,
+    private: bool,
     expected: u32,
     deadline: futex_deadline::Prepared,
 ) -> i64 {
-    attempt(source, target, expected, deadline).unwrap_or_else(|error| -i64::from(error))
+    // sys_futex has copied the timeout before this same-VA refusal. Resolve the
+    // destination first; same-key aliases are checked after the source value.
+    if source == target {
+        return -i64::from(EINVAL);
+    }
+    let target = match write_key(target, private) {
+        Ok(target) => target,
+        Err(error) => return error,
+    };
+    let source = match FutexAddress::resolve(source, private) {
+        Ok(source) => source,
+        Err(error) => return error,
+    };
+    attempt(source, target, expected, deadline).unwrap_or_else(|error| {
+        if error == pi::RETRY {
+            futex_pi::RESTART
+        } else {
+            -i64::from(error)
+        }
+    })
 }
+
 fn attempt(
     source: FutexAddress,
     target: FutexAddress,
@@ -88,19 +125,18 @@ fn attempt(
     if interrupt.is_null() {
         return Err(EIO);
     }
-    let (mut transaction, source_key, target_key, queues) = begin(source, target)?;
-    let token = requeue::enqueue(
+    let (mut transaction, key, target_key, queues) = begin(source, target)?;
+    let token = pi::enqueue_requeue(
         &mut transaction,
-        source_key,
-        target_key,
+        key,
         source.word as usize,
         expected,
+        target_key,
         tid,
     )?;
     drop(queues);
     drop(transaction);
     signal::register_waiter();
-    let mut target_observed = false;
     let outcome = loop {
         let pending = signal::interrupt_pending();
         let expired = deadline
@@ -110,52 +146,48 @@ fn attempt(
             Ok(value) => value,
             Err(error) => break Err(error),
         };
-        let progress = match requeue::poll_waiter(
+        let stage = match pi::poll_requeue(
             &mut transaction,
+            key,
             target_key,
             target.word as usize,
             token,
             pending || expired,
-            !target_observed,
         ) {
-            Ok(value) => value,
+            Ok(stage) => stage,
             Err(error) => {
-                pi::cancel_error(&mut transaction, target_key, token);
+                pi::retire_requeue(&mut transaction, target_key, token);
                 break Err(error);
             }
         };
-        let owner = match progress {
-            Progress::Owned => break Ok(0),
-            Progress::Source => {
-                if expired {
-                    break Err(ETIMEDOUT);
+        if matches!(stage, RequeueStatus::Owned) {
+            break Ok(0);
+        }
+        if expired {
+            break Err(ETIMEDOUT);
+        }
+        if pending {
+            break if matches!(stage, RequeueStatus::Source) {
+                Ok(futex_pi::RESTART)
+            } else {
+                Err(EAGAIN)
+            };
+        }
+        let owner = if matches!(stage, RequeueStatus::Moved) {
+            match pi::owner_handle(&transaction, target_key) {
+                Ok(owner) => Some(owner),
+                Err(3) => {
+                    drop(queues);
+                    drop(transaction);
+                    continue;
                 }
-                if pending {
-                    break Ok(futex_pi::RESTART);
-                }
-                None
-            }
-            Progress::Queued => {
-                target_observed = true;
-                if expired {
-                    break Err(ETIMEDOUT);
-                }
-                if pending {
-                    break Err(EAGAIN);
-                }
-                match pi::owner_handle(&transaction, target_key) {
-                    Ok(owner) => Some(owner),
-                    Err(3) => {
-                        drop(queues);
-                        drop(transaction);
-                        continue;
-                    }
-                    Err(error) => {
-                        pi::cancel_error(&mut transaction, target_key, token);
-                        break Err(error);
-                    }
+                Err(error) => {
+                    pi::retire_requeue(&mut transaction, target_key, token);
+                    break Err(error);
                 }
             }
+        } else {
+            None
         };
         drop(queues);
         drop(transaction);
@@ -169,22 +201,15 @@ fn attempt(
         let handles = [
             park,
             interrupt,
-            owner
-                .as_ref()
-                .map_or(core::ptr::null_mut(), |owner| owner.raw()),
+            owner.as_ref().map_or(park, |owner| owner.raw()),
         ];
-        let status = unsafe {
-            kinakaze_vfs::deadline_wait::any(
-                &handles[..if owner.is_some() { 3 } else { 2 }],
-                milliseconds,
-            )
-        };
+        let handles = &handles[..if owner.is_some() { 3 } else { 2 }];
+        let status = unsafe { kinakaze_vfs::deadline_wait::any(handles, milliseconds) };
         if status != WAIT_TIMEOUT
-            && !(WAIT_OBJECT_0..WAIT_OBJECT_0 + if owner.is_some() { 3 } else { 2 })
-                .contains(&status)
+            && !(WAIT_OBJECT_0..WAIT_OBJECT_0 + handles.len() as u32).contains(&status)
         {
             if let Ok((mut transaction, _, _, _queues)) = begin(source, target) {
-                pi::cancel_error(&mut transaction, target_key, token);
+                pi::retire_requeue(&mut transaction, target_key, token);
             }
             break Err(EIO);
         }
@@ -196,3 +221,6 @@ fn attempt(
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod prior_tests;

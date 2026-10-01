@@ -5,16 +5,20 @@ use super::{
 };
 
 pub(super) fn register() -> Result<(), crate::LinkError> {
-    if unsafe { kinakaze_runtime::register_fork_participant_without_inherited_handles(kinakaze_runtime::ForkParticipant {
-        abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
-        // Engine ABI/TLS restoration (0) precedes private linker reconstruction.
-        priority: 1,
-        key: 0x4c44_5354_4154_4531, // LDSTATE1
-        prepare: Some(prepare),
-        snapshot: Some(snapshot),
-        parent: Some(parent),
-        child: Some(restore),
-    }) } {
+    if unsafe {
+        kinakaze_runtime::register_fork_participant_without_inherited_handles(
+            kinakaze_runtime::ForkParticipant {
+                abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
+                // Engine ABI/TLS restoration (0) precedes private linker reconstruction.
+                priority: 1,
+                key: 0x4c44_5354_4154_4531, // LDSTATE1
+                prepare: Some(prepare),
+                snapshot: Some(snapshot),
+                parent: Some(parent),
+                child: Some(restore),
+            },
+        )
+    } {
         Ok(())
     } else {
         Err(crate::LinkError::InvalidProvider(

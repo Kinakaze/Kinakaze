@@ -14,6 +14,7 @@ pub(crate) mod account_files;
 mod enumeration;
 mod nss_parse;
 mod password_lock;
+mod priority;
 mod returned;
 mod rhosts;
 mod shadow_stream;
@@ -168,15 +169,19 @@ mod identity_handoff {
     }
 
     fn register() {
-        let _ = unsafe { kinakaze_runtime::register_fork_participant_without_inherited_handles(kinakaze_runtime::ForkParticipant {
-            abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
-            priority: 40,
-            key: KEY,
-            prepare: None,
-            snapshot: Some(snapshot),
-            parent: None,
-            child: Some(child),
-        }) };
+        let _ = unsafe {
+            kinakaze_runtime::register_fork_participant_without_inherited_handles(
+                kinakaze_runtime::ForkParticipant {
+                    abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
+                    priority: 40,
+                    key: KEY,
+                    prepare: None,
+                    snapshot: Some(snapshot),
+                    parent: None,
+                    child: Some(child),
+                },
+            )
+        };
     }
 
     extern "C" fn initializer() {
@@ -2093,7 +2098,8 @@ pub unsafe extern "sysv64" fn kinakaze_abi_capget(header: *mut c_void, data: *mu
         crate::set_errno(EINVAL);
         return -1;
     }
-    // Zero selects the caller directly; no PID-namespace lookup is needed.
+    // Zero explicitly selects the caller; filesystem permission checks use
+    // this form and need no PID-namespace lookup or synthetic getpid call.
     if header.pid != 0 && header.pid != crate::process::kinakaze_abi_getpid() {
         crate::set_errno(ESRCH);
         return -1;
@@ -2920,10 +2926,9 @@ pub extern "sysv64" fn kinakaze_abi_nice(increment: c_int) -> c_int {
 
 /// `getpriority`.
 ///
-/// Only this process can be described. A `who` of 0 means the caller, and a
-/// process group or user target is answered for this process because it is the
-/// only member of both. Naming a different process is refused rather than
-/// answered with this process's value.
+/// A process target resolves through the caller's PID namespace and retains an
+/// identity-checked Windows handle. Group/user selection remains limited to
+/// the zero target. Scheduling classes have the same coarse mapping as `nice`.
 ///
 /// The return value is the nice value itself, so -1 is a legitimate result; the
 /// documented way to detect an error is to clear errno first and check it after.
@@ -2934,14 +2939,20 @@ pub extern "sysv64" fn kinakaze_abi_getpriority(which: c_int, who: u32) -> c_int
         crate::set_errno(EINVAL);
         return -1;
     }
-    // For PRIO_USER, `who` is a uid, and 0 is the uid this process has.
-    if who != 0 && !(which == PRIO_PROCESS && who == own_pid() as u32) {
+    if who != 0 && which != PRIO_PROCESS {
         crate::set_errno(ESRCH);
         return -1;
     }
-    // Cleared so a caller using the errno protocol does not read a stale value.
-    crate::set_errno(0);
-    current_nice()
+    match priority::get(who) {
+        Ok(value) => {
+            crate::set_errno(0);
+            value
+        }
+        Err(error) => {
+            crate::set_errno(error);
+            -1
+        }
+    }
 }
 
 /// `setpriority`.
@@ -2951,11 +2962,11 @@ pub extern "sysv64" fn kinakaze_abi_setpriority(which: c_int, who: u32, value: c
         crate::set_errno(EINVAL);
         return -1;
     }
-    if who != 0 && !(which == PRIO_PROCESS && who == own_pid() as u32) {
+    if who != 0 && which != PRIO_PROCESS {
         crate::set_errno(ESRCH);
         return -1;
     }
-    match apply_nice(value) {
+    match priority::set(who, value) {
         Ok(_) => 0,
         Err(error) => {
             crate::set_errno(error);

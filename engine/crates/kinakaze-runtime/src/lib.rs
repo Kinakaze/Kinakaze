@@ -8084,7 +8084,10 @@ mod windows {
                 if fork_mapping_trace_enabled() {
                     fork_copy_trace!(
                         "kinakaze fork: ordinary group #{group_index} replacement failed base={:#x} len={:#x} returned={:#x} error={}",
-                        group.base, group.len, reserved as usize, os_code,
+                        group.base,
+                        group.len,
+                        reserved as usize,
+                        os_code,
                     );
                 }
                 super::LAST_NATIVE_FAILURE_LINE.store(line!(), Ordering::Release);
@@ -8767,7 +8770,7 @@ mod windows {
                                         address,
                                         count,
                                         local.Protect,
-                                        std::ptr::null_mut(),
+                                        ptr::null_mut(),
                                         false,
                                     )
                                     .map(|_| ())
