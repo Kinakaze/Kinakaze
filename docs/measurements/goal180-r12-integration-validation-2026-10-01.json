@@ -1,0 +1,91 @@
+{
+  "passed": true,
+  "full_install_performed": false,
+  "target_met": false,
+  "base_source": {
+    "git_head": "ee72c47c84e96f639a04fbf68b640ed5e73a00c7",
+    "source": "git archive of committed revision; unrelated workspace edits excluded",
+    "archive_sha256": "060b7594bdbbf7c9643be0071155b144d77fe10c8a31fd1d0e60897b6205a05d",
+    "files": 1853,
+    "changed_from_r11": 53
+  },
+  "generated_files": [
+    "libs/libc/exports.def",
+    "libs/libpthread/exports.def"
+  ],
+  "source_file_count": 1853,
+  "distribution_file_count": 61,
+  "native_tests_passed": 243,
+  "native_tests_ignored": 7,
+  "packaged_guest_checks": 72,
+  "pthread_probe_groups": 8,
+  "export_generator_tests": 25,
+  "limitations": [
+    "This is an integration validation, not an installation timing.",
+    "The user requested wrap-up and Git push before the next complete installation.",
+    "The first native-test launcher ended without a report; the completed retry is the only accepted result.",
+    "Only two regenerated linker definition files differ from the archived commit."
+  ],
+  "evidence": [
+    {
+      "path": "artifacts/goal-install-180-20260930/r12-source.json",
+      "sha256": "ae598a37d90d155f38402c1111c8594cdb50d14cf107835cb32927e682076e1a"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/r12-source-capture.json",
+      "sha256": "ec443972b892053307ad55a7613d9a796d9537f75c68db071a7b589a8528e1f0"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/r12-source-before-export-generation.json",
+      "sha256": "8420cf37d385808ea54540d8ad35a3cc174a4f20a0e300d23c418f074a470570"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/r12-generated-files.json",
+      "sha256": "5b49f861f4a8636c5501f58871f4967a8b3d646ca71fbc5204609c7d758fdbde"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/r12-build.log",
+      "sha256": "628896f2c3fd066a2581d384322fc10dd2e354257f0692a2041c935e59719504"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/r12-export-generation.log",
+      "sha256": "be81118b14c2df2f01de1ee718865ca756366aeba8691bec3d2667b0be05addf"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/r12-fixed-build.log",
+      "sha256": "2d776717c3bc7ee8f935849b9162daf749e1597963194e4d3a7945f83dfee959"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/r12-dist.json",
+      "sha256": "42e4f854d7f3a20dc5c883b784135a0d26521703ff4fddb689517d625ed64bbb"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/r12-final-tests.json",
+      "sha256": "97e062c062b128578b112b035ecfd16814dcf6f586e185c9c26539cc95d759ba"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/r12-final-guest/report.json",
+      "sha256": "134617187c0a9ee41954856c4cc3f673e8029215bb5b4a1aa190e6448f37d664"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/r12-pthread-guest/report.json",
+      "sha256": "e2071d4d31c2816d2b2951017dc86a9b5d5b1c11bfc942231e01a504831fb7dc"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/r12-export-tests.log",
+      "sha256": "32d451fd45587a09caf8bb99e7264d128a1ecaa1013d2b282107d10fb54fdd9f"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/r12-setup.log",
+      "sha256": "6c013b7d15efadb44e6d1c1e616cee51d5706ab7c0690a8ffec6b1e4c2d3d98c"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/run-r12-tests.py",
+      "sha256": "3b2fcbe3ba6e815d815c2a111b757bae041c467b92c0e2eb323bf4a89e3cd18f"
+    },
+    {
+      "path": "artifacts/goal-install-180-20260930/run-r12-guest.py",
+      "sha256": "53bfd55c1129c7f527bc260f4548474c780b1abe160ff79481fe977299bbc3be"
+    }
+  ]
+}
