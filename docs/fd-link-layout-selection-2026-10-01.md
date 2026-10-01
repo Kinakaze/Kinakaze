@@ -1,5 +1,12 @@
 # Retain the compact descriptor-link layout
 
+Acceptance update: the complete-install observations below use the legacy
+seed, whose debconf preconfiguration fails. The historical 185.597-second
+observation is not accepted under the current benchmark check. The component
+fork/exec comparison still supports the selected layout; see the
+[corrected-seed integration result](selected-routes-full-install-2026-10-01.md)
+for a full installation with working preconfiguration.
+
 Production now has one descriptor-link layout: contiguous 16-byte headers
 and separate 1,024-byte targets. The legacy interleaved implementation and
 `KINAKAZE_COMPACT_FD_LINKS` switch have been removed. The retained header
@@ -92,9 +99,10 @@ image hashes stayed unchanged. This run used observed host load, with
 and 0 samples with foreign runtime
 workers. No quiet-start condition is claimed.
 
-The best verified complete-install time is
-**185.597 seconds**.
-The sub-180-second target remains unmet.
+Under the former acceptance checks, the best observed time was
+**185.597 seconds**. It fails the current preconfiguration requirement and is
+retained only as a historical observation. The sub-180-second target remains
+unmet by these legacy-seed measurements.
 [Full measurements and evidence hashes](measurements/fd-link-layout-selection-2026-10-01.json)
 preserve the initial failed quiet attempt, both full comparisons, all eight
 fork sessions, exact source/image hashes, and final-route validation.

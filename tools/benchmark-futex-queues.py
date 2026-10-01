@@ -15,6 +15,8 @@ import subprocess
 
 CASES = {
     'smallfile-create': ('KINAKAZE_TEST_NATIVE_CREATE_NONEXCL', 'fs::native_create::tests::benchmark_smallfile_lifecycle', 'SMALLFILE_CREATE_BENCH'),
+    'small-files': ('KINAKAZE_TEST_FILE_VECTOR_OPT', 'fdio::positioned::tests::benchmark_package_files', 'SMALL_FILE_BENCH'),
+    'file-vector': ('KINAKAZE_TEST_FILE_VECTOR_OPT', 'fdio::positioned::tests::benchmark_file_vectors', 'FILE_VECTOR_BENCH'),
     'unix-dgram': ('KINAKAZE_TEST_DGRAM_EVENTS', 'unix::datagram::tests::benchmark_named_datagram_events', 'DGRAM_EVENTS_BENCH'),
     'pthread-pi-store': ('KINAKAZE_TEST_PTHREAD_PI_STORE_OPT', 'futex::pi::pthread::tests::benchmark_pthread_pi_stores', 'PTHREAD_PI_STORE_BENCH'),
     'pthread-pi': ('KINAKAZE_PTHREAD_PI_OPT', 'futex::pi::pthread::tests::benchmark_pthread_pi_pairs', 'PTHREAD_PI_BENCH'),

@@ -4,6 +4,23 @@
 use super::{IoVec, c_int, c_void, read_at, set_errno};
 use kinakaze_vfs::{EBADF, EFAULT, EINVAL, EISDIR, EOPNOTSUPP, ESPIPE, FdFlags, FdKind};
 
+#[cfg(test)]
+fn stream_optimized() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var_os("KINAKAZE_TEST_FILE_VECTOR_OPT").is_none_or(|value| value != "0")
+    })
+}
+
+#[cfg(not(test))]
+#[inline]
+fn stream_optimized() -> bool {
+    true
+}
+
+#[cfg(all(test, windows))]
+mod tests;
+
 fn result(value: Result<usize, i32>) -> isize {
     match value {
         Ok(count) => count as isize,
@@ -33,6 +50,23 @@ pub(super) unsafe fn stream(fd: c_int, iov: *const IoVec, count: c_int, writing:
                 && !entry.flags.contains(FdFlags::READ_ACCESS))
         {
             return Err(EBADF);
+        }
+        #[cfg(windows)]
+        if count > 1
+            && limit != 0
+            // Dense small/medium segments won the paired throughput trials.
+            // MiB-sized segments keep the established stream route.
+            && limit <= count as usize * 65_536
+            && entry.kind == FdKind::File
+            && entry.flags.contains(FdFlags::SEEKABLE)
+            && stream_optimized()
+        {
+            return unsafe {
+                kinakaze_vfs::file_vector::transfer(fd, count as usize, limit, writing, |index| {
+                    let item = &*iov.add(index);
+                    (item.iov_base.cast(), item.iov_len)
+                })
+            };
         }
         let mut total = 0usize;
         for index in 0..count as usize {

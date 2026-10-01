@@ -1012,12 +1012,11 @@
     "initial_status_sha256": "24bcc6ba2871eaa963404032caf723f7bc1ec4e1896ac44b352d67dd5c2ae1ae",
     "seed_manifest_unchanged": true
   },
-  "passed": true,
+  "passed": false,
   "target_met": false,
   "install_ms": 292442.581,
   "download_ms": 2563.5602,
   "verify_ms": 21726.5945,
-  "previous_best_install_ms": 185596.8295,
   "package_names_and_versions_equal": true,
   "installed_package_records_sha256": "727de4f64f68e875397639c1884633c34d0c59904c0a17f16508eb9914657589",
   "dpkg_timings": {
@@ -1426,8 +1425,21 @@
     "r18-cow-integrated-install.json": "a64cd0b88c9da618615279375b79d80643a61e9f059a6770ef235ff408bd3234",
     "r18-cow-integrated-quiet.json": "c2bddd3c0dbe31eb4c658b872155cebcce0070ea97bae62ba8523e9ecbc3b2da",
     "r18-cow-integrated-host.jsonl": "19a857b7bf71795a0d8fe75b436e02a3ef24563b5d637aaefdebf7877885cfb7",
-    "record-r18-cow-integrated.py": "43d46c14c45a5e381fece1f768ecf7cb19d14d1c65bb06cc08b1a6e421d2fda6"
+    "record-r18-cow-integrated.py": "43d46c14c45a5e381fece1f768ecf7cb19d14d1c65bb06cc08b1a6e421d2fda6",
+    "correct-r18-r19-debconf-acceptance.py": "206e33228e47456ad6dfcb325eb05c4e1440248fc23042d65728b5ea07100c24"
   },
   "raw_report_sha256": "9b9963cce92ea86989f07c97705040fc7464bc685efd81e25a28add6cc8e2dc8",
-  "limitations": "One complete integrated observation, not a same-source isolated attribution or a guarantee across host states. Downloads and verification are separate. All package scripts, triggers and synchronization are enabled. Own builds, setup and probes finish before the timed installation. Foreign process sampling can miss short-lived work. The preceding R17 package attempt omitted import libraries and failed before publication; R18 freezes its complete Cargo DLL/import-library graph before packaging."
+  "limitations": "One complete integrated observation, not a same-source isolated attribution or a guarantee across host states. Downloads and verification are separate. All package scripts, triggers and synchronization are enabled. Own builds, setup and probes finish before the timed installation. Foreign process sampling can miss short-lived work. The preceding R17 package attempt omitted import libraries and failed before publication; R18 freezes its complete Cargo DLL/import-library graph before packaging.",
+  "historical_harness_passed": true,
+  "current_acceptance_passed": false,
+  "debconf_preconfiguration_errors": [
+    "E: Cannot get debconf version. Is debconf installed?",
+    "debconf: apt-extracttemplates failed: Inappropriate ioctl for device"
+  ],
+  "debconf_stderr_sha256": "4bf17335b950fa7726b0a6161a0b173e0e9a54d8f8db06326c7df5f1e7421f78",
+  "historical_non_equivalent_best_install_ms": 185596.8295,
+  "best_verified_working_preconfiguration_reference": "goal180-r10-integrated-2026-10-01.json",
+  "acceptance_update": "The frozen original seed failed debconf template extraction. The historical harness did not reject those errors. Installation phases, Node/npm, audit and installed-file checks passed, but this observation does not pass the current working-preconfiguration acceptance criterion. Its raw report is unchanged. The historical 185.597-second result uses the same failing seed and is not a comparable complete-work baseline.",
+  "acceptance_update_commit": "f084697cfc03a3b7c414d4cdf517ab80e98108e3",
+  "best_verified_working_preconfiguration_install_ms": 215414.9167
 }

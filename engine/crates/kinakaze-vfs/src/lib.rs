@@ -11,6 +11,8 @@ mod native_transfer;
 #[cfg(windows)]
 pub use native_pin::pin_native_fd;
 #[cfg(windows)]
+pub mod file_vector;
+#[cfg(windows)]
 pub mod positional;
 
 #[cfg(windows)]

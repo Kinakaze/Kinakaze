@@ -1,5 +1,10 @@
 # Integrated native write/create installation
 
+Comparison update: the historical 185.597-second result uses the older seed
+with failed debconf template extraction. It is not a like-for-like baseline
+for the current working-preconfiguration fixture; see the
+[seed comparison](selected-native-open-r13-2026-10-01.md#comparable-installation-fixture).
+
 The validated frozen release completed a fresh 357-package Node.js/npm
 installation in **206.074 seconds**, with downloads
 timed separately at 1.766 seconds. Every phase
