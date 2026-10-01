@@ -14,6 +14,7 @@ import subprocess
 
 
 CASES = {
+    'pthread-pi-store': ('KINAKAZE_TEST_PTHREAD_PI_STORE_OPT', 'futex::pi::pthread::tests::benchmark_pthread_pi_stores', 'PTHREAD_PI_STORE_BENCH'),
     'pthread-pi': ('KINAKAZE_PTHREAD_PI_OPT', 'futex::pi::pthread::tests::benchmark_pthread_pi_pairs', 'PTHREAD_PI_BENCH'),
     'pthread': ('KINAKAZE_PTHREAD_PARK_OPT', 'parking::tests::benchmark_event_parking', 'PTHREAD_PARK_BENCH'),
     'wait2': ('KINAKAZE_FUTEX_OPT', 'sysadmin::futex_scalar::tests::benchmark_wait2_registration', 'WAIT2_BENCH'),
@@ -43,6 +44,9 @@ def main():
     sysroot = subprocess.check_output(['rustc', '--print', 'sysroot'], text=True).strip()
     environment = dict(os.environ, PATH=str(binary.parent) + os.pathsep + str(Path(sysroot) / 'bin') + os.pathsep + os.environ['PATH'])
     switch, test, marker = CASES[args.case]
+    if args.case == 'pthread-pi-store':
+        # Compare metadata writes with the already winning PI algorithm held fixed.
+        environment['KINAKAZE_PTHREAD_PI_OPT'] = '1'
     dependencies = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in binary.parent.glob('*.so*') if path.is_file()}
     report = dict(passed=False, case=args.case, binary=str(binary), sha256=hashlib.sha256(binary.read_bytes()).hexdigest(), dependencies=dependencies, rows=[])
     args.output.parent.mkdir(parents=True, exist_ok=True)

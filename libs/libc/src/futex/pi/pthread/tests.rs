@@ -7,6 +7,20 @@ use windows_sys::Win32::System::Threading::{
 #[test]
 #[ignore = "isolated release PI mutex pairs with live idle PI participants"]
 fn benchmark_pthread_pi_pairs() {
+    benchmark_pairs("PTHREAD_PI_BENCH", super::optimized());
+}
+
+#[test]
+#[ignore = "isolated release PI metadata write comparison"]
+fn benchmark_pthread_pi_stores() {
+    assert!(
+        super::optimized(),
+        "hold the previously winning PI path constant"
+    );
+    benchmark_pairs("PTHREAD_PI_STORE_BENCH", super::store_optimized());
+}
+
+fn benchmark_pairs(marker: &str, enabled: bool) {
     const ITERATIONS: u32 = 500;
     super::install();
     crate::fsextra::kinakaze_abi_gettid();
@@ -73,10 +87,27 @@ fn benchmark_pthread_pi_pairs() {
         }
     }
     println!(
-        "PTHREAD_PI_BENCH {{\"optimized\":{},\"iterations\":{ITERATIONS},{}}}",
-        std::env::var_os("KINAKAZE_PTHREAD_PI_OPT").is_none_or(|v| v != "0"),
+        "{marker} {{\"optimized\":{},\"iterations\":{ITERATIONS},{}}}",
+        enabled,
         metrics.join(",")
     );
+}
+
+#[test]
+fn pthread_pi_missing_park_rechecks_death_and_preserves_live_failure() {
+    let key = Key::anonymous(new_backing_id().unwrap(), 0);
+    let token = Transaction::begin().unwrap().shared.token();
+    let live = Identity::current().unwrap().record(key, token, 1, WAIT);
+    let domain = kinakaze_runtime::authority::domain_id();
+    // This fresh numerical token has no event. A live identity must still
+    // report ENOENT, rather than fabricate a wake or consume its journal.
+    assert_eq!(notify(live, domain), Err(2));
+    let dead = std::thread::spawn(move || Identity::current().unwrap().record(key, token, 1, WAIT))
+        .join()
+        .unwrap();
+    assert!(dead.dead());
+    // Model exit after the journal caller's earlier liveness check.
+    assert_eq!(notify(dead, domain), Ok(()));
 }
 
 fn init(mutex: &mut [usize; 5], kind: i32, shared: bool, robust: bool) {

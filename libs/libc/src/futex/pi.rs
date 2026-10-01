@@ -364,9 +364,18 @@ pub(crate) fn exit_current() {
 }
 
 fn notify(record: Record, domain: u64) -> Result<(), i32> {
-    let event = Handle::new(unsafe {
-        OpenEventW(EVENT_MODIFY_STATE, 0, record.event_name(domain).as_ptr())
-    })?;
+    let raw = unsafe { OpenEventW(EVENT_MODIFY_STATE, 0, record.event_name(domain).as_ptr()) };
+    if raw.is_null() {
+        let error = unsafe { GetLastError() };
+        // A thread can exit and close its park after the caller's liveness
+        // check. Publish the journal for a proven-dead recipient; a missing
+        // event for a live or inaccessible identity remains an error.
+        if error == windows_sys::Win32::Foundation::ERROR_FILE_NOT_FOUND && record.dead() {
+            return Ok(());
+        }
+        return Err(errno_from_win32(error));
+    }
+    let event = Handle(raw);
     if unsafe { SetEvent(event.0) } == 0 {
         return Err(errno_from_win32(unsafe { GetLastError() }));
     }

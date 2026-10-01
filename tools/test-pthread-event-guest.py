@@ -57,10 +57,10 @@ def main():
         subprocess.run([args.clang, '--target=x86_64-linux-gnu', '-fuse-ld=lld',
                         '-fPIC', '-shared', '-nostdlib', '-O2', *defines, str(source / (name + '.c')),
                         '-o', str(staging / (name + '.so'))], check=True)
-    report = dict(root=str(args.root.resolve()), dist=str(args.dist.resolve()), pi_mutex=args.pi_mutex, robust_cancel=args.robust_cancel, shared_cancel=args.shared_cancel,
+    report = dict(root=str(args.root.resolve()), dist=str(args.dist.resolve()), pi_mutex=args.pi_mutex, pi_hotpath='always_optimized', robust_cancel=args.robust_cancel, shared_cancel=args.shared_cancel,
                   staging=str(staging), fixture_sha256=inputs,
                   distribution_sha256=distribution_hashes(args.dist), rows=[])
-    switches = ('KINAKAZE_PTHREAD_PARK_OPT', 'KINAKAZE_PTHREAD_SHARED_CACHE_OPT', 'KINAKAZE_PTHREAD_PI_OPT')
+    switches = ('KINAKAZE_PTHREAD_PARK_OPT', 'KINAKAZE_PTHREAD_SHARED_CACHE_OPT')
     previous = {name: os.environ.get(name) for name in switches}
     try:
         for enabled in (False, True):

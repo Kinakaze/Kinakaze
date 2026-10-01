@@ -14,9 +14,23 @@ const NOT_RECOVERABLE: u32 = INCONSISTENT - 1;
 const EBUSY: i32 = 16;
 const EOWNERDEAD: i32 = 130;
 const ENOTRECOVERABLE: i32 = 131;
+// Production uses the measured winner. Legacy selection exists only in the
+// native test executable; graph-dependent recovery still selects its full path.
+#[cfg(not(test))]
+pub(super) const fn optimized() -> bool {
+    true
+}
+#[cfg(test)]
 pub(super) fn optimized() -> bool {
     static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *ENABLED.get_or_init(|| std::env::var_os("KINAKAZE_PTHREAD_PI_OPT").is_none_or(|v| v != "0"))
+}
+#[cfg(test)]
+fn store_optimized() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var_os("KINAKAZE_TEST_PTHREAD_PI_STORE_OPT").is_none_or(|v| v != "0")
+    })
 }
 #[derive(Clone, Copy)]
 struct Held {
@@ -84,14 +98,18 @@ pub(crate) fn install() {
 }
 
 fn put(address: usize, value: u32) -> Result<(), i32> {
-    let mut old = atomic_word::read(address)?;
-    loop {
-        let observed = atomic_word::compare_exchange(address, old, value)?;
-        if observed == old {
-            return Ok(());
+    #[cfg(test)]
+    if !store_optimized() {
+        let mut old = atomic_word::read(address)?;
+        loop {
+            let observed = atomic_word::compare_exchange(address, old, value)?;
+            if observed == old {
+                return Ok(());
+            }
+            old = observed;
         }
-        old = observed;
     }
+    atomic_word::write(address, value)
 }
 fn first(
     transaction: &mut Transaction,
