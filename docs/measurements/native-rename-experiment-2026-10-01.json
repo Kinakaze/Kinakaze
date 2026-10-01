@@ -1,0 +1,151 @@
+{
+  "accepted": false,
+  "target_met": false,
+  "disposition": "Rejected pending correction of same-inode hardlink semantics. No executable implementation backported to main.",
+  "native_passed": 69,
+  "native_failed": 1,
+  "native_ignored": 1,
+  "production_packaging_performed": false,
+  "guest_validation_performed": false,
+  "performance_measured": false,
+  "full_install_measured": false,
+  "source_manifest": {
+    "base": "48067166ec504b4d9ff032ad24970252d6418928",
+    "source_hashes": {
+      "crates/loader/src/handoff.rs": "f0a616a2bab3aa27cc855c62d76abd1853fd1395bde14f9aca23b40621ae989f",
+      "engine/crates/guest-engine/src/lib.rs": "c5736903ad82267471384b8991762fc1f4102ecbb3c78453092ea30609c137f1",
+      "engine/crates/kinakaze-runtime/src/lib.rs": "96dfeafef2389291c32232fc43390402067649d6ca293115befe63711d75e21b",
+      "engine/crates/kinakaze-vfs/src/fs.rs": "58338e6cc7a3ee6c962ebd8572eb3ef2cc1a84e2353b789c5e6593e9bad4bf7c",
+      "engine/crates/kinakaze-vfs/src/fs/native_rename.rs": "7a687557de384e6128a0f4aef5fbb17488ddef161ecaee4412a9d059447efb76",
+      "engine/crates/kinakaze-vfs/src/fs/native_rename/tests.rs": "1be0ef8f91e6a1f9876ca5be09a6fc94d0c96e7f9ac368e48199149bbb332432",
+      "engine/crates/kinakaze-vfs/src/mount/overlay/native_open.rs": "cfc700783e3c11f700cf3e0c95b808d46f0e16359566ae44c5dbc055fc588fd7",
+      "libs/ld-linux-x86-64/src/process/fork.rs": "9f7a78310fedcaafaa66633dd5590514b60cb6456476aef090a5468a564341f3",
+      "libs/libc/src/fdio.rs": "177433d436a85cd80b1dd57e2fc463847bd5a4825e3830b05c83444f28ba3cc4",
+      "libs/libc/src/fdio/dump_advice.rs": "32d90369d52c2675c3d2bda0bb66d17e3da827e3f349eb92bb57d7d32cfce48a",
+      "libs/libc/src/fdio/fork_advice.rs": "2e9a2efaafc19b92c998122a6e74d7f64450aaca692e796cece180125e35b86e",
+      "libs/libc/src/fdio/program_break.rs": "2747cc0e7e5e1dd27e16f2fdf628f30f5693888740a67fde56437f453b314881",
+      "libs/libc/src/format/extension/registry.rs": "f46a7b0bde26d090f63d8026c0f0d0384a2e12af748b35eeacc95a255f842d7b",
+      "libs/libc/src/futex.rs": "886f0f4808a7212473a259babc0ff3d1ee7d2033d3686f4c2a78935207066a58",
+      "libs/libc/src/futex/wait_group.rs": "c5e6f864124437f63d71c817f7ec9abce81f0327aa5955a977d0ba83109050a6",
+      "libs/libc/src/locale/lifecycle.rs": "fb3794d7f9e6931d7d6905e0937cc9b45d624ecb1b5f9167d1a8bf2a570910c7",
+      "libs/libc/src/misc/program_name_fork.rs": "7f5c72c8ac74bd6df855c21cc69f545a602827cbb25c99546994acfe7fad38c0",
+      "libs/libc/src/netdb/nss.rs": "f2219d620157e4c3ea9bd9c055925441b54e32992cbf5d0128ea8100f45d949b",
+      "libs/libc/src/process/environment.rs": "18d7a1949a508f01e5f603976033aa835731acd52677e702dae70cb6496a4133",
+      "libs/libc/src/process/termination/lifecycle.rs": "a3adb55e8c06e401aedf6cb7e984c88bd62d1e0b23a14f747b113085d224c3d0",
+      "libs/libc/src/rand48.rs": "53e49250d771ce0d777193aee11c0fba64ef570cad8fffb2827f82bf43bde8e9",
+      "libs/libc/src/semaphore/named.rs": "f3f68f4f50f273e74c6ebbc545bca01f3bba00bcba4f949a54f206c44f2939a6",
+      "libs/libc/src/stdio/gnu_error.rs": "d4bb42fe26ee1f365921e7ffad783c3c301405563802a15b51986d19847d4546",
+      "libs/libc/src/stdio/lifecycle.rs": "454aac4c2d19cb188aa33bbf904f6401d59b4a0b996e10908f612265e7a50399",
+      "libs/libc/src/sysadmin.rs": "3c2c38f58b14e4ed4cfbdd71e59b2f44ca5a3f7696029c06dc45c1494f08464f",
+      "libs/libc/src/sysvipc/lifecycle.rs": "0f2ade0c1fccffbf43719dbe62dbb140a6d6184c0c0afac9f42bd4b525464e5e",
+      "libs/libc/src/term/password/lifecycle.rs": "d357164b4dadf072b849cc1d84cfc65f0a3b7ddca9530e7c79456d285a6356ae",
+      "libs/libc/src/time/zone_globals.rs": "4bd0ad4dccd82dac6df4ce29ed5bf5efb15f618dbd3c61c9bb1cc2e94506334d",
+      "libs/libc/src/uchar.rs": "c6b6525edd0936db17363b62e4fa429cf3a22ae22a4f84734f95fc9fe0d0ff1b",
+      "libs/libc/src/userdb.rs": "ddd7ab2a0b1698428d265b325954dd8cf84cb3d735ea8588a2b1c55d3e72a5c3",
+      "libs/libc/src/userdb/password_lock.rs": "0fe1398028fb0bace301ae81f6c175033063c53e9ab38dee91c1a4c32c2c454b",
+      "libs/libpthread/src/sched.rs": "6cb889cb267bd24c129bf837dc598584874340cee5db4a1a3ff3dd2e94ae6ea0"
+    },
+    "archive_sha256": "06c289f8a38d358c094fd2a6fb24330b2371f117c7e276be53f3694be233a6b0",
+    "status": "prototype; native correctness pending; no production packaging or performance claim"
+  },
+  "native_report": {
+    "profile": "release",
+    "suite": "focused",
+    "executable_artifacts": {
+      "kinakaze-vfs": "F:\\crysoacu2\\target\\apt180-r15-tests\\release\\deps\\kinakaze_vfs-6a49cb6eadeefdcb.exe"
+    },
+    "scope": "Build isolated native regression tests and stage their exact SONAME imports.\n\nThe default suite covers Windows debugging, descriptor/mapping lifetime, raw\nsyscall contracts, SYSV IPC and generated instruction bridges. DLL staging uses\nonly compiler artifacts from this invocation, avoiding mixed target graphs.\n",
+    "tests": [
+      {
+        "package": "kinakaze-vfs",
+        "filter": "fs::native_rename::tests",
+        "exit_code": 101,
+        "seconds": 0.35582020000219927,
+        "stdout": "\nrunning 8 tests\ntest fs::native_rename::tests::complete_fast_path_acquires_mount_writers_and_moves_current_native_inode ... ok\ntest fs::native_rename::tests::complex_paths_directories_and_hosted_ancestor_links_keep_the_walker ... ok\ntest fs::native_rename::tests::hosted_link_and_special_inode_are_moved_without_following_or_reclassifying ... ok\ntest fs::native_rename::tests::namespace_prefix_and_escaped_leaf_names_select_the_guest_inode ... ok\ntest fs::native_rename::tests::native_junctions_cannot_redirect_either_source_or_destination ... ok\ntest fs::native_rename::tests::no_replace_is_atomic_and_replacement_preserves_open_target_inode ... ok\ntest fs::native_rename::tests::pinned_source_and_destination_parent_survive_independent_name_replacement ... ok\ntest fs::native_rename::tests::same_path_and_same_inode_hardlink_rename_preserve_linux_names ... FAILED\n\nfailures:\n\nfailures:\n    fs::native_rename::tests::same_path_and_same_inode_hardlink_rename_preserve_linux_names\n\ntest result: FAILED. 7 passed; 1 failed; 0 ignored; 0 measured; 898 filtered out; finished in 0.10s\n\n",
+        "stderr": "\nthread 'fs::native_rename::tests::same_path_and_same_inode_hardlink_rename_preserve_linux_names' (14064) panicked at engine\\crates\\kinakaze-vfs\\src\\fs\\native_rename\\tests.rs:168:5:\nassertion failed: f.path(\"source\").exists()\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n"
+      },
+      {
+        "package": "kinakaze-vfs",
+        "filter": "fs::native_create::tests",
+        "exit_code": 0,
+        "seconds": 0.04014680000182125,
+        "stdout": "\nrunning 7 tests\ntest fs::native_create::tests::ancestor_junction_cannot_redirect_exclusive_creation ... ok\ntest fs::native_create::tests::each_creation_reads_current_parent_metadata_without_reusing_observations ... ok\ntest fs::native_create::tests::exclusive_create_publishes_live_setgid_metadata_and_retains_parent_identity ... ok\ntest fs::native_create::tests::exclusive_creation_never_mutates_existing_leaf_or_link_targets ... ok\ntest fs::native_create::tests::existing_readonly_and_nonexclusive_opens_remain_ineligible ... ok\ntest fs::native_create::tests::hosted_parent_links_and_regular_parents_keep_the_walker ... ok\ntest fs::native_create::tests::native_create_installs_access_flags_and_writable_verity_exclusion ... ok\n\ntest result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 899 filtered out; finished in 0.03s\n\n",
+        "stderr": ""
+      },
+      {
+        "package": "kinakaze-vfs",
+        "filter": "fs::native_read::tests",
+        "exit_code": 0,
+        "seconds": 0.04756450000058976,
+        "stdout": "\nrunning 8 tests\ntest fs::native_read::tests::complete_fast_path_installs_the_native_description_and_flags ... ok\ntest fs::native_read::tests::cwd_relative_lookup_retains_the_selected_visible_inode ... ok\ntest fs::native_read::tests::namespace_prefix_and_escaped_names_select_the_visible_file ... ok\ntest fs::native_read::tests::native_junctions_in_ancestors_cannot_bypass_the_guest_walker ... ok\ntest fs::native_read::tests::normalized_names_cannot_replace_dirfd_dot_or_trailing_slash_semantics ... ok\ntest fs::native_read::tests::retained_read_inode_survives_name_replacement_and_unlink ... ok\ntest fs::native_read::tests::special_inodes_links_and_component_rules_keep_the_walker ... ok\ntest fs::native_read::tests::write_create_directory_and_path_flags_are_ineligible ... ok\n\ntest result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 898 filtered out; finished in 0.03s\n\n",
+        "stderr": ""
+      },
+      {
+        "package": "kinakaze-vfs",
+        "filter": "fs::install_tests",
+        "exit_code": 0,
+        "seconds": 0.0599086999973224,
+        "stdout": "\nrunning 5 tests\ntest fs::install_tests::descriptor_chmod_keeps_the_pinned_inode_and_rejects_link_and_stale_slots ... ok\ntest fs::install_tests::exclusive_install_create_rejects_existing_special_inodes ... ok\ntest fs::install_tests::install_ownership_retains_inode_identity_and_clears_privilege_bits ... ok\ntest fs::install_tests::repeated_install_metadata_still_clears_capabilities_and_checks_permissions ... ok\ntest fs::install_tests::writable_stat_reads_live_inode_metadata_and_survives_unlink ... ok\n\ntest result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 901 filtered out; finished in 0.04s\n\n",
+        "stderr": ""
+      },
+      {
+        "package": "kinakaze-vfs",
+        "filter": "fs::object::tests",
+        "exit_code": 0,
+        "seconds": 0.444255800000974,
+        "stdout": "\nrunning 12 tests\ntest fs::object::tests::compound_inode_initialization_preserves_identity_xattrs_and_handles ... ok\ntest fs::object::tests::directory_enumeration_reopens_the_inode_and_spans_native_buffers ... ok\ntest fs::object::tests::guest_readdir_keeps_an_open_directory_outside_a_new_root ... ok\ntest fs::object::tests::large_symlink_record_grows_the_native_ea_query_buffer ... ok\ntest fs::object::tests::malformed_metadata_is_not_replaced_by_guessed_host_permissions ... ok\ntest fs::object::tests::metadata_queries_preserve_directory_atime_after_the_last_handle_closes ... ok\ntest fs::object::tests::native_ea_update_works_on_a_readonly_inode_and_preserves_guest_xattrs ... ok\ntest fs::object::tests::pinned_descriptor_survives_guest_close_and_inode_name_replacement ... ok\ntest fs::object::tests::readonly_unlink_detaches_name_and_retains_open_inode_attributes ... ok\ntest fs::object::tests::stat_metadata_survives_unlink_and_name_replacement ... ok\ntest fs::object::tests::stream_enumeration_grows_its_buffer_and_stays_on_the_same_inode ... ok\ntest fs::object::tests::symlink_and_device_records_follow_the_inode_after_rename ... ok\n\ntest result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 894 filtered out; finished in 0.43s\n\n",
+        "stderr": ""
+      },
+      {
+        "package": "kinakaze-vfs",
+        "filter": "fs::verity::tests",
+        "exit_code": 0,
+        "seconds": 0.440713500000129,
+        "stdout": "\nrunning 21 tests\ntest fs::verity::tests::abandoned_preparing_tail_is_masked_and_recovered_before_write ... ok\ntest fs::verity::tests::abandoned_transaction_process_helper ... ok\ntest fs::verity::tests::cached_reader_owns_each_concurrent_positioned_request ... ok\ntest fs::verity::tests::checked_writer_alias_retains_exclusion_after_rename_unlink_and_fd_replacement ... ok\ntest fs::verity::tests::corruption_fails_before_unverified_bytes_are_returned ... ok\ntest fs::verity::tests::directory_ioctl_errors_distinguish_enable_from_measure ... ok\ntest fs::verity::tests::externally_installed_writer_still_checks_enabled_verity ... ok\ntest fs::verity::tests::granted_access_does_not_escalate_a_write_only_descriptor ... ok\ntest fs::verity::tests::hidden_merkle_writes_do_not_change_guest_mtime ... ok\ntest fs::verity::tests::malformed_persistent_state_fails_closed ... ok\ntest fs::verity::tests::native_existing_writer_blocks_enable_without_changing_file ... ok\ntest fs::verity::tests::native_readonly_mapping_same_eof_probe ... ignored, native capability diagnostic; does not define guest fs-verity behavior\ntest fs::verity::tests::opened_metadata_stays_on_one_inode_across_close_and_slot_reuse ... ok\ntest fs::verity::tests::opened_validates_path_only_before_descriptor_kind ... ok\ntest fs::verity::tests::persisted_tree_masks_tail_and_survives_hardlink_unlink ... ok\ntest fs::verity::tests::process_death_releases_inode_guard_and_next_process_recovers_tail ... ok\ntest fs::verity::tests::read_cache_does_not_escalate_imported_write_only_access ... ok\ntest fs::verity::tests::readonly_host_inode_is_not_temporarily_made_writable ... ok\ntest fs::verity::tests::reused_read_capability_observes_enable_corruption_and_original_inode ... ok\ntest fs::verity::tests::shared_reader_observes_enable_and_rejects_later_corruption ... ok\ntest fs::verity::tests::shared_writable_mapping_blocks_enable_after_fd_close ... ok\n\ntest result: ok. 20 passed; 0 failed; 1 ignored; 0 measured; 885 filtered out; finished in 0.43s\n\n",
+        "stderr": ""
+      },
+      {
+        "package": "kinakaze-vfs",
+        "filter": "path::root::tests",
+        "exit_code": 0,
+        "seconds": 0.01650819999849773,
+        "stdout": "\nrunning 3 tests\ntest path::root::tests::configured_root_preserves_namespace_across_native_prefix_forms ... ok\ntest path::root::tests::root_handoff_rejects_corruption_and_base_changes_before_mutation ... ok\ntest path::root::tests::root_path_encoding_is_bounded_absolute_and_preserves_utf16 ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 903 filtered out; finished in 0.00s\n\n",
+        "stderr": ""
+      },
+      {
+        "package": "kinakaze-vfs",
+        "filter": "mount::overlay::native_lookup::",
+        "exit_code": 0,
+        "seconds": 0.02403250000133994,
+        "stdout": "\nrunning 3 tests\ntest mount::overlay::native_lookup::attributes::tests::whole_path_query_refuses_ancestor_junctions ... ok\ntest mount::overlay::native_lookup::tests::lookup_observes_links_missing_parents_chroot_and_replacement ... ok\ntest mount::overlay::native_lookup::tests::stat_observations_expire_and_follow_replaced_links ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 903 filtered out; finished in 0.01s\n\n",
+        "stderr": ""
+      },
+      {
+        "package": "kinakaze-vfs",
+        "filter": "ofd::tests",
+        "exit_code": 0,
+        "seconds": 0.024328899999090936,
+        "stdout": "\nrunning 4 tests\ntest ofd::tests::metadata_opens_are_private_reused_by_aliases_and_retired_after_close ... ok\ntest ofd::tests::native_data_hole_seek_preserves_offset_on_failure ... ok\ntest ofd::tests::native_pins_share_one_capability_and_survive_final_close_and_slot_reuse ... ok\ntest ofd::tests::promoted_alias_publishes_its_completed_write_read_and_seek_position ... ok\n\ntest result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 902 filtered out; finished in 0.01s\n\n",
+        "stderr": ""
+      }
+    ]
+  },
+  "implementation_hashes": {
+    "engine/crates/kinakaze-vfs/src/fs.rs": "58338e6cc7a3ee6c962ebd8572eb3ef2cc1a84e2353b789c5e6593e9bad4bf7c",
+    "engine/crates/kinakaze-vfs/src/mount/overlay/native_open.rs": "cfc700783e3c11f700cf3e0c95b808d46f0e16359566ae44c5dbc055fc588fd7",
+    "engine/crates/kinakaze-vfs/src/fs/native_rename.rs": "7a687557de384e6128a0f4aef5fbb17488ddef161ecaee4412a9d059447efb76",
+    "engine/crates/kinakaze-vfs/src/fs/native_rename/tests.rs": "1be0ef8f91e6a1f9876ca5be09a6fc94d0c96e7f9ac368e48199149bbb332432"
+  },
+  "expected": "rename(old,new) succeeds without changing either name when both resolve to the same existing inode.",
+  "observed": "The private relative NT rename succeeded, but the source pathname then no longer existed. Same-path rename had passed earlier in the same test.",
+  "baseline_behavior_verified": false,
+  "normative_reference": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/rename.html",
+  "evidence_sha256": {
+    "artifacts\\apt-180-20260930\\r15-native-rename-prototype-sources.json": "6af50c334f9823563110c3d840677e31d1f21350a524e2cd4ae3b68eab672b63",
+    "artifacts\\apt-180-20260930\\native-r15-rename.json": "620713a7ea707751802c032aea34b2a708c6b3ffc57b8568de82b6f0f7175cf2",
+    "artifacts\\apt-180-20260930\\native-r15-rename-prototype.log": "4617f5d84d5576c8de6db8c8cbcfbb9ca8eca36332411c2cf3f233343be62c5a",
+    "artifacts\\apt-180-20260930\\run-native-r15.py": "bbd5a3e468c4e20f1978e7dbcb5569aad66ab17cd807ed5b97b06143d8a73efe",
+    "artifacts\\apt-180-20260930\\record-r15-rename.py": "f7daad7eada69999d1405375c83997225639f91bd622a5be65fbf2fdb6152c24",
+    "docs\\experiments\\native-rename-prototype-2026-10-01.patch": "81c2a084e4deacb50b2afd5bd2ea4fb58bad6bb116242789ee4d84e8657b4650"
+  }
+}

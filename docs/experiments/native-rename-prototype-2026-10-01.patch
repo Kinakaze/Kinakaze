@@ -1,0 +1,475 @@
+diff --git a/engine/crates/kinakaze-vfs/src/fs.rs b/engine/crates/kinakaze-vfs/src/fs.rs
+index 35a2fcc..79979cc 100644
+--- a/engine/crates/kinakaze-vfs/src/fs.rs
++++ b/engine/crates/kinakaze-vfs/src/fs.rs
+@@ -56,6 +56,7 @@ pub use directory::{NativeDirectoryEntry, read_directory_bytes, read_native_dire
+ mod install_tests;
+ mod native_create;
+ mod native_read;
++mod native_rename;
+ mod native_write;
+ mod permissions;
+ pub use allocation::fallocate;
+@@ -3356,6 +3357,9 @@ pub fn rename_with_flags(from: &str, to: &str, flags: u32) -> Result<(), i32> {
+     if flags & !7 != 0 || flags & 2 != 0 && flags & 5 != 0 {
+         return Err(EINVAL);
+     }
++    if let Some(()) = native_rename::try_rename(from, to, flags)? {
++        return Ok(());
++    }
+     if crate::mount::overlay::rename_with_flags(from, to, flags)?.is_some() {
+         return Ok(());
+     }
+diff --git a/engine/crates/kinakaze-vfs/src/fs/native_rename.rs b/engine/crates/kinakaze-vfs/src/fs/native_rename.rs
+new file mode 100644
+index 0000000..661d076
+--- /dev/null
++++ b/engine/crates/kinakaze-vfs/src/fs/native_rename.rs
+@@ -0,0 +1,130 @@
++//! Rename an ordinary native file through operation-local inode capabilities.
++//! Pin the source and destination parent once instead of probing their names
++//! and then opening the source again. Complex paths retain the full walker.
++use super::object::Object;
++use std::{
++    ffi::OsString,
++    path::{Path, PathBuf},
++    sync::OnceLock,
++};
++
++fn ordinary(path: &str) -> bool {
++    !path.is_empty()
++        && !path.ends_with('/')
++        && !path.contains('\0')
++        && !path.split('/').any(|part| part == "." || part == "..")
++}
++
++pub(super) fn try_rename(from: &str, to: &str, flags: u32) -> Result<Option<()>, i32> {
++    static ENABLED: OnceLock<bool> = OnceLock::new();
++    if flags & !1 != 0
++        || !ordinary(from)
++        || !ordinary(to)
++        || !*ENABLED.get_or_init(|| {
++            std::env::var_os("KINAKAZE_NATIVE_RENAME").as_deref() != Some(std::ffi::OsStr::new("0"))
++        })
++        || !crate::user_namespace::capable(1, 1)
++        || !crate::user_namespace::capable(1, 3)
++        || crate::path::overlay_root().is_some()
++        || [from, to].iter().any(|path| {
++            crate::mount::api::tree_reference(path).is_some()
++                || crate::tmpfs::owns(path)
++                || crate::procfs::owns(path)
++        })
++    {
++        return Ok(None);
++    }
++    let Some(namespace) = crate::path::namespace_root_path()? else {
++        return Ok(None);
++    };
++    let absolute = |path: &str| {
++        if path.starts_with('/') {
++            path.to_owned()
++        } else {
++            format!("{}/{path}", super::getcwd())
++        }
++    };
++    let from = absolute(from);
++    let to = absolute(to);
++    let _deferred = crate::signal::defer_delivery();
++    let Some(prepared) =
++        PreparedRename::open(&crate::path::default_system_root(), &namespace, &from, &to)?
++    else {
++        return Ok(None);
++    };
++    let _source_writer = crate::mount::native::write_canonical(&canonical(&from))?;
++    let _target_writer = crate::mount::native::write_canonical(&canonical(&to))?;
++    prepared.apply(flags == 0)?;
++    Ok(Some(()))
++}
++
++fn canonical(path: &str) -> String {
++    format!(
++        "/{}",
++        path.split('/')
++            .filter(|p| !p.is_empty())
++            .collect::<Vec<_>>()
++            .join("/")
++    )
++}
++
++struct PreparedRename {
++    source: Object,
++    parent: Object,
++    name: OsString,
++}
++
++impl PreparedRename {
++    fn open(root: &Path, namespace: &str, from: &str, to: &str) -> Result<Option<Self>, i32> {
++        if !from.starts_with('/') || !to.starts_with('/') || !ordinary(from) || !ordinary(to) {
++            return Ok(None);
++        }
++        let native = |absolute: &str| -> Result<Option<PathBuf>, i32> {
++            let mut guest = namespace.trim_end_matches('/').to_owned();
++            let mut path = root.to_path_buf();
++            for part in namespace.split('/').filter(|part| !part.is_empty()) {
++                path.push(crate::path::escape_component(part).as_ref());
++            }
++            for part in absolute.split('/').filter(|part| !part.is_empty()) {
++                guest.push('/');
++                guest.push_str(part);
++                path.push(crate::path::escape_component(part).as_ref());
++            }
++            Ok((!crate::mount::has_attachment(&guest)?).then_some(path))
++        };
++        let (Some(from), Some(to)) = (native(from)?, native(to)?) else {
++            return Ok(None);
++        };
++        let source = match crate::mount::overlay::native_open::rename_file(&from) {
++            Ok(object) => object,
++            Err(_) => return Ok(None),
++        };
++        let parent = match crate::mount::overlay::native_open::directory(
++            to.parent().ok_or(crate::EINVAL)?,
++        ) {
++            Ok(object) => object,
++            Err(_) => return Ok(None),
++        };
++        Ok(Some(Self {
++            source,
++            parent,
++            name: to.file_name().ok_or(crate::EINVAL)?.to_owned(),
++        }))
++    }
++
++    fn apply(&self, replace: bool) -> Result<(), i32> {
++        // Both private opens are owned for the entire request; no unrelated I/O
++        // shares the source completion event or cancellation scope.
++        unsafe {
++            super::rename_host_handle_relative(
++                self.source.raw(),
++                self.parent.raw(),
++                &self.name,
++                replace,
++            )
++        }
++    }
++}
++
++#[cfg(test)]
++mod tests;
+diff --git a/engine/crates/kinakaze-vfs/src/fs/native_rename/tests.rs b/engine/crates/kinakaze-vfs/src/fs/native_rename/tests.rs
+new file mode 100644
+index 0000000..78fe740
+--- /dev/null
++++ b/engine/crates/kinakaze-vfs/src/fs/native_rename/tests.rs
+@@ -0,0 +1,291 @@
++use super::*;
++use crate::fs::{S_IFIFO, S_IFREG, inode};
++use std::io::Read;
++use windows_sys::Win32::Storage::FileSystem::{FILE_READ_ATTRIBUTES, FILE_READ_EA, FILE_WRITE_EA};
++
++struct Fixture(PathBuf);
++impl Fixture {
++    fn new() -> Self {
++        let stamp = std::time::SystemTime::now()
++            .duration_since(std::time::UNIX_EPOCH)
++            .unwrap()
++            .as_nanos();
++        let path = std::env::temp_dir().join(format!(
++            "kinakaze-native-rename-{}-{stamp}",
++            std::process::id()
++        ));
++        std::fs::create_dir_all(path.join("jail/dest")).unwrap();
++        std::fs::write(path.join("jail/source"), b"original source").unwrap();
++        Self(path)
++    }
++    fn prepare(&self, from: &str, to: &str) -> Option<PreparedRename> {
++        PreparedRename::open(&self.0, "/jail", from, to).unwrap()
++    }
++    fn path(&self, path: &str) -> PathBuf {
++        self.0.join("jail").join(path)
++    }
++}
++impl Drop for Fixture {
++    fn drop(&mut self) {
++        std::fs::remove_dir_all(&self.0).unwrap();
++    }
++}
++
++#[test]
++fn pinned_source_and_destination_parent_survive_independent_name_replacement() {
++    let f = Fixture::new();
++    let prepared = f.prepare("/source", "/dest/result").unwrap();
++    std::fs::rename(f.path("source"), f.path("moved-source")).unwrap();
++    std::fs::write(f.path("source"), b"source replacement").unwrap();
++    std::fs::rename(f.path("dest"), f.path("retained-parent")).unwrap();
++    std::fs::create_dir(f.path("dest")).unwrap();
++    prepared.apply(true).unwrap();
++    assert_eq!(
++        std::fs::read(f.path("retained-parent/result")).unwrap(),
++        b"original source"
++    );
++    assert_eq!(
++        std::fs::read(f.path("source")).unwrap(),
++        b"source replacement"
++    );
++    assert!(!f.path("dest/result").exists());
++    assert!(!f.path("moved-source").exists());
++}
++
++#[test]
++fn no_replace_is_atomic_and_replacement_preserves_open_target_inode() {
++    let f = Fixture::new();
++    std::fs::write(f.path("dest/result"), b"retained target").unwrap();
++    let mut target = std::fs::File::open(f.path("dest/result")).unwrap();
++    let prepared = f.prepare("/source", "/dest/result").unwrap();
++    assert_eq!(prepared.apply(false), Err(crate::EEXIST));
++    assert_eq!(std::fs::read(f.path("source")).unwrap(), b"original source");
++    assert_eq!(
++        std::fs::read(f.path("dest/result")).unwrap(),
++        b"retained target"
++    );
++    prepared.apply(true).unwrap();
++    let mut data = Vec::new();
++    target.read_to_end(&mut data).unwrap();
++    assert_eq!(data, b"retained target");
++    assert_eq!(
++        std::fs::read(f.path("dest/result")).unwrap(),
++        b"original source"
++    );
++    assert!(!f.path("source").exists());
++}
++
++#[test]
++fn hosted_link_and_special_inode_are_moved_without_following_or_reclassifying() {
++    let f = Fixture::new();
++    crate::create_emulated_symlink(&f.path("link"), "source").unwrap();
++    f.prepare("/link", "/dest/link")
++        .unwrap()
++        .apply(true)
++        .unwrap();
++    assert_eq!(
++        inode::read_path(&f.path("dest/link")).unwrap().symlink,
++        Some("source".into())
++    );
++    assert_eq!(std::fs::read(f.path("source")).unwrap(), b"original source");
++    std::fs::write(f.path("fifo"), b"").unwrap();
++    let fifo = Object::open(
++        &f.path("fifo"),
++        FILE_READ_ATTRIBUTES | FILE_READ_EA | FILE_WRITE_EA,
++    )
++    .unwrap();
++    let record = inode::Record {
++        mode: Some(S_IFIFO | 0o640),
++        uid: Some(1234),
++        gid: Some(4321),
++        ..Default::default()
++    };
++    inode::replace(fifo.raw(), &record).unwrap();
++    f.prepare("/fifo", "/dest/fifo")
++        .unwrap()
++        .apply(true)
++        .unwrap();
++    let renamed = Object::open(&f.path("dest/fifo"), FILE_READ_ATTRIBUTES | FILE_READ_EA).unwrap();
++    assert_eq!(inode::read_object(&renamed).unwrap(), record);
++}
++
++#[test]
++fn complex_paths_directories_and_hosted_ancestor_links_keep_the_walker() {
++    let f = Fixture::new();
++    crate::create_emulated_symlink(&f.path("link"), "dest").unwrap();
++    std::fs::create_dir(f.path("directory")).unwrap();
++    std::fs::write(f.path("dest/file"), b"ancestor payload").unwrap();
++    for (from, to) in [
++        ("/source/", "/dest/result"),
++        ("/./source", "/dest/result"),
++        ("/directory", "/dest/result"),
++        ("/missing", "/dest/result"),
++        ("/link/file", "/dest/result"),
++        ("/source", "/link/result"),
++        ("/source", "/missing/result"),
++        ("/source", "/dest/../result"),
++        ("/source", "/dest/result/"),
++        ("/source", "/dest/\0result"),
++    ] {
++        assert!(f.prepare(from, to).is_none(), "{from} -> {to}");
++    }
++    assert_eq!(std::fs::read(f.path("source")).unwrap(), b"original source");
++    assert_eq!(
++        std::fs::read(f.path("dest/file")).unwrap(),
++        b"ancestor payload"
++    );
++}
++
++#[test]
++fn namespace_prefix_and_escaped_leaf_names_select_the_guest_inode() {
++    let f = Fixture::new();
++    let from = f.path(crate::path::escape_component("source:name").as_ref());
++    let to = f
++        .path("dest")
++        .join(crate::path::escape_component("result:name").as_ref());
++    std::fs::write(&from, b"escaped source").unwrap();
++    f.prepare("//source:name", "/dest//result:name")
++        .unwrap()
++        .apply(false)
++        .unwrap();
++    assert_eq!(std::fs::read(to).unwrap(), b"escaped source");
++    assert!(!from.exists());
++}
++
++#[test]
++fn same_path_and_same_inode_hardlink_rename_preserve_linux_names() {
++    let f = Fixture::new();
++    f.prepare("/source", "/source")
++        .unwrap()
++        .apply(true)
++        .unwrap();
++    assert_eq!(std::fs::read(f.path("source")).unwrap(), b"original source");
++    std::fs::hard_link(f.path("source"), f.path("dest/alias")).unwrap();
++    f.prepare("/source", "/dest/alias")
++        .unwrap()
++        .apply(true)
++        .unwrap();
++    assert!(f.path("source").exists());
++    assert!(f.path("dest/alias").exists());
++}
++
++#[test]
++fn complete_fast_path_acquires_mount_writers_and_moves_current_native_inode() {
++    struct Restore(crate::fs_context::State);
++    impl Drop for Restore {
++        fn drop(&mut self) {
++            crate::fs_context::update(|state| *state = self.0.clone());
++        }
++    }
++    crate::fs_context::unshare();
++    let _restore = Restore(crate::fs_context::read(Clone::clone));
++    let stamp = std::time::SystemTime::now()
++        .duration_since(std::time::UNIX_EPOCH)
++        .unwrap()
++        .as_nanos();
++    let f = Fixture(crate::path::default_system_root().join(format!(
++        "native-rename-install-{}-{stamp}",
++        std::process::id()
++    )));
++    std::fs::create_dir_all(f.path("dest")).unwrap();
++    std::fs::write(f.path("source"), b"original source").unwrap();
++    crate::fs_context::update(|state| {
++        state.root = Some(f.path(""));
++        state.root_object = None;
++        state.overlay = None;
++        state.confined = true;
++    });
++    let object = Object::open(
++        &f.path("source"),
++        FILE_READ_ATTRIBUTES | FILE_READ_EA | FILE_WRITE_EA,
++    )
++    .unwrap();
++    let record = inode::Record {
++        mode: Some(S_IFREG | 0o640),
++        uid: Some(777),
++        gid: Some(888),
++        ..Default::default()
++    };
++    inode::replace(object.raw(), &record).unwrap();
++    assert_eq!(try_rename("/source", "/dest/result", 1), Ok(Some(())));
++    assert_eq!(
++        std::fs::read(f.path("dest/result")).unwrap(),
++        b"original source"
++    );
++    assert_eq!(inode::read_object(&object).unwrap(), record);
++    for flags in [2, 4, 6, 8] {
++        assert_eq!(try_rename("/dest/result", "/source", flags), Ok(None));
++    }
++}
++
++#[test]
++fn native_junctions_cannot_redirect_either_source_or_destination() {
++    use windows_sys::Win32::{
++        Foundation::GENERIC_WRITE,
++        Storage::FileSystem::{
++            CreateFileW, FILE_FLAG_BACKUP_SEMANTICS, FILE_FLAG_OPEN_REPARSE_POINT,
++            FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING,
++        },
++        System::IO::DeviceIoControl,
++    };
++    let f = Fixture::new();
++    let outside = f.0.join("outside");
++    std::fs::create_dir_all(outside.join("child")).unwrap();
++    std::fs::write(outside.join("file"), b"outside inode").unwrap();
++    let link = f.path("junction");
++    std::fs::create_dir(&link).unwrap();
++    let object = Object::owned(unsafe {
++        CreateFileW(
++            crate::path::wide_path(&link).unwrap().as_ptr(),
++            GENERIC_WRITE,
++            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
++            std::ptr::null(),
++            OPEN_EXISTING,
++            FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
++            std::ptr::null_mut(),
++        )
++    })
++    .unwrap();
++    let target = format!(r"\??\{}", outside.display());
++    let bytes: Vec<u8> = target.encode_utf16().flat_map(u16::to_le_bytes).collect();
++    let mut data = vec![0u8; 16];
++    data[..4].copy_from_slice(&0xa000_0003u32.to_le_bytes());
++    data[4..6].copy_from_slice(&((12 + bytes.len()) as u16).to_le_bytes());
++    data[10..12].copy_from_slice(&(bytes.len() as u16).to_le_bytes());
++    data[12..14].copy_from_slice(&((bytes.len() + 2) as u16).to_le_bytes());
++    data.extend(bytes);
++    data.extend([0; 4]);
++    let mut returned = 0;
++    assert_ne!(
++        unsafe {
++            DeviceIoControl(
++                object.raw(),
++                0x0009_00a4,
++                data.as_ptr().cast(),
++                data.len() as u32,
++                std::ptr::null_mut(),
++                0,
++                &mut returned,
++                std::ptr::null_mut(),
++            )
++        },
++        0
++    );
++    drop(object);
++    assert!(f.prepare("/source", "/dest/result").is_some());
++    for (from, to) in [
++        ("/junction/file", "/dest/result"),
++        ("/junction", "/dest/result"),
++        ("/source", "/junction/result"),
++        ("/source", "/junction/child/result"),
++    ] {
++        assert!(f.prepare(from, to).is_none(), "{from} -> {to}");
++    }
++    assert_eq!(
++        std::fs::read(outside.join("file")).unwrap(),
++        b"outside inode"
++    );
++    assert_eq!(std::fs::read(f.path("source")).unwrap(), b"original source");
++    assert!(!outside.join("result").exists());
++    std::fs::remove_dir(link).unwrap();
++}
+diff --git a/engine/crates/kinakaze-vfs/src/mount/overlay/native_open.rs b/engine/crates/kinakaze-vfs/src/mount/overlay/native_open.rs
+index 705f9b6..93f4d62 100644
+--- a/engine/crates/kinakaze-vfs/src/mount/overlay/native_open.rs
++++ b/engine/crates/kinakaze-vfs/src/mount/overlay/native_open.rs
+@@ -79,6 +79,15 @@ pub(crate) fn directory(path: &Path) -> Result<Object, i32> {
+     )
+ }
+ 
++/// A private DELETE-capable ordinary file; no native reparse may be followed.
++pub(crate) fn rename_file(path: &Path) -> Result<Object, i32> {
++    open_with_options(
++        path,
++        windows_sys::Win32::Storage::FileSystem::DELETE,
++        0x0000_0040, // FILE_NON_DIRECTORY_FILE, without FILE_OPEN_REPARSE_POINT.
++    )
++}
++
+ fn open_with_options(path: &Path, access: u32, options: u32) -> Result<Object, i32> {
+     let wide = crate::path::wide_path(path)?;
+     let mut name = Name(unsafe { std::mem::zeroed() });
