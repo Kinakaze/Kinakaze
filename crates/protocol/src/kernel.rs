@@ -11,7 +11,7 @@ pub const BPF_MAGIC: u64 = 0x4352_5942_5046_3032;
 pub const SHM_MAGIC: u64 = 0x4352_5953_5348_4d02;
 pub const SEM_MAGIC: u64 = 0x4352_5953_5345_4d02;
 pub const POLICY_MAGIC: u64 = u64::from_le_bytes(*b"CYMPOL02");
-pub const PROCESS_TABLE_MAGIC: u64 = 0x4352_5950_4944_3137;
+pub const PROCESS_TABLE_MAGIC: u64 = 0x4352_5950_4944_3138;
 pub const CGROUP_CATALOG: u64 = u64::MAX - 26;
 pub const CGROUP_MAGIC: u64 = u64::from_le_bytes(*b"CRYCG003");
 pub const RESOURCE_MAGIC: u64 = u64::from_le_bytes(*b"CYRES001");
@@ -66,7 +66,7 @@ impl ObjectKey {
             Self::Shared(id) => format!(r"Local\kinakaze.mount-object.v1.{domain}.{id}.state"),
             Self::Time(id) => format!(r"Local\kinakaze.time.v1.{domain}.{id}.state"),
             Self::Bpf => format!(r"Local\kinakaze.bpf.v3.{domain}"),
-            Self::ProcessTable => format!(r"Local\kinakaze.v2.pidns.{domain:016x}.v15"),
+            Self::ProcessTable => format!(r"Local\kinakaze.v2.pidns.{domain:016x}.v16"),
             Self::CgroupJob(id) => format!(r"Local\kinakaze.cgroup.v2.{domain}.{id}"),
             Self::MountPolicy { namespace, id } => {
                 format!(r"Local\kinakaze.mount-policy.v2.{domain}.{namespace}.{id}.state")
