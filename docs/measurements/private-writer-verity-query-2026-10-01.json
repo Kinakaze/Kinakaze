@@ -1,0 +1,1099 @@
+{
+  "source_base": "98b3312947b5e43d0acc83b3ce6476550765417b",
+  "source_changes": {
+    "engine/crates/kinakaze-vfs/src/fs/native_write.rs": {
+      "before": "de237d0c3c8517c78cf060cb1d6af6936fb40fd911cf8c2c6d3a7da1c6a6f2ec",
+      "after": "e7034b8839cdb2b86f0b84a7ee9d689a0ed1ab27f70783ad6f32ca0a778a7bd8"
+    },
+    "engine/crates/kinakaze-vfs/src/fs/verity.rs": {
+      "before": "8f6031d26016ea29efe3c6faa9740dd797deb1bc705b6ec6ed7c52d100b17f76",
+      "after": "53d6034ebc6989941f3727e045dccee21bd272578142635d6d6f7fac23b85017"
+    },
+    "engine/crates/kinakaze-vfs/src/fs/verity/tests.rs": {
+      "before": "22452db717866c24f7a9ec3a2386da1e640b4d8c56b359ac0dbc4ce857059bd7",
+      "after": "133f331f0d4a91fda6745017463778ace80d9f9ed6ce0661c9022e1dde6b1dbb"
+    }
+  },
+  "selection": "Reuse the private unpublished writer for its live verity EA query; no production switch.",
+  "summary": {
+    "native_passed": 112,
+    "native_ignored": 3,
+    "guest_passed": 57,
+    "comparison": {
+      "absolute_repeated": {
+        "control_ms": 1159.8054333333334,
+        "candidate_ms": 883.3701833333333,
+        "reduction_percent": 23.83462277853904
+      },
+      "absolute_varied": {
+        "control_ms": 1168.2455,
+        "candidate_ms": 898.9261833333334,
+        "reduction_percent": 23.053315135103592
+      },
+      "absolute_varied_write": {
+        "control_ms": 1907.0276,
+        "candidate_ms": 1534.2169333333334,
+        "reduction_percent": 19.54930629565438
+      },
+      "relative_repeated": {
+        "control_ms": 1311.28835,
+        "candidate_ms": 1064.85925,
+        "reduction_percent": 18.792899364964242
+      },
+      "relative_varied": {
+        "control_ms": 1349.1309833333335,
+        "candidate_ms": 1075.4531833333333,
+        "reduction_percent": 20.28548772364691
+      },
+      "relative_varied_write": {
+        "control_ms": 2232.8459333333335,
+        "candidate_ms": 1827.9073166666667,
+        "reduction_percent": 18.13553772884584
+      }
+    },
+    "rounds": [
+      {
+        "absolute_repeated": {
+          "control_ms": 1207.87865,
+          "candidate_ms": 874.57105,
+          "reduction_percent": 27.594460751500172
+        },
+        "absolute_varied": {
+          "control_ms": 1179.647,
+          "candidate_ms": 904.4802,
+          "reduction_percent": 23.32619843054744
+        },
+        "absolute_varied_write": {
+          "control_ms": 1944.4427,
+          "candidate_ms": 1571.77375,
+          "reduction_percent": 19.16584890879016
+        },
+        "relative_repeated": {
+          "control_ms": 1331.9742,
+          "candidate_ms": 1051.513,
+          "reduction_percent": 21.056053488123126
+        },
+        "relative_varied": {
+          "control_ms": 1385.37415,
+          "candidate_ms": 1059.2857,
+          "reduction_percent": 23.537933777672993
+        },
+        "relative_varied_write": {
+          "control_ms": 2248.84765,
+          "candidate_ms": 1832.1948,
+          "reduction_percent": 18.527393351879585
+        }
+      },
+      {
+        "absolute_repeated": {
+          "control_ms": 1130.47275,
+          "candidate_ms": 881.7923000000001,
+          "reduction_percent": 21.997916358443838
+        },
+        "absolute_varied": {
+          "control_ms": 1162.8710500000002,
+          "candidate_ms": 894.46145,
+          "reduction_percent": 23.081630590081346
+        },
+        "absolute_varied_write": {
+          "control_ms": 1896.6674,
+          "candidate_ms": 1518.44405,
+          "reduction_percent": 19.941469442665593
+        },
+        "relative_repeated": {
+          "control_ms": 1301.5301,
+          "candidate_ms": 1068.275,
+          "reduction_percent": 17.921606269420888
+        },
+        "relative_varied": {
+          "control_ms": 1332.8452000000002,
+          "candidate_ms": 1081.7349,
+          "reduction_percent": 18.84016988619536
+        },
+        "relative_varied_write": {
+          "control_ms": 2178.4261500000002,
+          "candidate_ms": 1810.1763999999998,
+          "reduction_percent": 16.904394486817942
+        }
+      },
+      {
+        "absolute_repeated": {
+          "control_ms": 1141.0649,
+          "candidate_ms": 893.7472,
+          "reduction_percent": 21.67428864037445
+        },
+        "absolute_varied": {
+          "control_ms": 1162.2184499999998,
+          "candidate_ms": 897.8369,
+          "reduction_percent": 22.74800834559113
+        },
+        "absolute_varied_write": {
+          "control_ms": 1879.9726999999998,
+          "candidate_ms": 1512.433,
+          "reduction_percent": 19.550267937401422
+        },
+        "relative_repeated": {
+          "control_ms": 1300.3607499999998,
+          "candidate_ms": 1074.78975,
+          "reduction_percent": 17.346801647158294
+        },
+        "relative_varied": {
+          "control_ms": 1329.1736,
+          "candidate_ms": 1085.33895,
+          "reduction_percent": 18.34483095360907
+        },
+        "relative_varied_write": {
+          "control_ms": 2271.264,
+          "candidate_ms": 1841.35075,
+          "reduction_percent": 18.928369841638848
+        }
+      }
+    ],
+    "job_cpu_mean_ms": {
+      "r16-control": 9541.666666666666,
+      "r16": 7671.875
+    },
+    "hashes_unchanged": true,
+    "source_diff": [
+      "engine/crates/kinakaze-vfs/src/fs/native_write.rs",
+      "engine/crates/kinakaze-vfs/src/fs/verity.rs",
+      "engine/crates/kinakaze-vfs/src/fs/verity/tests.rs"
+    ]
+  },
+  "rows": [
+    {
+      "pid": 1,
+      "command": [
+        "/usr/bin/python3",
+        "/var/tmp/goal180-r16-open-comparison/probe.py",
+        "/var/tmp/goal180-r16-open-comparison"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.2812,
+      "request_to_exit_ms": 10252.4516,
+      "activation_to_exit_ms": 10252.1704,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 1593.75,
+        "kernel_ms": 8546.875,
+        "total_cpu_ms": 10140.625,
+        "cycles": 29315092920,
+        "page_faults": 8226
+      },
+      "prepared_working_set_bytes": 11960320,
+      "cpu_metrics": {
+        "user_ms": 1640.625,
+        "kernel_ms": 8562.5,
+        "total_cpu_ms": 10203.125,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 15519,
+        "read_bytes": 7647065,
+        "write_bytes": 128310,
+        "read_ops": 1199,
+        "write_ops": 17008,
+        "other_ops": 1416294,
+        "other_bytes": 29699792
+      },
+      "label": "r16-control",
+      "loops": {
+        "absolute_repeated": {
+          "iterations": 8192,
+          "ms": 1288.8684
+        },
+        "absolute_varied": {
+          "iterations": 8192,
+          "ms": 1222.0693
+        },
+        "absolute_varied_write": {
+          "iterations": 8192,
+          "ms": 2011.8136
+        },
+        "relative_repeated": {
+          "iterations": 8192,
+          "ms": 1377.7091
+        },
+        "relative_varied": {
+          "iterations": 8192,
+          "ms": 1467.7253
+        },
+        "relative_varied_write": {
+          "iterations": 8192,
+          "ms": 2298.1844
+        }
+      }
+    },
+    {
+      "pid": 1,
+      "command": [
+        "/usr/bin/python3",
+        "/var/tmp/goal180-r16-open-comparison/probe.py",
+        "/var/tmp/goal180-r16-open-comparison"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.34,
+      "request_to_exit_ms": 7771.0658,
+      "activation_to_exit_ms": 7770.7258,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 1312.5,
+        "kernel_ms": 6328.125,
+        "total_cpu_ms": 7640.625,
+        "cycles": 22343650000,
+        "page_faults": 8289
+      },
+      "prepared_working_set_bytes": 11960320,
+      "cpu_metrics": {
+        "user_ms": 1343.75,
+        "kernel_ms": 6328.125,
+        "total_cpu_ms": 7671.875,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 15475,
+        "read_bytes": 7647063,
+        "write_bytes": 128307,
+        "read_ops": 1199,
+        "write_ops": 17008,
+        "other_ops": 1170056,
+        "other_bytes": 28193923
+      },
+      "label": "r16",
+      "loops": {
+        "absolute_repeated": {
+          "iterations": 8192,
+          "ms": 874.8671
+        },
+        "absolute_varied": {
+          "iterations": 8192,
+          "ms": 896.4507
+        },
+        "absolute_varied_write": {
+          "iterations": 8192,
+          "ms": 1582.1439
+        },
+        "relative_repeated": {
+          "iterations": 8192,
+          "ms": 1038.5035
+        },
+        "relative_varied": {
+          "iterations": 8192,
+          "ms": 1059.7519
+        },
+        "relative_varied_write": {
+          "iterations": 8192,
+          "ms": 1860.5582
+        }
+      }
+    },
+    {
+      "pid": 1,
+      "command": [
+        "/usr/bin/python3",
+        "/var/tmp/goal180-r16-open-comparison/probe.py",
+        "/var/tmp/goal180-r16-open-comparison"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3695,
+      "request_to_exit_ms": 7738.6091,
+      "activation_to_exit_ms": 7738.2396,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 1187.5,
+        "kernel_ms": 6406.25,
+        "total_cpu_ms": 7593.75,
+        "cycles": 22216277907,
+        "page_faults": 8270
+      },
+      "prepared_working_set_bytes": 11931648,
+      "cpu_metrics": {
+        "user_ms": 1187.5,
+        "kernel_ms": 6421.875,
+        "total_cpu_ms": 7609.375,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 15540,
+        "read_bytes": 7647063,
+        "write_bytes": 128306,
+        "read_ops": 1199,
+        "write_ops": 17008,
+        "other_ops": 1170075,
+        "other_bytes": 28194513
+      },
+      "label": "r16",
+      "loops": {
+        "absolute_repeated": {
+          "iterations": 8192,
+          "ms": 874.275
+        },
+        "absolute_varied": {
+          "iterations": 8192,
+          "ms": 912.5097
+        },
+        "absolute_varied_write": {
+          "iterations": 8192,
+          "ms": 1561.4036
+        },
+        "relative_repeated": {
+          "iterations": 8192,
+          "ms": 1064.5225
+        },
+        "relative_varied": {
+          "iterations": 8192,
+          "ms": 1058.8195
+        },
+        "relative_varied_write": {
+          "iterations": 8192,
+          "ms": 1803.8314
+        }
+      }
+    },
+    {
+      "pid": 1,
+      "command": [
+        "/usr/bin/python3",
+        "/var/tmp/goal180-r16-open-comparison/probe.py",
+        "/var/tmp/goal180-r16-open-comparison"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.352,
+      "request_to_exit_ms": 9383.4095,
+      "activation_to_exit_ms": 9383.0575,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 1187.5,
+        "kernel_ms": 8078.125,
+        "total_cpu_ms": 9265.625,
+        "cycles": 26979616755,
+        "page_faults": 8264
+      },
+      "prepared_working_set_bytes": 11960320,
+      "cpu_metrics": {
+        "user_ms": 1203.125,
+        "kernel_ms": 8078.125,
+        "total_cpu_ms": 9281.25,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 14676,
+        "read_bytes": 7647065,
+        "write_bytes": 128309,
+        "read_ops": 1199,
+        "write_ops": 17008,
+        "other_ops": 1415794,
+        "other_bytes": 29687711
+      },
+      "label": "r16-control",
+      "loops": {
+        "absolute_repeated": {
+          "iterations": 8192,
+          "ms": 1126.8889
+        },
+        "absolute_varied": {
+          "iterations": 8192,
+          "ms": 1137.2247
+        },
+        "absolute_varied_write": {
+          "iterations": 8192,
+          "ms": 1877.0718
+        },
+        "relative_repeated": {
+          "iterations": 8192,
+          "ms": 1286.2393
+        },
+        "relative_varied": {
+          "iterations": 8192,
+          "ms": 1303.023
+        },
+        "relative_varied_write": {
+          "iterations": 8192,
+          "ms": 2199.5109
+        }
+      }
+    },
+    {
+      "pid": 1,
+      "command": [
+        "/usr/bin/python3",
+        "/var/tmp/goal180-r16-open-comparison/probe.py",
+        "/var/tmp/goal180-r16-open-comparison"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3152,
+      "request_to_exit_ms": 9414.6783,
+      "activation_to_exit_ms": 9414.3631,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 1546.875,
+        "kernel_ms": 7812.5,
+        "total_cpu_ms": 9359.375,
+        "cycles": 27072301383,
+        "page_faults": 8317
+      },
+      "prepared_working_set_bytes": 11980800,
+      "cpu_metrics": {
+        "user_ms": 1562.5,
+        "kernel_ms": 7812.5,
+        "total_cpu_ms": 9375.0,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 15361,
+        "read_bytes": 7647071,
+        "write_bytes": 128316,
+        "read_ops": 1199,
+        "write_ops": 17008,
+        "other_ops": 1415809,
+        "other_bytes": 29787547
+      },
+      "label": "r16-control",
+      "loops": {
+        "absolute_repeated": {
+          "iterations": 8192,
+          "ms": 1123.4942
+        },
+        "absolute_varied": {
+          "iterations": 8192,
+          "ms": 1166.3329
+        },
+        "absolute_varied_write": {
+          "iterations": 8192,
+          "ms": 1859.866
+        },
+        "relative_repeated": {
+          "iterations": 8192,
+          "ms": 1296.0809
+        },
+        "relative_varied": {
+          "iterations": 8192,
+          "ms": 1334.2162
+        },
+        "relative_varied_write": {
+          "iterations": 8192,
+          "ms": 2181.0906
+        }
+      }
+    },
+    {
+      "pid": 1,
+      "command": [
+        "/usr/bin/python3",
+        "/var/tmp/goal180-r16-open-comparison/probe.py",
+        "/var/tmp/goal180-r16-open-comparison"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3931,
+      "request_to_exit_ms": 7666.0414,
+      "activation_to_exit_ms": 7665.6483,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 1125.0,
+        "kernel_ms": 6359.375,
+        "total_cpu_ms": 7484.375,
+        "cycles": 22032700281,
+        "page_faults": 8338
+      },
+      "prepared_working_set_bytes": 11960320,
+      "cpu_metrics": {
+        "user_ms": 1171.875,
+        "kernel_ms": 6359.375,
+        "total_cpu_ms": 7531.25,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 14955,
+        "read_bytes": 7647063,
+        "write_bytes": 128307,
+        "read_ops": 1199,
+        "write_ops": 17008,
+        "other_ops": 1170027,
+        "other_bytes": 28193215
+      },
+      "label": "r16",
+      "loops": {
+        "absolute_repeated": {
+          "iterations": 8192,
+          "ms": 872.9879
+        },
+        "absolute_varied": {
+          "iterations": 8192,
+          "ms": 886.7852
+        },
+        "absolute_varied_write": {
+          "iterations": 8192,
+          "ms": 1501.9518
+        },
+        "relative_repeated": {
+          "iterations": 8192,
+          "ms": 1061.5803
+        },
+        "relative_varied": {
+          "iterations": 8192,
+          "ms": 1063.2857
+        },
+        "relative_varied_write": {
+          "iterations": 8192,
+          "ms": 1816.4478
+        }
+      }
+    },
+    {
+      "pid": 1,
+      "command": [
+        "/usr/bin/python3",
+        "/var/tmp/goal180-r16-open-comparison/probe.py",
+        "/var/tmp/goal180-r16-open-comparison"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.4272,
+      "request_to_exit_ms": 7757.0094,
+      "activation_to_exit_ms": 7756.5822,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 1156.25,
+        "kernel_ms": 6500.0,
+        "total_cpu_ms": 7656.25,
+        "cycles": 22284713450,
+        "page_faults": 8221
+      },
+      "prepared_working_set_bytes": 11956224,
+      "cpu_metrics": {
+        "user_ms": 1187.5,
+        "kernel_ms": 6562.5,
+        "total_cpu_ms": 7750.0,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 16155,
+        "read_bytes": 7647063,
+        "write_bytes": 128306,
+        "read_ops": 1199,
+        "write_ops": 17008,
+        "other_ops": 1170222,
+        "other_bytes": 28196999
+      },
+      "label": "r16",
+      "loops": {
+        "absolute_repeated": {
+          "iterations": 8192,
+          "ms": 890.5967
+        },
+        "absolute_varied": {
+          "iterations": 8192,
+          "ms": 902.1377
+        },
+        "absolute_varied_write": {
+          "iterations": 8192,
+          "ms": 1534.9363
+        },
+        "relative_repeated": {
+          "iterations": 8192,
+          "ms": 1074.9697
+        },
+        "relative_varied": {
+          "iterations": 8192,
+          "ms": 1100.1841
+        },
+        "relative_varied_write": {
+          "iterations": 8192,
+          "ms": 1803.905
+        }
+      }
+    },
+    {
+      "pid": 1,
+      "command": [
+        "/usr/bin/python3",
+        "/var/tmp/goal180-r16-open-comparison/probe.py",
+        "/var/tmp/goal180-r16-open-comparison"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3977,
+      "request_to_exit_ms": 9505.588,
+      "activation_to_exit_ms": 9505.1903,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 1359.375,
+        "kernel_ms": 7984.375,
+        "total_cpu_ms": 9343.75,
+        "cycles": 27257309469,
+        "page_faults": 8330
+      },
+      "prepared_working_set_bytes": 11952128,
+      "cpu_metrics": {
+        "user_ms": 1359.375,
+        "kernel_ms": 7984.375,
+        "total_cpu_ms": 9343.75,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 15256,
+        "read_bytes": 7647065,
+        "write_bytes": 128309,
+        "read_ops": 1199,
+        "write_ops": 17008,
+        "other_ops": 1415805,
+        "other_bytes": 29688145
+      },
+      "label": "r16-control",
+      "loops": {
+        "absolute_repeated": {
+          "iterations": 8192,
+          "ms": 1137.4513
+        },
+        "absolute_varied": {
+          "iterations": 8192,
+          "ms": 1159.4092
+        },
+        "absolute_varied_write": {
+          "iterations": 8192,
+          "ms": 1933.4688
+        },
+        "relative_repeated": {
+          "iterations": 8192,
+          "ms": 1306.9793
+        },
+        "relative_varied": {
+          "iterations": 8192,
+          "ms": 1331.4742
+        },
+        "relative_varied_write": {
+          "iterations": 8192,
+          "ms": 2175.7617
+        }
+      }
+    },
+    {
+      "pid": 1,
+      "command": [
+        "/usr/bin/python3",
+        "/var/tmp/goal180-r16-open-comparison/probe.py",
+        "/var/tmp/goal180-r16-open-comparison"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3061,
+      "request_to_exit_ms": 9337.1368,
+      "activation_to_exit_ms": 9336.8307,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 1234.375,
+        "kernel_ms": 7968.75,
+        "total_cpu_ms": 9203.125,
+        "cycles": 26796724090,
+        "page_faults": 8299
+      },
+      "prepared_working_set_bytes": 11968512,
+      "cpu_metrics": {
+        "user_ms": 1312.5,
+        "kernel_ms": 8000.0,
+        "total_cpu_ms": 9312.5,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 15590,
+        "read_bytes": 7647065,
+        "write_bytes": 128310,
+        "read_ops": 1199,
+        "write_ops": 17008,
+        "other_ops": 1415831,
+        "other_bytes": 29688943
+      },
+      "label": "r16-control",
+      "loops": {
+        "absolute_repeated": {
+          "iterations": 8192,
+          "ms": 1127.9425
+        },
+        "absolute_varied": {
+          "iterations": 8192,
+          "ms": 1173.5753
+        },
+        "absolute_varied_write": {
+          "iterations": 8192,
+          "ms": 1876.8354
+        },
+        "relative_repeated": {
+          "iterations": 8192,
+          "ms": 1285.7203
+        },
+        "relative_varied": {
+          "iterations": 8192,
+          "ms": 1309.0519
+        },
+        "relative_varied_write": {
+          "iterations": 8192,
+          "ms": 2104.1055
+        }
+      }
+    },
+    {
+      "pid": 1,
+      "command": [
+        "/usr/bin/python3",
+        "/var/tmp/goal180-r16-open-comparison/probe.py",
+        "/var/tmp/goal180-r16-open-comparison"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3648,
+      "request_to_exit_ms": 7785.4528,
+      "activation_to_exit_ms": 7785.088,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 1140.625,
+        "kernel_ms": 6593.75,
+        "total_cpu_ms": 7734.375,
+        "cycles": 22369299014,
+        "page_faults": 8286
+      },
+      "prepared_working_set_bytes": 11952128,
+      "cpu_metrics": {
+        "user_ms": 1156.25,
+        "kernel_ms": 6609.375,
+        "total_cpu_ms": 7765.625,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 15721,
+        "read_bytes": 7647063,
+        "write_bytes": 128307,
+        "read_ops": 1199,
+        "write_ops": 17008,
+        "other_ops": 1170090,
+        "other_bytes": 28194901
+      },
+      "label": "r16",
+      "loops": {
+        "absolute_repeated": {
+          "iterations": 8192,
+          "ms": 893.3728
+        },
+        "absolute_varied": {
+          "iterations": 8192,
+          "ms": 904.4317
+        },
+        "absolute_varied_write": {
+          "iterations": 8192,
+          "ms": 1517.2945
+        },
+        "relative_repeated": {
+          "iterations": 8192,
+          "ms": 1071.7825
+        },
+        "relative_varied": {
+          "iterations": 8192,
+          "ms": 1075.6374
+        },
+        "relative_varied_write": {
+          "iterations": 8192,
+          "ms": 1863.2358
+        }
+      }
+    },
+    {
+      "pid": 1,
+      "command": [
+        "/usr/bin/python3",
+        "/var/tmp/goal180-r16-open-comparison/probe.py",
+        "/var/tmp/goal180-r16-open-comparison"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3094,
+      "request_to_exit_ms": 7740.2014,
+      "activation_to_exit_ms": 7739.892,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 1250.0,
+        "kernel_ms": 6421.875,
+        "total_cpu_ms": 7671.875,
+        "cycles": 22270042069,
+        "page_faults": 8277
+      },
+      "prepared_working_set_bytes": 11960320,
+      "cpu_metrics": {
+        "user_ms": 1265.625,
+        "kernel_ms": 6437.5,
+        "total_cpu_ms": 7703.125,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 15921,
+        "read_bytes": 7647057,
+        "write_bytes": 128299,
+        "read_ops": 1199,
+        "write_ops": 17008,
+        "other_ops": 1170064,
+        "other_bytes": 28093949
+      },
+      "label": "r16",
+      "loops": {
+        "absolute_repeated": {
+          "iterations": 8192,
+          "ms": 894.1216
+        },
+        "absolute_varied": {
+          "iterations": 8192,
+          "ms": 891.2421
+        },
+        "absolute_varied_write": {
+          "iterations": 8192,
+          "ms": 1507.5715
+        },
+        "relative_repeated": {
+          "iterations": 8192,
+          "ms": 1077.797
+        },
+        "relative_varied": {
+          "iterations": 8192,
+          "ms": 1095.0405
+        },
+        "relative_varied_write": {
+          "iterations": 8192,
+          "ms": 1819.4657
+        }
+      }
+    },
+    {
+      "pid": 1,
+      "command": [
+        "/usr/bin/python3",
+        "/var/tmp/goal180-r16-open-comparison/probe.py",
+        "/var/tmp/goal180-r16-open-comparison"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.364,
+      "request_to_exit_ms": 9759.3202,
+      "activation_to_exit_ms": 9758.9562,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 1578.125,
+        "kernel_ms": 8140.625,
+        "total_cpu_ms": 9718.75,
+        "cycles": 28005296986,
+        "page_faults": 8331
+      },
+      "prepared_working_set_bytes": 11964416,
+      "cpu_metrics": {
+        "user_ms": 1593.75,
+        "kernel_ms": 8140.625,
+        "total_cpu_ms": 9734.375,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 13282,
+        "read_bytes": 7647071,
+        "write_bytes": 128315,
+        "read_ops": 1199,
+        "write_ops": 17008,
+        "other_ops": 1415616,
+        "other_bytes": 29784485
+      },
+      "label": "r16-control",
+      "loops": {
+        "absolute_repeated": {
+          "iterations": 8192,
+          "ms": 1154.1873
+        },
+        "absolute_varied": {
+          "iterations": 8192,
+          "ms": 1150.8616
+        },
+        "absolute_varied_write": {
+          "iterations": 8192,
+          "ms": 1883.11
+        },
+        "relative_repeated": {
+          "iterations": 8192,
+          "ms": 1315.0012
+        },
+        "relative_varied": {
+          "iterations": 8192,
+          "ms": 1349.2953
+        },
+        "relative_varied_write": {
+          "iterations": 8192,
+          "ms": 2438.4225
+        }
+      }
+    }
+  ],
+  "distribution_hashes": {
+    "r16-control": {
+      "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "init.exe": "147628b90de5e7c8bfa13aab4c640761f1410c82710ed89738bec9bbed376358",
+      "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "rootfs.manifest.json": "65c4c844188db2bd5da8d011fdc4c7577377a973da26f3e1250193d07a2bf6bc",
+      "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+      "worker.exe": "25748f612193a6cf158b6f0e5d5a509534c475f733ed45cfe81fe779bd01a2f1",
+      "rootfs/lib/concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "rootfs/lib/kinakaze_alloc.so": "8ca85d9361224c4efd55153926c97290e09cb9c4f460248579b617cbba3e286a",
+      "rootfs/lib/kinakaze_elf.so": "295e46e211ac6a141aca77988743aa28450a3e97efed3c2455a8d055067c58d8",
+      "rootfs/lib/kinakaze_guest_engine.so": "b37cd94a0c89eb98a24776609f58d3bf8916e4e3dba2679dc9d443a2948aa8d6",
+      "rootfs/lib/kinakaze_kernel.so": "ab4e2b7edbec914015034e5e57badca562335e2138a8d967429c8f73815aafb5",
+      "rootfs/lib/kinakaze_tls.so": "f608ea0536629fa81bcd4399523b99e5ffc61e9e6c5f6db3bd5b9b948251ed7b",
+      "rootfs/lib/kinakaze_vfs.so": "e2e6fe880b5fe01ccec152914e74191a43baab7d86ebf8928892cb556fc68fe8",
+      "rootfs/lib/ld-linux-x86-64.so.2": "cc3143e98d80a7fccab7c892d720ad8e3c4c85bba36f930b919f1ab74f284e02",
+      "rootfs/lib/libasound.so.2": "02617ded5081474aaf34c092c35d55ec1c787da6e67f6cc8449c77fc2c1dba2a",
+      "rootfs/lib/libc.so.6": "a7fbaac2910d9a3f3150b89a8ed83e5ff83fbe1eaef14907a8edc639560a0119",
+      "rootfs/lib/libcuda.so.1": "6756527572aa653cd9057fe6df138b8c4cfe896c384829248eb3df8465d64b2c",
+      "rootfs/lib/libdisplay.so.1": "0685cefc8518fcc7dfa06b1310a0c0b5c502bcfd33c86d1c20cf1da89e994ced",
+      "rootfs/lib/libdl.so.2": "47185ab85a6bb8c2f66c326802734d7575d8b2add917c64913fd671235156fbe",
+      "rootfs/lib/libEGL.so.1": "f6f78c6bc59d3bfb80b220194c1c8fd7f8b9a8fed11164db38428f815516f301",
+      "rootfs/lib/libGL.so.1": "42e7b0b01b841aa597705b004f5983618df6f21656896d80a9366502434075e3",
+      "rootfs/lib/libGLESv2.so.2": "91b631e5d37406c434a8b64bf3d8e500f96fcd91106968c9652b2b7d1351c790",
+      "rootfs/lib/libGLX.so.0": "a80f9dcb9cbdef765f5f9c5e6a9167e763857eda4ebadfe8be6859409f3213b9",
+      "rootfs/lib/libkinakaze-runtime.so.1": "14cbc0bd515d001c5c322ba8d16c0e7b500cb98514bc866fef1e18e0862602f7",
+      "rootfs/lib/libm.so.6": "a8114b030226b9f0b113724156d612e4d0a44336790c9484c53926fa3511a07c",
+      "rootfs/lib/libOpenGL.so.0": "8b03e0985948d10af840d65461087231012e1ee68d92c5c00dff0fbaa527eb60",
+      "rootfs/lib/libpipewire-0.3.so.0": "34812333f075abc862dbfb676da9822db9f710c84d0f62fae39ca602fcdeade8",
+      "rootfs/lib/libpthread.so.0": "27a946e081018334b535394484d1e1323489a7a1e4f7f2a07deba56043cc3ed0",
+      "rootfs/lib/libpulse.so.0": "89fb969483faabb21a7adf6395371232cade6cd81a852272d486b5d32bebf5f3",
+      "rootfs/lib/libresolv.so.2": "001ebbdefec87487499f7215f7546037ffdd01ca4d64b0299056305b27765f25",
+      "rootfs/lib/librt.so.1": "a7157fa15aa124123d701d91669befa8e7e600ca856ed388bd7fb033c7087b7f",
+      "rootfs/lib/libvulkan.so.1": "03c09cf9ddc0fc2bf65923b151e9dca34469daa44f0c5bd93b4a1d371f8a0f99",
+      "rootfs/lib/libX11-xcb.so.1": "408774fb2b6966a4b3ce8a2adf2d4533f3ff1cb9a64daaf7f9acdde235fb8159",
+      "rootfs/lib/libX11.so.6": "cb6c1174685910956dc507f6c77667802fe6f5649466b582a26295ac687fb7c1",
+      "rootfs/lib/libxcb.so.1": "6526bf6c8e15db9e1732c14450860c0fee6b080b09f695f83d6b6f35dae38777",
+      "rootfs/lib/libXcursor.so.1": "fef8787fd4774eca5da11f6db7f83934a419e7522d9e549933ee1094c539b616",
+      "rootfs/lib/libXext.so.6": "ffc2f6924fd597229d3fbd262493a771cbc01cf659258b4a77c161d63f90ba9d",
+      "rootfs/lib/libXi.so.6": "49c7c91b8e6b1e27897d2330823f6a24742622d8d2671b931e511531232877cc",
+      "rootfs/lib/libXinerama.so.1": "af2c764a7322d15e33aa03b2e1df3004eaa5596017ad7cfd3301a86c510c9148",
+      "rootfs/lib/libXrandr.so.2": "fcf4c5863d421a8ae8e23ea8af043a15dfdb0648d48c352ff9ef93532f204450",
+      "rootfs/lib/libXrender.so.1": "2620e00dfd1146c49be5e64fbc59ad1d178fbca10ee897ca3bd170661b2492af",
+      "rootfs/lib/libXxf86vm.so.1": "3ca8a86304ad43e01ab49b6cf19aa0a820b25d8b7727a18ab8f1b250265709fd",
+      "rootfs/lib/msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "rootfs/lib/msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "rootfs/lib/msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "rootfs/lib/msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "rootfs/lib/msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "rootfs/lib/std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+      "rootfs/lib/vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "rootfs/lib/vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "rootfs/lib/vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "rootfs/lib/vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+      "rootfs/usr/share/doc/kinakaze-libc/copyright": "a16d883c5eddfa9fc7b8621d526ac2af038b10b06d4f792a918c501097119deb",
+      "rootfs/usr/share/doc/kinakaze-libm/copyright": "3fee3d0eadff95f51a6bc34d6f3818b8b8b71ea99732737233259b0dbb884631"
+    },
+    "r16": {
+      "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "init.exe": "147628b90de5e7c8bfa13aab4c640761f1410c82710ed89738bec9bbed376358",
+      "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "rootfs.manifest.json": "65c4c844188db2bd5da8d011fdc4c7577377a973da26f3e1250193d07a2bf6bc",
+      "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+      "worker.exe": "25748f612193a6cf158b6f0e5d5a509534c475f733ed45cfe81fe779bd01a2f1",
+      "rootfs/lib/concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+      "rootfs/lib/kinakaze_alloc.so": "8ca85d9361224c4efd55153926c97290e09cb9c4f460248579b617cbba3e286a",
+      "rootfs/lib/kinakaze_elf.so": "295e46e211ac6a141aca77988743aa28450a3e97efed3c2455a8d055067c58d8",
+      "rootfs/lib/kinakaze_guest_engine.so": "2f6c35806ac2b996ba84ce00fb3d741021ccd6fda283b45120c3cf73b24b1c47",
+      "rootfs/lib/kinakaze_kernel.so": "ab4e2b7edbec914015034e5e57badca562335e2138a8d967429c8f73815aafb5",
+      "rootfs/lib/kinakaze_tls.so": "f608ea0536629fa81bcd4399523b99e5ffc61e9e6c5f6db3bd5b9b948251ed7b",
+      "rootfs/lib/kinakaze_vfs.so": "b3a272902d0de72a99d113074e4139007a77dce10f295cb819cc451534306cc7",
+      "rootfs/lib/ld-linux-x86-64.so.2": "2d1ea47a71380530bd32fb824a71fadf5ea177e1ca91a3b8c126d778e9ec4fbc",
+      "rootfs/lib/libasound.so.2": "eece63fbd9b9df0c8ea869e2460e1dc036075e015eedbfd16823d1e3a011371c",
+      "rootfs/lib/libc.so.6": "477f86fa013349892615f4f65c465025029470db14bd448b52626dc82d0548ac",
+      "rootfs/lib/libcuda.so.1": "fbf9816865f95a2b5992ff456f6bd1e860a4f78d1285a64f2dacc84302a3b4de",
+      "rootfs/lib/libdisplay.so.1": "0685cefc8518fcc7dfa06b1310a0c0b5c502bcfd33c86d1c20cf1da89e994ced",
+      "rootfs/lib/libdl.so.2": "47185ab85a6bb8c2f66c326802734d7575d8b2add917c64913fd671235156fbe",
+      "rootfs/lib/libEGL.so.1": "f6f78c6bc59d3bfb80b220194c1c8fd7f8b9a8fed11164db38428f815516f301",
+      "rootfs/lib/libGL.so.1": "a32c7430c3a57686d3a91896002c17e3b2009e61716cd32fea063c3a48d8cc85",
+      "rootfs/lib/libGLESv2.so.2": "91b631e5d37406c434a8b64bf3d8e500f96fcd91106968c9652b2b7d1351c790",
+      "rootfs/lib/libGLX.so.0": "a80f9dcb9cbdef765f5f9c5e6a9167e763857eda4ebadfe8be6859409f3213b9",
+      "rootfs/lib/libkinakaze-runtime.so.1": "562e5bc7195a680717cc04ce84551287ff6a91c0e8a1bab4bf7aada1e72ce019",
+      "rootfs/lib/libm.so.6": "a8114b030226b9f0b113724156d612e4d0a44336790c9484c53926fa3511a07c",
+      "rootfs/lib/libOpenGL.so.0": "8b03e0985948d10af840d65461087231012e1ee68d92c5c00dff0fbaa527eb60",
+      "rootfs/lib/libpipewire-0.3.so.0": "3ce90d87871d57ae6876fb3500552ea27097d30786c0d9c88e0899741fb147c9",
+      "rootfs/lib/libpthread.so.0": "1c50dd4eaf3c20a44f36a0f30eb9d73d27146e291b8e6c3ebfa3c91762935ac9",
+      "rootfs/lib/libpulse.so.0": "283baa2a5a0650a8f6a9f41d51896b37d32c10053229eb057d9ca7f502299631",
+      "rootfs/lib/libresolv.so.2": "62a93ba05e4ca90d31a1f8eb2050139349981c06afd567cf498201824d760b27",
+      "rootfs/lib/librt.so.1": "4e354cc8f60044b646fff074e8a0db68c85eecbb1b88c43dd8affd9d9a89bb6b",
+      "rootfs/lib/libvulkan.so.1": "4f80659509006c7f4a0f441fab679c4140d51c17d7f6604125c887087b48ca35",
+      "rootfs/lib/libX11-xcb.so.1": "408774fb2b6966a4b3ce8a2adf2d4533f3ff1cb9a64daaf7f9acdde235fb8159",
+      "rootfs/lib/libX11.so.6": "aed3267453896f290275c68091d9d9e64ebc1737899051c26735abb3c27512f4",
+      "rootfs/lib/libxcb.so.1": "8e660399792ca7a0d326185ea13e6d6a999d98e577c432b9eb6127f2be505632",
+      "rootfs/lib/libXcursor.so.1": "fef8787fd4774eca5da11f6db7f83934a419e7522d9e549933ee1094c539b616",
+      "rootfs/lib/libXext.so.6": "165a732a7bf02d527276a67b18e4a8e71887132fd109cac952d45710c05b784e",
+      "rootfs/lib/libXi.so.6": "8af4eed671b9a0513358df841944b5e79035b24c7b643a246b39fb6da8fd9554",
+      "rootfs/lib/libXinerama.so.1": "af2c764a7322d15e33aa03b2e1df3004eaa5596017ad7cfd3301a86c510c9148",
+      "rootfs/lib/libXrandr.so.2": "284b3403b4f5e50283267fe3653ba467bbf9517b7b9a02a5aeacd709355967cb",
+      "rootfs/lib/libXrender.so.1": "2620e00dfd1146c49be5e64fbc59ad1d178fbca10ee897ca3bd170661b2492af",
+      "rootfs/lib/libXxf86vm.so.1": "3ca8a86304ad43e01ab49b6cf19aa0a820b25d8b7727a18ab8f1b250265709fd",
+      "rootfs/lib/msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+      "rootfs/lib/msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+      "rootfs/lib/msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+      "rootfs/lib/msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+      "rootfs/lib/msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+      "rootfs/lib/std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+      "rootfs/lib/vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+      "rootfs/lib/vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+      "rootfs/lib/vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+      "rootfs/lib/vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+      "rootfs/usr/share/doc/kinakaze-libc/copyright": "a16d883c5eddfa9fc7b8621d526ac2af038b10b06d4f792a918c501097119deb",
+      "rootfs/usr/share/doc/kinakaze-libm/copyright": "3fee3d0eadff95f51a6bc34d6f3818b8b8b71ea99732737233259b0dbb884631"
+    }
+  },
+  "evidence": {
+    "r16-control-source.json": "5b112821fb80bb0446a710ec00f3050000b58fa672368c89cf5765faa8025d73",
+    "r16-source.json": "f63d58715721fb9bc46abbfa4657a1f768fd083da93b2bce16a31321562da613",
+    "r16-pair-source-diff.json": "d70aa95964afde580ccadba205a7326675ca87cb32a40fdc34c0dee999a4c295",
+    "r16-control-build.log": "f0c0ba4922393bbad18429bf48a5f943fd77d79f68e1c6269aa89de79ce6c358",
+    "r16-build.log": "2c5265ec0d1bf029731d68fb84f97f7aac8428fe16b519aef18112052d26a9c6",
+    "r16-control-dist.json": "b068d9312662c6acd2889977f45d768d19c056ed6743040460912b85d98c222f",
+    "r16-dist.json": "4e4e5d2cde4b80e7c9b62950a93b03f2d4db224341a660fb563d25e8eb37a1ee",
+    "r16-final-tests.json": "48721b1a6b6c8ce25e380b62049c48ced0b13316b94d0890f8fd06eed5e71ebb",
+    "r16-final-guest/report.json": "1c030ee5a1bc142602ffa0c7737c556405ab8fe83cdd2f08e4bfccf73adc1ba8",
+    "r16-open-comparison/report.json": "2e5e97ec4c6604aaa4bd476b02029ef76dee5d1ca13a784bba3ab8b97186f3c2",
+    "build-r16-pair.py": "c8ca99628ae11b534a884cf48497025a22b91277237b5a73bbe68858ee3c1ce5",
+    "run-r16-tests.py": "b7306716478370bac88809dc730ba806892af5dce3e59a03df6926b0051284b2",
+    "run-r16-guest.py": "f231e37114d722e019d0e2e09c338a0f757cc4be2fdd840f4f6c21b9f2ffaa39",
+    "compare-r16-write-open.py": "aef3cdbab56998f81511244be8ca3aa8abce7aa09d00858fa691d0822c941462",
+    "validate-r16.py": "c2d8825ff59b83a306f8ffb1b4b02357434749674c1a9e3664dd66e7b74f8793",
+    "r16-validation.log": "c797e64c4f5b2a159d9d6364bbe1b3061f9e1b30bef1e68a6738d2cfb634bbcf",
+    "summarize-r16.py": "37dc10ee375b747999e37fb925f540f948cbf752c15a63f5a51629c1a0eb8bc2"
+  },
+  "caveat": "The pair differs only in the three recorded files (two production files and one regression file); same-input ABBA, no own concurrent build. Host is not exclusively reserved.",
+  "full_install": null,
+  "ported_lf_source_hashes": {
+    "engine/crates/kinakaze-vfs/src/fs/native_write.rs": "70f5d61e8dfbd72135a1a270034ba78bcd6d73c57dd38323b48470c3280be0fe",
+    "engine/crates/kinakaze-vfs/src/fs/verity.rs": "f6a0b2a01c6f4640b72ad9148b5c504189363a2b98425c595458488dd7366765",
+    "engine/crates/kinakaze-vfs/src/fs/verity/tests.rs": "36bcff070248a4b14129242d141c14cb27504468b0bc5eb89cdd5dd98b00b0d5"
+  }
+}

@@ -276,20 +276,28 @@ pub(crate) fn authoritative_size_object(object: &Object) -> Result<u64, i32> {
 /// same cross-process inode mutex used by enable; no process liveness guesses.
 pub fn ensure_writable(handle: HANDLE) -> Result<(), i32> {
     let query = Object::reopen(handle, QUERY_ACCESS)?;
-    let Some(record) = read_record(&query)? else {
+    ensure_writable_object(&query)
+}
+
+/// Check a private, independently opened object with QUERY_ACCESS before
+/// publishing it as a writable descriptor. Its owner keeps the native writer
+/// alive, excluding a new verity enable throughout validation. Borrowed/shared
+/// descriptors still use ensure_writable and its independent metadata open.
+pub(crate) fn ensure_writable_object(query: &Object) -> Result<(), i32> {
+    let Some(record) = read_record(query)? else {
         return Ok(());
     };
     if record.state == ENABLED {
         return Err(EPERM);
     }
     let _lock = crate::xattr::InodeLock::acquire(query.raw())?;
-    let Some(record) = read_record(&query)? else {
+    let Some(record) = read_record(query)? else {
         return Ok(());
     };
     if record.state == ENABLED {
         return Err(EPERM);
     }
-    let writer = Object::reopen(handle, QUERY_ACCESS | GENERIC_WRITE | FILE_WRITE_EA)?;
+    let writer = Object::reopen(query.raw(), QUERY_ACCESS | GENERIC_WRITE | FILE_WRITE_EA)?;
     recover(&writer, &record)
 }
 

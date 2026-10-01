@@ -593,3 +593,31 @@ fn shared_reader_observes_enable_and_rejects_later_corruption() {
     assert_eq!(verified_read_entry(&entry, &mut bytes), Err(EIO));
     assert_eq!(bytes, [0xcc; 32]);
 }
+
+#[test]
+fn private_writable_query_observes_live_records_and_recovers_retained_inode() {
+    let fixture = Fixture::new();
+    let path = fixture.file("private-writer", b"original payload");
+    let object = Object::open(&path, GENERIC_WRITE | QUERY_ACCESS | FILE_WRITE_EA).unwrap();
+    ensure_writable_object(&object).unwrap();
+    let pending = Record::new(PREPARING, Descriptor::new(1, 4096, b"", 16).unwrap()).unwrap();
+    ea::write(&object, EA_NAME, &pending.encode()).unwrap();
+    object.flush().unwrap();
+    exact_write(&object, 4096, b"unpublished tree").unwrap();
+    object.flush().unwrap();
+    let retained = fixture.0.join("retained");
+    std::fs::rename(&path, &retained).unwrap();
+    std::fs::write(&path, b"replacement").unwrap();
+    ensure_writable_object(&object).unwrap();
+    assert_eq!(std::fs::read(&retained).unwrap(), b"original payload");
+    assert_eq!(std::fs::read(&path).unwrap(), b"replacement");
+    assert!(read_record(&object).unwrap().is_none());
+    std::fs::remove_file(&retained).unwrap();
+    ensure_writable_object(&object).unwrap();
+    ea::write(&object, EA_NAME, b"malformed").unwrap();
+    assert_eq!(ensure_writable_object(&object), Err(EIO));
+    let enabled = Record::new(ENABLED, Descriptor::new(1, 4096, b"", 16).unwrap()).unwrap();
+    ea::write(&object, EA_NAME, &enabled.encode()).unwrap();
+    assert_eq!(ensure_writable_object(&object), Err(EPERM));
+    assert_eq!(std::fs::read(&path).unwrap(), b"replacement");
+}

@@ -64,7 +64,7 @@ pub(super) fn try_open_at(
         return Ok(None);
     };
     super::permissions::check(object.raw(), flags)?;
-    super::verity::ensure_writable(object.raw())?;
+    super::verity::ensure_writable_object(&object)?;
     let mut fd_flags = FdFlags::WRITE_ACCESS
         .union(FdFlags::VERITY_WRITABLE)
         .union(FdFlags::OVERLAPPED)
