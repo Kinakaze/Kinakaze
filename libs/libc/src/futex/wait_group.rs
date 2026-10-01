@@ -58,7 +58,11 @@ impl WaitGroup {
         }
         let mut records = self.shared.load()?;
         self.shared.reserve(&mut records, 1)?;
-        records.push(Record { key, reserved: index as u32 + 1, ..self.record });
+        records.push(Record {
+            key,
+            reserved: index as u32 + 1,
+            ..self.record
+        });
         self.shared.commit(&records);
         self.members |= 1u128 << index;
         Ok(())
@@ -106,7 +110,10 @@ impl WaitGroup {
         let _guard = self.shared.acquire()?;
         let records = self.shared.records()?;
         let mut present = 0u128;
-        for record in records.iter().filter(|r| !r.metadata() && r.token == self.record.token) {
+        for record in records
+            .iter()
+            .filter(|r| !r.metadata() && r.token == self.record.token)
+        {
             if !(1..=128).contains(&record.reserved) {
                 return Err(EIO);
             }

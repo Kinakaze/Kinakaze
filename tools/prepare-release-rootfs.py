@@ -11,7 +11,7 @@ import tomllib
 WORKSPACE = Path(__file__).resolve().parents[1]
 preparer = runpy.run_path(str(Path(__file__).with_name('prepare-root.py')))
 from native_image import modules
-from rootfs_bootstrap import configure_packages, configure_standard
+from rootfs_bootstrap import configure_packages, configure_standard, preserve_debconf_extractor
 from debian_standard import load as load_standard, stored_path
 
 
@@ -36,6 +36,7 @@ def prepare(dist, cache, preset_path, online=False, elf_imports=None):
             lock_path, cache.directory, set(modules(dist)), cache.offline, sources=sources)
         # Config overlays are explicit Kinakaze policy; package data is retained
         # in the locked original archives and all other payloads are installed.
+        preserve_debconf_extractor(base, payloads)
         base.update(payloads)
         payloads = base
         packages = sorted(record['package'] for record in records)
@@ -75,7 +76,8 @@ def prepare(dist, cache, preset_path, online=False, elf_imports=None):
             links[f'bin/{name}'] = '/bin/busybox'
     linker_targets = set()
     native_files = [*sorted(path for path in (dist / 'rootfs/lib').iterdir() if path.is_file()),
-                    dist / 'rootfs/usr/share/doc/kinakaze-libc/copyright']
+                    dist / 'rootfs/usr/share/doc/kinakaze-libc/copyright',
+                    dist / 'rootfs/usr/share/doc/kinakaze-libm/copyright']
     for source in native_files:
         if source.is_symlink() or source.is_junction() or not source.is_file():
             raise ValueError(f'invalid native distribution file: {source}')

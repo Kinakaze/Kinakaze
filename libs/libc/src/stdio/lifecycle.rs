@@ -257,15 +257,19 @@ unsafe extern "system" fn child(input: *const u8, length: usize) -> i32 {
         .unwrap_or(0)
 }
 extern "C" fn register() {
-    let _ = unsafe { kinakaze_runtime::register_fork_participant_without_inherited_handles(kinakaze_runtime::ForkParticipant {
-        abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
-        priority: 450,
-        key: MAGIC,
-        prepare: Some(prepare),
-        snapshot: Some(snapshot),
-        parent: Some(parent),
-        child: Some(child),
-    }) };
+    let _ = unsafe {
+        kinakaze_runtime::register_fork_participant_without_inherited_handles(
+            kinakaze_runtime::ForkParticipant {
+                abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
+                priority: 450,
+                key: MAGIC,
+                prepare: Some(prepare),
+                snapshot: Some(snapshot),
+                parent: Some(parent),
+                child: Some(child),
+            },
+        )
+    };
 }
 #[used]
 #[unsafe(link_section = ".CRT$XCU")]

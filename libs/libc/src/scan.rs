@@ -66,6 +66,36 @@ enum LengthModifier {
     BigL, // long double
 }
 
+/// Assign a byte string, including POSIX's caller-owned `%m` allocation.
+unsafe fn assign_bytes(bytes: &[u8], terminate: bool, allocate: bool, va: &mut VaList) -> bool {
+    let destination: *mut u8 = unsafe { va.next_integer() };
+    if destination.is_null() {
+        return true;
+    }
+    let output = if allocate {
+        let Some(size) = bytes.len().checked_add(usize::from(terminate)) else {
+            crate::set_errno(crate::ENOMEM);
+            return false;
+        };
+        unsafe { crate::c_malloc(size).cast::<u8>() }
+    } else {
+        destination
+    };
+    if output.is_null() {
+        return false;
+    }
+    unsafe {
+        ptr::copy_nonoverlapping(bytes.as_ptr(), output, bytes.len());
+        if terminate {
+            *output.add(bytes.len()) = 0;
+        }
+        if allocate {
+            ptr::write_unaligned(destination.cast::<*mut u8>(), output);
+        }
+    }
+    true
+}
+
 unsafe fn scan_format<S: ScanSource>(
     source: &mut S,
     format: *const c_char,
@@ -154,6 +184,14 @@ unsafe fn scan_format<S: ScanSource>(
             }
         }
 
+        // POSIX assignment allocation appears after the width, before length.
+        let allocate = if *fmt_ptr == b'm' {
+            fmt_ptr = fmt_ptr.add(1);
+            true
+        } else {
+            false
+        };
+
         // Optional length modifier
         let mut len_mod = LengthModifier::None;
         match *fmt_ptr {
@@ -199,6 +237,10 @@ unsafe fn scan_format<S: ScanSource>(
             break;
         }
         fmt_ptr = fmt_ptr.add(1);
+        if allocate && (!matches!(conv, b's' | b'c' | b'[') || len_mod != LengthModifier::None) {
+            // Wide input conversions are not implemented by this byte scanner.
+            break;
+        }
 
         if conv == b'n' {
             if !suppress {
@@ -238,9 +280,12 @@ unsafe fn scan_format<S: ScanSource>(
                 break;
             }
             if !suppress {
-                let dest: *mut u8 = va.next_integer();
-                if !dest.is_null() {
-                    ptr::copy_nonoverlapping(buf.as_ptr(), dest, buf.len());
+                if !assign_bytes(&buf, false, allocate, va) {
+                    return if matched_items == 0 {
+                        EOF
+                    } else {
+                        matched_items
+                    };
                 }
                 matched_items += 1;
             }
@@ -280,6 +325,7 @@ unsafe fn scan_format<S: ScanSource>(
             while buf.len() < max_w {
                 match source.next_char() {
                     Some(sc) => {
+                        had_input = true;
                         let matches = set[sc as usize] != invert;
                         if matches {
                             chars_read += 1;
@@ -297,10 +343,12 @@ unsafe fn scan_format<S: ScanSource>(
                 break;
             }
             if !suppress {
-                let dest: *mut u8 = va.next_integer();
-                if !dest.is_null() {
-                    ptr::copy_nonoverlapping(buf.as_ptr(), dest, buf.len());
-                    *dest.add(buf.len()) = 0;
+                if !assign_bytes(&buf, true, allocate, va) {
+                    return if matched_items == 0 {
+                        EOF
+                    } else {
+                        matched_items
+                    };
                 }
                 matched_items += 1;
             }
@@ -339,10 +387,12 @@ unsafe fn scan_format<S: ScanSource>(
                 break;
             }
             if !suppress {
-                let dest: *mut u8 = va.next_integer();
-                if !dest.is_null() {
-                    ptr::copy_nonoverlapping(buf.as_ptr(), dest, buf.len());
-                    *dest.add(buf.len()) = 0;
+                if !assign_bytes(&buf, true, allocate, va) {
+                    return if matched_items == 0 {
+                        EOF
+                    } else {
+                        matched_items
+                    };
                 }
                 matched_items += 1;
             }

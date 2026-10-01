@@ -16,11 +16,11 @@ use std::sync::{Arc, Mutex};
 use crate::set_errno;
 mod futex_deadline;
 mod futex_pi;
-mod futex_requeue_pi;
 mod futex_requeue;
-mod futex_scalar;
+mod futex_requeue_pi;
 #[cfg(test)]
 mod futex_requeue_race_tests;
+mod futex_scalar;
 mod futex_vector;
 mod keys;
 pub(crate) mod mount_api;
@@ -2656,17 +2656,19 @@ mod futex_handoff {
     }
 
     extern "C" fn initializer() {
-        assert!(unsafe { kinakaze_runtime::register_fork_participant_without_inherited_handles(
-            kinakaze_runtime::ForkParticipant {
-                abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
-                priority: 45,
-                key: 0x4c49_4243_4655_5431, // "LIBCFUT1"
-                prepare: None,
-                snapshot: None,
-                parent: None,
-                child: Some(child),
-            }
-        ) });
+        assert!(unsafe {
+            kinakaze_runtime::register_fork_participant_without_inherited_handles(
+                kinakaze_runtime::ForkParticipant {
+                    abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
+                    priority: 45,
+                    key: 0x4c49_4243_4655_5431, // "LIBCFUT1"
+                    prepare: None,
+                    snapshot: None,
+                    parent: None,
+                    child: Some(child),
+                },
+            )
+        });
     }
 
     #[used]
@@ -3005,7 +3007,13 @@ fn futex_wait(
         Ok(duration) => duration,
         Err(error) => return error,
     };
-    futex_wait_prepared(address, expected, duration, std::time::Instant::now(), bitset)
+    futex_wait_prepared(
+        address,
+        expected,
+        duration,
+        std::time::Instant::now(),
+        bitset,
+    )
 }
 
 /// One syscall attempt uses a copied timeout budget, including key resolution.
@@ -3154,7 +3162,9 @@ fn futex_syscall(
 ) -> i64 {
     loop {
         let result = futex_syscall_attempt(uaddr, op, val, timeout, uaddr2, val3);
-        if result != futex_pi::RESTART { return result; }
+        if result != futex_pi::RESTART {
+            return result;
+        }
     }
 }
 
@@ -3178,7 +3188,12 @@ fn futex_syscall_attempt(
     if deadline.is_some() {
         futex_deadline::tests::pause_after_copy(uaddr as usize);
     }
-    if flags & FUTEX_CLOCK_REALTIME != 0 && !matches!(cmd, FUTEX_WAIT_BITSET | FUTEX_LOCK_PI2 | FUTEX_WAIT_REQUEUE_PI) {
+    if flags & FUTEX_CLOCK_REALTIME != 0
+        && !matches!(
+            cmd,
+            FUTEX_WAIT_BITSET | FUTEX_LOCK_PI2 | FUTEX_WAIT_REQUEUE_PI
+        )
+    {
         return -i64::from(ENOSYS);
     }
     if !matches!(
@@ -3201,8 +3216,10 @@ fn futex_syscall_attempt(
     }
     // Linux checks non-PI requeue counts and empty wait/wake bit masks
     // before resolving either futex key. Keep faults from taking precedence.
-    if (matches!(cmd, FUTEX_REQUEUE | FUTEX_CMP_REQUEUE | FUTEX_CMP_REQUEUE_PI)
-        && ((val as i32) < 0 || (timeout as usize as u32 as i32) < 0))
+    if (matches!(
+        cmd,
+        FUTEX_REQUEUE | FUTEX_CMP_REQUEUE | FUTEX_CMP_REQUEUE_PI
+    ) && ((val as i32) < 0 || (timeout as usize as u32 as i32) < 0))
         || (matches!(cmd, FUTEX_WAIT_BITSET | FUTEX_WAKE_BITSET) && val3 == 0)
         || (cmd == FUTEX_CMP_REQUEUE_PI && val != 1)
         || (matches!(cmd, FUTEX_WAIT_REQUEUE_PI | FUTEX_CMP_REQUEUE_PI) && uaddr == uaddr2)
@@ -3214,15 +3231,21 @@ fn futex_syscall_attempt(
         // Linux resolves the writable PI destination before setting up the
         // source wait, after copying the optional absolute deadline.
         let target = match FutexAddress::resolve(uaddr2, private) {
-            Ok(address) => address, Err(error) => return error,
+            Ok(address) => address,
+            Err(error) => return error,
         };
-        if let Err(error) = futex_access(uaddr2 as usize, 4, true) { return error; }
+        if let Err(error) = futex_access(uaddr2 as usize, 4, true) {
+            return error;
+        }
         let source = match FutexAddress::resolve(uaddr, private) {
-            Ok(address) => address, Err(error) => return error,
+            Ok(address) => address,
+            Err(error) => return error,
         };
         return futex_requeue_pi::wait(source, target, val, deadline.unwrap());
     }
-    if cmd == FUTEX_UNLOCK_PI { return futex_pi::unlock(uaddr, private); }
+    if cmd == FUTEX_UNLOCK_PI {
+        return futex_pi::unlock(uaddr, private);
+    }
     let address = match FutexAddress::resolve(uaddr, private) {
         Ok(address) => address,
         Err(error) => return error,
@@ -3230,12 +3253,22 @@ fn futex_syscall_attempt(
     match cmd {
         FUTEX_CMP_REQUEUE_PI => {
             let target = match FutexAddress::resolve(uaddr2, private) {
-                Ok(address) => address, Err(error) => return error,
+                Ok(address) => address,
+                Err(error) => return error,
             };
-            if let Err(error) = futex_access(uaddr2 as usize, 4, true) { return error; }
+            if let Err(error) = futex_access(uaddr2 as usize, 4, true) {
+                return error;
+            }
             futex_requeue_pi::transfer(address, target, val3, timeout as usize as u32)
         }
-        FUTEX_LOCK_PI | FUTEX_TRYLOCK_PI | FUTEX_LOCK_PI2 => futex_pi::lock(address, cmd == FUTEX_TRYLOCK_PI, deadline.unwrap_or(futex_deadline::Prepared { duration: None, started: std::time::Instant::now() })),
+        FUTEX_LOCK_PI | FUTEX_TRYLOCK_PI | FUTEX_LOCK_PI2 => futex_pi::lock(
+            address,
+            cmd == FUTEX_TRYLOCK_PI,
+            deadline.unwrap_or(futex_deadline::Prepared {
+                duration: None,
+                started: std::time::Instant::now(),
+            }),
+        ),
         FUTEX_WAIT | FUTEX_WAIT_BITSET => {
             let deadline = deadline.expect("timed command was prepared before key resolution");
             futex_wait_prepared(
@@ -3243,7 +3276,11 @@ fn futex_syscall_attempt(
                 val as i32,
                 deadline.duration,
                 deadline.started,
-                if cmd == FUTEX_WAIT { FUTEX_BITSET_MATCH_ANY } else { val3 },
+                if cmd == FUTEX_WAIT {
+                    FUTEX_BITSET_MATCH_ANY
+                } else {
+                    val3
+                },
             )
         }
         FUTEX_WAKE => futex_wake(address, val, FUTEX_BITSET_MATCH_ANY),

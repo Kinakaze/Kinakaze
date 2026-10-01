@@ -30,15 +30,19 @@ pub fn install(resolver: RuntimeApiResolverV1) -> Result<(), i32> {
         return Err(22);
     }
     guest_link::provider::install_registry_loader(restore_registry).map_err(|_| 22)?;
-    if !unsafe { guest_process::register_fork_participant_without_inherited_handles(guest_process::ForkParticipant {
-        abi: guest_process::FORK_PARTICIPANT_ABI,
-        priority: -10_000,
-        key: KEY,
-        prepare: None,
-        snapshot: Some(snapshot),
-        parent: None,
-        child: Some(restore),
-    }) } {
+    if !unsafe {
+        guest_process::register_fork_participant_without_inherited_handles(
+            guest_process::ForkParticipant {
+                abi: guest_process::FORK_PARTICIPANT_ABI,
+                priority: -10_000,
+                key: KEY,
+                prepare: None,
+                snapshot: Some(snapshot),
+                parent: None,
+                child: Some(restore),
+            },
+        )
+    } {
         return Err(5);
     }
     Ok(())

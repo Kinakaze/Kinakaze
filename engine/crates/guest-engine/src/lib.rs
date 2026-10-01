@@ -1251,19 +1251,23 @@ unsafe extern "system" fn restore_engine_fork_state(payload: *const u8, len: usi
 
 #[cfg(all(windows, target_arch = "x86_64"))]
 fn register_engine_fork_participant() -> bool {
-    unsafe { kinakaze_runtime::register_fork_participant_without_inherited_handles(kinakaze_runtime::ForkParticipant {
-        abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
-        // The loader owns the process-wide TEB publications and ABI transition
-        // block that provider participants depend on. POSIX child handlers run
-        // in registration order (the inverse of prepare), so restore this
-        // substrate before any DLL-local state is adopted.
-        priority: 0,
-        key: 0x454e_4741_4249_3031, // "ENGABI01"
-        prepare: None,
-        snapshot: Some(snapshot_engine_fork_state),
-        parent: None,
-        child: Some(restore_engine_fork_state),
-    }) }
+    unsafe {
+        kinakaze_runtime::register_fork_participant_without_inherited_handles(
+            kinakaze_runtime::ForkParticipant {
+                abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
+                // The loader owns the process-wide TEB publications and ABI transition
+                // block that provider participants depend on. POSIX child handlers run
+                // in registration order (the inverse of prepare), so restore this
+                // substrate before any DLL-local state is adopted.
+                priority: 0,
+                key: 0x454e_4741_4249_3031, // "ENGABI01"
+                prepare: None,
+                snapshot: Some(snapshot_engine_fork_state),
+                parent: None,
+                child: Some(restore_engine_fork_state),
+            },
+        )
+    }
 }
 
 /// Enter one Linux process after the outer runtime has authenticated and adopted
