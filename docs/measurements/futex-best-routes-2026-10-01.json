@@ -784,5 +784,13 @@
       "sha256": "77d7d424d3e7f925dd5bc166025fdd4ca384962cf8e6bfe126d2ed2c62112e63"
     },
     "performance_boundary": "Earlier numerical performance measurements retain their frozen v5 graphs; merged source includes v6/v5 PI hotpath and XCHG metadata changes and receives native correctness plus production check here, without relabeling old timings as v6 timings"
+  },
+  "final_integration_check": {
+    "source_commit": "580d843ccbda17b1f94b331acb6625e468d71e08",
+    "merged_main_commit": "2c66b62",
+    "passed": true,
+    "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-best-route-final-production-check.log",
+    "sha256": "c94533412f406a5c01509afed9b8aeb7213e2e1dfe1571263b205aa8d584e024",
+    "scope": "Production check after later VFS selected native opens and fork COW changes; native regression and numerical benchmarks keep their separately recorded snapshots"
   }
 }
