@@ -3,7 +3,7 @@
 本阶段接入 raw 202 的 LOCK_PI（6）、UNLOCK_PI（7）、TRYLOCK_PI（8）及
 LOCK_PI2（13）。支持 PRIVATE 与无标记键、共享匿名/文件别名、所有者 TID、
 WAITERS/OWNER_DIED、无竞争 CAS、阻塞转移、绝对超时和信号后的入口重启。
-这是完整 futex 目标中的锁原语阶段，PI requeue、pthread PI 属性及 Linux 实时
+这是完整 futex 目标中的锁原语阶段，PI requeue 已由[后续实现](futex-requeue-pi-2026-10-01.md)补齐；pthread PI 属性及 Linux 实时
 调度策略仍需实现；全部 3,750 项 syscall 路径审查仍未据此自动标为完成。
 
 ## 状态与崩溃恢复
@@ -83,7 +83,7 @@ fork 后 leader TID、不同 VA 的文件别名及 raw exit_group 后的死亡�
 
 ## 继续工作
 
-WAIT_REQUEUE_PI/CMP_REQUEUE_PI、pthread PI 属性、Linux 实时
+WAIT_REQUEUE_PI/CMP_REQUEUE_PI 已由后续阶段接入。pthread PI 属性、Linux 实时
 策略、跨 PID namespace 层级的所有者视图，以及更多分配失败、非合作式退出
 和内存权限竞争路径仍需完成。死亡 PI 等待行由 PI 操作/退出清理维护，普通
 wake/requeue 不代替这项清理。原有 futex/VFS/io 的性能与所有 syscall 的

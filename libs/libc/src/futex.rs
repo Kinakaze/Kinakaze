@@ -149,7 +149,7 @@ struct Record {
 
 impl Record {
     fn metadata(self) -> bool {
-        self.reserved & (pi::STATE | pi::JOURNAL) != 0
+        self.reserved & (pi::STATE | pi::JOURNAL | pi::LINK) != 0
     }
 
     fn pi_wait(self) -> bool {
@@ -161,7 +161,7 @@ impl Record {
             return hybrid::park_name(domain, self.host, self.thread, self.born);
         }
         wide(&format!(
-            r"Local\kinakaze.futex.wait.v2.{domain:016x}.{:016x}",
+            r"Local\kinakaze.futex.wait.v3.{domain:016x}.{:016x}",
             self.token
         ))
     }
@@ -318,7 +318,7 @@ fn thread_birth(thread: HANDLE) -> Result<u64, i32> {
 // A domain has a bounded kernel resource, not a silently truncated queue.
 // Exhaustion reports ENOMEM after reclaiming dead waiters.
 const CAPACITY: usize = 32_768;
-const MAGIC: u64 = u64::from_le_bytes(*b"CYFUT002");
+const MAGIC: u64 = u64::from_le_bytes(*b"CYFUT003");
 
 #[repr(C)]
 struct Header {
@@ -392,7 +392,9 @@ impl Shared {
     fn token(&self) -> u64 {
         loop {
             let token = self.header().next_token.fetch_add(1, Ordering::Relaxed);
-            if token != 0 { return token; }
+            if token != 0 {
+                return token;
+            }
         }
     }
 
@@ -453,12 +455,26 @@ impl Shared {
                 let cursor = unsafe { &mut (*self.view.Value.cast::<Header>()).reserved };
                 let index = *cursor as usize % records.len();
                 *cursor = cursor.wrapping_add(1);
-                if !records[index].metadata() && !records[index].pi_wait() && records[index].dead() {
-                    records.remove(index);
+                let row = records[index];
+                if (row.reserved & (pi::SOURCE | pi::LINK) != 0
+                    || (!row.metadata() && !row.pi_wait()))
+                    && row.dead()
+                {
+                    if row.reserved & (pi::SOURCE | pi::LINK) != 0 {
+                        records.retain(|other| {
+                            !(other.token == row.token
+                                && other.reserved & (pi::SOURCE | pi::LINK) != 0)
+                        });
+                    } else {
+                        records.remove(index);
+                    }
                 }
             }
         } else {
-            records.retain(|record| record.metadata() || record.pi_wait() || !record.dead());
+            records.retain(|record| {
+                !(record.reserved & (pi::SOURCE | pi::LINK) != 0 && record.dead())
+                    && (record.metadata() || record.pi_wait() || !record.dead())
+            });
         }
         if records.len().saturating_add(count) > CAPACITY {
             Err(ENOMEM)
@@ -487,7 +503,10 @@ impl Shared {
         let mut index = 0;
         while index < records.len() && selected < count {
             let record = records[index];
-            if record.metadata() || record.key != key || (!record.pi_wait() && record.bitset & bitset == 0) {
+            if record.metadata()
+                || record.key != key
+                || (!record.pi_wait() && record.bitset & bitset == 0)
+            {
                 index += 1;
                 continue;
             }
@@ -589,7 +608,7 @@ fn shared() -> Result<&'static Shared, i32> {
         CreateMutexW(
             ptr::null(),
             0,
-            wide(&format!(r"Local\kinakaze.futex.guard.v2.{domain:016x}")).as_ptr(),
+            wide(&format!(r"Local\kinakaze.futex.guard.v3.{domain:016x}")).as_ptr(),
         )
     })?;
     let section = Handle::new(unsafe {
@@ -599,7 +618,7 @@ fn shared() -> Result<&'static Shared, i32> {
             PAGE_READWRITE,
             0,
             SECTION_SIZE as u32,
-            wide(&format!(r"Local\kinakaze.futex.v2.{domain:016x}")).as_ptr(),
+            wide(&format!(r"Local\kinakaze.futex.v3.{domain:016x}")).as_ptr(),
         )
     })?;
     let view = unsafe { MapViewOfFile(section.0, FILE_MAP_ALL_ACCESS, 0, 0, SECTION_SIZE) };
@@ -696,7 +715,12 @@ pub(crate) fn requeue(
     if comparison.is_some_and(|(word, expected)| word.load(Ordering::SeqCst) != expected) {
         return Err(EAGAIN);
     }
-    if optimized() && !shared.records()?.iter().any(|record| record.key == key && !record.metadata()) {
+    if optimized()
+        && !shared
+            .records()?
+            .iter()
+            .any(|record| record.key == key && !record.metadata())
+    {
         return Ok(0);
     }
     let mut transaction = Transaction::from_guard(shared, guard)?;

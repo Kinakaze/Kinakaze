@@ -1,0 +1,1647 @@
+{
+  "baseline": "d711f2bb59ffb981f9412fc396eaa85266fea806",
+  "scope": "WAIT_REQUEUE_PI/CMP_REQUEUE_PI semantics; component timing only, not application throughput",
+  "native_manifest": {
+    "build": "F:\\crysoacu2\\artifacts\\futex-requeue-pi-20261001\\native-build-2.jsonl",
+    "build_sha256": "ee0a23c82222ea3466e0a8e1eb8729a3a8706ed8800bd99715d27201a74e4a69",
+    "executables": {
+      "kinakaze_libpthread": "kinakaze_libpthread-fc02787bf1110563.exe",
+      "kinakaze_libc": "kinakaze_libc-0218f268d52b511c.exe"
+    },
+    "files": {
+      "kinakaze_alloc.so": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_alloc.dll",
+        "sha256": "8c344e40e7d16ce51bab47ff0888a983764d79135dd21e47a6c492f70bcf5d35"
+      },
+      "serde_derive-ebb234dc8366345c.dll": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\deps\\serde_derive-ebb234dc8366345c.dll",
+        "sha256": "b42c757d0f5a7d393bab4d30559d4e7019c40dc4b8168535f9914269d1a87ddb"
+      },
+      "kinakaze_elf.so": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_elf.dll",
+        "sha256": "6e74fc65bcbbca1cb8728f2abd9016bcf7576b81af0333231b288d7966910c24"
+      },
+      "kinakaze_kernel.so": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_kernel.dll",
+        "sha256": "952add31b94105e0fb6bab65a173503e001512d0e15a3aacc261426871bc379f"
+      },
+      "kinakaze_tls.so": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_tls.dll",
+        "sha256": "a2f9c8dd04acbf04efb870eba3cabf77ab426c125e4646104a3c68e0b9cceda7"
+      },
+      "kinakaze_vfs.so": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_vfs.dll",
+        "sha256": "b578baa50e099a3727a14d1e7eaeb911a02d98fda5fc0bed4a42cf40d1325c66"
+      },
+      "libm.so.6": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libm.dll",
+        "sha256": "5ebb8f385a24bf06d4276b6de68f5d38f7689d8c5a6f891d541012d809c05625"
+      },
+      "ld-linux-x86-64.so.2": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_link.dll",
+        "sha256": "fb9d75fc202885ef3e61b33b3f75b57b736da9fb8e59c25a4eec4c638f5d2a1e"
+      },
+      "libpthread.so.0": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libpthread.dll",
+        "sha256": "4299860e87ccb65ff568b04bd02b7ab4d9adc9c1f3f1bdec1e5d115d52441ab7"
+      },
+      "kinakaze_libpthread-fc02787bf1110563.exe": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\deps\\kinakaze_libpthread-fc02787bf1110563.exe",
+        "sha256": "b6d89c472a71d0918cb0311af08ac96576b8487e30e7881e5019b17befea5f1d"
+      },
+      "kinakaze_libc-0218f268d52b511c.exe": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\deps\\kinakaze_libc-0218f268d52b511c.exe",
+        "sha256": "97af7379cc6521070e713c7f9fe0f82b8176debb8f65a5ffb7aea1f97fec2ebe"
+      },
+      "std-0cebe7c42cd80226.dll": {
+        "source": "C:\\Users\\nanaeo\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\std-0cebe7c42cd80226.dll",
+        "sha256": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc"
+      }
+    }
+  },
+  "native_tests": {
+    "kinakaze_libc-0": {
+      "passed": 625,
+      "ignored": 19,
+      "failed": 0,
+      "log": "F:\\crysoacu2\\artifacts\\futex-requeue-pi-20261001\\native-kinakaze_libc-0.log",
+      "sha256": "fa1f0f962c913b749738be705a983b6a198907bb8c05350e9bd4a2deb1d7e90f"
+    },
+    "kinakaze_libpthread-0": {
+      "passed": 59,
+      "ignored": 4,
+      "failed": 0,
+      "log": "F:\\crysoacu2\\artifacts\\futex-requeue-pi-20261001\\native-kinakaze_libpthread-0.log",
+      "sha256": "97300b35876fcd07b526417c1eef62fdd8281902daf8ee2b8c78c61180ee005b"
+    },
+    "kinakaze_libc-1": {
+      "passed": 625,
+      "ignored": 19,
+      "failed": 0,
+      "log": "F:\\crysoacu2\\artifacts\\futex-requeue-pi-20261001\\native-kinakaze_libc-1.log",
+      "sha256": "8ba305f85771f78e6a69cd6d4dd8660c417913bb920618342b72c58464f0a504"
+    },
+    "kinakaze_libpthread-1": {
+      "passed": 59,
+      "ignored": 4,
+      "failed": 0,
+      "log": "F:\\crysoacu2\\artifacts\\futex-requeue-pi-20261001\\native-kinakaze_libpthread-1.log",
+      "sha256": "e3aff1e4d879fa0b2daa8668cafdb287c8b0ed04762e18fe4d1dca081aee9f2b"
+    }
+  },
+  "guest_reports": {
+    "requeue-pi": {
+      "probe": "requeue-pi",
+      "passed": true,
+      "distribution_sha256": {
+        "worker.exe": "5f62fea212ab827d1f177ca262b4458a3dfb0944f9fb267b7079d3e0f85020ac",
+        "init.exe": "851a18a39aa9f59f3c066e60fb05c627bdd5af7952abd2a84a9c7d290347cd49",
+        "rootfs.manifest.json": "efb5c990576e555db5ef532aaaac415b98bab802f3cebac145919a73a9f430c6",
+        "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+        "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "rootfs\\lib\\kinakaze_alloc.so": "54821d0a3422de13cd5702238d8c178d4acfa0daef1aca3f74bb2f513bab4de8",
+        "rootfs\\lib\\kinakaze_elf.so": "6e74fc65bcbbca1cb8728f2abd9016bcf7576b81af0333231b288d7966910c24",
+        "rootfs\\lib\\kinakaze_guest_engine.so": "338dcc723e9255c74b2a043ed2a31e26c2b0487fb33863fa180b966d366b32c9",
+        "rootfs\\lib\\kinakaze_kernel.so": "60f8f5c6f3ba3da5462633512588a1fad0ce348dd2c14b061dc23a40bdd5ae90",
+        "rootfs\\lib\\kinakaze_tls.so": "7dd80690d8a3e11fa8edbda0bd4a9c6267bf3b31bc72f4caafb3d3a8d9e0d7ef",
+        "rootfs\\lib\\kinakaze_vfs.so": "74956f42f9c1576079314ac2ed2698a21a8749f0a23199392a0e167db66e332e",
+        "rootfs\\lib\\ld-linux-x86-64.so.2": "c39a1e45cb77fa20c39ba64fc754d89dd97fbbf30c0fd1dc6106e36ce696bd9f",
+        "rootfs\\lib\\libasound.so.2": "5b71c75ca323c7abd1b7da8aa21894d879992a5fa5b1ce19ba0b35ef88fc03cb",
+        "rootfs\\lib\\libc.so.6": "7c993bfea9afce94a69764a717b2f760a486ba292a1447a7e74624244f28658e",
+        "rootfs\\lib\\libcuda.so.1": "a09c6fc8f696bbe5fbce7d6fc3564f9b49816e098e6b59d7e545f727558954fc",
+        "rootfs\\lib\\libdisplay.so.1": "32b933536913bf2216ebf707c50fe70e6fd4c95cdb21e078dd61b75d4e25a608",
+        "rootfs\\lib\\libdl.so.2": "40521063d398fd6235d00842cd6d72ae47fb4172a603393840a86d77d7d55b80",
+        "rootfs\\lib\\libEGL.so.1": "cda9f9e557713501ab75c8f24ab119137263217a12e9c8cfbe98fec645c69095",
+        "rootfs\\lib\\libGL.so.1": "543348b43c2e79b422461bb1e96246b1570d8bf32572903a61a7c0b803c878a0",
+        "rootfs\\lib\\libGLESv2.so.2": "9ea41057f6640fc7435be1da3a23841f208a02d0e6de43c8b5c552451b07d42a",
+        "rootfs\\lib\\libGLX.so.0": "b921b7e52d46307c2c5c1dae7cb71f6cf9d098d7213f28d3a3d0920b498ccf23",
+        "rootfs\\lib\\libkinakaze-runtime.so.1": "abdf033aaf7b8214c403685fb06cde4948feac8970a143f49fcff690ca18fe8b",
+        "rootfs\\lib\\libm.so.6": "f77a4bb0bb549ef8fad85973addfa73b0db8d8865ccd56360237f32c240e2600",
+        "rootfs\\lib\\libOpenGL.so.0": "d59bc037213274c567897afb83dfde4d5f70e88fcdb6df851fb49d6c69aaf972",
+        "rootfs\\lib\\libpipewire-0.3.so.0": "78f0c6b97a7397394f0d6444399cf1a3669451650670cc4e56db5e224590a3ce",
+        "rootfs\\lib\\libpthread.so.0": "d1f200480d2c270b28ccaedd31a00f15ac22c6cf4cdb9fcddcfc614d9f78601d",
+        "rootfs\\lib\\libpulse.so.0": "8137636bb892ee0d07205c918b2b4a255c8617168b694148b5b9f915db6ec825",
+        "rootfs\\lib\\libresolv.so.2": "8f1702535a30c59becc5ac71e8ff10ae3821eb8dc56374985e2a3f49423fbcbf",
+        "rootfs\\lib\\librt.so.1": "a8f52d7cc82ee163505a8e5b816873a824d0f2b45f225961e34ac341c2110b73",
+        "rootfs\\lib\\libvulkan.so.1": "594d54271ffca8b466b7efa21b1c227480f6f49951fafc468f7c359d7a5fe3e5",
+        "rootfs\\lib\\libX11-xcb.so.1": "00e3de781c1af33dbe26f3a8f3f0e95866e35b7cb88c5edd0e51d9615b2f1cba",
+        "rootfs\\lib\\libX11.so.6": "ec1a4be7ae1275f6e0d2ea7ff440e6b0c25b8caac79bbb82030a903707bb22d3",
+        "rootfs\\lib\\libxcb.so.1": "8a8cd1c1e0820765bfca57cf2ab6d8da5f7e9368456c921be189e637b8c827e1",
+        "rootfs\\lib\\libXcursor.so.1": "96c185c5e81160c1184b95643418b9fac522a4a80a378b4358cef46397a95da4",
+        "rootfs\\lib\\libXext.so.6": "1f9003223673b3d23180be8cbc69e3c72308f7fda5c7c130e00bd16b5f5d21d1",
+        "rootfs\\lib\\libXi.so.6": "525688fda82f0f667d341a52c815912b2669e85eec2476eb85090560bf2d2ba1",
+        "rootfs\\lib\\libXinerama.so.1": "b2f262924a81d4cb8cc4d69f2e867ebc8f259dfcbf8cbcf17eaa69de8a5ed8b5",
+        "rootfs\\lib\\libXrandr.so.2": "6de7019f273914d40a6bb130721ea8d0f013252fe12bdf7c33a700d7eb6b3a27",
+        "rootfs\\lib\\libXrender.so.1": "46ed8bed2cce4d1fb841f1d7c0c6604545d3cf0745da5c40816e483fa8dadadc",
+        "rootfs\\lib\\libXxf86vm.so.1": "98e80e53f817d5d0ea2c38a2bb4bbef0321ddf6c4934be50f558765923ea27e7",
+        "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+      },
+      "rows": [
+        {
+          "pid": 1,
+          "command": [
+            "/usr/bin/python3",
+            "-c",
+            "\"\"\"Raw PI requeue ownership, FIFO, signal stages and fork mapping aliases.\"\"\"\nimport ctypes as c\nimport errno\nimport json\nimport mmap\nimport os\nimport tempfile\nimport threading\nimport time\n\nlibc = c.CDLL('libc.so.6', use_errno=True)\nlibc.syscall.restype = c.c_long\nlibc.syscall.argtypes = [c.c_long] + [c.c_ulonglong] * 6\n\n\ndef call(number, *args):\n    c.set_errno(0)\n    result = libc.syscall(number, *args, *([0] * (6 - len(args))))\n    return result, c.get_errno()\n\n\nclass Timespec(c.Structure):\n    _fields_ = [('seconds', c.c_longlong), ('nanoseconds', c.c_longlong)]\n\n\ndef deadline(realtime=False, seconds=5):\n    value = (time.time() if realtime else time.monotonic()) + seconds\n    return Timespec(int(value), int((value % 1) * 1_000_000_000))\n\n\ndef futex(source, command, private, value=0, fourth=0, target=None, comparison=0):\n    return call(202, c.addressof(source), command | (128 if private else 0), value, fourth,\n                c.addressof(target) if target is not None else 0, comparison)\n\n\ndef until(predicate):\n    end = time.monotonic() + 5\n    while not predicate():\n        assert time.monotonic() < end, 'requeue state did not become visible'\n        time.sleep(0.001)\n\n\nrows = []\nfor private in (False, True):\n    for realtime in (False, True):\n        source, target = c.c_uint(7), c.c_uint(0)\n        for wake in (0, 2, 0xffffffff):\n            assert futex(source, 12, private, wake, 0, target, 7) == (-1, errno.EINVAL)\n        assert futex(source, 12, private, 1, 0xffffffff, target, 7) == (-1, errno.EINVAL)\n        assert futex(source, 12, private, 1, 0, target, 6) == (-1, errno.EAGAIN)\n        assert futex(source, 12, private, 1, 0, target, 7) == (0, 0)\n        zero = Timespec(0, 0)\n        assert futex(source, 11 | (256 if realtime else 0), private, 7, c.addressof(zero), target) == (-1, errno.ETIMEDOUT)\n        assert futex(source, 11, private, 7, 1, source) == (-1, errno.EFAULT)\n        assert futex(source, 11, private, 7, 0, source) == (-1, errno.EINVAL)\n        results, order, ids = [], [], []\n\n        def waiter(index):\n            limit = deadline(realtime)\n            ids.append(call(186)[0])\n            result = futex(source, 11 | (256 if realtime else 0), private, 7, c.addressof(limit), target)\n            results.append(result)\n            if result == (0, 0):\n                assert target.value & 0x3fffffff == call(186)[0]\n                order.append(index)\n                assert futex(target, 7, private) == (0, 0)\n\n        assert futex(target, 13, private) == (0, 0)\n        threads = []\n        for index in range(3):\n            thread = threading.Thread(target=waiter, args=(index,))\n            thread.start()\n            threads.append(thread)\n            until(lambda: len(ids) == index + 1 and futex(source, 1, private, 1) == (-1, errno.EINVAL))\n            time.sleep(0.02)\n        wrong = c.c_uint(0)\n        assert futex(source, 12, private, 1, 2, wrong, 7) == (-1, errno.EINVAL)\n        assert futex(source, 12, private, 1, 2, target, 7) == (3, 0)\n        assert not results, 'requeue returned before target unlock'\n        assert target.value & 0x80000000\n        assert futex(target, 7, private) == (0, 0)\n        for thread in threads:\n            thread.join(6)\n            assert not thread.is_alive()\n        assert results == [(0, 0)] * 3 and order == [0, 1, 2], (results, order)\n        assert target.value == 0\n        rows.append(dict(private=private, realtime=realtime, order=order))\n\n\nclass Action(c.Structure):\n    _fields_ = [('handler', c.c_ulonglong), ('flags', c.c_ulonglong),\n                ('restorer', c.c_ulonglong), ('mask', c.c_ulonglong)]\n\n\nactive = None\ndelivered = []\n\n\n@c.CFUNCTYPE(None, c.c_int)\ndef handler(number):\n    # Pre-migration restart must re-copy this absolute deadline even when\n    # SA_RESTART is absent. Post-migration must return EAGAIN without re-copy.\n    active.seconds = -1\n    delivered.append(number)\n\n\nfor private in (False, True):\n    for migrated in (False, True):\n        for restart in (False, True):\n            source, target = c.c_uint(0), c.c_uint(0)\n            assert futex(target, 13, private) == (0, 0)\n            active = deadline()\n            old = Action()\n            action = Action(c.cast(handler, c.c_void_p).value, 0x10000000 if restart else 0, 0, 0)\n            assert call(13, 12, c.addressof(action), c.addressof(old), 8) == (0, 0)\n            ids, result = [], []\n\n            def interrupted():\n                ids.append(call(186)[0])\n                result.append(futex(source, 11, private, 0, c.addressof(active), target))\n\n            thread = threading.Thread(target=interrupted)\n            thread.start()\n            until(lambda: ids and futex(source, 1, private, 1) == (-1, errno.EINVAL))\n            if migrated:\n                assert futex(source, 12, private, 1, 0, target, 0) == (1, 0)\n            before = len(delivered)\n            assert call(234, os.getpid(), ids[0], 12) == (0, 0)\n            thread.join(6)\n            assert not thread.is_alive()\n            assert len(delivered) == before + 1\n            assert result == [(-1, errno.EAGAIN if migrated else errno.EINVAL)], (private, migrated, restart, result)\n            assert futex(source, 1, private, 1) == (0, 0)\n            assert futex(target, 7, private) == (0, 0)\n            assert call(13, 12, c.addressof(old), 0, 8) == (0, 0)\n            rows.append(dict(private=private, migrated=migrated, restart=restart, result=result))\n\n\nfor occupied in (False, True):\n    with tempfile.TemporaryFile() as file:\n        file.truncate(4096)\n        first = mmap.mmap(file.fileno(), 4096, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)\n        source, target = c.c_uint.from_buffer(first, 0), c.c_uint.from_buffer(first, 4)\n        source.value = 7\n        if occupied:\n            assert futex(target, 13, False) == (0, 0)\n        child = os.fork()\n        if child == 0:\n            assert call(186)[0] == os.getpid()\n            alias = mmap.mmap(file.fileno(), 4096, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)\n            a, b = c.c_uint.from_buffer(alias, 0), c.c_uint.from_buffer(alias, 4)\n            assert c.addressof(a) != c.addressof(source)\n            limit = deadline()\n            assert futex(a, 11, False, 7, c.addressof(limit), b) == (0, 0)\n            assert b.value & 0x3fffffff == os.getpid()\n            assert futex(b, 7, False) == (0, 0)\n            os._exit(0)\n        until(lambda: futex(source, 1, False, 1) == (-1, errno.EINVAL))\n        assert futex(source, 12, False, 1, 0, target, 7) == (1, 0)\n        if occupied:\n            assert os.waitpid(child, os.WNOHANG) == (0, 0)\n            assert futex(target, 7, False) == (0, 0)\n        assert os.waitpid(child, 0) == (child, 0)\n        assert target.value == 0\n        del source, target\n        first.close()\n        rows.append(dict(fork_alias=True, occupied=occupied))\n\nprint(json.dumps(rows, sort_keys=True))\nprint('FUTEX_REQUEUE_PI_PASS', flush=True)\n"
+          ],
+          "exit_code": 0,
+          "expected_exit": 0,
+          "status": "passed",
+          "missing_markers": [],
+          "reservation_ms": 0.483,
+          "request_to_exit_ms": 762.0784,
+          "activation_to_exit_ms": 761.5954,
+          "request_to_ready_ms": null,
+          "application_cpu_metrics": {
+            "user_ms": 93.75,
+            "kernel_ms": 93.75,
+            "total_cpu_ms": 187.5,
+            "cycles": 537330440,
+            "page_faults": 18544
+          },
+          "prepared_working_set_bytes": 12455936,
+          "cpu_metrics": {
+            "user_ms": 109.375,
+            "kernel_ms": 156.25,
+            "total_cpu_ms": 265.625,
+            "processes": 3,
+            "active_processes": 0,
+            "page_faults": 36262,
+            "read_bytes": 8596803,
+            "write_bytes": 29575,
+            "read_ops": 368,
+            "write_ops": 256,
+            "other_ops": 11865,
+            "other_bytes": 494075
+          },
+          "optimized": false
+        },
+        {
+          "pid": 1,
+          "command": [
+            "/usr/bin/python3",
+            "-c",
+            "\"\"\"Raw PI requeue ownership, FIFO, signal stages and fork mapping aliases.\"\"\"\nimport ctypes as c\nimport errno\nimport json\nimport mmap\nimport os\nimport tempfile\nimport threading\nimport time\n\nlibc = c.CDLL('libc.so.6', use_errno=True)\nlibc.syscall.restype = c.c_long\nlibc.syscall.argtypes = [c.c_long] + [c.c_ulonglong] * 6\n\n\ndef call(number, *args):\n    c.set_errno(0)\n    result = libc.syscall(number, *args, *([0] * (6 - len(args))))\n    return result, c.get_errno()\n\n\nclass Timespec(c.Structure):\n    _fields_ = [('seconds', c.c_longlong), ('nanoseconds', c.c_longlong)]\n\n\ndef deadline(realtime=False, seconds=5):\n    value = (time.time() if realtime else time.monotonic()) + seconds\n    return Timespec(int(value), int((value % 1) * 1_000_000_000))\n\n\ndef futex(source, command, private, value=0, fourth=0, target=None, comparison=0):\n    return call(202, c.addressof(source), command | (128 if private else 0), value, fourth,\n                c.addressof(target) if target is not None else 0, comparison)\n\n\ndef until(predicate):\n    end = time.monotonic() + 5\n    while not predicate():\n        assert time.monotonic() < end, 'requeue state did not become visible'\n        time.sleep(0.001)\n\n\nrows = []\nfor private in (False, True):\n    for realtime in (False, True):\n        source, target = c.c_uint(7), c.c_uint(0)\n        for wake in (0, 2, 0xffffffff):\n            assert futex(source, 12, private, wake, 0, target, 7) == (-1, errno.EINVAL)\n        assert futex(source, 12, private, 1, 0xffffffff, target, 7) == (-1, errno.EINVAL)\n        assert futex(source, 12, private, 1, 0, target, 6) == (-1, errno.EAGAIN)\n        assert futex(source, 12, private, 1, 0, target, 7) == (0, 0)\n        zero = Timespec(0, 0)\n        assert futex(source, 11 | (256 if realtime else 0), private, 7, c.addressof(zero), target) == (-1, errno.ETIMEDOUT)\n        assert futex(source, 11, private, 7, 1, source) == (-1, errno.EFAULT)\n        assert futex(source, 11, private, 7, 0, source) == (-1, errno.EINVAL)\n        results, order, ids = [], [], []\n\n        def waiter(index):\n            limit = deadline(realtime)\n            ids.append(call(186)[0])\n            result = futex(source, 11 | (256 if realtime else 0), private, 7, c.addressof(limit), target)\n            results.append(result)\n            if result == (0, 0):\n                assert target.value & 0x3fffffff == call(186)[0]\n                order.append(index)\n                assert futex(target, 7, private) == (0, 0)\n\n        assert futex(target, 13, private) == (0, 0)\n        threads = []\n        for index in range(3):\n            thread = threading.Thread(target=waiter, args=(index,))\n            thread.start()\n            threads.append(thread)\n            until(lambda: len(ids) == index + 1 and futex(source, 1, private, 1) == (-1, errno.EINVAL))\n            time.sleep(0.02)\n        wrong = c.c_uint(0)\n        assert futex(source, 12, private, 1, 2, wrong, 7) == (-1, errno.EINVAL)\n        assert futex(source, 12, private, 1, 2, target, 7) == (3, 0)\n        assert not results, 'requeue returned before target unlock'\n        assert target.value & 0x80000000\n        assert futex(target, 7, private) == (0, 0)\n        for thread in threads:\n            thread.join(6)\n            assert not thread.is_alive()\n        assert results == [(0, 0)] * 3 and order == [0, 1, 2], (results, order)\n        assert target.value == 0\n        rows.append(dict(private=private, realtime=realtime, order=order))\n\n\nclass Action(c.Structure):\n    _fields_ = [('handler', c.c_ulonglong), ('flags', c.c_ulonglong),\n                ('restorer', c.c_ulonglong), ('mask', c.c_ulonglong)]\n\n\nactive = None\ndelivered = []\n\n\n@c.CFUNCTYPE(None, c.c_int)\ndef handler(number):\n    # Pre-migration restart must re-copy this absolute deadline even when\n    # SA_RESTART is absent. Post-migration must return EAGAIN without re-copy.\n    active.seconds = -1\n    delivered.append(number)\n\n\nfor private in (False, True):\n    for migrated in (False, True):\n        for restart in (False, True):\n            source, target = c.c_uint(0), c.c_uint(0)\n            assert futex(target, 13, private) == (0, 0)\n            active = deadline()\n            old = Action()\n            action = Action(c.cast(handler, c.c_void_p).value, 0x10000000 if restart else 0, 0, 0)\n            assert call(13, 12, c.addressof(action), c.addressof(old), 8) == (0, 0)\n            ids, result = [], []\n\n            def interrupted():\n                ids.append(call(186)[0])\n                result.append(futex(source, 11, private, 0, c.addressof(active), target))\n\n            thread = threading.Thread(target=interrupted)\n            thread.start()\n            until(lambda: ids and futex(source, 1, private, 1) == (-1, errno.EINVAL))\n            if migrated:\n                assert futex(source, 12, private, 1, 0, target, 0) == (1, 0)\n            before = len(delivered)\n            assert call(234, os.getpid(), ids[0], 12) == (0, 0)\n            thread.join(6)\n            assert not thread.is_alive()\n            assert len(delivered) == before + 1\n            assert result == [(-1, errno.EAGAIN if migrated else errno.EINVAL)], (private, migrated, restart, result)\n            assert futex(source, 1, private, 1) == (0, 0)\n            assert futex(target, 7, private) == (0, 0)\n            assert call(13, 12, c.addressof(old), 0, 8) == (0, 0)\n            rows.append(dict(private=private, migrated=migrated, restart=restart, result=result))\n\n\nfor occupied in (False, True):\n    with tempfile.TemporaryFile() as file:\n        file.truncate(4096)\n        first = mmap.mmap(file.fileno(), 4096, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)\n        source, target = c.c_uint.from_buffer(first, 0), c.c_uint.from_buffer(first, 4)\n        source.value = 7\n        if occupied:\n            assert futex(target, 13, False) == (0, 0)\n        child = os.fork()\n        if child == 0:\n            assert call(186)[0] == os.getpid()\n            alias = mmap.mmap(file.fileno(), 4096, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)\n            a, b = c.c_uint.from_buffer(alias, 0), c.c_uint.from_buffer(alias, 4)\n            assert c.addressof(a) != c.addressof(source)\n            limit = deadline()\n            assert futex(a, 11, False, 7, c.addressof(limit), b) == (0, 0)\n            assert b.value & 0x3fffffff == os.getpid()\n            assert futex(b, 7, False) == (0, 0)\n            os._exit(0)\n        until(lambda: futex(source, 1, False, 1) == (-1, errno.EINVAL))\n        assert futex(source, 12, False, 1, 0, target, 7) == (1, 0)\n        if occupied:\n            assert os.waitpid(child, os.WNOHANG) == (0, 0)\n            assert futex(target, 7, False) == (0, 0)\n        assert os.waitpid(child, 0) == (child, 0)\n        assert target.value == 0\n        del source, target\n        first.close()\n        rows.append(dict(fork_alias=True, occupied=occupied))\n\nprint(json.dumps(rows, sort_keys=True))\nprint('FUTEX_REQUEUE_PI_PASS', flush=True)\n"
+          ],
+          "exit_code": 0,
+          "expected_exit": 0,
+          "status": "passed",
+          "missing_markers": [],
+          "reservation_ms": 0.728,
+          "request_to_exit_ms": 442.1437,
+          "activation_to_exit_ms": 441.4157,
+          "request_to_ready_ms": null,
+          "application_cpu_metrics": {
+            "user_ms": 46.875,
+            "kernel_ms": 125.0,
+            "total_cpu_ms": 171.875,
+            "cycles": 432714011,
+            "page_faults": 18392
+          },
+          "prepared_working_set_bytes": 11849728,
+          "cpu_metrics": {
+            "user_ms": 93.75,
+            "kernel_ms": 125.0,
+            "total_cpu_ms": 218.75,
+            "processes": 3,
+            "active_processes": 0,
+            "page_faults": 34831,
+            "read_bytes": 8596803,
+            "write_bytes": 29575,
+            "read_ops": 368,
+            "write_ops": 256,
+            "other_ops": 11864,
+            "other_bytes": 490493
+          },
+          "optimized": true
+        }
+      ]
+    },
+    "pthread-shared": {
+      "root": "F:\\crysoacu2\\artifacts\\goal-systemd-idle\\debian-root",
+      "dist": "F:\\crysoacu2\\artifacts\\futex-requeue-pi-20261001\\candidate",
+      "robust_cancel": true,
+      "shared_cancel": true,
+      "staging": "F:\\crysoacu2\\artifacts\\goal-systemd-idle\\debian-root\\tmp\\kinakaze-pthread-events-b9176ca33da4486ea56853264116b2fd",
+      "fixture_sha256": {
+        "PthreadSharedCondProbe.py": "900b03bfb4887c6d8fd34f0cc5864b85f66b16602108530c7eed203cfefd2dd5",
+        "PthreadSharedCondProbe.c": "fa27d9975d591bc9d4cbde62664e33a63600fac1bcd521a7adebd1f06c35e5b7",
+        "PthreadCondCancelProbe.py": "0c024402fef652113bfafa80faa60fd2881f8149684eb36523ade2616897abd3",
+        "PthreadCondCancelProbe.c": "f8aa065a55b530fe97937e19ca4c107720822075975ddda49a7cc8f01ea44f9e"
+      },
+      "distribution_sha256": {
+        "worker.exe": "5f62fea212ab827d1f177ca262b4458a3dfb0944f9fb267b7079d3e0f85020ac",
+        "init.exe": "851a18a39aa9f59f3c066e60fb05c627bdd5af7952abd2a84a9c7d290347cd49",
+        "rootfs.manifest.json": "efb5c990576e555db5ef532aaaac415b98bab802f3cebac145919a73a9f430c6",
+        "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+        "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "rootfs\\lib\\kinakaze_alloc.so": "54821d0a3422de13cd5702238d8c178d4acfa0daef1aca3f74bb2f513bab4de8",
+        "rootfs\\lib\\kinakaze_elf.so": "6e74fc65bcbbca1cb8728f2abd9016bcf7576b81af0333231b288d7966910c24",
+        "rootfs\\lib\\kinakaze_guest_engine.so": "338dcc723e9255c74b2a043ed2a31e26c2b0487fb33863fa180b966d366b32c9",
+        "rootfs\\lib\\kinakaze_kernel.so": "60f8f5c6f3ba3da5462633512588a1fad0ce348dd2c14b061dc23a40bdd5ae90",
+        "rootfs\\lib\\kinakaze_tls.so": "7dd80690d8a3e11fa8edbda0bd4a9c6267bf3b31bc72f4caafb3d3a8d9e0d7ef",
+        "rootfs\\lib\\kinakaze_vfs.so": "74956f42f9c1576079314ac2ed2698a21a8749f0a23199392a0e167db66e332e",
+        "rootfs\\lib\\ld-linux-x86-64.so.2": "c39a1e45cb77fa20c39ba64fc754d89dd97fbbf30c0fd1dc6106e36ce696bd9f",
+        "rootfs\\lib\\libasound.so.2": "5b71c75ca323c7abd1b7da8aa21894d879992a5fa5b1ce19ba0b35ef88fc03cb",
+        "rootfs\\lib\\libc.so.6": "7c993bfea9afce94a69764a717b2f760a486ba292a1447a7e74624244f28658e",
+        "rootfs\\lib\\libcuda.so.1": "a09c6fc8f696bbe5fbce7d6fc3564f9b49816e098e6b59d7e545f727558954fc",
+        "rootfs\\lib\\libdisplay.so.1": "32b933536913bf2216ebf707c50fe70e6fd4c95cdb21e078dd61b75d4e25a608",
+        "rootfs\\lib\\libdl.so.2": "40521063d398fd6235d00842cd6d72ae47fb4172a603393840a86d77d7d55b80",
+        "rootfs\\lib\\libEGL.so.1": "cda9f9e557713501ab75c8f24ab119137263217a12e9c8cfbe98fec645c69095",
+        "rootfs\\lib\\libGL.so.1": "543348b43c2e79b422461bb1e96246b1570d8bf32572903a61a7c0b803c878a0",
+        "rootfs\\lib\\libGLESv2.so.2": "9ea41057f6640fc7435be1da3a23841f208a02d0e6de43c8b5c552451b07d42a",
+        "rootfs\\lib\\libGLX.so.0": "b921b7e52d46307c2c5c1dae7cb71f6cf9d098d7213f28d3a3d0920b498ccf23",
+        "rootfs\\lib\\libkinakaze-runtime.so.1": "abdf033aaf7b8214c403685fb06cde4948feac8970a143f49fcff690ca18fe8b",
+        "rootfs\\lib\\libm.so.6": "f77a4bb0bb549ef8fad85973addfa73b0db8d8865ccd56360237f32c240e2600",
+        "rootfs\\lib\\libOpenGL.so.0": "d59bc037213274c567897afb83dfde4d5f70e88fcdb6df851fb49d6c69aaf972",
+        "rootfs\\lib\\libpipewire-0.3.so.0": "78f0c6b97a7397394f0d6444399cf1a3669451650670cc4e56db5e224590a3ce",
+        "rootfs\\lib\\libpthread.so.0": "d1f200480d2c270b28ccaedd31a00f15ac22c6cf4cdb9fcddcfc614d9f78601d",
+        "rootfs\\lib\\libpulse.so.0": "8137636bb892ee0d07205c918b2b4a255c8617168b694148b5b9f915db6ec825",
+        "rootfs\\lib\\libresolv.so.2": "8f1702535a30c59becc5ac71e8ff10ae3821eb8dc56374985e2a3f49423fbcbf",
+        "rootfs\\lib\\librt.so.1": "a8f52d7cc82ee163505a8e5b816873a824d0f2b45f225961e34ac341c2110b73",
+        "rootfs\\lib\\libvulkan.so.1": "594d54271ffca8b466b7efa21b1c227480f6f49951fafc468f7c359d7a5fe3e5",
+        "rootfs\\lib\\libX11-xcb.so.1": "00e3de781c1af33dbe26f3a8f3f0e95866e35b7cb88c5edd0e51d9615b2f1cba",
+        "rootfs\\lib\\libX11.so.6": "ec1a4be7ae1275f6e0d2ea7ff440e6b0c25b8caac79bbb82030a903707bb22d3",
+        "rootfs\\lib\\libxcb.so.1": "8a8cd1c1e0820765bfca57cf2ab6d8da5f7e9368456c921be189e637b8c827e1",
+        "rootfs\\lib\\libXcursor.so.1": "96c185c5e81160c1184b95643418b9fac522a4a80a378b4358cef46397a95da4",
+        "rootfs\\lib\\libXext.so.6": "1f9003223673b3d23180be8cbc69e3c72308f7fda5c7c130e00bd16b5f5d21d1",
+        "rootfs\\lib\\libXi.so.6": "525688fda82f0f667d341a52c815912b2669e85eec2476eb85090560bf2d2ba1",
+        "rootfs\\lib\\libXinerama.so.1": "b2f262924a81d4cb8cc4d69f2e867ebc8f259dfcbf8cbcf17eaa69de8a5ed8b5",
+        "rootfs\\lib\\libXrandr.so.2": "6de7019f273914d40a6bb130721ea8d0f013252fe12bdf7c33a700d7eb6b3a27",
+        "rootfs\\lib\\libXrender.so.1": "46ed8bed2cce4d1fb841f1d7c0c6604545d3cf0745da5c40816e483fa8dadadc",
+        "rootfs\\lib\\libXxf86vm.so.1": "98e80e53f817d5d0ea2c38a2bb4bbef0321ddf6c4934be50f558765923ea27e7",
+        "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+      },
+      "rows": [
+        {
+          "pid": 1,
+          "command": [
+            "/usr/bin/python3.11",
+            "/tmp/kinakaze-pthread-events-b9176ca33da4486ea56853264116b2fd/PthreadSharedCondProbe.py"
+          ],
+          "exit_code": 0,
+          "expected_exit": 0,
+          "status": "passed",
+          "missing_markers": [],
+          "reservation_ms": 0.2223,
+          "request_to_exit_ms": 598.2833,
+          "activation_to_exit_ms": 598.061,
+          "request_to_ready_ms": null,
+          "application_cpu_metrics": {
+            "user_ms": 62.5,
+            "kernel_ms": 171.875,
+            "total_cpu_ms": 234.375,
+            "cycles": 723073112,
+            "page_faults": 29574
+          },
+          "prepared_working_set_bytes": 11886592,
+          "cpu_metrics": {
+            "user_ms": 359.375,
+            "kernel_ms": 359.375,
+            "total_cpu_ms": 718.75,
+            "processes": 17,
+            "active_processes": 0,
+            "page_faults": 111264,
+            "read_bytes": 8093643,
+            "write_bytes": 84400,
+            "read_ops": 1085,
+            "write_ops": 989,
+            "other_ops": 19631,
+            "other_bytes": 922488
+          },
+          "probe": "shared-cond",
+          "optimized": false
+        },
+        {
+          "pid": 1,
+          "command": [
+            "/usr/bin/python3.11",
+            "/tmp/kinakaze-pthread-events-b9176ca33da4486ea56853264116b2fd/PthreadCondCancelProbe.py"
+          ],
+          "exit_code": 0,
+          "expected_exit": 0,
+          "status": "passed",
+          "missing_markers": [],
+          "reservation_ms": 0.2278,
+          "request_to_exit_ms": 182.0807,
+          "activation_to_exit_ms": 181.8529,
+          "request_to_ready_ms": null,
+          "application_cpu_metrics": {
+            "user_ms": 46.875,
+            "kernel_ms": 31.25,
+            "total_cpu_ms": 78.125,
+            "cycles": 246744037,
+            "page_faults": 8633
+          },
+          "prepared_working_set_bytes": 11874304,
+          "cpu_metrics": {
+            "user_ms": 46.875,
+            "kernel_ms": 31.25,
+            "total_cpu_ms": 78.125,
+            "processes": 1,
+            "active_processes": 0,
+            "page_faults": 11197,
+            "read_bytes": 8011687,
+            "write_bytes": 9217,
+            "read_ops": 187,
+            "write_ops": 108,
+            "other_ops": 8133,
+            "other_bytes": 331356
+          },
+          "probe": "cancel",
+          "optimized": false
+        },
+        {
+          "pid": 1,
+          "command": [
+            "/usr/bin/python3.11",
+            "/tmp/kinakaze-pthread-events-b9176ca33da4486ea56853264116b2fd/PthreadSharedCondProbe.py"
+          ],
+          "exit_code": 0,
+          "expected_exit": 0,
+          "status": "passed",
+          "missing_markers": [],
+          "reservation_ms": 0.4218,
+          "request_to_exit_ms": 466.3031,
+          "activation_to_exit_ms": 465.8813,
+          "request_to_ready_ms": null,
+          "application_cpu_metrics": {
+            "user_ms": 62.5,
+            "kernel_ms": 109.375,
+            "total_cpu_ms": 171.875,
+            "cycles": 576693398,
+            "page_faults": 24653
+          },
+          "prepared_working_set_bytes": 11866112,
+          "cpu_metrics": {
+            "user_ms": 187.5,
+            "kernel_ms": 343.75,
+            "total_cpu_ms": 531.25,
+            "processes": 17,
+            "active_processes": 0,
+            "page_faults": 102699,
+            "read_bytes": 8093773,
+            "write_bytes": 84531,
+            "read_ops": 1085,
+            "write_ops": 989,
+            "other_ops": 19675,
+            "other_bytes": 922200
+          },
+          "probe": "shared-cond",
+          "optimized": true
+        },
+        {
+          "pid": 1,
+          "command": [
+            "/usr/bin/python3.11",
+            "/tmp/kinakaze-pthread-events-b9176ca33da4486ea56853264116b2fd/PthreadCondCancelProbe.py"
+          ],
+          "exit_code": 0,
+          "expected_exit": 0,
+          "status": "passed",
+          "missing_markers": [],
+          "reservation_ms": 0.2042,
+          "request_to_exit_ms": 153.6087,
+          "activation_to_exit_ms": 153.4045,
+          "request_to_ready_ms": null,
+          "application_cpu_metrics": {
+            "user_ms": 46.875,
+            "kernel_ms": 15.625,
+            "total_cpu_ms": 62.5,
+            "cycles": 249444938,
+            "page_faults": 8599
+          },
+          "prepared_working_set_bytes": 11878400,
+          "cpu_metrics": {
+            "user_ms": 62.5,
+            "kernel_ms": 15.625,
+            "total_cpu_ms": 78.125,
+            "processes": 0,
+            "active_processes": -1,
+            "page_faults": 10469,
+            "read_bytes": 8011682,
+            "write_bytes": 9209,
+            "read_ops": 187,
+            "write_ops": 108,
+            "other_ops": 8092,
+            "other_bytes": 329270
+          },
+          "probe": "cancel",
+          "optimized": true
+        }
+      ],
+      "passed": true
+    },
+    "pi": {
+      "probe": "pi",
+      "passed": true,
+      "distribution_sha256": {
+        "worker.exe": "5f62fea212ab827d1f177ca262b4458a3dfb0944f9fb267b7079d3e0f85020ac",
+        "init.exe": "851a18a39aa9f59f3c066e60fb05c627bdd5af7952abd2a84a9c7d290347cd49",
+        "rootfs.manifest.json": "efb5c990576e555db5ef532aaaac415b98bab802f3cebac145919a73a9f430c6",
+        "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+        "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "rootfs\\lib\\kinakaze_alloc.so": "54821d0a3422de13cd5702238d8c178d4acfa0daef1aca3f74bb2f513bab4de8",
+        "rootfs\\lib\\kinakaze_elf.so": "6e74fc65bcbbca1cb8728f2abd9016bcf7576b81af0333231b288d7966910c24",
+        "rootfs\\lib\\kinakaze_guest_engine.so": "338dcc723e9255c74b2a043ed2a31e26c2b0487fb33863fa180b966d366b32c9",
+        "rootfs\\lib\\kinakaze_kernel.so": "60f8f5c6f3ba3da5462633512588a1fad0ce348dd2c14b061dc23a40bdd5ae90",
+        "rootfs\\lib\\kinakaze_tls.so": "7dd80690d8a3e11fa8edbda0bd4a9c6267bf3b31bc72f4caafb3d3a8d9e0d7ef",
+        "rootfs\\lib\\kinakaze_vfs.so": "74956f42f9c1576079314ac2ed2698a21a8749f0a23199392a0e167db66e332e",
+        "rootfs\\lib\\ld-linux-x86-64.so.2": "c39a1e45cb77fa20c39ba64fc754d89dd97fbbf30c0fd1dc6106e36ce696bd9f",
+        "rootfs\\lib\\libasound.so.2": "5b71c75ca323c7abd1b7da8aa21894d879992a5fa5b1ce19ba0b35ef88fc03cb",
+        "rootfs\\lib\\libc.so.6": "7c993bfea9afce94a69764a717b2f760a486ba292a1447a7e74624244f28658e",
+        "rootfs\\lib\\libcuda.so.1": "a09c6fc8f696bbe5fbce7d6fc3564f9b49816e098e6b59d7e545f727558954fc",
+        "rootfs\\lib\\libdisplay.so.1": "32b933536913bf2216ebf707c50fe70e6fd4c95cdb21e078dd61b75d4e25a608",
+        "rootfs\\lib\\libdl.so.2": "40521063d398fd6235d00842cd6d72ae47fb4172a603393840a86d77d7d55b80",
+        "rootfs\\lib\\libEGL.so.1": "cda9f9e557713501ab75c8f24ab119137263217a12e9c8cfbe98fec645c69095",
+        "rootfs\\lib\\libGL.so.1": "543348b43c2e79b422461bb1e96246b1570d8bf32572903a61a7c0b803c878a0",
+        "rootfs\\lib\\libGLESv2.so.2": "9ea41057f6640fc7435be1da3a23841f208a02d0e6de43c8b5c552451b07d42a",
+        "rootfs\\lib\\libGLX.so.0": "b921b7e52d46307c2c5c1dae7cb71f6cf9d098d7213f28d3a3d0920b498ccf23",
+        "rootfs\\lib\\libkinakaze-runtime.so.1": "abdf033aaf7b8214c403685fb06cde4948feac8970a143f49fcff690ca18fe8b",
+        "rootfs\\lib\\libm.so.6": "f77a4bb0bb549ef8fad85973addfa73b0db8d8865ccd56360237f32c240e2600",
+        "rootfs\\lib\\libOpenGL.so.0": "d59bc037213274c567897afb83dfde4d5f70e88fcdb6df851fb49d6c69aaf972",
+        "rootfs\\lib\\libpipewire-0.3.so.0": "78f0c6b97a7397394f0d6444399cf1a3669451650670cc4e56db5e224590a3ce",
+        "rootfs\\lib\\libpthread.so.0": "d1f200480d2c270b28ccaedd31a00f15ac22c6cf4cdb9fcddcfc614d9f78601d",
+        "rootfs\\lib\\libpulse.so.0": "8137636bb892ee0d07205c918b2b4a255c8617168b694148b5b9f915db6ec825",
+        "rootfs\\lib\\libresolv.so.2": "8f1702535a30c59becc5ac71e8ff10ae3821eb8dc56374985e2a3f49423fbcbf",
+        "rootfs\\lib\\librt.so.1": "a8f52d7cc82ee163505a8e5b816873a824d0f2b45f225961e34ac341c2110b73",
+        "rootfs\\lib\\libvulkan.so.1": "594d54271ffca8b466b7efa21b1c227480f6f49951fafc468f7c359d7a5fe3e5",
+        "rootfs\\lib\\libX11-xcb.so.1": "00e3de781c1af33dbe26f3a8f3f0e95866e35b7cb88c5edd0e51d9615b2f1cba",
+        "rootfs\\lib\\libX11.so.6": "ec1a4be7ae1275f6e0d2ea7ff440e6b0c25b8caac79bbb82030a903707bb22d3",
+        "rootfs\\lib\\libxcb.so.1": "8a8cd1c1e0820765bfca57cf2ab6d8da5f7e9368456c921be189e637b8c827e1",
+        "rootfs\\lib\\libXcursor.so.1": "96c185c5e81160c1184b95643418b9fac522a4a80a378b4358cef46397a95da4",
+        "rootfs\\lib\\libXext.so.6": "1f9003223673b3d23180be8cbc69e3c72308f7fda5c7c130e00bd16b5f5d21d1",
+        "rootfs\\lib\\libXi.so.6": "525688fda82f0f667d341a52c815912b2669e85eec2476eb85090560bf2d2ba1",
+        "rootfs\\lib\\libXinerama.so.1": "b2f262924a81d4cb8cc4d69f2e867ebc8f259dfcbf8cbcf17eaa69de8a5ed8b5",
+        "rootfs\\lib\\libXrandr.so.2": "6de7019f273914d40a6bb130721ea8d0f013252fe12bdf7c33a700d7eb6b3a27",
+        "rootfs\\lib\\libXrender.so.1": "46ed8bed2cce4d1fb841f1d7c0c6604545d3cf0745da5c40816e483fa8dadadc",
+        "rootfs\\lib\\libXxf86vm.so.1": "98e80e53f817d5d0ea2c38a2bb4bbef0321ddf6c4934be50f558765923ea27e7",
+        "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+      },
+      "rows": [
+        {
+          "pid": 1,
+          "command": [
+            "/usr/bin/python3",
+            "-c",
+            "\"\"\"Raw PI lock ownership, FIFO handoff, deadlines, signals and shared aliases.\"\"\"\nimport ctypes as c\nimport errno\nimport json\nimport mmap\nimport os\nimport signal\nimport tempfile\nimport threading\nimport time\n\nlibc = c.CDLL('libc.so.6', use_errno=True)\nlibc.syscall.restype = c.c_long\nlibc.syscall.argtypes = [c.c_long] + [c.c_ulonglong] * 6\n\n\ndef call(number, *arguments):\n    c.set_errno(0)\n    value = libc.syscall(number, *arguments, *([0] * (6 - len(arguments))))\n    return value, c.get_errno()\n\n\nclass Timespec(c.Structure):\n    _fields_ = [('seconds', c.c_longlong), ('nanoseconds', c.c_longlong)]\n\n\ndef deadline(clock=1, seconds=5):\n    value = time.time() if clock == 0 else time.monotonic()\n    value += seconds\n    return Timespec(int(value), int((value % 1) * 1_000_000_000))\n\n\ndef pi(word, command, private, timeout=0):\n    return call(202, c.addressof(word), command | (128 if private else 0), 0, timeout)\n\n\ndef until(condition):\n    end = time.monotonic() + 5\n    while not condition():\n        assert time.monotonic() < end, 'PI state did not become visible'\n        time.sleep(0.001)\n\n\nrows = []\nassert call(186)[0] == os.getpid(), 'leader TID must use the guest PID namespace'\nfor private in [False, True]:\n    word = c.c_uint(0)\n    tid = call(186)[0]\n    for command in [6, 8, 13]:\n        assert pi(word, command, private) == (0, 0)\n        assert word.value == tid\n        assert pi(word, command, private) == (-1, errno.EDEADLK)\n        assert pi(word, 7, private, 1) == (0, 0)\n        assert word.value == 0\n    assert pi(word, 7, private) == (-1, errno.EPERM)\n    word.value = 0xc0000000\n    assert pi(word, 13, private) == (0, 0)\n    assert word.value == (0x40000000 | tid)\n    assert pi(word, 7, private) == (0, 0)\n    assert pi(word, 13, private) == (0, 0)\n    errors = []\n\n    def busy():\n        zero = Timespec(0, 0)\n        errors.extend([pi(word, 8, private, 1), pi(word, 13, private, c.addressof(zero))])\n\n    thread = threading.Thread(target=busy)\n    thread.start()\n    thread.join(5)\n    assert not thread.is_alive()\n    assert errors == [(-1, errno.EAGAIN), (-1, errno.ETIMEDOUT)], errors\n    acquired = []\n    queued = []\n    results = []\n\n    def wait(index):\n        limit = deadline()\n        queued.append(index)\n        result = pi(word, 13, private, c.addressof(limit))\n        results.append(result)\n        if result == (0, 0):\n            acquired.append(index)\n            assert word.value & 0x3fffffff == call(186)[0]\n            assert pi(word, 7, private) == (0, 0)\n\n    # Use WAITERS plus a short registration settling period for the guest\n    # schedule. Native tests additionally inspect each exact queue count.\n    threads = []\n    for index in range(3):\n        thread = threading.Thread(target=wait, args=(index,))\n        thread.start()\n        threads.append(thread)\n        until(lambda: len(queued) == index + 1 and word.value & 0x80000000)\n        time.sleep(0.02)\n    assert call(202, c.addressof(word), 1 | (128 if private else 0), 1) == (-1, errno.EINVAL)\n    target = c.c_uint(0)\n    assert call(202, c.addressof(word), 3 | (128 if private else 0), 0, 1, c.addressof(target)) == (-1, errno.EINVAL)\n    assert pi(word, 7, private) == (0, 0)\n    for thread in threads:\n        thread.join(5)\n        assert not thread.is_alive()\n    assert results == [(0, 0)] * 3, results\n    assert acquired == [0, 1, 2], acquired\n    assert word.value == 0\n    rows.append(dict(private=private, acquired=acquired, busy=errors))\n\nclass Action(c.Structure):\n    _fields_ = [('handler', c.c_ulonglong), ('flags', c.c_ulonglong),\n                ('restorer', c.c_ulonglong), ('mask', c.c_ulonglong)]\n\n\nactive = None\ndelivered = []\nhandler_wakes = []\n\n\n@c.CFUNCTYPE(None, c.c_int)\ndef handler(number):\n    word, private, limit, mutate = active\n    handler_wakes.append(call(202, c.addressof(word), 1 | (128 if private else 0), 1))\n    if mutate:\n        limit.seconds = -1\n    delivered.append(number)\n\n\nfor private in [False, True]:\n    for command in [6, 13]:\n        for restart in [False, True]:\n            for mutate in [False, True]:\n                word = c.c_uint(0)\n                assert pi(word, 13, private) == (0, 0)\n                limit = deadline(0 if command == 6 else 1)\n                active = word, private, limit, mutate\n                old = Action()\n                action = Action(c.cast(handler, c.c_void_p).value, 0x10000000 if restart else 0, 0, 0)\n                assert call(13, 12, c.addressof(action), c.addressof(old), 8) == (0, 0)\n                result, ids = [], []\n                before = len(delivered)\n\n                def wait_signal():\n                    ids.append(call(186)[0])\n                    result.append(pi(word, command, private, c.addressof(limit)))\n                    if result[-1] == (0, 0):\n                        assert pi(word, 7, private) == (0, 0)\n\n                waiter = threading.Thread(target=wait_signal)\n                waiter.start()\n                until(lambda: ids and call(202, c.addressof(word), 1 | (128 if private else 0), 1) == (-1, errno.EINVAL))\n                assert call(234, os.getpid(), ids[0], 12) == (0, 0)\n                until(lambda: len(delivered) == before + 1)\n                assert handler_wakes[-1] == (0, 0), handler_wakes\n                if not mutate:\n                    until(lambda: call(202, c.addressof(word), 1 | (128 if private else 0), 1) == (-1, errno.EINVAL))\n                assert pi(word, 7, private) == (0, 0)\n                waiter.join(6)\n                assert not waiter.is_alive()\n                assert result == [(-1, errno.EINVAL) if mutate else (0, 0)], (private, command, restart, mutate, result)\n                assert call(13, 12, c.addressof(old), 0, 8) == (0, 0)\n\n# File-backed aliases are created independently in a fork child. The owner is\n# the namespace leader, whose guest PID need not equal a native Windows TID.\nwith tempfile.TemporaryFile() as file:\n    file.truncate(4096)\n    parent_map = mmap.mmap(file.fileno(), 4096, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)\n    parent_word = c.c_uint.from_buffer(parent_map)\n    ready_r, ready_w = os.pipe()\n    release_r, release_w = os.pipe()\n    child = os.fork()\n    if child == 0:\n        assert call(186)[0] == os.getpid(), 'fork child must reset its native leader identity'\n        os.close(ready_r)\n        os.close(release_w)\n        child_map = mmap.mmap(file.fileno(), 4096, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)\n        child_word = c.c_uint.from_buffer(child_map)\n        assert c.addressof(child_word) != c.addressof(parent_word)\n        assert pi(child_word, 13, False) == (0, 0)\n        assert child_word.value == call(186)[0]\n        os.write(ready_w, b'R')\n        assert os.read(release_r, 1) == b'X'\n        # Abrupt process exit deliberately skips registered native TLS drops.\n        call(231, 0)\n        os._exit(99)\n    os.close(ready_w)\n    os.close(release_r)\n    assert os.read(ready_r, 1) == b'R'\n    result = []\n\n    def cross_process_wait():\n        limit = deadline()\n        result.append(pi(parent_word, 13, False, c.addressof(limit)))\n        if result[-1] == (0, 0):\n            assert parent_word.value & 0x40000000\n            assert pi(parent_word, 7, False) == (0, 0)\n\n    waiter = threading.Thread(target=cross_process_wait)\n    waiter.start()\n    until(lambda: parent_word.value & 0x80000000)\n    os.write(release_w, b'X')\n    waiter.join(8)\n    assert not waiter.is_alive()\n    assert result == [(0, 0)], result\n    assert os.waitpid(child, 0)[1] == 0\n    os.close(ready_r)\n    os.close(release_w)\n    del parent_word\n    parent_map.close()\n\nprint(json.dumps(dict(private_and_unflagged=rows, cross_process_owner_exit=True)))\nprint('FUTEX_PI_PASS')\n"
+          ],
+          "exit_code": 0,
+          "expected_exit": 0,
+          "status": "passed",
+          "missing_markers": [],
+          "reservation_ms": 0.3862,
+          "request_to_exit_ms": 342.3272,
+          "activation_to_exit_ms": 341.941,
+          "request_to_ready_ms": null,
+          "application_cpu_metrics": {
+            "user_ms": 78.125,
+            "kernel_ms": 78.125,
+            "total_cpu_ms": 156.25,
+            "cycles": 455386891,
+            "page_faults": 16823
+          },
+          "prepared_working_set_bytes": 11845632,
+          "cpu_metrics": {
+            "user_ms": 78.125,
+            "kernel_ms": 109.375,
+            "total_cpu_ms": 187.5,
+            "processes": 2,
+            "active_processes": 0,
+            "page_faults": 28060,
+            "read_bytes": 8598654,
+            "write_bytes": 24874,
+            "read_ops": 315,
+            "write_ops": 202,
+            "other_ops": 11158,
+            "other_bytes": 454959
+          },
+          "optimized": false
+        },
+        {
+          "pid": 1,
+          "command": [
+            "/usr/bin/python3",
+            "-c",
+            "\"\"\"Raw PI lock ownership, FIFO handoff, deadlines, signals and shared aliases.\"\"\"\nimport ctypes as c\nimport errno\nimport json\nimport mmap\nimport os\nimport signal\nimport tempfile\nimport threading\nimport time\n\nlibc = c.CDLL('libc.so.6', use_errno=True)\nlibc.syscall.restype = c.c_long\nlibc.syscall.argtypes = [c.c_long] + [c.c_ulonglong] * 6\n\n\ndef call(number, *arguments):\n    c.set_errno(0)\n    value = libc.syscall(number, *arguments, *([0] * (6 - len(arguments))))\n    return value, c.get_errno()\n\n\nclass Timespec(c.Structure):\n    _fields_ = [('seconds', c.c_longlong), ('nanoseconds', c.c_longlong)]\n\n\ndef deadline(clock=1, seconds=5):\n    value = time.time() if clock == 0 else time.monotonic()\n    value += seconds\n    return Timespec(int(value), int((value % 1) * 1_000_000_000))\n\n\ndef pi(word, command, private, timeout=0):\n    return call(202, c.addressof(word), command | (128 if private else 0), 0, timeout)\n\n\ndef until(condition):\n    end = time.monotonic() + 5\n    while not condition():\n        assert time.monotonic() < end, 'PI state did not become visible'\n        time.sleep(0.001)\n\n\nrows = []\nassert call(186)[0] == os.getpid(), 'leader TID must use the guest PID namespace'\nfor private in [False, True]:\n    word = c.c_uint(0)\n    tid = call(186)[0]\n    for command in [6, 8, 13]:\n        assert pi(word, command, private) == (0, 0)\n        assert word.value == tid\n        assert pi(word, command, private) == (-1, errno.EDEADLK)\n        assert pi(word, 7, private, 1) == (0, 0)\n        assert word.value == 0\n    assert pi(word, 7, private) == (-1, errno.EPERM)\n    word.value = 0xc0000000\n    assert pi(word, 13, private) == (0, 0)\n    assert word.value == (0x40000000 | tid)\n    assert pi(word, 7, private) == (0, 0)\n    assert pi(word, 13, private) == (0, 0)\n    errors = []\n\n    def busy():\n        zero = Timespec(0, 0)\n        errors.extend([pi(word, 8, private, 1), pi(word, 13, private, c.addressof(zero))])\n\n    thread = threading.Thread(target=busy)\n    thread.start()\n    thread.join(5)\n    assert not thread.is_alive()\n    assert errors == [(-1, errno.EAGAIN), (-1, errno.ETIMEDOUT)], errors\n    acquired = []\n    queued = []\n    results = []\n\n    def wait(index):\n        limit = deadline()\n        queued.append(index)\n        result = pi(word, 13, private, c.addressof(limit))\n        results.append(result)\n        if result == (0, 0):\n            acquired.append(index)\n            assert word.value & 0x3fffffff == call(186)[0]\n            assert pi(word, 7, private) == (0, 0)\n\n    # Use WAITERS plus a short registration settling period for the guest\n    # schedule. Native tests additionally inspect each exact queue count.\n    threads = []\n    for index in range(3):\n        thread = threading.Thread(target=wait, args=(index,))\n        thread.start()\n        threads.append(thread)\n        until(lambda: len(queued) == index + 1 and word.value & 0x80000000)\n        time.sleep(0.02)\n    assert call(202, c.addressof(word), 1 | (128 if private else 0), 1) == (-1, errno.EINVAL)\n    target = c.c_uint(0)\n    assert call(202, c.addressof(word), 3 | (128 if private else 0), 0, 1, c.addressof(target)) == (-1, errno.EINVAL)\n    assert pi(word, 7, private) == (0, 0)\n    for thread in threads:\n        thread.join(5)\n        assert not thread.is_alive()\n    assert results == [(0, 0)] * 3, results\n    assert acquired == [0, 1, 2], acquired\n    assert word.value == 0\n    rows.append(dict(private=private, acquired=acquired, busy=errors))\n\nclass Action(c.Structure):\n    _fields_ = [('handler', c.c_ulonglong), ('flags', c.c_ulonglong),\n                ('restorer', c.c_ulonglong), ('mask', c.c_ulonglong)]\n\n\nactive = None\ndelivered = []\nhandler_wakes = []\n\n\n@c.CFUNCTYPE(None, c.c_int)\ndef handler(number):\n    word, private, limit, mutate = active\n    handler_wakes.append(call(202, c.addressof(word), 1 | (128 if private else 0), 1))\n    if mutate:\n        limit.seconds = -1\n    delivered.append(number)\n\n\nfor private in [False, True]:\n    for command in [6, 13]:\n        for restart in [False, True]:\n            for mutate in [False, True]:\n                word = c.c_uint(0)\n                assert pi(word, 13, private) == (0, 0)\n                limit = deadline(0 if command == 6 else 1)\n                active = word, private, limit, mutate\n                old = Action()\n                action = Action(c.cast(handler, c.c_void_p).value, 0x10000000 if restart else 0, 0, 0)\n                assert call(13, 12, c.addressof(action), c.addressof(old), 8) == (0, 0)\n                result, ids = [], []\n                before = len(delivered)\n\n                def wait_signal():\n                    ids.append(call(186)[0])\n                    result.append(pi(word, command, private, c.addressof(limit)))\n                    if result[-1] == (0, 0):\n                        assert pi(word, 7, private) == (0, 0)\n\n                waiter = threading.Thread(target=wait_signal)\n                waiter.start()\n                until(lambda: ids and call(202, c.addressof(word), 1 | (128 if private else 0), 1) == (-1, errno.EINVAL))\n                assert call(234, os.getpid(), ids[0], 12) == (0, 0)\n                until(lambda: len(delivered) == before + 1)\n                assert handler_wakes[-1] == (0, 0), handler_wakes\n                if not mutate:\n                    until(lambda: call(202, c.addressof(word), 1 | (128 if private else 0), 1) == (-1, errno.EINVAL))\n                assert pi(word, 7, private) == (0, 0)\n                waiter.join(6)\n                assert not waiter.is_alive()\n                assert result == [(-1, errno.EINVAL) if mutate else (0, 0)], (private, command, restart, mutate, result)\n                assert call(13, 12, c.addressof(old), 0, 8) == (0, 0)\n\n# File-backed aliases are created independently in a fork child. The owner is\n# the namespace leader, whose guest PID need not equal a native Windows TID.\nwith tempfile.TemporaryFile() as file:\n    file.truncate(4096)\n    parent_map = mmap.mmap(file.fileno(), 4096, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)\n    parent_word = c.c_uint.from_buffer(parent_map)\n    ready_r, ready_w = os.pipe()\n    release_r, release_w = os.pipe()\n    child = os.fork()\n    if child == 0:\n        assert call(186)[0] == os.getpid(), 'fork child must reset its native leader identity'\n        os.close(ready_r)\n        os.close(release_w)\n        child_map = mmap.mmap(file.fileno(), 4096, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)\n        child_word = c.c_uint.from_buffer(child_map)\n        assert c.addressof(child_word) != c.addressof(parent_word)\n        assert pi(child_word, 13, False) == (0, 0)\n        assert child_word.value == call(186)[0]\n        os.write(ready_w, b'R')\n        assert os.read(release_r, 1) == b'X'\n        # Abrupt process exit deliberately skips registered native TLS drops.\n        call(231, 0)\n        os._exit(99)\n    os.close(ready_w)\n    os.close(release_r)\n    assert os.read(ready_r, 1) == b'R'\n    result = []\n\n    def cross_process_wait():\n        limit = deadline()\n        result.append(pi(parent_word, 13, False, c.addressof(limit)))\n        if result[-1] == (0, 0):\n            assert parent_word.value & 0x40000000\n            assert pi(parent_word, 7, False) == (0, 0)\n\n    waiter = threading.Thread(target=cross_process_wait)\n    waiter.start()\n    until(lambda: parent_word.value & 0x80000000)\n    os.write(release_w, b'X')\n    waiter.join(8)\n    assert not waiter.is_alive()\n    assert result == [(0, 0)], result\n    assert os.waitpid(child, 0)[1] == 0\n    os.close(ready_r)\n    os.close(release_w)\n    del parent_word\n    parent_map.close()\n\nprint(json.dumps(dict(private_and_unflagged=rows, cross_process_owner_exit=True)))\nprint('FUTEX_PI_PASS')\n"
+          ],
+          "exit_code": 0,
+          "expected_exit": 0,
+          "status": "passed",
+          "missing_markers": [],
+          "reservation_ms": 0.4221,
+          "request_to_exit_ms": 321.2171,
+          "activation_to_exit_ms": 320.795,
+          "request_to_ready_ms": null,
+          "application_cpu_metrics": {
+            "user_ms": 78.125,
+            "kernel_ms": 78.125,
+            "total_cpu_ms": 156.25,
+            "cycles": 423933765,
+            "page_faults": 16765
+          },
+          "prepared_working_set_bytes": 11878400,
+          "cpu_metrics": {
+            "user_ms": 109.375,
+            "kernel_ms": 125.0,
+            "total_cpu_ms": 234.375,
+            "processes": 2,
+            "active_processes": 0,
+            "page_faults": 27934,
+            "read_bytes": 8598642,
+            "write_bytes": 24862,
+            "read_ops": 315,
+            "write_ops": 202,
+            "other_ops": 11170,
+            "other_bytes": 454959
+          },
+          "optimized": true
+        }
+      ]
+    },
+    "timeout": {
+      "probe": "timeout",
+      "passed": true,
+      "distribution_sha256": {
+        "worker.exe": "5f62fea212ab827d1f177ca262b4458a3dfb0944f9fb267b7079d3e0f85020ac",
+        "init.exe": "851a18a39aa9f59f3c066e60fb05c627bdd5af7952abd2a84a9c7d290347cd49",
+        "rootfs.manifest.json": "efb5c990576e555db5ef532aaaac415b98bab802f3cebac145919a73a9f430c6",
+        "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+        "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "rootfs\\lib\\kinakaze_alloc.so": "54821d0a3422de13cd5702238d8c178d4acfa0daef1aca3f74bb2f513bab4de8",
+        "rootfs\\lib\\kinakaze_elf.so": "6e74fc65bcbbca1cb8728f2abd9016bcf7576b81af0333231b288d7966910c24",
+        "rootfs\\lib\\kinakaze_guest_engine.so": "338dcc723e9255c74b2a043ed2a31e26c2b0487fb33863fa180b966d366b32c9",
+        "rootfs\\lib\\kinakaze_kernel.so": "60f8f5c6f3ba3da5462633512588a1fad0ce348dd2c14b061dc23a40bdd5ae90",
+        "rootfs\\lib\\kinakaze_tls.so": "7dd80690d8a3e11fa8edbda0bd4a9c6267bf3b31bc72f4caafb3d3a8d9e0d7ef",
+        "rootfs\\lib\\kinakaze_vfs.so": "74956f42f9c1576079314ac2ed2698a21a8749f0a23199392a0e167db66e332e",
+        "rootfs\\lib\\ld-linux-x86-64.so.2": "c39a1e45cb77fa20c39ba64fc754d89dd97fbbf30c0fd1dc6106e36ce696bd9f",
+        "rootfs\\lib\\libasound.so.2": "5b71c75ca323c7abd1b7da8aa21894d879992a5fa5b1ce19ba0b35ef88fc03cb",
+        "rootfs\\lib\\libc.so.6": "7c993bfea9afce94a69764a717b2f760a486ba292a1447a7e74624244f28658e",
+        "rootfs\\lib\\libcuda.so.1": "a09c6fc8f696bbe5fbce7d6fc3564f9b49816e098e6b59d7e545f727558954fc",
+        "rootfs\\lib\\libdisplay.so.1": "32b933536913bf2216ebf707c50fe70e6fd4c95cdb21e078dd61b75d4e25a608",
+        "rootfs\\lib\\libdl.so.2": "40521063d398fd6235d00842cd6d72ae47fb4172a603393840a86d77d7d55b80",
+        "rootfs\\lib\\libEGL.so.1": "cda9f9e557713501ab75c8f24ab119137263217a12e9c8cfbe98fec645c69095",
+        "rootfs\\lib\\libGL.so.1": "543348b43c2e79b422461bb1e96246b1570d8bf32572903a61a7c0b803c878a0",
+        "rootfs\\lib\\libGLESv2.so.2": "9ea41057f6640fc7435be1da3a23841f208a02d0e6de43c8b5c552451b07d42a",
+        "rootfs\\lib\\libGLX.so.0": "b921b7e52d46307c2c5c1dae7cb71f6cf9d098d7213f28d3a3d0920b498ccf23",
+        "rootfs\\lib\\libkinakaze-runtime.so.1": "abdf033aaf7b8214c403685fb06cde4948feac8970a143f49fcff690ca18fe8b",
+        "rootfs\\lib\\libm.so.6": "f77a4bb0bb549ef8fad85973addfa73b0db8d8865ccd56360237f32c240e2600",
+        "rootfs\\lib\\libOpenGL.so.0": "d59bc037213274c567897afb83dfde4d5f70e88fcdb6df851fb49d6c69aaf972",
+        "rootfs\\lib\\libpipewire-0.3.so.0": "78f0c6b97a7397394f0d6444399cf1a3669451650670cc4e56db5e224590a3ce",
+        "rootfs\\lib\\libpthread.so.0": "d1f200480d2c270b28ccaedd31a00f15ac22c6cf4cdb9fcddcfc614d9f78601d",
+        "rootfs\\lib\\libpulse.so.0": "8137636bb892ee0d07205c918b2b4a255c8617168b694148b5b9f915db6ec825",
+        "rootfs\\lib\\libresolv.so.2": "8f1702535a30c59becc5ac71e8ff10ae3821eb8dc56374985e2a3f49423fbcbf",
+        "rootfs\\lib\\librt.so.1": "a8f52d7cc82ee163505a8e5b816873a824d0f2b45f225961e34ac341c2110b73",
+        "rootfs\\lib\\libvulkan.so.1": "594d54271ffca8b466b7efa21b1c227480f6f49951fafc468f7c359d7a5fe3e5",
+        "rootfs\\lib\\libX11-xcb.so.1": "00e3de781c1af33dbe26f3a8f3f0e95866e35b7cb88c5edd0e51d9615b2f1cba",
+        "rootfs\\lib\\libX11.so.6": "ec1a4be7ae1275f6e0d2ea7ff440e6b0c25b8caac79bbb82030a903707bb22d3",
+        "rootfs\\lib\\libxcb.so.1": "8a8cd1c1e0820765bfca57cf2ab6d8da5f7e9368456c921be189e637b8c827e1",
+        "rootfs\\lib\\libXcursor.so.1": "96c185c5e81160c1184b95643418b9fac522a4a80a378b4358cef46397a95da4",
+        "rootfs\\lib\\libXext.so.6": "1f9003223673b3d23180be8cbc69e3c72308f7fda5c7c130e00bd16b5f5d21d1",
+        "rootfs\\lib\\libXi.so.6": "525688fda82f0f667d341a52c815912b2669e85eec2476eb85090560bf2d2ba1",
+        "rootfs\\lib\\libXinerama.so.1": "b2f262924a81d4cb8cc4d69f2e867ebc8f259dfcbf8cbcf17eaa69de8a5ed8b5",
+        "rootfs\\lib\\libXrandr.so.2": "6de7019f273914d40a6bb130721ea8d0f013252fe12bdf7c33a700d7eb6b3a27",
+        "rootfs\\lib\\libXrender.so.1": "46ed8bed2cce4d1fb841f1d7c0c6604545d3cf0745da5c40816e483fa8dadadc",
+        "rootfs\\lib\\libXxf86vm.so.1": "98e80e53f817d5d0ea2c38a2bb4bbef0321ddf6c4934be50f558765923ea27e7",
+        "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+      },
+      "rows": [
+        {
+          "pid": 1,
+          "command": [
+            "/usr/bin/python3",
+            "-c",
+            "\"\"\"Check futex timeout copying and error precedence through real raw syscalls.\"\"\"\nimport ctypes as c\nimport errno\nimport json\nimport mmap\n\nlibc = c.CDLL('libc.so.6', use_errno=True)\nlibc.syscall.restype = c.c_long\nlibc.syscall.argtypes = [c.c_long] + [c.c_ulonglong] * 6\n\n\ndef call(number, *arguments):\n    c.set_errno(0)\n    result = libc.syscall(number, *arguments, *([0] * (6 - len(arguments))))\n    return result, c.get_errno()\n\n\nclass Timespec(c.Structure):\n    _fields_ = [('seconds', c.c_longlong), ('nanoseconds', c.c_longlong)]\n\n\nclass Entry(c.Structure):\n    _fields_ = [('value', c.c_ulonglong), ('address', c.c_ulonglong),\n                ('flags', c.c_uint), ('reserved', c.c_uint)]\n\n\ndef legacy(address, command, private, timeout, mask=1):\n    return call(202, address, command | (128 if private else 0), 0, timeout, 0, mask)\n\n\ninvalid = Timespec(-1, 0)\nzero = Timespec(0, 0)\nword = c.c_int(0)\naddress = c.addressof(word)\n\nfor private in [False, True]:\n    # Timed PI commands share sys_futex's copy stage even before their backend\n    # is available. These assertions do not claim PI locking is implemented.\n    for command in [0, 9, 6, 13, 11]:\n        for bad_address in [0, 1]:\n            assert legacy(bad_address, command, private, 1, 0) == (-1, errno.EFAULT)\n            assert legacy(bad_address, command, private, c.addressof(invalid)) == (-1, errno.EINVAL)\n    assert legacy(0, 256, private, 1) == (-1, errno.EFAULT)\n    assert legacy(0, 256, private, c.addressof(invalid)) == (-1, errno.EINVAL)\n    assert legacy(0, 256, private, c.addressof(zero)) == (-1, errno.ENOSYS)\n    assert legacy(0, 9, private, c.addressof(zero), 0) == (-1, errno.EINVAL)\n    assert legacy(0, 9, private, 1, 0) == (-1, errno.EFAULT)\n    assert legacy(address, 1, private, 1) == (0, 0)\n    assert legacy(address, 10, private, 1) == (0, 0)\n    assert legacy(0, 63, private, 1) == (-1, errno.ENOSYS)\n    assert legacy(0, 3, private, 0xffffffff) == (-1, errno.EINVAL)\n\n    storage = (c.c_ubyte * 17)()\n    unaligned = c.addressof(storage) + 1\n    c.memmove(unaligned, c.addressof(zero), 16)\n    flags = 0x82 if private else 2\n    entry = Entry(0, address, flags, 0)\n    word.value = 1\n    for command in [0, 9]:\n        assert legacy(address, command, private, unaligned) == (-1, errno.EAGAIN)\n    assert call(455, address, 0, 1, flags, unaligned, 1) == (-1, errno.EAGAIN)\n    assert call(449, c.addressof(entry), 1, 0, unaligned, 1) == (-1, errno.EAGAIN)\n    word.value = 0\n    for command in [0, 9]:\n        assert legacy(address, command, private, unaligned) == (-1, errno.ETIMEDOUT)\n    assert call(455, address, 0, 1, flags, unaligned, 1) == (-1, errno.ETIMEDOUT)\n    assert call(449, c.addressof(entry), 1, 0, unaligned, 1) == (-1, errno.ETIMEDOUT)\n\nwith mmap.mmap(-1, 8192, flags=mmap.MAP_PRIVATE | mmap.MAP_ANONYMOUS,\n               prot=mmap.PROT_READ | mmap.PROT_WRITE) as pages:\n    anchor = c.c_int.from_buffer(pages)\n    base = c.addressof(anchor)\n    timeout = base + 4096 - 8\n    c.memmove(timeout, c.addressof(zero), 16)\n    assert call(10, base + 4096, 4096, 0) == (0, 0)\n    try:\n        for private in [False, True]:\n            for command in [0, 9, 6, 13, 11]:\n                assert legacy(0, command, private, timeout) == (-1, errno.EFAULT)\n            flags = 0x82 if private else 2\n            entry = Entry(0, address, flags, 0)\n            assert call(455, address, 0, 1, flags, timeout, 1) == (-1, errno.EFAULT)\n            assert call(449, c.addressof(entry), 1, 0, timeout, 1) == (-1, errno.EFAULT)\n    finally:\n        assert call(10, base + 4096, 4096, 3) == (0, 0)\n        del anchor\n\nprint('FUTEX_TIMEOUT_PASS ' + json.dumps(dict(error_order=True, unaligned=True,\n    guard_page=True, private=True, unflagged=True, legacy=True, scalar=True,\n    vector=True, pi_timeout_entry=True)), flush=True)\n"
+          ],
+          "exit_code": 0,
+          "expected_exit": 0,
+          "status": "passed",
+          "missing_markers": [],
+          "reservation_ms": 0.3299,
+          "request_to_exit_ms": 86.8623,
+          "activation_to_exit_ms": 86.5324,
+          "request_to_ready_ms": null,
+          "application_cpu_metrics": {
+            "user_ms": 15.625,
+            "kernel_ms": 46.875,
+            "total_cpu_ms": 62.5,
+            "cycles": 226153176,
+            "page_faults": 8453
+          },
+          "prepared_working_set_bytes": 11857920,
+          "cpu_metrics": {
+            "user_ms": 15.625,
+            "kernel_ms": 78.125,
+            "total_cpu_ms": 93.75,
+            "processes": 1,
+            "active_processes": 0,
+            "page_faults": 10984,
+            "read_bytes": 7890910,
+            "write_bytes": 13562,
+            "read_ops": 187,
+            "write_ops": 114,
+            "other_ops": 7804,
+            "other_bytes": 314546
+          },
+          "optimized": false
+        },
+        {
+          "pid": 1,
+          "command": [
+            "/usr/bin/python3",
+            "-c",
+            "\"\"\"Check futex timeout copying and error precedence through real raw syscalls.\"\"\"\nimport ctypes as c\nimport errno\nimport json\nimport mmap\n\nlibc = c.CDLL('libc.so.6', use_errno=True)\nlibc.syscall.restype = c.c_long\nlibc.syscall.argtypes = [c.c_long] + [c.c_ulonglong] * 6\n\n\ndef call(number, *arguments):\n    c.set_errno(0)\n    result = libc.syscall(number, *arguments, *([0] * (6 - len(arguments))))\n    return result, c.get_errno()\n\n\nclass Timespec(c.Structure):\n    _fields_ = [('seconds', c.c_longlong), ('nanoseconds', c.c_longlong)]\n\n\nclass Entry(c.Structure):\n    _fields_ = [('value', c.c_ulonglong), ('address', c.c_ulonglong),\n                ('flags', c.c_uint), ('reserved', c.c_uint)]\n\n\ndef legacy(address, command, private, timeout, mask=1):\n    return call(202, address, command | (128 if private else 0), 0, timeout, 0, mask)\n\n\ninvalid = Timespec(-1, 0)\nzero = Timespec(0, 0)\nword = c.c_int(0)\naddress = c.addressof(word)\n\nfor private in [False, True]:\n    # Timed PI commands share sys_futex's copy stage even before their backend\n    # is available. These assertions do not claim PI locking is implemented.\n    for command in [0, 9, 6, 13, 11]:\n        for bad_address in [0, 1]:\n            assert legacy(bad_address, command, private, 1, 0) == (-1, errno.EFAULT)\n            assert legacy(bad_address, command, private, c.addressof(invalid)) == (-1, errno.EINVAL)\n    assert legacy(0, 256, private, 1) == (-1, errno.EFAULT)\n    assert legacy(0, 256, private, c.addressof(invalid)) == (-1, errno.EINVAL)\n    assert legacy(0, 256, private, c.addressof(zero)) == (-1, errno.ENOSYS)\n    assert legacy(0, 9, private, c.addressof(zero), 0) == (-1, errno.EINVAL)\n    assert legacy(0, 9, private, 1, 0) == (-1, errno.EFAULT)\n    assert legacy(address, 1, private, 1) == (0, 0)\n    assert legacy(address, 10, private, 1) == (0, 0)\n    assert legacy(0, 63, private, 1) == (-1, errno.ENOSYS)\n    assert legacy(0, 3, private, 0xffffffff) == (-1, errno.EINVAL)\n\n    storage = (c.c_ubyte * 17)()\n    unaligned = c.addressof(storage) + 1\n    c.memmove(unaligned, c.addressof(zero), 16)\n    flags = 0x82 if private else 2\n    entry = Entry(0, address, flags, 0)\n    word.value = 1\n    for command in [0, 9]:\n        assert legacy(address, command, private, unaligned) == (-1, errno.EAGAIN)\n    assert call(455, address, 0, 1, flags, unaligned, 1) == (-1, errno.EAGAIN)\n    assert call(449, c.addressof(entry), 1, 0, unaligned, 1) == (-1, errno.EAGAIN)\n    word.value = 0\n    for command in [0, 9]:\n        assert legacy(address, command, private, unaligned) == (-1, errno.ETIMEDOUT)\n    assert call(455, address, 0, 1, flags, unaligned, 1) == (-1, errno.ETIMEDOUT)\n    assert call(449, c.addressof(entry), 1, 0, unaligned, 1) == (-1, errno.ETIMEDOUT)\n\nwith mmap.mmap(-1, 8192, flags=mmap.MAP_PRIVATE | mmap.MAP_ANONYMOUS,\n               prot=mmap.PROT_READ | mmap.PROT_WRITE) as pages:\n    anchor = c.c_int.from_buffer(pages)\n    base = c.addressof(anchor)\n    timeout = base + 4096 - 8\n    c.memmove(timeout, c.addressof(zero), 16)\n    assert call(10, base + 4096, 4096, 0) == (0, 0)\n    try:\n        for private in [False, True]:\n            for command in [0, 9, 6, 13, 11]:\n                assert legacy(0, command, private, timeout) == (-1, errno.EFAULT)\n            flags = 0x82 if private else 2\n            entry = Entry(0, address, flags, 0)\n            assert call(455, address, 0, 1, flags, timeout, 1) == (-1, errno.EFAULT)\n            assert call(449, c.addressof(entry), 1, 0, timeout, 1) == (-1, errno.EFAULT)\n    finally:\n        assert call(10, base + 4096, 4096, 3) == (0, 0)\n        del anchor\n\nprint('FUTEX_TIMEOUT_PASS ' + json.dumps(dict(error_order=True, unaligned=True,\n    guard_page=True, private=True, unflagged=True, legacy=True, scalar=True,\n    vector=True, pi_timeout_entry=True)), flush=True)\n"
+          ],
+          "exit_code": 0,
+          "expected_exit": 0,
+          "status": "passed",
+          "missing_markers": [],
+          "reservation_ms": 0.3391,
+          "request_to_exit_ms": 85.8726,
+          "activation_to_exit_ms": 85.5335,
+          "request_to_ready_ms": null,
+          "application_cpu_metrics": {
+            "user_ms": 31.25,
+            "kernel_ms": 46.875,
+            "total_cpu_ms": 78.125,
+            "cycles": 223294992,
+            "page_faults": 8434
+          },
+          "prepared_working_set_bytes": 11853824,
+          "cpu_metrics": {
+            "user_ms": 31.25,
+            "kernel_ms": 46.875,
+            "total_cpu_ms": 78.125,
+            "processes": 1,
+            "active_processes": 0,
+            "page_faults": 10964,
+            "read_bytes": 7890911,
+            "write_bytes": 13563,
+            "read_ops": 187,
+            "write_ops": 114,
+            "other_ops": 7804,
+            "other_bytes": 314546
+          },
+          "optimized": true
+        }
+      ]
+    },
+    "signal": {
+      "probe": "signal",
+      "passed": true,
+      "distribution_sha256": {
+        "worker.exe": "5f62fea212ab827d1f177ca262b4458a3dfb0944f9fb267b7079d3e0f85020ac",
+        "init.exe": "851a18a39aa9f59f3c066e60fb05c627bdd5af7952abd2a84a9c7d290347cd49",
+        "rootfs.manifest.json": "efb5c990576e555db5ef532aaaac415b98bab802f3cebac145919a73a9f430c6",
+        "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+        "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "rootfs\\lib\\kinakaze_alloc.so": "54821d0a3422de13cd5702238d8c178d4acfa0daef1aca3f74bb2f513bab4de8",
+        "rootfs\\lib\\kinakaze_elf.so": "6e74fc65bcbbca1cb8728f2abd9016bcf7576b81af0333231b288d7966910c24",
+        "rootfs\\lib\\kinakaze_guest_engine.so": "338dcc723e9255c74b2a043ed2a31e26c2b0487fb33863fa180b966d366b32c9",
+        "rootfs\\lib\\kinakaze_kernel.so": "60f8f5c6f3ba3da5462633512588a1fad0ce348dd2c14b061dc23a40bdd5ae90",
+        "rootfs\\lib\\kinakaze_tls.so": "7dd80690d8a3e11fa8edbda0bd4a9c6267bf3b31bc72f4caafb3d3a8d9e0d7ef",
+        "rootfs\\lib\\kinakaze_vfs.so": "74956f42f9c1576079314ac2ed2698a21a8749f0a23199392a0e167db66e332e",
+        "rootfs\\lib\\ld-linux-x86-64.so.2": "c39a1e45cb77fa20c39ba64fc754d89dd97fbbf30c0fd1dc6106e36ce696bd9f",
+        "rootfs\\lib\\libasound.so.2": "5b71c75ca323c7abd1b7da8aa21894d879992a5fa5b1ce19ba0b35ef88fc03cb",
+        "rootfs\\lib\\libc.so.6": "7c993bfea9afce94a69764a717b2f760a486ba292a1447a7e74624244f28658e",
+        "rootfs\\lib\\libcuda.so.1": "a09c6fc8f696bbe5fbce7d6fc3564f9b49816e098e6b59d7e545f727558954fc",
+        "rootfs\\lib\\libdisplay.so.1": "32b933536913bf2216ebf707c50fe70e6fd4c95cdb21e078dd61b75d4e25a608",
+        "rootfs\\lib\\libdl.so.2": "40521063d398fd6235d00842cd6d72ae47fb4172a603393840a86d77d7d55b80",
+        "rootfs\\lib\\libEGL.so.1": "cda9f9e557713501ab75c8f24ab119137263217a12e9c8cfbe98fec645c69095",
+        "rootfs\\lib\\libGL.so.1": "543348b43c2e79b422461bb1e96246b1570d8bf32572903a61a7c0b803c878a0",
+        "rootfs\\lib\\libGLESv2.so.2": "9ea41057f6640fc7435be1da3a23841f208a02d0e6de43c8b5c552451b07d42a",
+        "rootfs\\lib\\libGLX.so.0": "b921b7e52d46307c2c5c1dae7cb71f6cf9d098d7213f28d3a3d0920b498ccf23",
+        "rootfs\\lib\\libkinakaze-runtime.so.1": "abdf033aaf7b8214c403685fb06cde4948feac8970a143f49fcff690ca18fe8b",
+        "rootfs\\lib\\libm.so.6": "f77a4bb0bb549ef8fad85973addfa73b0db8d8865ccd56360237f32c240e2600",
+        "rootfs\\lib\\libOpenGL.so.0": "d59bc037213274c567897afb83dfde4d5f70e88fcdb6df851fb49d6c69aaf972",
+        "rootfs\\lib\\libpipewire-0.3.so.0": "78f0c6b97a7397394f0d6444399cf1a3669451650670cc4e56db5e224590a3ce",
+        "rootfs\\lib\\libpthread.so.0": "d1f200480d2c270b28ccaedd31a00f15ac22c6cf4cdb9fcddcfc614d9f78601d",
+        "rootfs\\lib\\libpulse.so.0": "8137636bb892ee0d07205c918b2b4a255c8617168b694148b5b9f915db6ec825",
+        "rootfs\\lib\\libresolv.so.2": "8f1702535a30c59becc5ac71e8ff10ae3821eb8dc56374985e2a3f49423fbcbf",
+        "rootfs\\lib\\librt.so.1": "a8f52d7cc82ee163505a8e5b816873a824d0f2b45f225961e34ac341c2110b73",
+        "rootfs\\lib\\libvulkan.so.1": "594d54271ffca8b466b7efa21b1c227480f6f49951fafc468f7c359d7a5fe3e5",
+        "rootfs\\lib\\libX11-xcb.so.1": "00e3de781c1af33dbe26f3a8f3f0e95866e35b7cb88c5edd0e51d9615b2f1cba",
+        "rootfs\\lib\\libX11.so.6": "ec1a4be7ae1275f6e0d2ea7ff440e6b0c25b8caac79bbb82030a903707bb22d3",
+        "rootfs\\lib\\libxcb.so.1": "8a8cd1c1e0820765bfca57cf2ab6d8da5f7e9368456c921be189e637b8c827e1",
+        "rootfs\\lib\\libXcursor.so.1": "96c185c5e81160c1184b95643418b9fac522a4a80a378b4358cef46397a95da4",
+        "rootfs\\lib\\libXext.so.6": "1f9003223673b3d23180be8cbc69e3c72308f7fda5c7c130e00bd16b5f5d21d1",
+        "rootfs\\lib\\libXi.so.6": "525688fda82f0f667d341a52c815912b2669e85eec2476eb85090560bf2d2ba1",
+        "rootfs\\lib\\libXinerama.so.1": "b2f262924a81d4cb8cc4d69f2e867ebc8f259dfcbf8cbcf17eaa69de8a5ed8b5",
+        "rootfs\\lib\\libXrandr.so.2": "6de7019f273914d40a6bb130721ea8d0f013252fe12bdf7c33a700d7eb6b3a27",
+        "rootfs\\lib\\libXrender.so.1": "46ed8bed2cce4d1fb841f1d7c0c6604545d3cf0745da5c40816e483fa8dadadc",
+        "rootfs\\lib\\libXxf86vm.so.1": "98e80e53f817d5d0ea2c38a2bb4bbef0321ddf6c4934be50f558765923ea27e7",
+        "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+      },
+      "rows": [
+        {
+          "pid": 1,
+          "command": [
+            "/usr/bin/python3",
+            "-c",
+            "\"\"\"Verify old and modern futex signal restart rules with real guest callbacks.\"\"\"\nimport ctypes as c\nimport errno\nimport json\nimport os\nimport threading\nimport time\n\nlibc = c.CDLL('libc.so.6', use_errno=True)\nlibc.syscall.restype = c.c_long\nlibc.syscall.argtypes = [c.c_long] + [c.c_ulonglong] * 6\n\n\ndef call(number, *arguments):\n    c.set_errno(0)\n    result = libc.syscall(number, *arguments, *([0] * (6 - len(arguments))))\n    return result, c.get_errno()\n\n\nclass Timespec(c.Structure):\n    _fields_ = [('seconds', c.c_longlong), ('nanoseconds', c.c_longlong)]\n\n\nclass Entry(c.Structure):\n    _fields_ = [('value', c.c_ulonglong), ('address', c.c_ulonglong),\n                ('flags', c.c_uint), ('reserved', c.c_uint)]\n\n\nclass Action(c.Structure):\n    _fields_ = [('handler', c.c_ulonglong), ('flags', c.c_ulonglong),\n                ('restorer', c.c_ulonglong), ('mask', c.c_ulonglong)]\n\n\nobserved = []\nhandler_wakes = []\nactive = None\n\n\n@c.CFUNCTYPE(None, c.c_int)\ndef handler(number):\n    handler_wakes.append(call(454, active[0], 0xffffffff, 1, active[1]))\n    observed.append(number)\n\n\ndef queued(address, flags):\n    entries = (Entry * 2)(Entry(0, address, flags, 0), Entry(0, address, flags, 0))\n    end = time.monotonic() + 5\n    while time.monotonic() < end:\n        result = call(456, c.addressof(entries), 0, 0, 0x7fffffff)\n        assert result in [(0, 0), (1, 0)], result\n        if result[0] == 1:\n            return\n        time.sleep(.001)\n    raise AssertionError('waiter did not enter queue')\n\n\ndef check(number, private, restart, timed=True, mutate=None):\n    global active\n    word = c.c_int()\n    address = c.addressof(word)\n    flags = 0x82 if private else 2\n    active = address, flags\n    action = Action(c.cast(handler, c.c_void_p).value, 0x10000000 if restart else 0, 0, 0)\n    old = Action()\n    assert call(13, 12, c.addressof(action), c.addressof(old), 8) == (0, 0)\n    if number == 202:\n        timeout = Timespec(5, 0)\n    else:\n        now = time.monotonic_ns() + 5_000_000_000\n        timeout = Timespec(now // 1_000_000_000, now % 1_000_000_000)\n    entries = (Entry * 1)(Entry(0, address, flags, 0))\n    results, ids = [], []\n    begin = len(observed)\n\n    def waiting():\n        ids.append(call(186)[0])\n        if number == 202:\n            results.append(call(202, address, 128 if private else 0, 0,\n                                c.addressof(timeout) if timed else 0))\n        elif number == 455:\n            results.append(call(455, address, 0, 1, flags,\n                                c.addressof(timeout) if timed else 0, 1 if timed else 999))\n        else:\n            results.append(call(449, c.addressof(entries), 1, 0,\n                                c.addressof(timeout) if timed else 0, 1 if timed else 999))\n\n    thread = threading.Thread(target=waiting)\n    thread.start()\n    queued(address, flags)\n    if mutate == 'timeout':\n        timeout.seconds = timeout.nanoseconds = 0\n    if mutate == 'descriptor':\n        entries[0].reserved = 1\n    assert call(234, os.getpid(), ids[0], 12) == (0, 0)\n    end = time.monotonic() + 5\n    while len(observed) == begin and time.monotonic() < end:\n        time.sleep(.001)\n    assert len(observed) == begin + 1, observed\n    assert handler_wakes[-1] == (0, 0), handler_wakes\n    if restart and ((number == 202 and not timed) or (number != 202 and mutate is None)):\n        queued(address, flags)\n        assert call(454, address, 0xffffffff, 1, flags) == (1, 0)\n        expected = (0, 0)\n    elif number != 202 and restart:\n        expected = (-1, errno.EINVAL if mutate == 'descriptor' else errno.ETIMEDOUT)\n    else:\n        expected = (-1, errno.EINTR)\n    thread.join(timeout=6)\n    assert not thread.is_alive() and results == [expected], (number, private, restart, timed, mutate, results)\n    assert call(454, address, 0xffffffff, 1, flags) == (0, 0)\n    assert call(13, 12, c.addressof(old), 0, 8) == (0, 0)\n\n\nfor private in [False, True]:\n    for restart in [False, True]:\n        for timed in [False, True]:\n            check(202, private, restart, timed)\n        for number in [455, 449]:\n            for timed in [False, True]:\n                check(number, private, restart, timed)\n            if restart:\n                check(number, private, restart, mutate='timeout')\n                if number == 449:\n                    check(number, private, restart, mutate='descriptor')\n\nprint('FUTEX_SIGNAL_RESTART_PASS ' + json.dumps(dict(legacy_timed=True,\n    legacy_untimed=True, scalar=True, vector=True, argument_recopy=True,\n    private=True, unflagged=True, retired_before_handler=True)), flush=True)\n"
+          ],
+          "exit_code": 0,
+          "expected_exit": 0,
+          "status": "passed",
+          "missing_markers": [],
+          "reservation_ms": 0.2809,
+          "request_to_exit_ms": 155.2679,
+          "activation_to_exit_ms": 154.987,
+          "request_to_ready_ms": null,
+          "application_cpu_metrics": {
+            "user_ms": 62.5,
+            "kernel_ms": 46.875,
+            "total_cpu_ms": 109.375,
+            "cycles": 319301272,
+            "page_faults": 10554
+          },
+          "prepared_working_set_bytes": 11886592,
+          "cpu_metrics": {
+            "user_ms": 62.5,
+            "kernel_ms": 46.875,
+            "total_cpu_ms": 109.375,
+            "processes": 0,
+            "active_processes": -1,
+            "page_faults": 12444,
+            "read_bytes": 7943057,
+            "write_bytes": 14385,
+            "read_ops": 187,
+            "write_ops": 112,
+            "other_ops": 7833,
+            "other_bytes": 312962
+          },
+          "optimized": false
+        },
+        {
+          "pid": 1,
+          "command": [
+            "/usr/bin/python3",
+            "-c",
+            "\"\"\"Verify old and modern futex signal restart rules with real guest callbacks.\"\"\"\nimport ctypes as c\nimport errno\nimport json\nimport os\nimport threading\nimport time\n\nlibc = c.CDLL('libc.so.6', use_errno=True)\nlibc.syscall.restype = c.c_long\nlibc.syscall.argtypes = [c.c_long] + [c.c_ulonglong] * 6\n\n\ndef call(number, *arguments):\n    c.set_errno(0)\n    result = libc.syscall(number, *arguments, *([0] * (6 - len(arguments))))\n    return result, c.get_errno()\n\n\nclass Timespec(c.Structure):\n    _fields_ = [('seconds', c.c_longlong), ('nanoseconds', c.c_longlong)]\n\n\nclass Entry(c.Structure):\n    _fields_ = [('value', c.c_ulonglong), ('address', c.c_ulonglong),\n                ('flags', c.c_uint), ('reserved', c.c_uint)]\n\n\nclass Action(c.Structure):\n    _fields_ = [('handler', c.c_ulonglong), ('flags', c.c_ulonglong),\n                ('restorer', c.c_ulonglong), ('mask', c.c_ulonglong)]\n\n\nobserved = []\nhandler_wakes = []\nactive = None\n\n\n@c.CFUNCTYPE(None, c.c_int)\ndef handler(number):\n    handler_wakes.append(call(454, active[0], 0xffffffff, 1, active[1]))\n    observed.append(number)\n\n\ndef queued(address, flags):\n    entries = (Entry * 2)(Entry(0, address, flags, 0), Entry(0, address, flags, 0))\n    end = time.monotonic() + 5\n    while time.monotonic() < end:\n        result = call(456, c.addressof(entries), 0, 0, 0x7fffffff)\n        assert result in [(0, 0), (1, 0)], result\n        if result[0] == 1:\n            return\n        time.sleep(.001)\n    raise AssertionError('waiter did not enter queue')\n\n\ndef check(number, private, restart, timed=True, mutate=None):\n    global active\n    word = c.c_int()\n    address = c.addressof(word)\n    flags = 0x82 if private else 2\n    active = address, flags\n    action = Action(c.cast(handler, c.c_void_p).value, 0x10000000 if restart else 0, 0, 0)\n    old = Action()\n    assert call(13, 12, c.addressof(action), c.addressof(old), 8) == (0, 0)\n    if number == 202:\n        timeout = Timespec(5, 0)\n    else:\n        now = time.monotonic_ns() + 5_000_000_000\n        timeout = Timespec(now // 1_000_000_000, now % 1_000_000_000)\n    entries = (Entry * 1)(Entry(0, address, flags, 0))\n    results, ids = [], []\n    begin = len(observed)\n\n    def waiting():\n        ids.append(call(186)[0])\n        if number == 202:\n            results.append(call(202, address, 128 if private else 0, 0,\n                                c.addressof(timeout) if timed else 0))\n        elif number == 455:\n            results.append(call(455, address, 0, 1, flags,\n                                c.addressof(timeout) if timed else 0, 1 if timed else 999))\n        else:\n            results.append(call(449, c.addressof(entries), 1, 0,\n                                c.addressof(timeout) if timed else 0, 1 if timed else 999))\n\n    thread = threading.Thread(target=waiting)\n    thread.start()\n    queued(address, flags)\n    if mutate == 'timeout':\n        timeout.seconds = timeout.nanoseconds = 0\n    if mutate == 'descriptor':\n        entries[0].reserved = 1\n    assert call(234, os.getpid(), ids[0], 12) == (0, 0)\n    end = time.monotonic() + 5\n    while len(observed) == begin and time.monotonic() < end:\n        time.sleep(.001)\n    assert len(observed) == begin + 1, observed\n    assert handler_wakes[-1] == (0, 0), handler_wakes\n    if restart and ((number == 202 and not timed) or (number != 202 and mutate is None)):\n        queued(address, flags)\n        assert call(454, address, 0xffffffff, 1, flags) == (1, 0)\n        expected = (0, 0)\n    elif number != 202 and restart:\n        expected = (-1, errno.EINVAL if mutate == 'descriptor' else errno.ETIMEDOUT)\n    else:\n        expected = (-1, errno.EINTR)\n    thread.join(timeout=6)\n    assert not thread.is_alive() and results == [expected], (number, private, restart, timed, mutate, results)\n    assert call(454, address, 0xffffffff, 1, flags) == (0, 0)\n    assert call(13, 12, c.addressof(old), 0, 8) == (0, 0)\n\n\nfor private in [False, True]:\n    for restart in [False, True]:\n        for timed in [False, True]:\n            check(202, private, restart, timed)\n        for number in [455, 449]:\n            for timed in [False, True]:\n                check(number, private, restart, timed)\n            if restart:\n                check(number, private, restart, mutate='timeout')\n                if number == 449:\n                    check(number, private, restart, mutate='descriptor')\n\nprint('FUTEX_SIGNAL_RESTART_PASS ' + json.dumps(dict(legacy_timed=True,\n    legacy_untimed=True, scalar=True, vector=True, argument_recopy=True,\n    private=True, unflagged=True, retired_before_handler=True)), flush=True)\n"
+          ],
+          "exit_code": 0,
+          "expected_exit": 0,
+          "status": "passed",
+          "missing_markers": [],
+          "reservation_ms": 0.2331,
+          "request_to_exit_ms": 155.9667,
+          "activation_to_exit_ms": 155.7336,
+          "request_to_ready_ms": null,
+          "application_cpu_metrics": {
+            "user_ms": 46.875,
+            "kernel_ms": 62.5,
+            "total_cpu_ms": 109.375,
+            "cycles": 311603871,
+            "page_faults": 10536
+          },
+          "prepared_working_set_bytes": 11849728,
+          "cpu_metrics": {
+            "user_ms": 46.875,
+            "kernel_ms": 62.5,
+            "total_cpu_ms": 109.375,
+            "processes": 0,
+            "active_processes": -1,
+            "page_faults": 12426,
+            "read_bytes": 7943061,
+            "write_bytes": 14391,
+            "read_ops": 187,
+            "write_ops": 112,
+            "other_ops": 7834,
+            "other_bytes": 313120
+          },
+          "optimized": true
+        }
+      ]
+    },
+    "scalar": {
+      "probe": "scalar",
+      "passed": true,
+      "distribution_sha256": {
+        "worker.exe": "5f62fea212ab827d1f177ca262b4458a3dfb0944f9fb267b7079d3e0f85020ac",
+        "init.exe": "851a18a39aa9f59f3c066e60fb05c627bdd5af7952abd2a84a9c7d290347cd49",
+        "rootfs.manifest.json": "efb5c990576e555db5ef532aaaac415b98bab802f3cebac145919a73a9f430c6",
+        "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+        "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "rootfs\\lib\\kinakaze_alloc.so": "54821d0a3422de13cd5702238d8c178d4acfa0daef1aca3f74bb2f513bab4de8",
+        "rootfs\\lib\\kinakaze_elf.so": "6e74fc65bcbbca1cb8728f2abd9016bcf7576b81af0333231b288d7966910c24",
+        "rootfs\\lib\\kinakaze_guest_engine.so": "338dcc723e9255c74b2a043ed2a31e26c2b0487fb33863fa180b966d366b32c9",
+        "rootfs\\lib\\kinakaze_kernel.so": "60f8f5c6f3ba3da5462633512588a1fad0ce348dd2c14b061dc23a40bdd5ae90",
+        "rootfs\\lib\\kinakaze_tls.so": "7dd80690d8a3e11fa8edbda0bd4a9c6267bf3b31bc72f4caafb3d3a8d9e0d7ef",
+        "rootfs\\lib\\kinakaze_vfs.so": "74956f42f9c1576079314ac2ed2698a21a8749f0a23199392a0e167db66e332e",
+        "rootfs\\lib\\ld-linux-x86-64.so.2": "c39a1e45cb77fa20c39ba64fc754d89dd97fbbf30c0fd1dc6106e36ce696bd9f",
+        "rootfs\\lib\\libasound.so.2": "5b71c75ca323c7abd1b7da8aa21894d879992a5fa5b1ce19ba0b35ef88fc03cb",
+        "rootfs\\lib\\libc.so.6": "7c993bfea9afce94a69764a717b2f760a486ba292a1447a7e74624244f28658e",
+        "rootfs\\lib\\libcuda.so.1": "a09c6fc8f696bbe5fbce7d6fc3564f9b49816e098e6b59d7e545f727558954fc",
+        "rootfs\\lib\\libdisplay.so.1": "32b933536913bf2216ebf707c50fe70e6fd4c95cdb21e078dd61b75d4e25a608",
+        "rootfs\\lib\\libdl.so.2": "40521063d398fd6235d00842cd6d72ae47fb4172a603393840a86d77d7d55b80",
+        "rootfs\\lib\\libEGL.so.1": "cda9f9e557713501ab75c8f24ab119137263217a12e9c8cfbe98fec645c69095",
+        "rootfs\\lib\\libGL.so.1": "543348b43c2e79b422461bb1e96246b1570d8bf32572903a61a7c0b803c878a0",
+        "rootfs\\lib\\libGLESv2.so.2": "9ea41057f6640fc7435be1da3a23841f208a02d0e6de43c8b5c552451b07d42a",
+        "rootfs\\lib\\libGLX.so.0": "b921b7e52d46307c2c5c1dae7cb71f6cf9d098d7213f28d3a3d0920b498ccf23",
+        "rootfs\\lib\\libkinakaze-runtime.so.1": "abdf033aaf7b8214c403685fb06cde4948feac8970a143f49fcff690ca18fe8b",
+        "rootfs\\lib\\libm.so.6": "f77a4bb0bb549ef8fad85973addfa73b0db8d8865ccd56360237f32c240e2600",
+        "rootfs\\lib\\libOpenGL.so.0": "d59bc037213274c567897afb83dfde4d5f70e88fcdb6df851fb49d6c69aaf972",
+        "rootfs\\lib\\libpipewire-0.3.so.0": "78f0c6b97a7397394f0d6444399cf1a3669451650670cc4e56db5e224590a3ce",
+        "rootfs\\lib\\libpthread.so.0": "d1f200480d2c270b28ccaedd31a00f15ac22c6cf4cdb9fcddcfc614d9f78601d",
+        "rootfs\\lib\\libpulse.so.0": "8137636bb892ee0d07205c918b2b4a255c8617168b694148b5b9f915db6ec825",
+        "rootfs\\lib\\libresolv.so.2": "8f1702535a30c59becc5ac71e8ff10ae3821eb8dc56374985e2a3f49423fbcbf",
+        "rootfs\\lib\\librt.so.1": "a8f52d7cc82ee163505a8e5b816873a824d0f2b45f225961e34ac341c2110b73",
+        "rootfs\\lib\\libvulkan.so.1": "594d54271ffca8b466b7efa21b1c227480f6f49951fafc468f7c359d7a5fe3e5",
+        "rootfs\\lib\\libX11-xcb.so.1": "00e3de781c1af33dbe26f3a8f3f0e95866e35b7cb88c5edd0e51d9615b2f1cba",
+        "rootfs\\lib\\libX11.so.6": "ec1a4be7ae1275f6e0d2ea7ff440e6b0c25b8caac79bbb82030a903707bb22d3",
+        "rootfs\\lib\\libxcb.so.1": "8a8cd1c1e0820765bfca57cf2ab6d8da5f7e9368456c921be189e637b8c827e1",
+        "rootfs\\lib\\libXcursor.so.1": "96c185c5e81160c1184b95643418b9fac522a4a80a378b4358cef46397a95da4",
+        "rootfs\\lib\\libXext.so.6": "1f9003223673b3d23180be8cbc69e3c72308f7fda5c7c130e00bd16b5f5d21d1",
+        "rootfs\\lib\\libXi.so.6": "525688fda82f0f667d341a52c815912b2669e85eec2476eb85090560bf2d2ba1",
+        "rootfs\\lib\\libXinerama.so.1": "b2f262924a81d4cb8cc4d69f2e867ebc8f259dfcbf8cbcf17eaa69de8a5ed8b5",
+        "rootfs\\lib\\libXrandr.so.2": "6de7019f273914d40a6bb130721ea8d0f013252fe12bdf7c33a700d7eb6b3a27",
+        "rootfs\\lib\\libXrender.so.1": "46ed8bed2cce4d1fb841f1d7c0c6604545d3cf0745da5c40816e483fa8dadadc",
+        "rootfs\\lib\\libXxf86vm.so.1": "98e80e53f817d5d0ea2c38a2bb4bbef0321ddf6c4934be50f558765923ea27e7",
+        "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+      },
+      "rows": [
+        {
+          "pid": 1,
+          "command": [
+            "/usr/bin/python3",
+            "-c",
+            "\"\"\"Exercise Linux futex2 scalar waiting through real guest raw syscalls.\"\"\"\nimport ctypes as c\nimport errno\nimport json\nimport mmap\nimport os\nimport tempfile\nimport threading\nimport time\n\nlibc = c.CDLL('libc.so.6', use_errno=True)\nlibc.syscall.restype = c.c_long\nlibc.syscall.argtypes = [c.c_long] + [c.c_ulonglong] * 6\n\n\ndef call(number, *arguments):\n    c.set_errno(0)\n    result = libc.syscall(number, *arguments, *([0] * (6 - len(arguments))))\n    return result, c.get_errno()\n\n\nclass Timespec(c.Structure):\n    _fields_ = [('seconds', c.c_longlong), ('nanoseconds', c.c_longlong)]\n\n\nclass Entry(c.Structure):\n    _fields_ = [('value', c.c_ulonglong), ('address', c.c_ulonglong),\n                ('flags', c.c_uint), ('reserved', c.c_uint)]\n\n\ndef wait(address, flags, mask=8, seconds=5, clock=1):\n    now = time.monotonic_ns() if clock == 1 else time.time_ns()\n    end = now + int(seconds * 1_000_000_000)\n    deadline = Timespec(end // 1_000_000_000, end % 1_000_000_000)\n    return call(455, address, 0, mask, flags, c.addressof(deadline), clock)\n\n\ndef queued(address, flags):\n    entries = (Entry * 2)(Entry(0, address, flags, 0), Entry(0, address, flags, 0))\n    deadline = time.monotonic() + 5\n    while time.monotonic() < deadline:\n        result = call(456, c.addressof(entries), 0, 0, 0x7fffffff)\n        assert result in [(0, 0), (1, 0)], result\n        if result[0] == 1:\n            return\n        time.sleep(.001)\n    raise AssertionError('scalar waiter did not enter its queue')\n\n\ndef join(thread, result):\n    thread.join(timeout=6)\n    assert not thread.is_alive() and result == [(0, 0)], result\n\n\nword = c.c_int(7)\naddress = c.addressof(word)\npast = Timespec()\ninvalid = Timespec(-1, 0)\nfor flags in [0, 1, 3, 6, 0x102, 0xffffffff]:\n    assert call(455, 1, 0, 1, flags, 1, 999) == (-1, errno.EINVAL)\nfor flags in [2, 0x82]:\n    for value, mask in [(1 << 32, 1), (0, 1 << 32)]:\n        assert call(455, 1, value, mask, flags, 1, 999) == (-1, errno.EINVAL)\n    assert call(455, 1, 0, 0, flags, 1, 1) == (-1, errno.EFAULT)\n    assert call(455, 1, 0, 0, flags, c.addressof(invalid), 1) == (-1, errno.EINVAL)\n    assert call(455, 1, 0, 0, flags, c.addressof(past), 1) == (-1, errno.EINVAL)\n    assert call(455, 4, 0, 1, flags, c.addressof(past), 1) == (-1, errno.EFAULT)\n    assert call(455, address, 8, 1, flags, 0, 999) == (-1, errno.EAGAIN)\n    assert call(455, address, 8, 1, flags, c.addressof(past), 1) == (-1, errno.EAGAIN)\n    assert call(455, address, 7, 1, flags, c.addressof(past), 1) == (-1, errno.ETIMEDOUT)\nword.value = -1\nassert call(455, address, 0xffffffff, 0xffffffff, 0x82, c.addressof(past), 1) == (-1, errno.ETIMEDOUT)\nword.value = 0\n\nfor flags in [2, 0x82]:\n    for legacy in [False, True]:\n        result = []\n        thread = threading.Thread(target=lambda: result.append(wait(address, flags)))\n        thread.start()\n        queued(address, flags)\n        assert call(454, address, 0xffffffff, 1, flags ^ 0x80) == (0, 0)\n        assert call(454, address, 4, 1, flags) == (0, 0)\n        if legacy:\n            assert call(202, address, 10 | (flags & 0x80), 1, 0, 0, 8) == (1, 0)\n        else:\n            assert call(454, address, 8, 1, flags) == (1, 0)\n        join(thread, result)\n        assert call(454, address, 0xffffffff, 1, flags) == (0, 0)\n\nfor source_flags in [2, 0x82]:\n    for target_flags in [2, 0x82]:\n        target = c.c_int()\n        target_address = c.addressof(target)\n        result = []\n        thread = threading.Thread(target=lambda: result.append(wait(address, source_flags)))\n        thread.start()\n        queued(address, source_flags)\n        entries = (Entry * 2)(Entry(0, address, source_flags, 0), Entry(17, target_address, target_flags, 0))\n        assert call(456, c.addressof(entries), 0, 0, 1) == (1, 0)\n        assert call(454, address, 0xffffffff, 1, source_flags) == (0, 0)\n        assert call(454, target_address, 4, 1, target_flags) == (0, 0)\n        assert call(454, target_address, 8, 1, target_flags) == (1, 0)\n        join(thread, result)\n\nfor flags in [2, 0x82]:\n    for clock in [0, 1]:\n        start = time.monotonic()\n        assert wait(address, flags, seconds=.025, clock=clock) == (-1, errno.ETIMEDOUT)\n        assert time.monotonic() - start >= .01\n        assert call(454, address, 0xffffffff, 1, flags) == (0, 0)\n\nwith tempfile.TemporaryFile() as file:\n    os.ftruncate(file.fileno(), 4096)\n    first = mmap.mmap(file.fileno(), 4096, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)\n    second = mmap.mmap(file.fileno(), 4096, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)\n    first_word = c.c_int.from_buffer(first)\n    alias_word = c.c_int.from_buffer(second)\n    first_address, alias_address = c.addressof(first_word), c.addressof(alias_word)\n    read_fd, write_fd = os.pipe()\n    pid = os.fork()\n    if pid == 0:\n        os.close(write_fd)\n        assert os.read(read_fd, 1) == b'W'\n        end = time.monotonic() + 5\n        while time.monotonic() < end:\n            result = call(454, alias_address, 8, 1, 2)\n            assert result in [(0, 0), (1, 0)], result\n            if result[0] == 1:\n                os._exit(0)\n            time.sleep(.001)\n        os._exit(17)\n    os.close(read_fd)\n    result = []\n    thread = threading.Thread(target=lambda: result.append(wait(first_address, 2)))\n    thread.start()\n    queued(first_address, 2)\n    os.write(write_fd, b'W')\n    os.close(write_fd)\n    join(thread, result)\n    assert os.waitpid(pid, 0) == (pid, 0)\n    assert call(454, first_address, 0xffffffff, 1, 2) == (0, 0)\n    del first_word, alias_word\n    first.close()\n    second.close()\n\nprint('FUTEX_SCALAR_PASS ' + json.dumps(dict(widths=True, timeout_order=True, masks=True,\n    legacy=True, tag_isolation=True, requeue=True, clocks=True, shared_alias_fork=True)), flush=True)\n"
+          ],
+          "exit_code": 0,
+          "expected_exit": 0,
+          "status": "passed",
+          "missing_markers": [],
+          "reservation_ms": 0.3857,
+          "request_to_exit_ms": 241.3531,
+          "activation_to_exit_ms": 240.9674,
+          "request_to_ready_ms": null,
+          "application_cpu_metrics": {
+            "user_ms": 46.875,
+            "kernel_ms": 46.875,
+            "total_cpu_ms": 93.75,
+            "cycles": 311394658,
+            "page_faults": 14515
+          },
+          "prepared_working_set_bytes": 11853824,
+          "cpu_metrics": {
+            "user_ms": 93.75,
+            "kernel_ms": 46.875,
+            "total_cpu_ms": 140.625,
+            "processes": 1,
+            "active_processes": -1,
+            "page_faults": 22650,
+            "read_bytes": 8588565,
+            "write_bytes": 21759,
+            "read_ops": 300,
+            "write_ops": 190,
+            "other_ops": 10381,
+            "other_bytes": 416718
+          },
+          "optimized": false
+        },
+        {
+          "pid": 1,
+          "command": [
+            "/usr/bin/python3",
+            "-c",
+            "\"\"\"Exercise Linux futex2 scalar waiting through real guest raw syscalls.\"\"\"\nimport ctypes as c\nimport errno\nimport json\nimport mmap\nimport os\nimport tempfile\nimport threading\nimport time\n\nlibc = c.CDLL('libc.so.6', use_errno=True)\nlibc.syscall.restype = c.c_long\nlibc.syscall.argtypes = [c.c_long] + [c.c_ulonglong] * 6\n\n\ndef call(number, *arguments):\n    c.set_errno(0)\n    result = libc.syscall(number, *arguments, *([0] * (6 - len(arguments))))\n    return result, c.get_errno()\n\n\nclass Timespec(c.Structure):\n    _fields_ = [('seconds', c.c_longlong), ('nanoseconds', c.c_longlong)]\n\n\nclass Entry(c.Structure):\n    _fields_ = [('value', c.c_ulonglong), ('address', c.c_ulonglong),\n                ('flags', c.c_uint), ('reserved', c.c_uint)]\n\n\ndef wait(address, flags, mask=8, seconds=5, clock=1):\n    now = time.monotonic_ns() if clock == 1 else time.time_ns()\n    end = now + int(seconds * 1_000_000_000)\n    deadline = Timespec(end // 1_000_000_000, end % 1_000_000_000)\n    return call(455, address, 0, mask, flags, c.addressof(deadline), clock)\n\n\ndef queued(address, flags):\n    entries = (Entry * 2)(Entry(0, address, flags, 0), Entry(0, address, flags, 0))\n    deadline = time.monotonic() + 5\n    while time.monotonic() < deadline:\n        result = call(456, c.addressof(entries), 0, 0, 0x7fffffff)\n        assert result in [(0, 0), (1, 0)], result\n        if result[0] == 1:\n            return\n        time.sleep(.001)\n    raise AssertionError('scalar waiter did not enter its queue')\n\n\ndef join(thread, result):\n    thread.join(timeout=6)\n    assert not thread.is_alive() and result == [(0, 0)], result\n\n\nword = c.c_int(7)\naddress = c.addressof(word)\npast = Timespec()\ninvalid = Timespec(-1, 0)\nfor flags in [0, 1, 3, 6, 0x102, 0xffffffff]:\n    assert call(455, 1, 0, 1, flags, 1, 999) == (-1, errno.EINVAL)\nfor flags in [2, 0x82]:\n    for value, mask in [(1 << 32, 1), (0, 1 << 32)]:\n        assert call(455, 1, value, mask, flags, 1, 999) == (-1, errno.EINVAL)\n    assert call(455, 1, 0, 0, flags, 1, 1) == (-1, errno.EFAULT)\n    assert call(455, 1, 0, 0, flags, c.addressof(invalid), 1) == (-1, errno.EINVAL)\n    assert call(455, 1, 0, 0, flags, c.addressof(past), 1) == (-1, errno.EINVAL)\n    assert call(455, 4, 0, 1, flags, c.addressof(past), 1) == (-1, errno.EFAULT)\n    assert call(455, address, 8, 1, flags, 0, 999) == (-1, errno.EAGAIN)\n    assert call(455, address, 8, 1, flags, c.addressof(past), 1) == (-1, errno.EAGAIN)\n    assert call(455, address, 7, 1, flags, c.addressof(past), 1) == (-1, errno.ETIMEDOUT)\nword.value = -1\nassert call(455, address, 0xffffffff, 0xffffffff, 0x82, c.addressof(past), 1) == (-1, errno.ETIMEDOUT)\nword.value = 0\n\nfor flags in [2, 0x82]:\n    for legacy in [False, True]:\n        result = []\n        thread = threading.Thread(target=lambda: result.append(wait(address, flags)))\n        thread.start()\n        queued(address, flags)\n        assert call(454, address, 0xffffffff, 1, flags ^ 0x80) == (0, 0)\n        assert call(454, address, 4, 1, flags) == (0, 0)\n        if legacy:\n            assert call(202, address, 10 | (flags & 0x80), 1, 0, 0, 8) == (1, 0)\n        else:\n            assert call(454, address, 8, 1, flags) == (1, 0)\n        join(thread, result)\n        assert call(454, address, 0xffffffff, 1, flags) == (0, 0)\n\nfor source_flags in [2, 0x82]:\n    for target_flags in [2, 0x82]:\n        target = c.c_int()\n        target_address = c.addressof(target)\n        result = []\n        thread = threading.Thread(target=lambda: result.append(wait(address, source_flags)))\n        thread.start()\n        queued(address, source_flags)\n        entries = (Entry * 2)(Entry(0, address, source_flags, 0), Entry(17, target_address, target_flags, 0))\n        assert call(456, c.addressof(entries), 0, 0, 1) == (1, 0)\n        assert call(454, address, 0xffffffff, 1, source_flags) == (0, 0)\n        assert call(454, target_address, 4, 1, target_flags) == (0, 0)\n        assert call(454, target_address, 8, 1, target_flags) == (1, 0)\n        join(thread, result)\n\nfor flags in [2, 0x82]:\n    for clock in [0, 1]:\n        start = time.monotonic()\n        assert wait(address, flags, seconds=.025, clock=clock) == (-1, errno.ETIMEDOUT)\n        assert time.monotonic() - start >= .01\n        assert call(454, address, 0xffffffff, 1, flags) == (0, 0)\n\nwith tempfile.TemporaryFile() as file:\n    os.ftruncate(file.fileno(), 4096)\n    first = mmap.mmap(file.fileno(), 4096, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)\n    second = mmap.mmap(file.fileno(), 4096, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)\n    first_word = c.c_int.from_buffer(first)\n    alias_word = c.c_int.from_buffer(second)\n    first_address, alias_address = c.addressof(first_word), c.addressof(alias_word)\n    read_fd, write_fd = os.pipe()\n    pid = os.fork()\n    if pid == 0:\n        os.close(write_fd)\n        assert os.read(read_fd, 1) == b'W'\n        end = time.monotonic() + 5\n        while time.monotonic() < end:\n            result = call(454, alias_address, 8, 1, 2)\n            assert result in [(0, 0), (1, 0)], result\n            if result[0] == 1:\n                os._exit(0)\n            time.sleep(.001)\n        os._exit(17)\n    os.close(read_fd)\n    result = []\n    thread = threading.Thread(target=lambda: result.append(wait(first_address, 2)))\n    thread.start()\n    queued(first_address, 2)\n    os.write(write_fd, b'W')\n    os.close(write_fd)\n    join(thread, result)\n    assert os.waitpid(pid, 0) == (pid, 0)\n    assert call(454, first_address, 0xffffffff, 1, 2) == (0, 0)\n    del first_word, alias_word\n    first.close()\n    second.close()\n\nprint('FUTEX_SCALAR_PASS ' + json.dumps(dict(widths=True, timeout_order=True, masks=True,\n    legacy=True, tag_isolation=True, requeue=True, clocks=True, shared_alias_fork=True)), flush=True)\n"
+          ],
+          "exit_code": 0,
+          "expected_exit": 0,
+          "status": "passed",
+          "missing_markers": [],
+          "reservation_ms": 0.3383,
+          "request_to_exit_ms": 240.8854,
+          "activation_to_exit_ms": 240.5471,
+          "request_to_ready_ms": null,
+          "application_cpu_metrics": {
+            "user_ms": 31.25,
+            "kernel_ms": 78.125,
+            "total_cpu_ms": 109.375,
+            "cycles": 324828849,
+            "page_faults": 14546
+          },
+          "prepared_working_set_bytes": 11874304,
+          "cpu_metrics": {
+            "user_ms": 31.25,
+            "kernel_ms": 78.125,
+            "total_cpu_ms": 109.375,
+            "processes": 2,
+            "active_processes": 0,
+            "page_faults": 23241,
+            "read_bytes": 8588566,
+            "write_bytes": 21760,
+            "read_ops": 300,
+            "write_ops": 190,
+            "other_ops": 10414,
+            "other_bytes": 418624
+          },
+          "optimized": true
+        }
+      ]
+    },
+    "vector": {
+      "probe": "vector",
+      "passed": true,
+      "distribution_sha256": {
+        "worker.exe": "5f62fea212ab827d1f177ca262b4458a3dfb0944f9fb267b7079d3e0f85020ac",
+        "init.exe": "851a18a39aa9f59f3c066e60fb05c627bdd5af7952abd2a84a9c7d290347cd49",
+        "rootfs.manifest.json": "efb5c990576e555db5ef532aaaac415b98bab802f3cebac145919a73a9f430c6",
+        "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+        "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "rootfs\\lib\\kinakaze_alloc.so": "54821d0a3422de13cd5702238d8c178d4acfa0daef1aca3f74bb2f513bab4de8",
+        "rootfs\\lib\\kinakaze_elf.so": "6e74fc65bcbbca1cb8728f2abd9016bcf7576b81af0333231b288d7966910c24",
+        "rootfs\\lib\\kinakaze_guest_engine.so": "338dcc723e9255c74b2a043ed2a31e26c2b0487fb33863fa180b966d366b32c9",
+        "rootfs\\lib\\kinakaze_kernel.so": "60f8f5c6f3ba3da5462633512588a1fad0ce348dd2c14b061dc23a40bdd5ae90",
+        "rootfs\\lib\\kinakaze_tls.so": "7dd80690d8a3e11fa8edbda0bd4a9c6267bf3b31bc72f4caafb3d3a8d9e0d7ef",
+        "rootfs\\lib\\kinakaze_vfs.so": "74956f42f9c1576079314ac2ed2698a21a8749f0a23199392a0e167db66e332e",
+        "rootfs\\lib\\ld-linux-x86-64.so.2": "c39a1e45cb77fa20c39ba64fc754d89dd97fbbf30c0fd1dc6106e36ce696bd9f",
+        "rootfs\\lib\\libasound.so.2": "5b71c75ca323c7abd1b7da8aa21894d879992a5fa5b1ce19ba0b35ef88fc03cb",
+        "rootfs\\lib\\libc.so.6": "7c993bfea9afce94a69764a717b2f760a486ba292a1447a7e74624244f28658e",
+        "rootfs\\lib\\libcuda.so.1": "a09c6fc8f696bbe5fbce7d6fc3564f9b49816e098e6b59d7e545f727558954fc",
+        "rootfs\\lib\\libdisplay.so.1": "32b933536913bf2216ebf707c50fe70e6fd4c95cdb21e078dd61b75d4e25a608",
+        "rootfs\\lib\\libdl.so.2": "40521063d398fd6235d00842cd6d72ae47fb4172a603393840a86d77d7d55b80",
+        "rootfs\\lib\\libEGL.so.1": "cda9f9e557713501ab75c8f24ab119137263217a12e9c8cfbe98fec645c69095",
+        "rootfs\\lib\\libGL.so.1": "543348b43c2e79b422461bb1e96246b1570d8bf32572903a61a7c0b803c878a0",
+        "rootfs\\lib\\libGLESv2.so.2": "9ea41057f6640fc7435be1da3a23841f208a02d0e6de43c8b5c552451b07d42a",
+        "rootfs\\lib\\libGLX.so.0": "b921b7e52d46307c2c5c1dae7cb71f6cf9d098d7213f28d3a3d0920b498ccf23",
+        "rootfs\\lib\\libkinakaze-runtime.so.1": "abdf033aaf7b8214c403685fb06cde4948feac8970a143f49fcff690ca18fe8b",
+        "rootfs\\lib\\libm.so.6": "f77a4bb0bb549ef8fad85973addfa73b0db8d8865ccd56360237f32c240e2600",
+        "rootfs\\lib\\libOpenGL.so.0": "d59bc037213274c567897afb83dfde4d5f70e88fcdb6df851fb49d6c69aaf972",
+        "rootfs\\lib\\libpipewire-0.3.so.0": "78f0c6b97a7397394f0d6444399cf1a3669451650670cc4e56db5e224590a3ce",
+        "rootfs\\lib\\libpthread.so.0": "d1f200480d2c270b28ccaedd31a00f15ac22c6cf4cdb9fcddcfc614d9f78601d",
+        "rootfs\\lib\\libpulse.so.0": "8137636bb892ee0d07205c918b2b4a255c8617168b694148b5b9f915db6ec825",
+        "rootfs\\lib\\libresolv.so.2": "8f1702535a30c59becc5ac71e8ff10ae3821eb8dc56374985e2a3f49423fbcbf",
+        "rootfs\\lib\\librt.so.1": "a8f52d7cc82ee163505a8e5b816873a824d0f2b45f225961e34ac341c2110b73",
+        "rootfs\\lib\\libvulkan.so.1": "594d54271ffca8b466b7efa21b1c227480f6f49951fafc468f7c359d7a5fe3e5",
+        "rootfs\\lib\\libX11-xcb.so.1": "00e3de781c1af33dbe26f3a8f3f0e95866e35b7cb88c5edd0e51d9615b2f1cba",
+        "rootfs\\lib\\libX11.so.6": "ec1a4be7ae1275f6e0d2ea7ff440e6b0c25b8caac79bbb82030a903707bb22d3",
+        "rootfs\\lib\\libxcb.so.1": "8a8cd1c1e0820765bfca57cf2ab6d8da5f7e9368456c921be189e637b8c827e1",
+        "rootfs\\lib\\libXcursor.so.1": "96c185c5e81160c1184b95643418b9fac522a4a80a378b4358cef46397a95da4",
+        "rootfs\\lib\\libXext.so.6": "1f9003223673b3d23180be8cbc69e3c72308f7fda5c7c130e00bd16b5f5d21d1",
+        "rootfs\\lib\\libXi.so.6": "525688fda82f0f667d341a52c815912b2669e85eec2476eb85090560bf2d2ba1",
+        "rootfs\\lib\\libXinerama.so.1": "b2f262924a81d4cb8cc4d69f2e867ebc8f259dfcbf8cbcf17eaa69de8a5ed8b5",
+        "rootfs\\lib\\libXrandr.so.2": "6de7019f273914d40a6bb130721ea8d0f013252fe12bdf7c33a700d7eb6b3a27",
+        "rootfs\\lib\\libXrender.so.1": "46ed8bed2cce4d1fb841f1d7c0c6604545d3cf0745da5c40816e483fa8dadadc",
+        "rootfs\\lib\\libXxf86vm.so.1": "98e80e53f817d5d0ea2c38a2bb4bbef0321ddf6c4934be50f558765923ea27e7",
+        "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+      },
+      "rows": [
+        {
+          "pid": 1,
+          "command": [
+            "/usr/bin/python3",
+            "-c",
+            "\"\"\"Exercise raw futex_waitv via guest ABI, mmap aliases and a fork child.\"\"\"\nimport ctypes as c\nimport errno\nimport json\nimport mmap\nimport os\nimport tempfile\nimport threading\nimport time\n\nlibc = c.CDLL('libc.so.6', use_errno=True)\nlibc.syscall.restype = c.c_long\nlibc.syscall.argtypes = [c.c_long] + [c.c_ulonglong] * 6\n\n\ndef call(number, *arguments):\n    c.set_errno(0)\n    result = libc.syscall(number, *arguments, *([0] * (6 - len(arguments))))\n    return result, c.get_errno()\n\n\nclass Timespec(c.Structure):\n    _fields_ = [('seconds', c.c_longlong), ('nanoseconds', c.c_longlong)]\n\n\nclass Entry(c.Structure):\n    _fields_ = [('value', c.c_ulonglong), ('address', c.c_ulonglong),\n                ('flags', c.c_uint), ('reserved', c.c_uint)]\n\n\ndef wait(entries, seconds=5):\n    end = time.monotonic_ns() + int(seconds * 1_000_000_000)\n    deadline = Timespec(end // 1_000_000_000, end % 1_000_000_000)\n    return call(449, c.addressof(entries), len(entries), 0, c.addressof(deadline), 1)\n\n\ndef wake_until(address, flags):\n    deadline = time.monotonic() + 10\n    while time.monotonic() < deadline:\n        selected, error = call(454, address, 0xffffffff, 1, flags)\n        assert error == 0 and selected in (0, 1), (selected, error)\n        if selected:\n            return\n        time.sleep(.001)\n    raise AssertionError('vector waiter never became wakeable')\n\n\nassert c.sizeof(Entry) == 24\nword = c.c_int(7)\nvalid = Entry(7, c.addressof(word), 0x82, 0)\none = (Entry * 1)(valid)\nassert call(449, 0, 1) == (-1, errno.EINVAL)\nassert call(449, c.addressof(one), 129) == (-1, errno.EINVAL)\nassert call(449, 1, 1) == (-1, errno.EFAULT)\nfor invalid in [Entry(7, c.addressof(word), 6, 0),\n                Entry(7, c.addressof(word), 0x82, 1),\n                Entry(1 << 32, c.addressof(word), 0x82, 0)]:\n    entries = (Entry * 1)(invalid)\n    assert call(449, c.addressof(entries), 1) == (-1, errno.EINVAL)\none[0].value = 8\nassert call(449, c.addressof(one), 1, 0, 0, 999) == (-1, errno.EAGAIN)\none[0].value = 7\npast = Timespec()\nassert call(449, c.addressof(one), 1, 0, c.addressof(past), 1) == (-1, errno.ETIMEDOUT)\n\nwords = (c.c_int * 128)()\nentries = (Entry * 128)(*[Entry(0, c.addressof(words) + 4 * i, 0x82 if i % 2 == 0 else 2, 0)\n                         for i in range(128)])\nresult = []\nthread = threading.Thread(target=lambda: result.append(wait(entries)))\nthread.start()\nwake_until(entries[127].address, 2)\nthread.join(timeout=6)\nassert not thread.is_alive() and result == [(127, 0)], result\nfor entry in entries:\n    assert call(454, entry.address, 0xffffffff, 1, entry.flags) == (0, 0)\n\nwith tempfile.TemporaryFile() as file:\n    os.ftruncate(file.fileno(), 4096)\n    first = mmap.mmap(file.fileno(), 4096, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)\n    second = mmap.mmap(file.fileno(), 4096, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)\n    first_word = c.c_int.from_buffer(first)\n    alias_word = c.c_int.from_buffer(second)\n    first_word.value = 0\n    assert alias_word.value == 0\n    private = c.c_int()\n    vector = (Entry * 2)(Entry(0, c.addressof(private), 0x82, 0),\n                         Entry(0, c.addressof(first_word), 2, 0))\n    result = []\n    thread = threading.Thread(target=lambda: result.append(wait(vector)))\n    thread.start()\n    wake_until(c.addressof(alias_word), 2)\n    thread.join(timeout=6)\n    assert not thread.is_alive() and result == [(1, 0)], result\n    assert call(454, c.addressof(first_word), 0xffffffff, 1, 2) == (0, 0)\n\n    # Create the child after all Python worker threads have joined. The file\n    # mapping retains shared identity through native fork restoration.\n    reader, writer = os.pipe()\n    pid = os.fork()\n    if pid == 0:\n        os.close(reader)\n        outcome = wait(vector)\n        os.write(writer, json.dumps(outcome).encode())\n        os.close(writer)\n        os._exit(int(outcome != (1, 0)))\n    os.close(writer)\n    wake_until(c.addressof(alias_word), 2)\n    outcome = os.read(reader, 4096)\n    os.close(reader)\n    waited, status = os.waitpid(pid, 0)\n    assert waited == pid and status == 0 and json.loads(outcome) == [1, 0], (status, outcome)\n    assert call(454, c.addressof(first_word), 0xffffffff, 1, 2) == (0, 0)\n    del first_word, alias_word\n    first.close()\n    second.close()\n\nprint('FUTEX_VECTOR_PASS', flush=True)\n"
+          ],
+          "exit_code": 0,
+          "expected_exit": 0,
+          "status": "passed",
+          "missing_markers": [],
+          "reservation_ms": 0.2627,
+          "request_to_exit_ms": 142.6229,
+          "activation_to_exit_ms": 142.3602,
+          "request_to_ready_ms": null,
+          "application_cpu_metrics": {
+            "user_ms": 15.625,
+            "kernel_ms": 109.375,
+            "total_cpu_ms": 125.0,
+            "cycles": 328273537,
+            "page_faults": 14310
+          },
+          "prepared_working_set_bytes": 11821056,
+          "cpu_metrics": {
+            "user_ms": 15.625,
+            "kernel_ms": 125.0,
+            "total_cpu_ms": 140.625,
+            "processes": 2,
+            "active_processes": 0,
+            "page_faults": 23133,
+            "read_bytes": 8585554,
+            "write_bytes": 20096,
+            "read_ops": 300,
+            "write_ops": 190,
+            "other_ops": 10422,
+            "other_bytes": 418662
+          },
+          "optimized": false
+        },
+        {
+          "pid": 1,
+          "command": [
+            "/usr/bin/python3",
+            "-c",
+            "\"\"\"Exercise raw futex_waitv via guest ABI, mmap aliases and a fork child.\"\"\"\nimport ctypes as c\nimport errno\nimport json\nimport mmap\nimport os\nimport tempfile\nimport threading\nimport time\n\nlibc = c.CDLL('libc.so.6', use_errno=True)\nlibc.syscall.restype = c.c_long\nlibc.syscall.argtypes = [c.c_long] + [c.c_ulonglong] * 6\n\n\ndef call(number, *arguments):\n    c.set_errno(0)\n    result = libc.syscall(number, *arguments, *([0] * (6 - len(arguments))))\n    return result, c.get_errno()\n\n\nclass Timespec(c.Structure):\n    _fields_ = [('seconds', c.c_longlong), ('nanoseconds', c.c_longlong)]\n\n\nclass Entry(c.Structure):\n    _fields_ = [('value', c.c_ulonglong), ('address', c.c_ulonglong),\n                ('flags', c.c_uint), ('reserved', c.c_uint)]\n\n\ndef wait(entries, seconds=5):\n    end = time.monotonic_ns() + int(seconds * 1_000_000_000)\n    deadline = Timespec(end // 1_000_000_000, end % 1_000_000_000)\n    return call(449, c.addressof(entries), len(entries), 0, c.addressof(deadline), 1)\n\n\ndef wake_until(address, flags):\n    deadline = time.monotonic() + 10\n    while time.monotonic() < deadline:\n        selected, error = call(454, address, 0xffffffff, 1, flags)\n        assert error == 0 and selected in (0, 1), (selected, error)\n        if selected:\n            return\n        time.sleep(.001)\n    raise AssertionError('vector waiter never became wakeable')\n\n\nassert c.sizeof(Entry) == 24\nword = c.c_int(7)\nvalid = Entry(7, c.addressof(word), 0x82, 0)\none = (Entry * 1)(valid)\nassert call(449, 0, 1) == (-1, errno.EINVAL)\nassert call(449, c.addressof(one), 129) == (-1, errno.EINVAL)\nassert call(449, 1, 1) == (-1, errno.EFAULT)\nfor invalid in [Entry(7, c.addressof(word), 6, 0),\n                Entry(7, c.addressof(word), 0x82, 1),\n                Entry(1 << 32, c.addressof(word), 0x82, 0)]:\n    entries = (Entry * 1)(invalid)\n    assert call(449, c.addressof(entries), 1) == (-1, errno.EINVAL)\none[0].value = 8\nassert call(449, c.addressof(one), 1, 0, 0, 999) == (-1, errno.EAGAIN)\none[0].value = 7\npast = Timespec()\nassert call(449, c.addressof(one), 1, 0, c.addressof(past), 1) == (-1, errno.ETIMEDOUT)\n\nwords = (c.c_int * 128)()\nentries = (Entry * 128)(*[Entry(0, c.addressof(words) + 4 * i, 0x82 if i % 2 == 0 else 2, 0)\n                         for i in range(128)])\nresult = []\nthread = threading.Thread(target=lambda: result.append(wait(entries)))\nthread.start()\nwake_until(entries[127].address, 2)\nthread.join(timeout=6)\nassert not thread.is_alive() and result == [(127, 0)], result\nfor entry in entries:\n    assert call(454, entry.address, 0xffffffff, 1, entry.flags) == (0, 0)\n\nwith tempfile.TemporaryFile() as file:\n    os.ftruncate(file.fileno(), 4096)\n    first = mmap.mmap(file.fileno(), 4096, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)\n    second = mmap.mmap(file.fileno(), 4096, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)\n    first_word = c.c_int.from_buffer(first)\n    alias_word = c.c_int.from_buffer(second)\n    first_word.value = 0\n    assert alias_word.value == 0\n    private = c.c_int()\n    vector = (Entry * 2)(Entry(0, c.addressof(private), 0x82, 0),\n                         Entry(0, c.addressof(first_word), 2, 0))\n    result = []\n    thread = threading.Thread(target=lambda: result.append(wait(vector)))\n    thread.start()\n    wake_until(c.addressof(alias_word), 2)\n    thread.join(timeout=6)\n    assert not thread.is_alive() and result == [(1, 0)], result\n    assert call(454, c.addressof(first_word), 0xffffffff, 1, 2) == (0, 0)\n\n    # Create the child after all Python worker threads have joined. The file\n    # mapping retains shared identity through native fork restoration.\n    reader, writer = os.pipe()\n    pid = os.fork()\n    if pid == 0:\n        os.close(reader)\n        outcome = wait(vector)\n        os.write(writer, json.dumps(outcome).encode())\n        os.close(writer)\n        os._exit(int(outcome != (1, 0)))\n    os.close(writer)\n    wake_until(c.addressof(alias_word), 2)\n    outcome = os.read(reader, 4096)\n    os.close(reader)\n    waited, status = os.waitpid(pid, 0)\n    assert waited == pid and status == 0 and json.loads(outcome) == [1, 0], (status, outcome)\n    assert call(454, c.addressof(first_word), 0xffffffff, 1, 2) == (0, 0)\n    del first_word, alias_word\n    first.close()\n    second.close()\n\nprint('FUTEX_VECTOR_PASS', flush=True)\n"
+          ],
+          "exit_code": 0,
+          "expected_exit": 0,
+          "status": "passed",
+          "missing_markers": [],
+          "reservation_ms": 0.3265,
+          "request_to_exit_ms": 136.2389,
+          "activation_to_exit_ms": 135.9124,
+          "request_to_ready_ms": null,
+          "application_cpu_metrics": {
+            "user_ms": 31.25,
+            "kernel_ms": 109.375,
+            "total_cpu_ms": 140.625,
+            "cycles": 316477522,
+            "page_faults": 14295
+          },
+          "prepared_working_set_bytes": 11878400,
+          "cpu_metrics": {
+            "user_ms": 31.25,
+            "kernel_ms": 109.375,
+            "total_cpu_ms": 140.625,
+            "processes": 1,
+            "active_processes": -1,
+            "page_faults": 22539,
+            "read_bytes": 8585555,
+            "write_bytes": 20097,
+            "read_ops": 300,
+            "write_ops": 190,
+            "other_ops": 10377,
+            "other_bytes": 416714
+          },
+          "optimized": true
+        }
+      ]
+    },
+    "requeue": {
+      "probe": "requeue",
+      "passed": true,
+      "distribution_sha256": {
+        "worker.exe": "5f62fea212ab827d1f177ca262b4458a3dfb0944f9fb267b7079d3e0f85020ac",
+        "init.exe": "851a18a39aa9f59f3c066e60fb05c627bdd5af7952abd2a84a9c7d290347cd49",
+        "rootfs.manifest.json": "efb5c990576e555db5ef532aaaac415b98bab802f3cebac145919a73a9f430c6",
+        "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+        "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "rootfs\\lib\\kinakaze_alloc.so": "54821d0a3422de13cd5702238d8c178d4acfa0daef1aca3f74bb2f513bab4de8",
+        "rootfs\\lib\\kinakaze_elf.so": "6e74fc65bcbbca1cb8728f2abd9016bcf7576b81af0333231b288d7966910c24",
+        "rootfs\\lib\\kinakaze_guest_engine.so": "338dcc723e9255c74b2a043ed2a31e26c2b0487fb33863fa180b966d366b32c9",
+        "rootfs\\lib\\kinakaze_kernel.so": "60f8f5c6f3ba3da5462633512588a1fad0ce348dd2c14b061dc23a40bdd5ae90",
+        "rootfs\\lib\\kinakaze_tls.so": "7dd80690d8a3e11fa8edbda0bd4a9c6267bf3b31bc72f4caafb3d3a8d9e0d7ef",
+        "rootfs\\lib\\kinakaze_vfs.so": "74956f42f9c1576079314ac2ed2698a21a8749f0a23199392a0e167db66e332e",
+        "rootfs\\lib\\ld-linux-x86-64.so.2": "c39a1e45cb77fa20c39ba64fc754d89dd97fbbf30c0fd1dc6106e36ce696bd9f",
+        "rootfs\\lib\\libasound.so.2": "5b71c75ca323c7abd1b7da8aa21894d879992a5fa5b1ce19ba0b35ef88fc03cb",
+        "rootfs\\lib\\libc.so.6": "7c993bfea9afce94a69764a717b2f760a486ba292a1447a7e74624244f28658e",
+        "rootfs\\lib\\libcuda.so.1": "a09c6fc8f696bbe5fbce7d6fc3564f9b49816e098e6b59d7e545f727558954fc",
+        "rootfs\\lib\\libdisplay.so.1": "32b933536913bf2216ebf707c50fe70e6fd4c95cdb21e078dd61b75d4e25a608",
+        "rootfs\\lib\\libdl.so.2": "40521063d398fd6235d00842cd6d72ae47fb4172a603393840a86d77d7d55b80",
+        "rootfs\\lib\\libEGL.so.1": "cda9f9e557713501ab75c8f24ab119137263217a12e9c8cfbe98fec645c69095",
+        "rootfs\\lib\\libGL.so.1": "543348b43c2e79b422461bb1e96246b1570d8bf32572903a61a7c0b803c878a0",
+        "rootfs\\lib\\libGLESv2.so.2": "9ea41057f6640fc7435be1da3a23841f208a02d0e6de43c8b5c552451b07d42a",
+        "rootfs\\lib\\libGLX.so.0": "b921b7e52d46307c2c5c1dae7cb71f6cf9d098d7213f28d3a3d0920b498ccf23",
+        "rootfs\\lib\\libkinakaze-runtime.so.1": "abdf033aaf7b8214c403685fb06cde4948feac8970a143f49fcff690ca18fe8b",
+        "rootfs\\lib\\libm.so.6": "f77a4bb0bb549ef8fad85973addfa73b0db8d8865ccd56360237f32c240e2600",
+        "rootfs\\lib\\libOpenGL.so.0": "d59bc037213274c567897afb83dfde4d5f70e88fcdb6df851fb49d6c69aaf972",
+        "rootfs\\lib\\libpipewire-0.3.so.0": "78f0c6b97a7397394f0d6444399cf1a3669451650670cc4e56db5e224590a3ce",
+        "rootfs\\lib\\libpthread.so.0": "d1f200480d2c270b28ccaedd31a00f15ac22c6cf4cdb9fcddcfc614d9f78601d",
+        "rootfs\\lib\\libpulse.so.0": "8137636bb892ee0d07205c918b2b4a255c8617168b694148b5b9f915db6ec825",
+        "rootfs\\lib\\libresolv.so.2": "8f1702535a30c59becc5ac71e8ff10ae3821eb8dc56374985e2a3f49423fbcbf",
+        "rootfs\\lib\\librt.so.1": "a8f52d7cc82ee163505a8e5b816873a824d0f2b45f225961e34ac341c2110b73",
+        "rootfs\\lib\\libvulkan.so.1": "594d54271ffca8b466b7efa21b1c227480f6f49951fafc468f7c359d7a5fe3e5",
+        "rootfs\\lib\\libX11-xcb.so.1": "00e3de781c1af33dbe26f3a8f3f0e95866e35b7cb88c5edd0e51d9615b2f1cba",
+        "rootfs\\lib\\libX11.so.6": "ec1a4be7ae1275f6e0d2ea7ff440e6b0c25b8caac79bbb82030a903707bb22d3",
+        "rootfs\\lib\\libxcb.so.1": "8a8cd1c1e0820765bfca57cf2ab6d8da5f7e9368456c921be189e637b8c827e1",
+        "rootfs\\lib\\libXcursor.so.1": "96c185c5e81160c1184b95643418b9fac522a4a80a378b4358cef46397a95da4",
+        "rootfs\\lib\\libXext.so.6": "1f9003223673b3d23180be8cbc69e3c72308f7fda5c7c130e00bd16b5f5d21d1",
+        "rootfs\\lib\\libXi.so.6": "525688fda82f0f667d341a52c815912b2669e85eec2476eb85090560bf2d2ba1",
+        "rootfs\\lib\\libXinerama.so.1": "b2f262924a81d4cb8cc4d69f2e867ebc8f259dfcbf8cbcf17eaa69de8a5ed8b5",
+        "rootfs\\lib\\libXrandr.so.2": "6de7019f273914d40a6bb130721ea8d0f013252fe12bdf7c33a700d7eb6b3a27",
+        "rootfs\\lib\\libXrender.so.1": "46ed8bed2cce4d1fb841f1d7c0c6604545d3cf0745da5c40816e483fa8dadadc",
+        "rootfs\\lib\\libXxf86vm.so.1": "98e80e53f817d5d0ea2c38a2bb4bbef0321ddf6c4934be50f558765923ea27e7",
+        "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+      },
+      "rows": [
+        {
+          "pid": 1,
+          "command": [
+            "/usr/bin/python3",
+            "-c",
+            "\"\"\"Raw futex2 requeue: mixed flags, aliases, vector indexes and fork wakeups.\"\"\"\nimport ctypes as c\nimport errno\nimport json\nimport mmap\nimport os\nimport tempfile\nimport threading\nimport time\nimport traceback\n\nlibc = c.CDLL('libc.so.6', use_errno=True)\nlibc.syscall.restype = c.c_long\nlibc.syscall.argtypes = [c.c_long] + [c.c_ulonglong] * 6\n\n\ndef call(number, *arguments):\n    c.set_errno(0)\n    result = libc.syscall(number, *arguments, *([0] * (6 - len(arguments))))\n    return result, c.get_errno()\n\n\nclass Entry(c.Structure):\n    _fields_ = [('value', c.c_ulonglong), ('address', c.c_ulonglong),\n                ('flags', c.c_uint), ('reserved', c.c_uint)]\n\n\nclass Timespec(c.Structure):\n    _fields_ = [('seconds', c.c_longlong), ('nanoseconds', c.c_longlong)]\n\n\ndef entry(address, flags, expected=None):\n    value = c.c_uint.from_address(address).value if expected is None else expected\n    return Entry(value, address, flags, 0)\n\n\ndef requeue(source, source_flags, target, target_flags, wake=0, transfer=1, expected=None):\n    entries = (Entry * 2)(entry(source, source_flags, expected), entry(target, target_flags, 0))\n    return call(456, c.addressof(entries), 0, wake, transfer)\n\n\ndef queued(address, flags, count):\n    deadline = time.monotonic() + 10\n    while time.monotonic() < deadline:\n        result, error = requeue(address, flags, address, flags, transfer=0x7fffffff)\n        assert error == 0 and result >= 0, (result, error)\n        if result == count:\n            return\n        time.sleep(.001)\n    raise AssertionError(('queue size', address, flags, count, result))\n\n\ndef wake(address, flags, mask=0xffffffff):\n    return call(454, address, mask, 1, flags)\n\n\ndef wait(address, flags, mask=0xffffffff, seconds=8):\n    end = time.monotonic_ns() + int(seconds * 1_000_000_000)\n    timeout = Timespec(end // 1_000_000_000, end % 1_000_000_000)\n    return call(202, address, 9 | (flags & 0x80), c.c_uint.from_address(address).value,\n                c.addressof(timeout), 0, mask)\n\n\ndef spawn(body):\n    pid = os.fork()\n    if pid == 0:\n        try:\n            body()\n        except BaseException:\n            traceback.print_exc()\n            os._exit(1)\n        os._exit(0)\n    return pid\n\n\ndef reap(pid):\n    result = os.waitpid(pid, 0)\n    assert result == (pid, 0), result\n\n\nassert c.sizeof(Entry) == 24\nword = c.c_int(7)\ntarget_word = c.c_int(13)\naddress, target_address = c.addressof(word), c.addressof(target_word)\nvalid = (Entry * 2)(entry(address, 0x82), entry(target_address, 2))\nassert call(456, 0) == (-1, errno.EINVAL)\nassert call(456, 1, 1, -1, -1) == (-1, errno.EINVAL)\nassert call(456, 1, 0, -1, -1) == (-1, errno.EFAULT)\nassert call(456, c.addressof(valid), 0, -1, 0) == (-1, errno.EINVAL)\nfor invalid in [Entry(13, target_address, 6, 0), Entry(13, target_address, 2, 1),\n                Entry(1 << 32, target_address, 2, 0)]:\n    entries = (Entry * 2)(valid[0], invalid)\n    assert call(456, c.addressof(entries)) == (-1, errno.EINVAL)\nassert requeue(address, 0x82, 4, 2, expected=8) == (-1, errno.EFAULT)\nassert requeue(address, 0x82, target_address, 2, transfer=0, expected=8) == (-1, errno.EAGAIN)\nassert requeue(address, 0x82, target_address, 2, transfer=0) == (0, 0)\nvalid[1].value = 99  # The target descriptor's value is validated, not compared.\nassert call(456, c.addressof(valid), 0, 0, 1) == (0, 0)\nassert requeue(address, 0x82, 4, 0x82, expected=8) == (-1, errno.EAGAIN)\nassert wake(4, 0x82) == (0, 0)\nassert wake(0, 0x82) == (0, 0)\n\nfor source_flags in [0x82, 2]:\n    for target_flags in [0x82, 2]:\n        words = (c.c_int * 2)()\n        source, target = c.addressof(words), c.addressof(words) + 4\n        results = [[], []]\n        first = threading.Thread(target=lambda: results[0].append(wait(source, source_flags, 1)))\n        second = threading.Thread(target=lambda: results[1].append(wait(source, source_flags, 2)))\n        first.start()\n        queued(source, source_flags, 1)\n        second.start()\n        queued(source, source_flags, 2)\n        assert requeue(source, source_flags, target, target_flags, wake=1) == (2, 0)\n        first.join(timeout=9)\n        assert not first.is_alive() and results[0] == [(0, 0)], results\n        assert wake(source, source_flags) == (0, 0)\n        assert wake(target, target_flags, 1) == (0, 0)\n        assert wake(target, target_flags, 2) == (1, 0)\n        second.join(timeout=9)\n        assert not second.is_alive() and results[1] == [(0, 0)], results\n        queued(target, target_flags, 0)\n\n# A tag change at one VA must transfer ownership rather than merge queues.\nword.value = 0\nresult = []\nthread = threading.Thread(target=lambda: result.append(wait(address, 0x82)))\nthread.start()\nqueued(address, 0x82, 1)\nassert requeue(address, 0x82, 4, 0x82) == (1, 0)\nassert wake(4, 0x82) == (1, 0)\nthread.join(timeout=9)\nassert not thread.is_alive() and result == [(0, 0)], result\nfor flags in [0x82, 2]:\n    other_flags = flags ^ 0x80\n    result = []\n    thread = threading.Thread(target=lambda: result.append(wait(address, flags)))\n    thread.start()\n    queued(address, flags, 1)\n    assert requeue(address, flags, address, other_flags) == (1, 0)\n    assert wake(address, flags) == (0, 0)\n    assert wake(address, other_flags) == (1, 0)\n    thread.join(timeout=9)\n    assert not thread.is_alive() and result == [(0, 0)], result\n\nwords = (c.c_int * 3)()\nsource, sibling, target = [c.addressof(words) + i * 4 for i in range(3)]\nvector = (Entry * 2)(entry(sibling, 0x82), entry(source, 0x82))\nresult = []\n\n\ndef vector_wait():\n    end = time.monotonic_ns() + 8_000_000_000\n    timeout = Timespec(end // 1_000_000_000, end % 1_000_000_000)\n    result.append(call(449, c.addressof(vector), 2, 0, c.addressof(timeout), 1))\n\n\nthread = threading.Thread(target=vector_wait)\nthread.start()\nqueued(source, 0x82, 1)\nassert requeue(source, 0x82, target, 2) == (1, 0)\nassert wake(target, 2) == (1, 0)\nthread.join(timeout=9)\nassert not thread.is_alive() and result == [(1, 0)], result\nassert wake(sibling, 0x82) == (0, 0)\n\nresult = []\nthread = threading.Thread(target=lambda: result.append(wait(source, 0x82, seconds=.15)))\nthread.start()\nqueued(source, 0x82, 1)\nassert requeue(source, 0x82, target, 2) == (1, 0)\nthread.join(timeout=2)\nassert not thread.is_alive() and result == [(-1, errno.ETIMEDOUT)], result\nassert wake(target, 2) == (0, 0)\n\nwith tempfile.TemporaryFile() as file:\n    os.ftruncate(file.fileno(), 4096)\n    first = mmap.mmap(file.fileno(), 4096, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)\n    second = mmap.mmap(file.fileno(), 4096, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)\n    shared = c.c_int.from_buffer(first)\n    alias = c.c_int.from_buffer(second)\n    shared.value = 0\n    shared_address, alias_address = c.addressof(shared), c.addressof(alias)\n\n    # Fork before creating a parent worker thread. The child later wakes the\n    # parent's migrated PRIVATE waiter through another VA of the shared file.\n    reader, writer = os.pipe()\n\n    def child_waker():\n        os.close(writer)\n        assert os.read(reader, 1) == b'x'\n        assert wake(alias_address, 2) == (1, 0)\n        os.close(reader)\n\n    pid = spawn(child_waker)\n    os.close(reader)\n    result = []\n    thread = threading.Thread(target=lambda: result.append(wait(source, 0x82)))\n    thread.start()\n    queued(source, 0x82, 1)\n    assert requeue(source, 0x82, shared_address, 2) == (1, 0)\n    os.write(writer, b'x')\n    os.close(writer)\n    reap(pid)\n    thread.join(timeout=9)\n    assert not thread.is_alive() and result == [(0, 0)], result\n    assert wake(shared_address, 2) == (0, 0)\n\n    # An external shared waiter may move to the requeuer's private queue. Its\n    # own timeout/wake bookkeeping follows its original token across the move.\n    reader, writer = os.pipe()\n\n    def child_waiter():\n        os.close(reader)\n        outcome = wait(alias_address, 2)\n        os.write(writer, json.dumps(outcome).encode())\n        os.close(writer)\n        assert outcome == (0, 0), outcome\n\n    pid = spawn(child_waiter)\n    os.close(writer)\n    queued(shared_address, 2, 1)\n    assert requeue(shared_address, 2, target, 0x82) == (1, 0)\n    assert wake(shared_address, 2) == (0, 0)\n    assert wake(target, 0x82) == (1, 0)\n    outcome = os.read(reader, 4096)\n    os.close(reader)\n    reap(pid)\n    assert json.loads(outcome) == [0, 0], outcome\n    assert wake(target, 0x82) == (0, 0)\n    del shared, alias\n    first.close()\n    second.close()\n\nprint('FUTEX_REQUEUE_PASS', flush=True)\n"
+          ],
+          "exit_code": 0,
+          "expected_exit": 0,
+          "status": "passed",
+          "missing_markers": [],
+          "reservation_ms": 0.3527,
+          "request_to_exit_ms": 363.0703,
+          "activation_to_exit_ms": 362.7176,
+          "request_to_ready_ms": null,
+          "application_cpu_metrics": {
+            "user_ms": 62.5,
+            "kernel_ms": 62.5,
+            "total_cpu_ms": 125.0,
+            "cycles": 407871921,
+            "page_faults": 16686
+          },
+          "prepared_working_set_bytes": 11862016,
+          "cpu_metrics": {
+            "user_ms": 140.625,
+            "kernel_ms": 109.375,
+            "total_cpu_ms": 250.0,
+            "processes": 3,
+            "active_processes": 0,
+            "page_faults": 33083,
+            "read_bytes": 8739605,
+            "write_bytes": 29899,
+            "read_ops": 380,
+            "write_ops": 254,
+            "other_ops": 12233,
+            "other_bytes": 506200
+          },
+          "optimized": false
+        },
+        {
+          "pid": 1,
+          "command": [
+            "/usr/bin/python3",
+            "-c",
+            "\"\"\"Raw futex2 requeue: mixed flags, aliases, vector indexes and fork wakeups.\"\"\"\nimport ctypes as c\nimport errno\nimport json\nimport mmap\nimport os\nimport tempfile\nimport threading\nimport time\nimport traceback\n\nlibc = c.CDLL('libc.so.6', use_errno=True)\nlibc.syscall.restype = c.c_long\nlibc.syscall.argtypes = [c.c_long] + [c.c_ulonglong] * 6\n\n\ndef call(number, *arguments):\n    c.set_errno(0)\n    result = libc.syscall(number, *arguments, *([0] * (6 - len(arguments))))\n    return result, c.get_errno()\n\n\nclass Entry(c.Structure):\n    _fields_ = [('value', c.c_ulonglong), ('address', c.c_ulonglong),\n                ('flags', c.c_uint), ('reserved', c.c_uint)]\n\n\nclass Timespec(c.Structure):\n    _fields_ = [('seconds', c.c_longlong), ('nanoseconds', c.c_longlong)]\n\n\ndef entry(address, flags, expected=None):\n    value = c.c_uint.from_address(address).value if expected is None else expected\n    return Entry(value, address, flags, 0)\n\n\ndef requeue(source, source_flags, target, target_flags, wake=0, transfer=1, expected=None):\n    entries = (Entry * 2)(entry(source, source_flags, expected), entry(target, target_flags, 0))\n    return call(456, c.addressof(entries), 0, wake, transfer)\n\n\ndef queued(address, flags, count):\n    deadline = time.monotonic() + 10\n    while time.monotonic() < deadline:\n        result, error = requeue(address, flags, address, flags, transfer=0x7fffffff)\n        assert error == 0 and result >= 0, (result, error)\n        if result == count:\n            return\n        time.sleep(.001)\n    raise AssertionError(('queue size', address, flags, count, result))\n\n\ndef wake(address, flags, mask=0xffffffff):\n    return call(454, address, mask, 1, flags)\n\n\ndef wait(address, flags, mask=0xffffffff, seconds=8):\n    end = time.monotonic_ns() + int(seconds * 1_000_000_000)\n    timeout = Timespec(end // 1_000_000_000, end % 1_000_000_000)\n    return call(202, address, 9 | (flags & 0x80), c.c_uint.from_address(address).value,\n                c.addressof(timeout), 0, mask)\n\n\ndef spawn(body):\n    pid = os.fork()\n    if pid == 0:\n        try:\n            body()\n        except BaseException:\n            traceback.print_exc()\n            os._exit(1)\n        os._exit(0)\n    return pid\n\n\ndef reap(pid):\n    result = os.waitpid(pid, 0)\n    assert result == (pid, 0), result\n\n\nassert c.sizeof(Entry) == 24\nword = c.c_int(7)\ntarget_word = c.c_int(13)\naddress, target_address = c.addressof(word), c.addressof(target_word)\nvalid = (Entry * 2)(entry(address, 0x82), entry(target_address, 2))\nassert call(456, 0) == (-1, errno.EINVAL)\nassert call(456, 1, 1, -1, -1) == (-1, errno.EINVAL)\nassert call(456, 1, 0, -1, -1) == (-1, errno.EFAULT)\nassert call(456, c.addressof(valid), 0, -1, 0) == (-1, errno.EINVAL)\nfor invalid in [Entry(13, target_address, 6, 0), Entry(13, target_address, 2, 1),\n                Entry(1 << 32, target_address, 2, 0)]:\n    entries = (Entry * 2)(valid[0], invalid)\n    assert call(456, c.addressof(entries)) == (-1, errno.EINVAL)\nassert requeue(address, 0x82, 4, 2, expected=8) == (-1, errno.EFAULT)\nassert requeue(address, 0x82, target_address, 2, transfer=0, expected=8) == (-1, errno.EAGAIN)\nassert requeue(address, 0x82, target_address, 2, transfer=0) == (0, 0)\nvalid[1].value = 99  # The target descriptor's value is validated, not compared.\nassert call(456, c.addressof(valid), 0, 0, 1) == (0, 0)\nassert requeue(address, 0x82, 4, 0x82, expected=8) == (-1, errno.EAGAIN)\nassert wake(4, 0x82) == (0, 0)\nassert wake(0, 0x82) == (0, 0)\n\nfor source_flags in [0x82, 2]:\n    for target_flags in [0x82, 2]:\n        words = (c.c_int * 2)()\n        source, target = c.addressof(words), c.addressof(words) + 4\n        results = [[], []]\n        first = threading.Thread(target=lambda: results[0].append(wait(source, source_flags, 1)))\n        second = threading.Thread(target=lambda: results[1].append(wait(source, source_flags, 2)))\n        first.start()\n        queued(source, source_flags, 1)\n        second.start()\n        queued(source, source_flags, 2)\n        assert requeue(source, source_flags, target, target_flags, wake=1) == (2, 0)\n        first.join(timeout=9)\n        assert not first.is_alive() and results[0] == [(0, 0)], results\n        assert wake(source, source_flags) == (0, 0)\n        assert wake(target, target_flags, 1) == (0, 0)\n        assert wake(target, target_flags, 2) == (1, 0)\n        second.join(timeout=9)\n        assert not second.is_alive() and results[1] == [(0, 0)], results\n        queued(target, target_flags, 0)\n\n# A tag change at one VA must transfer ownership rather than merge queues.\nword.value = 0\nresult = []\nthread = threading.Thread(target=lambda: result.append(wait(address, 0x82)))\nthread.start()\nqueued(address, 0x82, 1)\nassert requeue(address, 0x82, 4, 0x82) == (1, 0)\nassert wake(4, 0x82) == (1, 0)\nthread.join(timeout=9)\nassert not thread.is_alive() and result == [(0, 0)], result\nfor flags in [0x82, 2]:\n    other_flags = flags ^ 0x80\n    result = []\n    thread = threading.Thread(target=lambda: result.append(wait(address, flags)))\n    thread.start()\n    queued(address, flags, 1)\n    assert requeue(address, flags, address, other_flags) == (1, 0)\n    assert wake(address, flags) == (0, 0)\n    assert wake(address, other_flags) == (1, 0)\n    thread.join(timeout=9)\n    assert not thread.is_alive() and result == [(0, 0)], result\n\nwords = (c.c_int * 3)()\nsource, sibling, target = [c.addressof(words) + i * 4 for i in range(3)]\nvector = (Entry * 2)(entry(sibling, 0x82), entry(source, 0x82))\nresult = []\n\n\ndef vector_wait():\n    end = time.monotonic_ns() + 8_000_000_000\n    timeout = Timespec(end // 1_000_000_000, end % 1_000_000_000)\n    result.append(call(449, c.addressof(vector), 2, 0, c.addressof(timeout), 1))\n\n\nthread = threading.Thread(target=vector_wait)\nthread.start()\nqueued(source, 0x82, 1)\nassert requeue(source, 0x82, target, 2) == (1, 0)\nassert wake(target, 2) == (1, 0)\nthread.join(timeout=9)\nassert not thread.is_alive() and result == [(1, 0)], result\nassert wake(sibling, 0x82) == (0, 0)\n\nresult = []\nthread = threading.Thread(target=lambda: result.append(wait(source, 0x82, seconds=.15)))\nthread.start()\nqueued(source, 0x82, 1)\nassert requeue(source, 0x82, target, 2) == (1, 0)\nthread.join(timeout=2)\nassert not thread.is_alive() and result == [(-1, errno.ETIMEDOUT)], result\nassert wake(target, 2) == (0, 0)\n\nwith tempfile.TemporaryFile() as file:\n    os.ftruncate(file.fileno(), 4096)\n    first = mmap.mmap(file.fileno(), 4096, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)\n    second = mmap.mmap(file.fileno(), 4096, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)\n    shared = c.c_int.from_buffer(first)\n    alias = c.c_int.from_buffer(second)\n    shared.value = 0\n    shared_address, alias_address = c.addressof(shared), c.addressof(alias)\n\n    # Fork before creating a parent worker thread. The child later wakes the\n    # parent's migrated PRIVATE waiter through another VA of the shared file.\n    reader, writer = os.pipe()\n\n    def child_waker():\n        os.close(writer)\n        assert os.read(reader, 1) == b'x'\n        assert wake(alias_address, 2) == (1, 0)\n        os.close(reader)\n\n    pid = spawn(child_waker)\n    os.close(reader)\n    result = []\n    thread = threading.Thread(target=lambda: result.append(wait(source, 0x82)))\n    thread.start()\n    queued(source, 0x82, 1)\n    assert requeue(source, 0x82, shared_address, 2) == (1, 0)\n    os.write(writer, b'x')\n    os.close(writer)\n    reap(pid)\n    thread.join(timeout=9)\n    assert not thread.is_alive() and result == [(0, 0)], result\n    assert wake(shared_address, 2) == (0, 0)\n\n    # An external shared waiter may move to the requeuer's private queue. Its\n    # own timeout/wake bookkeeping follows its original token across the move.\n    reader, writer = os.pipe()\n\n    def child_waiter():\n        os.close(reader)\n        outcome = wait(alias_address, 2)\n        os.write(writer, json.dumps(outcome).encode())\n        os.close(writer)\n        assert outcome == (0, 0), outcome\n\n    pid = spawn(child_waiter)\n    os.close(writer)\n    queued(shared_address, 2, 1)\n    assert requeue(shared_address, 2, target, 0x82) == (1, 0)\n    assert wake(shared_address, 2) == (0, 0)\n    assert wake(target, 0x82) == (1, 0)\n    outcome = os.read(reader, 4096)\n    os.close(reader)\n    reap(pid)\n    assert json.loads(outcome) == [0, 0], outcome\n    assert wake(target, 0x82) == (0, 0)\n    del shared, alias\n    first.close()\n    second.close()\n\nprint('FUTEX_REQUEUE_PASS', flush=True)\n"
+          ],
+          "exit_code": 0,
+          "expected_exit": 0,
+          "status": "passed",
+          "missing_markers": [],
+          "reservation_ms": 0.4545,
+          "request_to_exit_ms": 334.5846,
+          "activation_to_exit_ms": 334.1301,
+          "request_to_ready_ms": null,
+          "application_cpu_metrics": {
+            "user_ms": 31.25,
+            "kernel_ms": 109.375,
+            "total_cpu_ms": 140.625,
+            "cycles": 407044940,
+            "page_faults": 16657
+          },
+          "prepared_working_set_bytes": 11862016,
+          "cpu_metrics": {
+            "user_ms": 46.875,
+            "kernel_ms": 140.625,
+            "total_cpu_ms": 187.5,
+            "processes": 3,
+            "active_processes": 0,
+            "page_faults": 33061,
+            "read_bytes": 8739582,
+            "write_bytes": 29876,
+            "read_ops": 380,
+            "write_ops": 254,
+            "other_ops": 12249,
+            "other_bytes": 505904
+          },
+          "optimized": true
+        }
+      ]
+    }
+  },
+  "staging": {
+    "build": "F:\\crysoacu2\\artifacts\\futex-requeue-pi-20261001\\guest-build.jsonl",
+    "build_sha256": "09c674726b1ac60dbacb2ebce6d912bfdc8cd231fac845f28af950538af0abd8",
+    "base": "F:\\crysoacu2\\artifacts\\pthread-shared-condition-20261001\\candidate-integrated",
+    "candidate": "F:\\crysoacu2\\artifacts\\futex-requeue-pi-20261001\\candidate",
+    "files": {
+      "rootfs/lib/kinakaze_elf.so": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_elf.dll",
+        "sha256": "6e74fc65bcbbca1cb8728f2abd9016bcf7576b81af0333231b288d7966910c24"
+      },
+      "rootfs/lib/libXinerama.so.1": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libXinerama.dll",
+        "sha256": "b2f262924a81d4cb8cc4d69f2e867ebc8f259dfcbf8cbcf17eaa69de8a5ed8b5"
+      },
+      "rootfs/lib/libXrender.so.1": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libXrender.dll",
+        "sha256": "46ed8bed2cce4d1fb841f1d7c0c6604545d3cf0745da5c40816e483fa8dadadc"
+      },
+      "rootfs/lib/libEGL.so.1": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libEGL.dll",
+        "sha256": "cda9f9e557713501ab75c8f24ab119137263217a12e9c8cfbe98fec645c69095"
+      },
+      "rootfs/lib/libGLX.so.0": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libGLX.dll",
+        "sha256": "b921b7e52d46307c2c5c1dae7cb71f6cf9d098d7213f28d3a3d0920b498ccf23"
+      },
+      "rootfs/lib/libOpenGL.so.0": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libOpenGL.dll",
+        "sha256": "d59bc037213274c567897afb83dfde4d5f70e88fcdb6df851fb49d6c69aaf972"
+      },
+      "rootfs/lib/libXxf86vm.so.1": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libXxf86vm.dll",
+        "sha256": "98e80e53f817d5d0ea2c38a2bb4bbef0321ddf6c4934be50f558765923ea27e7"
+      },
+      "rootfs/lib/libdl.so.2": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libdl.dll",
+        "sha256": "40521063d398fd6235d00842cd6d72ae47fb4172a603393840a86d77d7d55b80"
+      },
+      "rootfs/lib/libX11-xcb.so.1": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libX11_xcb.dll",
+        "sha256": "00e3de781c1af33dbe26f3a8f3f0e95866e35b7cb88c5edd0e51d9615b2f1cba"
+      },
+      "rootfs/lib/libGLESv2.so.2": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libGLESv2.dll",
+        "sha256": "9ea41057f6640fc7435be1da3a23841f208a02d0e6de43c8b5c552451b07d42a"
+      },
+      "rootfs/lib/libXcursor.so.1": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libXcursor.dll",
+        "sha256": "96c185c5e81160c1184b95643418b9fac522a4a80a378b4358cef46397a95da4"
+      },
+      "rootfs/lib/kinakaze_alloc.so": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_alloc.dll",
+        "sha256": "54821d0a3422de13cd5702238d8c178d4acfa0daef1aca3f74bb2f513bab4de8"
+      },
+      "rootfs/lib/kinakaze_kernel.so": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_kernel.dll",
+        "sha256": "60f8f5c6f3ba3da5462633512588a1fad0ce348dd2c14b061dc23a40bdd5ae90"
+      },
+      "rootfs/lib/kinakaze_tls.so": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_tls.dll",
+        "sha256": "7dd80690d8a3e11fa8edbda0bd4a9c6267bf3b31bc72f4caafb3d3a8d9e0d7ef"
+      },
+      "rootfs/lib/libm.so.6": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libm.dll",
+        "sha256": "f77a4bb0bb549ef8fad85973addfa73b0db8d8865ccd56360237f32c240e2600"
+      },
+      "rootfs/lib/libdisplay.so.1": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libdisplay.dll",
+        "sha256": "32b933536913bf2216ebf707c50fe70e6fd4c95cdb21e078dd61b75d4e25a608"
+      },
+      "worker.exe": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\worker.exe",
+        "sha256": "5f62fea212ab827d1f177ca262b4458a3dfb0944f9fb267b7079d3e0f85020ac"
+      },
+      "init.exe": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\init.exe",
+        "sha256": "851a18a39aa9f59f3c066e60fb05c627bdd5af7952abd2a84a9c7d290347cd49"
+      },
+      "rootfs/lib/kinakaze_vfs.so": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_vfs.dll",
+        "sha256": "74956f42f9c1576079314ac2ed2698a21a8749f0a23199392a0e167db66e332e"
+      },
+      "rootfs/lib/libcuda.so.1": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libcuda.dll",
+        "sha256": "a09c6fc8f696bbe5fbce7d6fc3564f9b49816e098e6b59d7e545f727558954fc"
+      },
+      "rootfs/lib/libpthread.so.0": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libpthread.dll",
+        "sha256": "d1f200480d2c270b28ccaedd31a00f15ac22c6cf4cdb9fcddcfc614d9f78601d"
+      },
+      "rootfs/lib/ld-linux-x86-64.so.2": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_link.dll",
+        "sha256": "c39a1e45cb77fa20c39ba64fc754d89dd97fbbf30c0fd1dc6106e36ce696bd9f"
+      },
+      "rootfs/lib/libc.so.6": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libc.dll",
+        "sha256": "7c993bfea9afce94a69764a717b2f760a486ba292a1447a7e74624244f28658e"
+      },
+      "rootfs/lib/libresolv.so.2": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libresolv.dll",
+        "sha256": "8f1702535a30c59becc5ac71e8ff10ae3821eb8dc56374985e2a3f49423fbcbf"
+      },
+      "rootfs/lib/librt.so.1": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_librt.dll",
+        "sha256": "a8f52d7cc82ee163505a8e5b816873a824d0f2b45f225961e34ac341c2110b73"
+      },
+      "rootfs/lib/libpipewire-0.3.so.0": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libpipewire.dll",
+        "sha256": "78f0c6b97a7397394f0d6444399cf1a3669451650670cc4e56db5e224590a3ce"
+      },
+      "rootfs/lib/libpulse.so.0": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libpulse.dll",
+        "sha256": "8137636bb892ee0d07205c918b2b4a255c8617168b694148b5b9f915db6ec825"
+      },
+      "rootfs/lib/libasound.so.2": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libasound.dll",
+        "sha256": "5b71c75ca323c7abd1b7da8aa21894d879992a5fa5b1ce19ba0b35ef88fc03cb"
+      },
+      "rootfs/lib/kinakaze_guest_engine.so": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_guest_engine.dll",
+        "sha256": "338dcc723e9255c74b2a043ed2a31e26c2b0487fb33863fa180b966d366b32c9"
+      },
+      "rootfs/lib/libkinakaze-runtime.so.1": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_runtime.dll",
+        "sha256": "abdf033aaf7b8214c403685fb06cde4948feac8970a143f49fcff690ca18fe8b"
+      },
+      "rootfs/lib/libX11.so.6": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libX11.dll",
+        "sha256": "ec1a4be7ae1275f6e0d2ea7ff440e6b0c25b8caac79bbb82030a903707bb22d3"
+      },
+      "rootfs/lib/libXrandr.so.2": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libXrandr.dll",
+        "sha256": "6de7019f273914d40a6bb130721ea8d0f013252fe12bdf7c33a700d7eb6b3a27"
+      },
+      "rootfs/lib/libXext.so.6": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libXext.dll",
+        "sha256": "1f9003223673b3d23180be8cbc69e3c72308f7fda5c7c130e00bd16b5f5d21d1"
+      },
+      "rootfs/lib/libGL.so.1": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libGL.dll",
+        "sha256": "543348b43c2e79b422461bb1e96246b1570d8bf32572903a61a7c0b803c878a0"
+      },
+      "rootfs/lib/libXi.so.6": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libXi.dll",
+        "sha256": "525688fda82f0f667d341a52c815912b2669e85eec2476eb85090560bf2d2ba1"
+      },
+      "rootfs/lib/libxcb.so.1": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libxcb.dll",
+        "sha256": "8a8cd1c1e0820765bfca57cf2ab6d8da5f7e9368456c921be189e637b8c827e1"
+      },
+      "rootfs/lib/libvulkan.so.1": {
+        "source": "F:\\crysoacu2\\target\\pthread-shared-goal\\release\\kinakaze_libvulkan.dll",
+        "sha256": "594d54271ffca8b466b7efa21b1c227480f6f49951fafc468f7c359d7a5fe3e5"
+      },
+      "std-0cebe7c42cd80226.dll": {
+        "source": "C:\\Users\\nanaeo\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\std-0cebe7c42cd80226.dll",
+        "sha256": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc"
+      }
+    }
+  },
+  "benchmark": {
+    "passed": true,
+    "case": "requeue-pi",
+    "binary": "F:\\crysoacu2\\artifacts\\futex-requeue-pi-20261001\\native-frozen\\kinakaze_libc-0218f268d52b511c.exe",
+    "sha256": "97af7379cc6521070e713c7f9fe0f82b8176debb8f65a5ffb7aea1f97fec2ebe",
+    "dependencies": {
+      "kinakaze_alloc.so": "8c344e40e7d16ce51bab47ff0888a983764d79135dd21e47a6c492f70bcf5d35",
+      "kinakaze_elf.so": "6e74fc65bcbbca1cb8728f2abd9016bcf7576b81af0333231b288d7966910c24",
+      "kinakaze_kernel.so": "952add31b94105e0fb6bab65a173503e001512d0e15a3aacc261426871bc379f",
+      "kinakaze_tls.so": "a2f9c8dd04acbf04efb870eba3cabf77ab426c125e4646104a3c68e0b9cceda7",
+      "kinakaze_vfs.so": "b578baa50e099a3727a14d1e7eaeb911a02d98fda5fc0bed4a42cf40d1325c66",
+      "ld-linux-x86-64.so.2": "fb9d75fc202885ef3e61b33b3f75b57b736da9fb8e59c25a4eec4c638f5d2a1e",
+      "libm.so.6": "5ebb8f385a24bf06d4276b6de68f5d38f7689d8c5a6f891d541012d809c05625",
+      "libpthread.so.0": "4299860e87ccb65ff568b04bd02b7ab4d9adc9c1f3f1bdec1e5d115d52441ab7"
+    },
+    "rows": [
+      {
+        "iterations": 1000,
+        "elapsed_ns": 17187800,
+        "proxy_ns": 17187.8,
+        "round": 0,
+        "enabled": false,
+        "warmup": true
+      },
+      {
+        "iterations": 1000,
+        "elapsed_ns": 16455100,
+        "proxy_ns": 16455.1,
+        "round": 0,
+        "enabled": true,
+        "warmup": true
+      },
+      {
+        "iterations": 1000,
+        "elapsed_ns": 15835700,
+        "proxy_ns": 15835.7,
+        "round": 1,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 1000,
+        "elapsed_ns": 16617100,
+        "proxy_ns": 16617.1,
+        "round": 1,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "iterations": 1000,
+        "elapsed_ns": 16634800,
+        "proxy_ns": 16634.8,
+        "round": 2,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "iterations": 1000,
+        "elapsed_ns": 16614000,
+        "proxy_ns": 16614.0,
+        "round": 2,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 1000,
+        "elapsed_ns": 16273300,
+        "proxy_ns": 16273.3,
+        "round": 3,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 1000,
+        "elapsed_ns": 16964700,
+        "proxy_ns": 16964.7,
+        "round": 3,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "iterations": 1000,
+        "elapsed_ns": 16692000,
+        "proxy_ns": 16692.0,
+        "round": 4,
+        "enabled": false,
+        "warmup": false
+      },
+      {
+        "iterations": 1000,
+        "elapsed_ns": 15592700,
+        "proxy_ns": 15592.7,
+        "round": 4,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 1000,
+        "elapsed_ns": 15674700,
+        "proxy_ns": 15674.7,
+        "round": 5,
+        "enabled": true,
+        "warmup": false
+      },
+      {
+        "iterations": 1000,
+        "elapsed_ns": 17263200,
+        "proxy_ns": 17263.2,
+        "round": 5,
+        "enabled": false,
+        "warmup": false
+      }
+    ],
+    "medians_ns": {
+      "control": {
+        "elapsed_ns": 16692000,
+        "proxy_ns": 16692.0
+      },
+      "candidate": {
+        "elapsed_ns": 15835700,
+        "proxy_ns": 15835.7
+      }
+    }
+  },
+  "source_sha256": {
+    "libs/libc/src/futex.rs": "d77b5f05e4baa255e5433fabec0821708fc8f51de3f8b70ad7c37f3c7d6ddd92",
+    "libs/libc/src/futex/hybrid.rs": "13cdd49bca21655240a936dc94b8ca7059d07033a209472251837f4a08a296f1",
+    "libs/libc/src/futex/pi.rs": "184d29bc40b20ae21ec6fad7b7950c5b8d1c0289725daac0d7e29cc702e908f0",
+    "libs/libc/src/sysadmin.rs": "c58f4490a6800fe8b32450f60247bbd400c2ffb00173a4aec8e6d98ebb1af88a",
+    "tools/benchmark-futex-queues.py": "7b0a41736fddf8d61360e882008afa2622a12908a9f09dea16835ee3ae06865f",
+    "tools/test-futex-vector-guest.py": "5564d7dd3b77d2697bf0e79d85c51b899cbf171494b4f197ece1aed7a29c5b42",
+    "libs/libc/src/futex/pi/requeue.rs": "6b225a89bd1f688a6542aaa48db675abb70a81fc23e3166ab2cbfbbf3a4d9abb",
+    "libs/libc/src/futex/pi/requeue/tests.rs": "1df3727d9f6d88fe84130db97f79a63fcb74dab51b16a2f2ae10b60b62463c39",
+    "libs/libc/src/sysadmin/futex_requeue_pi.rs": "e472518e9492cc020a053e9cca41359924d790309670f96574b6d4d68dc091af",
+    "libs/libc/src/sysadmin/futex_requeue_pi/tests.rs": "3196be46f367de0d377dc511ede2dcb3cee3add0a57a8c9ebedf44546e45c08d",
+    "tests/guest/FutexRequeuePiProbe.py": "b20542d5dcd8e48bf6c9b6d0595d14992234c44cb149b37397a662289162defb"
+  }
+}

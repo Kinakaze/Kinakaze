@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import statistics
 import subprocess
@@ -20,6 +21,7 @@ CASES = {
     'waitv-background': ('KINAKAZE_FUTEX_OPT', 'sysadmin::futex_vector::batch_tests::benchmark_vector_registration', 'FUTEX_VECTOR_BENCH'),
     'waitv': ('KINAKAZE_FUTEX_OPT', 'sysadmin::futex_vector::tests::benchmark_waitv_registration', 'WAITV_BENCH'),
     'requeue': ('KINAKAZE_FUTEX_OPT', 'sysadmin::futex_requeue::tests::benchmark_requeue2_paths', 'REQUEUE_BENCH'),
+    'requeue-pi': ('KINAKAZE_FUTEX_OPT', 'futex::pi::requeue::tests::benchmark_requeue_proxy', 'REQUEUE_PI_BENCH'),
     'tmpfs': ('KINAKAZE_TMPFS_READ_OPT', 'tmpfs::read_pages::tests::benchmark_shared_read', 'TMPFS_READ_BENCH'),
     'syscall': ('KINAKAZE_SYSCALL_TEMPLATE', 'execution::instruction_trampoline::tests::benchmark_syscall_templates', 'SYSCALL_TEMPLATE_BENCH'),
     'route': ('KINAKAZE_IO_ROUTE_OPT', 'io_route_tests::benchmark_io_routes', 'IO_ROUTE_BENCH'),
@@ -53,7 +55,14 @@ def main():
                 lines = [line.partition(marker + ' ')[2] for line in child.stdout.splitlines() if marker + ' ' in line]
                 if len(lines) != 1:
                     raise RuntimeError(f'missing result: {child.stdout}')
-                row = json.loads(lines[0])
+                if args.case == 'requeue-pi':
+                    match = re.fullmatch(r'iterations=(\d+) elapsed_ns=(\d+) optimized=(true|false)', lines[0])
+                    if not match:
+                        raise RuntimeError('invalid requeue-pi benchmark record: ' + lines[0])
+                    row = dict(iterations=int(match[1]), elapsed_ns=int(match[2]), optimized=match[3] == 'true',
+                               proxy_ns=int(match[2]) / int(match[1]))
+                else:
+                    row = json.loads(lines[0])
                 if row.pop('optimized') != enabled:
                     raise RuntimeError(f'{switch} was not applied')
                 row.update(round=iteration, enabled=enabled, warmup=iteration == 0)

@@ -13,13 +13,16 @@ use windows_sys::Win32::System::Threading::{
 pub(super) const WAIT: u32 = 1 << 30;
 pub(super) const STATE: u32 = 1 << 29;
 pub(super) const JOURNAL: u32 = 1 << 28;
+pub(super) const SOURCE: u32 = 1 << 26;
+pub(super) const LINK: u32 = 1 << 25;
+pub(crate) mod requeue;
 const DEAD: u32 = 1 << 27;
 const WAITERS: u32 = 1 << 31;
 const OWNER_DIED: u32 = 1 << 30;
 const TID_MASK: u32 = OWNER_DIED - 1;
 const ESRCH: i32 = 3;
 const TASK_CAPACITY: usize = 4096;
-const TASK_MAGIC: u64 = u64::from_le_bytes(*b"CYFPI001");
+const TASK_MAGIC: u64 = u64::from_le_bytes(*b"CYFPI002");
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -184,7 +187,7 @@ impl Tasks {
                 PAGE_READWRITE,
                 0,
                 TASK_SIZE as u32,
-                wide(&format!(r"Local\kinakaze.futex.pi.tasks.v1.{domain:016x}")).as_ptr(),
+                wide(&format!(r"Local\kinakaze.futex.pi.tasks.v2.{domain:016x}")).as_ptr(),
             )
         })?;
         let view = unsafe { MapViewOfFile(section.0, FILE_MAP_ALL_ACCESS, 0, 0, TASK_SIZE) };
@@ -354,9 +357,10 @@ fn retire(task: Registered) {
     let Ok(mut transaction) = Transaction::begin() else {
         return;
     };
-    transaction
-        .records
-        .retain(|record| !(record.pi_wait() && Identity::from(*record) == task.identity));
+    transaction.records.retain(|record| {
+        !((record.pi_wait() || record.reserved & LINK != 0)
+            && Identity::from(*record) == task.identity)
+    });
     for record in &mut transaction.records {
         if record.reserved & STATE != 0 && Identity::from(*record) == task.identity {
             record.reserved |= DEAD;
@@ -528,11 +532,10 @@ fn top(transaction: &Transaction, key: Key) -> Option<Record> {
         .records
         .iter()
         .copied()
-        .filter(|record| record.key == key && !record.metadata() && !record.dead())
-        // All admitted guest scheduling policies are OTHER/0. Linux clamps
-        // non-RT futex queue priorities to the same band and keeps FIFO order.
-        // Native donation below does not invent Linux FIFO/RR admission.
-        .min_by_key(|record| record.token)
+        .find(|record| record.key == key && !record.metadata() && !record.dead())
+    // All admitted guest scheduling policies are OTHER/0. Linux clamps
+    // non-RT futex queue priorities to the same band and keeps FIFO order.
+    // Native donation below does not invent Linux FIFO/RR admission.
 }
 
 fn cycle(transaction: &Transaction, waiting: Identity, mut owner: Identity) -> bool {
@@ -577,9 +580,17 @@ fn prune(transaction: &mut Transaction, key: Key) {
         .iter()
         .find(|record| record.key == key && record.reserved & JOURNAL != 0)
         .map(|record| record.token);
+    let dead: Vec<u64> = transaction
+        .records
+        .iter()
+        .filter(|record| {
+            record.key == key && record.pi_wait() && Some(record.token) != journal && record.dead()
+        })
+        .map(|record| record.token)
+        .collect();
     let before = transaction.records.len();
     transaction.records.retain(|record| {
-        !(record.key == key && record.pi_wait() && Some(record.token) != journal && record.dead())
+        !((record.pi_wait() || record.reserved & LINK != 0) && dead.contains(&record.token))
     });
     transaction.dirty |= before != transaction.records.len();
 }
@@ -721,7 +732,7 @@ pub(crate) fn acquire(
             return Err(EDEADLK);
         }
         let queued = top(transaction, key);
-        if queued.is_some_and(|record| !record.pi_wait()) {
+        if queued.is_some_and(|record| !record.pi_wait() || record.reserved & SOURCE != 0) {
             return Err(EINVAL);
         }
         if queued.is_none() {
@@ -811,7 +822,7 @@ pub(crate) fn unlock(
     let had_state = state(transaction, key).is_some();
     let queued = top(transaction, key);
     if let Some(next) = queued {
-        if !next.pi_wait() {
+        if !next.pi_wait() || next.reserved & SOURCE != 0 {
             return Err(EINVAL);
         }
         let state = state(transaction, key).ok_or(EINVAL)?;
