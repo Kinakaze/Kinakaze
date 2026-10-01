@@ -15,4 +15,6 @@ R28 候选未合入。32 次 FIFO 打开、写入、读回和关闭的 A/B/B/A �
 
 全部样本保留。两边均为独立冻结构建，源码及分发哈希在筛查后重新核验。主机未独占；本会话没有同时编译或运行其他基准。该短测覆盖 FIFO 工作负载，不代替完整回归。R28 的原生套件、84 项客体套件、12 次启动/dpkg 对照和完整安装均未执行。180 秒目标仍未达到。
 
-源码基于 `ff12782`，仅修改 `engine/crates/kinakaze-vfs/src/fifo/lifecycle.rs`。生产继续保留原路线；隔离候选和全部证据保留，未修改或提交其他会话的工作。见[测量记录](measurements/deferred-folder-api-screen-2026-10-01.json)。
+测试源码基于 `ff12782`，仅修改 `engine/crates/kinakaze-vfs/src/fifo/lifecycle.rs`。R28 未合入，隔离候选和全部证据保留。见[测量记录](measurements/deferred-folder-api-screen-2026-10-01.json)。
+
+发布说明：提交 `d28aa2d` 意外带入其他会话并发暂存的 ownership 描述符复用改动及测试。那些文件不属于 R28 测试对象，本文结果不能作为其验证依据。已保留这些代码，未回退或重写已推送历史。
