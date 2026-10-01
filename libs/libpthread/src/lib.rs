@@ -56,7 +56,6 @@ const EBUSY: i32 = 16;
 #[cfg(all(windows, target_arch = "x86_64"))]
 const EPERM: i32 = 1;
 #[cfg(all(windows, target_arch = "x86_64"))]
-const ENOSYS: i32 = 38;
 #[cfg(all(windows, target_arch = "x86_64"))]
 const ETIMEDOUT: i32 = 110;
 #[cfg(all(windows, target_arch = "x86_64"))]
