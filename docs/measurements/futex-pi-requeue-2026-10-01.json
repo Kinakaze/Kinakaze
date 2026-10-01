@@ -1,0 +1,163 @@
+{
+  "scope": "PI requeue Linux error ordering, recoverable proxy CAS, FIFO and batched migration",
+  "base_commit": "4a011e77ad01cb5c2e39b05250a974bc92e266ff",
+  "protocol": {
+    "queue": "CYFUT004 / v4",
+    "pi_tasks": "CYFPI003 / v3",
+    "record_bytes": 72,
+    "queue_capacity_records": 32768,
+    "task_capacity": 4096
+  },
+  "environment_switch": "KINAKAZE_FUTEX_OPT",
+  "source_sha256": {
+    "libs/libc/src/futex.rs": "0301cc96d700a0c2853ca6972a6439826bbe90fed563975eb0423a03402fd3ee",
+    "libs/libc/src/futex/hybrid.rs": "144332318959b03efd6850f20c1f99f9f0e17c49ba068ee8b1a8026a1b046f68",
+    "libs/libc/src/futex/pi.rs": "918b52cd301b130e94950de93b37be32d3661b2ae18d65e4cd76de328890f9ae",
+    "libs/libc/src/futex/pi/requeue.rs": "248279043e31f97327fad3d504eb47395ca203a4fe85b94578ab28780e53c238",
+    "libs/libc/src/futex/pi/requeue/tests.rs": "1df3727d9f6d88fe84130db97f79a63fcb74dab51b16a2f2ae10b60b62463c39",
+    "libs/libc/src/futex/pi/requeue/additional_tests.rs": "5ea691caf62a0cd13f775680886d2d70221dbd602a15414f55014893cf159841",
+    "libs/libc/src/sysadmin.rs": "781058beb3dcd3485a0fcf152190ebddef41026d55cdb580561c14b86c568c28",
+    "libs/libc/src/sysadmin/futex_pi.rs": "018210585c57c5613f4eb53d930e10bda3e74a41f34dbae1b65bdb2af37f6c18",
+    "libs/libc/src/sysadmin/futex_requeue_pi.rs": "403f8659de1c4a0a98b561b9d923853b6c581a6f3c5c8355ab259b6695ad5590",
+    "libs/libc/src/sysadmin/futex_requeue_pi/tests.rs": "c06ee94058c5ebcbc7c62e7535ecec3033d8c3fc5cc963291676d0dbda4d204f",
+    "libs/libc/src/sysadmin/futex_requeue_pi/prior_tests.rs": "3196be46f367de0d377dc511ede2dcb3cee3add0a57a8c9ebedf44546e45c08d"
+  },
+  "native": {
+    "passed": true,
+    "manifest": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-native-publish\\manifest.json",
+    "manifest_sha256": "ccdd78f8179c9c9e1dba6b195aa50424e03fddb6c5cd33f8ebd8c9a6c13cb720",
+    "image_hashes_unchanged": true,
+    "rows": [
+      {
+        "configuration": "0",
+        "environment": "KINAKAZE_FUTEX_OPT",
+        "crate": "kinakaze_libc",
+        "exit_code": 0,
+        "required_requeue_tests_passed": true,
+        "summary": "test result: ok. 636 passed; 0 failed; 19 ignored",
+        "passed": 636,
+        "failed": 0,
+        "ignored": 19,
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-publish-kinakaze_libc-0.log",
+        "log_sha256": "3e209f8b82663cb96b717366eb93c9694c84857bcdcb53c643d3a0c652971924"
+      },
+      {
+        "configuration": "0",
+        "environment": "KINAKAZE_FUTEX_OPT",
+        "crate": "kinakaze_libpthread",
+        "exit_code": 0,
+        "required_requeue_tests_passed": true,
+        "summary": "test result: ok. 59 passed; 0 failed; 4 ignored",
+        "passed": 59,
+        "failed": 0,
+        "ignored": 4,
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-publish-kinakaze_libpthread-0.log",
+        "log_sha256": "1cfc510e08971c542f654009d2000ab0fd5de89292e6199fd9a4df3c2d23b5b3"
+      },
+      {
+        "configuration": "1",
+        "environment": "KINAKAZE_FUTEX_OPT",
+        "crate": "kinakaze_libc",
+        "exit_code": 0,
+        "required_requeue_tests_passed": true,
+        "summary": "test result: ok. 636 passed; 0 failed; 19 ignored",
+        "passed": 636,
+        "failed": 0,
+        "ignored": 19,
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-publish-kinakaze_libc-1.log",
+        "log_sha256": "8c4ee9a2da9b8ddf6536ce9728af18ca120eefb442f1f85e167de60495124d68"
+      },
+      {
+        "configuration": "1",
+        "environment": "KINAKAZE_FUTEX_OPT",
+        "crate": "kinakaze_libpthread",
+        "exit_code": 0,
+        "required_requeue_tests_passed": true,
+        "summary": "test result: ok. 59 passed; 0 failed; 4 ignored",
+        "passed": 59,
+        "failed": 0,
+        "ignored": 4,
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-publish-kinakaze_libpthread-1.log",
+        "log_sha256": "f0f5821f9fd8d333f9332f943f29e67e280e9078056a6792335b23c5214ae37f"
+      }
+    ]
+  },
+  "production_check": {
+    "exit_code": 0,
+    "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-publish-production-check.log"
+  },
+  "frozen_images": {
+    "kinakaze_alloc.so": {
+      "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_alloc.dll",
+      "sha256": "05fd2cf2f31b83e6a5f4a3a244d3eb293357a15d9bda99716148f047c38e3bac"
+    },
+    "serde_derive-ebb234dc8366345c.dll": {
+      "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\deps\\serde_derive-ebb234dc8366345c.dll",
+      "sha256": "e0805346528b838488002807261a16733e7efcd6f4843a9bd660e2f8c44ff48a"
+    },
+    "kinakaze_elf.so": {
+      "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_elf.dll",
+      "sha256": "a8bcccac9dc28d39cabb8a1435808fe8e6d1845353cd5285f65871b2409191f3"
+    },
+    "kinakaze_kernel.so": {
+      "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_kernel.dll",
+      "sha256": "c06dd847b26ebd374dbe6cebfeca1b4e3884c2d10ff4b598124e19e42f1af16d"
+    },
+    "kinakaze_tls.so": {
+      "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_tls.dll",
+      "sha256": "9a3b40bab30cc059397b2914d1529c4e586c41d15d9dd25940a56184a786a234"
+    },
+    "kinakaze_vfs.so": {
+      "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_vfs.dll",
+      "sha256": "7ae113347b9068310807c8b05a059e2c3146f0c67113206edec25f46a7f05ee4"
+    },
+    "libm.so.6": {
+      "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libm.dll",
+      "sha256": "7d83a25bdf4abc143e31483c42410cfc12031a3334ad0fbe88c2b3bb9f7c8448"
+    },
+    "ld-linux-x86-64.so.2": {
+      "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_link.dll",
+      "sha256": "5aea8bf73c58933436653bc4fc69a4d47aefa1a832ee87ec7e72a820976877c8"
+    },
+    "libpthread.so.0": {
+      "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libpthread.dll",
+      "sha256": "b315876bd3546bae595f5e046d417c413ef0783c2a19c0323a666bb75bb38151"
+    },
+    "kinakaze_libpthread-250de4662be47f01.exe": {
+      "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\deps\\kinakaze_libpthread-250de4662be47f01.exe",
+      "sha256": "6f7bcc0321c6ff1451dc437c1e413be4f38555d486cfd8d5261da735e83e7570"
+    },
+    "kinakaze_libc-27c70d972095bce3.exe": {
+      "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\deps\\kinakaze_libc-27c70d972095bce3.exe",
+      "sha256": "0d69dc747ae1e3cdf2005e341fce1944a3382edd7a0d0b6cf3d1d0c373d2dc44"
+    },
+    "std-0cebe7c42cd80226.dll": {
+      "source": "C:\\Users\\nanaeo\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\std-0cebe7c42cd80226.dll",
+      "sha256": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc"
+    }
+  },
+  "artifacts_sha256": {
+    "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-publish-build.jsonl": "4afc6f48ac41e0fefd2be346686daa9e71533d47c9c38d8761804cb09d9b4010",
+    "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-publish-build.log": "08f8f0c09042e33cdb3f32ba05c82c7a612842eb9e4a2ec5df4254a728c12978",
+    "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-publish-production-check.log": "c1aea07aece3eff6ed57a801fa3fca2f1d269d7351f1bb4f6d4f2c04431b78f7",
+    "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-publish-results.json": "e6932eadba820103b7b9154b8d57747e64c83618d66aa8f28804bd928db54370",
+    "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-native-publish\\manifest.json": "ccdd78f8179c9c9e1dba6b195aa50424e03fddb6c5cd33f8ebd8c9a6c13cb720",
+    "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-publish-kinakaze_libc-0.log": "3e209f8b82663cb96b717366eb93c9694c84857bcdcb53c643d3a0c652971924",
+    "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-publish-kinakaze_libpthread-0.log": "1cfc510e08971c542f654009d2000ab0fd5de89292e6199fd9a4df3c2d23b5b3",
+    "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-publish-kinakaze_libc-1.log": "8c4ee9a2da9b8ddf6536ce9728af18ca120eefb442f1f85e167de60495124d68",
+    "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-publish-kinakaze_libpthread-1.log": "f0f5821f9fd8d333f9332f943f29e67e280e9078056a6792335b23c5214ae37f"
+  },
+  "guest_rerun": false,
+  "new_batch_performance_measured": false,
+  "remaining": [
+    "v4 real Debian guest and alias/fork coverage",
+    "cross-process failed proxy CAS and permission-race recovery",
+    "capacity/resource exhaustion",
+    "pthread PI attributes and Linux realtime scheduling",
+    "complete 375 syscall / 3750 path review"
+  ],
+  "discarded_evidence": [
+    "Earlier default-only targeted runs used a different environment variable; final publish report uses KINAKAZE_FUTEX_OPT explicitly.",
+    "First publish reporter rejected multiline subprocess output although all 636 tests passed; the corrected report preserves that original successful log."
+  ]
+}

@@ -3178,7 +3178,7 @@ fn futex_syscall_attempt(
     if deadline.is_some() {
         futex_deadline::tests::pause_after_copy(uaddr as usize);
     }
-    if flags & FUTEX_CLOCK_REALTIME != 0 && !matches!(cmd, FUTEX_WAIT_BITSET | FUTEX_LOCK_PI2 | FUTEX_WAIT_REQUEUE_PI) {
+    if flags & FUTEX_CLOCK_REALTIME != 0 && !matches!(cmd, FUTEX_WAIT_BITSET | FUTEX_WAIT_REQUEUE_PI | FUTEX_LOCK_PI2) {
         return -i64::from(ENOSYS);
     }
     if !matches!(
@@ -3201,40 +3201,25 @@ fn futex_syscall_attempt(
     }
     // Linux checks non-PI requeue counts and empty wait/wake bit masks
     // before resolving either futex key. Keep faults from taking precedence.
-    if (matches!(cmd, FUTEX_REQUEUE | FUTEX_CMP_REQUEUE | FUTEX_CMP_REQUEUE_PI)
+    if (matches!(cmd, FUTEX_REQUEUE | FUTEX_CMP_REQUEUE)
         && ((val as i32) < 0 || (timeout as usize as u32 as i32) < 0))
         || (matches!(cmd, FUTEX_WAIT_BITSET | FUTEX_WAKE_BITSET) && val3 == 0)
-        || (cmd == FUTEX_CMP_REQUEUE_PI && val != 1)
-        || (matches!(cmd, FUTEX_WAIT_REQUEUE_PI | FUTEX_CMP_REQUEUE_PI) && uaddr == uaddr2)
     {
         return -i64::from(EINVAL);
     }
     let private = flags & FUTEX_PRIVATE_FLAG != 0;
-    if cmd == FUTEX_WAIT_REQUEUE_PI {
-        // Linux resolves the writable PI destination before setting up the
-        // source wait, after copying the optional absolute deadline.
-        let target = match FutexAddress::resolve(uaddr2, private) {
-            Ok(address) => address, Err(error) => return error,
-        };
-        if let Err(error) = futex_access(uaddr2 as usize, 4, true) { return error; }
-        let source = match FutexAddress::resolve(uaddr, private) {
-            Ok(address) => address, Err(error) => return error,
-        };
-        return futex_requeue_pi::wait(source, target, val, deadline.unwrap());
-    }
     if cmd == FUTEX_UNLOCK_PI { return futex_pi::unlock(uaddr, private); }
+    if cmd == FUTEX_WAIT_REQUEUE_PI { return futex_requeue_pi::wait(uaddr, uaddr2, private, val, deadline.expect("timed command was prepared")); }
+    if cmd == FUTEX_CMP_REQUEUE_PI {
+        let count = timeout as usize as u32;
+        if val != 1 || (count as i32) < 0 || uaddr == uaddr2 { return -i64::from(EINVAL); }
+        return futex_requeue_pi::compare(uaddr, uaddr2, private, val3, count);
+    }
     let address = match FutexAddress::resolve(uaddr, private) {
         Ok(address) => address,
         Err(error) => return error,
     };
     match cmd {
-        FUTEX_CMP_REQUEUE_PI => {
-            let target = match FutexAddress::resolve(uaddr2, private) {
-                Ok(address) => address, Err(error) => return error,
-            };
-            if let Err(error) = futex_access(uaddr2 as usize, 4, true) { return error; }
-            futex_requeue_pi::transfer(address, target, val3, timeout as usize as u32)
-        }
         FUTEX_LOCK_PI | FUTEX_TRYLOCK_PI | FUTEX_LOCK_PI2 => futex_pi::lock(address, cmd == FUTEX_TRYLOCK_PI, deadline.unwrap_or(futex_deadline::Prepared { duration: None, started: std::time::Instant::now() })),
         FUTEX_WAIT | FUTEX_WAIT_BITSET => {
             let deadline = deadline.expect("timed command was prepared before key resolution");

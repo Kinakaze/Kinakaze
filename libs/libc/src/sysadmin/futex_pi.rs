@@ -50,7 +50,16 @@ pub(super) fn unlock(word: *mut c_int, private: bool) -> i64 {
         let (mut transaction, key, _queues) = begin(address)?;
         pi::unlock(&mut transaction, key, word as usize, tid)
     })();
-    result.map_or_else(|error| -i64::from(error), |()| 0)
+    result.map_or_else(
+        |error| {
+            if error == pi::RETRY {
+                RESTART
+            } else {
+                -i64::from(error)
+            }
+        },
+        |()| 0,
+    )
 }
 
 pub(super) fn lock(
@@ -60,7 +69,13 @@ pub(super) fn lock(
 ) -> i64 {
     let result = attempt(address, try_only, deadline);
     result.map_or_else(
-        |error| -i64::from(error),
+        |error| {
+            if error == pi::RETRY {
+                RESTART
+            } else {
+                -i64::from(error)
+            }
+        },
         |restart| if restart { RESTART } else { 0 },
     )
 }

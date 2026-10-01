@@ -6,6 +6,9 @@ LOCK_PI2，补充共享所有权转移日志、原生捐赠、死亡接管及信
 pi、timeout、scalar、signal、vector、requeue 六类探针在两配置均通过。
 实现、边界与测量见 [PI 锁阶段记录](futex-pi-locks-2026-10-01.md)。
 WAIT_REQUEUE_PI/CMP_REQUEUE_PI 已在后续接入；两配置各通过 libc 625 项、pthread 59 项，18 行真实 guest 回归通过，见[PI requeue 阶段记录](futex-requeue-pi-2026-10-01.md)。
+后续 v4 协议补充批量迁移、代理 CAS 故障恢复及 Linux 错误顺序，见
+[PI 重排队边界与集成检查](futex-pi-requeue-2026-10-01.md)；上述客体与性能
+结果保留其原 v3 图的验证边界。
 旧式超时入口与 raw 202/455 的独立证据仍见
 [超时入口阶段记录](futex-timeout-entry-2026-10-01.md)。
 覆盖工具当前记录 304 项已分发、1 项明确拒绝、70 项缺少分发；375 个 syscall
