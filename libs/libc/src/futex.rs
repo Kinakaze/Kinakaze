@@ -161,7 +161,7 @@ impl Record {
             return hybrid::park_name(domain, self.host, self.thread, self.born);
         }
         wide(&format!(
-            r"Local\kinakaze.futex.wait.v3.{domain:016x}.{:016x}",
+            r"Local\kinakaze.futex.wait.v4.{domain:016x}.{:016x}",
             self.token
         ))
     }
@@ -318,7 +318,7 @@ fn thread_birth(thread: HANDLE) -> Result<u64, i32> {
 // A domain has a bounded kernel resource, not a silently truncated queue.
 // Exhaustion reports ENOMEM after reclaiming dead waiters.
 const CAPACITY: usize = 32_768;
-const MAGIC: u64 = u64::from_le_bytes(*b"CYFUT003");
+const MAGIC: u64 = u64::from_le_bytes(*b"CYFUT004");
 
 #[repr(C)]
 struct Header {
@@ -608,7 +608,7 @@ fn shared() -> Result<&'static Shared, i32> {
         CreateMutexW(
             ptr::null(),
             0,
-            wide(&format!(r"Local\kinakaze.futex.guard.v3.{domain:016x}")).as_ptr(),
+            wide(&format!(r"Local\kinakaze.futex.guard.v4.{domain:016x}")).as_ptr(),
         )
     })?;
     let section = Handle::new(unsafe {
@@ -618,7 +618,7 @@ fn shared() -> Result<&'static Shared, i32> {
             PAGE_READWRITE,
             0,
             SECTION_SIZE as u32,
-            wide(&format!(r"Local\kinakaze.futex.v3.{domain:016x}")).as_ptr(),
+            wide(&format!(r"Local\kinakaze.futex.v4.{domain:016x}")).as_ptr(),
         )
     })?;
     let view = unsafe { MapViewOfFile(section.0, FILE_MAP_ALL_ACCESS, 0, 0, SECTION_SIZE) };

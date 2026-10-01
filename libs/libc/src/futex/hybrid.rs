@@ -26,7 +26,7 @@ thread_local! {
 
 pub(super) fn park_name(domain: u64, host: u32, thread: u32, born: u64) -> Vec<u16> {
     wide(&format!(
-        r"Local\kinakaze.futex.park.v3.{domain:016x}.{host:08x}.{thread:08x}.{born:016x}"
+        r"Local\kinakaze.futex.park.v4.{domain:016x}.{host:08x}.{thread:08x}.{born:016x}"
     ))
 }
 

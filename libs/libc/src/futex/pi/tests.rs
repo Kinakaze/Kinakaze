@@ -6,7 +6,7 @@ pub(super) fn crash_at(phase: &str) {
     }
 }
 
-fn mapping(name: &str) -> (Handle, MEMORY_MAPPED_VIEW_ADDRESS) {
+pub(super) fn mapping(name: &str) -> (Handle, MEMORY_MAPPED_VIEW_ADDRESS) {
     let section = Handle::new(unsafe {
         CreateFileMappingW(
             INVALID_HANDLE_VALUE,

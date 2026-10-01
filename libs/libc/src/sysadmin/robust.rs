@@ -103,6 +103,7 @@ pub(crate) fn install_exit_hook() {
 }
 
 pub(crate) fn exit_current() {
+    crate::futex::pi::pthread::exit_current();
     let _ = TASK.try_with(|task| finish(task.0.replace(Registration::default())));
     crate::futex::pi::exit_current();
 }

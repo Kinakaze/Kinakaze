@@ -33,6 +33,8 @@ def main():
                         help='compile GNU condition cleanup with a shared mutex and condition')
     parser.add_argument('--robust-cancel', action='store_true',
                         help='compile the real GNU condition cleanup probe with a robust mutex')
+    parser.add_argument('--pi-mutex', action='store_true',
+                        help='exercise shared mutexes and GNU cancellation using PRIO_INHERIT')
     args = parser.parse_args()
     selected = args.probe or list(PROBES)
     source = Path(__file__).resolve().parents[1] / 'tests/guest'
@@ -50,10 +52,12 @@ def main():
         defines = ['-DPROBE_ROBUST_MUTEX'] if key == 'cancel' and args.robust_cancel else []
         if key == 'cancel' and args.shared_cancel:
             defines += ['-DPROBE_SHARED_COND']
+        if key in ('shared', 'shared-cond', 'cancel') and args.pi_mutex:
+            defines += ['-DPROBE_PI_MUTEX']
         subprocess.run([args.clang, '--target=x86_64-linux-gnu', '-fuse-ld=lld',
                         '-fPIC', '-shared', '-nostdlib', '-O2', *defines, str(source / (name + '.c')),
                         '-o', str(staging / (name + '.so'))], check=True)
-    report = dict(root=str(args.root.resolve()), dist=str(args.dist.resolve()), robust_cancel=args.robust_cancel, shared_cancel=args.shared_cancel,
+    report = dict(root=str(args.root.resolve()), dist=str(args.dist.resolve()), pi_mutex=args.pi_mutex, robust_cancel=args.robust_cancel, shared_cancel=args.shared_cancel,
                   staging=str(staging), fixture_sha256=inputs,
                   distribution_sha256=distribution_hashes(args.dist), rows=[])
     switches = ('KINAKAZE_PTHREAD_PARK_OPT', 'KINAKAZE_PTHREAD_SHARED_CACHE_OPT')
@@ -66,6 +70,8 @@ def main():
             for key in selected:
                 name, markers = PROBES[key]
                 command = ['/usr/bin/python3.11', guest + '/' + name + '.py']
+                if key == 'shared' and args.pi_mutex:
+                    command += ['--pi-mutex']
                 if key == 'event' and args.event_case:
                     command += args.event_case
                     markers = ['PTHREAD_EVENT_' + case.upper() + '_OK' for case in args.event_case]

@@ -260,7 +260,8 @@ class ExportTests(unittest.TestCase):
 class SharedMutexVersionsTest(unittest.TestCase):
     def test_empty_import_inventory_keeps_shared_mutex_accessor_versions(self):
         for name in ('pthread_mutexattr_setpshared', 'pthread_mutexattr_getpshared',
-                     'pthread_condattr_setpshared', 'pthread_condattr_getpshared'):
+                     'pthread_condattr_setpshared', 'pthread_condattr_getpshared',
+                     'pthread_mutexattr_setprotocol', 'pthread_mutexattr_getprotocol'):
             self.assertEqual(generate.symbol_versions('libpthread.so.0', name, {}), ['GLIBC_2.2.5'])
             self.assertEqual(generate.symbol_versions('libc.so.6', name, {}), ['GLIBC_2.2.5', 'GLIBC_2.34'])
 

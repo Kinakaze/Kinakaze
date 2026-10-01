@@ -4608,6 +4608,7 @@ pub extern "sysv64" fn kinakaze_abi___getpagesize() -> c_int {
 // Counting live threads cannot identify the leader once pthread_create is used.
 static INITIAL_NATIVE_THREAD: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
 extern "C" fn record_initial_native_thread() {
+    crate::futex::pi::pthread::install();
     INITIAL_NATIVE_THREAD.store(
         unsafe { windows_sys::Win32::System::Threading::GetCurrentThreadId() },
         std::sync::atomic::Ordering::Relaxed,
