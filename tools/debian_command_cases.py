@@ -80,7 +80,7 @@ def cases():
     output("cat", "text.txt", "^alpha beta$", "read file content")
     exact("tac", "lines.txt", "three\ntwo\none\n", "reverse line order")
     output("ls dir vdir", "-l text.txt", "text.txt", "directory entry metadata")
-    output("pwd", "", "/tmp/command-audit/", "current working directory")
+    add("pwd", '"$1" > out; test "$(cat out)" = "$PWD"', "current working directory")
     exact(
         "basename",
         "/tmp/example.txt .txt",
@@ -409,7 +409,7 @@ def cases():
     )
     output("pmap", "$$", "[0-9a-f]+", "process memory mappings")
     output("pstree pstree.x11", "-p $$", "bash", "process tree query")
-    output("pwdx", "$$", "/tmp/command-audit/", "process working directory query")
+    add("pwdx", '"$1" $$ > out; grep -Fx -- "$$: $PWD" out', "process working directory query")
     output("prtstat", "$$", "Process:", "process stat decoding")
     output("pgrep", "-x bash", "[0-9]+", "process matching")
     add("kill", '"$1" -0 $$', "signal-zero process existence check")
@@ -418,12 +418,8 @@ def cases():
         'code=0; "$1" --exact __kinakaze_no_such_process_926f54b__ 2> err || code=$?; test "$code" = 1',
         "negative process-name lookup without sending signals",
     )
-    output(
-        "lsof",
-        "-p $$ -a -d cwd -Fn",
-        "^n/tmp/command-audit/",
-        "open-file working directory",
-    )
+    add("lsof", '"$1" -p $$ -a -d cwd -Fn > out; grep -Fx -- "n$PWD" out',
+        "open-file working directory")
     output("lsfd", "-p $$", "(COMMAND|bash)", "file descriptor metadata query")
     output("lslocks", "", ".*", "active file lock query")
     output("lslogins", "-u", "root", "account information table")

@@ -138,15 +138,19 @@ unsafe extern "system" fn restore(input: *const u8, length: usize) -> i32 {
     0
 }
 extern "C" fn register() {
-    let _ = unsafe { kinakaze_runtime::register_fork_participant_without_inherited_handles(kinakaze_runtime::ForkParticipant {
-        abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
-        priority: 500,
-        key: u64::from_le_bytes(*b"CYNSS001"),
-        prepare: None,
-        snapshot: Some(snapshot),
-        parent: None,
-        child: Some(restore),
-    }) };
+    let _ = unsafe {
+        kinakaze_runtime::register_fork_participant_without_inherited_handles(
+            kinakaze_runtime::ForkParticipant {
+                abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
+                priority: 500,
+                key: u64::from_le_bytes(*b"CYNSS001"),
+                prepare: None,
+                snapshot: Some(snapshot),
+                parent: None,
+                child: Some(restore),
+            },
+        )
+    };
 }
 #[used]
 #[unsafe(link_section = ".CRT$XCU")]

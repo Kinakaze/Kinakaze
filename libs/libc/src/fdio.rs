@@ -2826,15 +2826,19 @@ mod mapping_fork_handoff {
 
     fn register() {
         kinakaze_vfs::tmpfs::mapping::set_buffer_resolver(tmpfs_mapping::prepare_buffer);
-        let _ = unsafe { kinakaze_runtime::register_fork_participant_without_inherited_handles(kinakaze_runtime::ForkParticipant {
-            abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
-            priority: 30,
-            key: KEY,
-            prepare: Some(tmpfs_mapping::fork_prepare),
-            snapshot: Some(snapshot),
-            parent: Some(tmpfs_mapping::fork_parent),
-            child: Some(child),
-        }) };
+        let _ = unsafe {
+            kinakaze_runtime::register_fork_participant_without_inherited_handles(
+                kinakaze_runtime::ForkParticipant {
+                    abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
+                    priority: 30,
+                    key: KEY,
+                    prepare: Some(tmpfs_mapping::fork_prepare),
+                    snapshot: Some(snapshot),
+                    parent: Some(tmpfs_mapping::fork_parent),
+                    child: Some(child),
+                },
+            )
+        };
     }
 
     extern "C" fn initializer() {

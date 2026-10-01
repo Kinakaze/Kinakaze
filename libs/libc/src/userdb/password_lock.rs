@@ -131,15 +131,19 @@ unsafe extern "system" fn child(buffer: *const u8, length: usize) -> c_int {
     0
 }
 extern "C" fn initialize() {
-    let _ = unsafe { kinakaze_runtime::register_fork_participant_without_inherited_handles(kinakaze_runtime::ForkParticipant {
-        abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
-        priority: 40,
-        key: u64::from_le_bytes(*b"LIBCPWDL"),
-        prepare: None,
-        snapshot: Some(snapshot),
-        parent: None,
-        child: Some(child),
-    }) };
+    let _ = unsafe {
+        kinakaze_runtime::register_fork_participant_without_inherited_handles(
+            kinakaze_runtime::ForkParticipant {
+                abi: kinakaze_runtime::FORK_PARTICIPANT_ABI,
+                priority: 40,
+                key: u64::from_le_bytes(*b"LIBCPWDL"),
+                prepare: None,
+                snapshot: Some(snapshot),
+                parent: None,
+                child: Some(child),
+            },
+        )
+    };
 }
 #[used]
 #[unsafe(link_section = ".CRT$XCU")]

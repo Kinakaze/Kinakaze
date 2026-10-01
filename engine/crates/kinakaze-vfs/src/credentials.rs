@@ -68,6 +68,15 @@ pub struct Identity {
     pub uids: [u32; 3],
     pub gids: [u32; 3],
 }
+
+/// Read another registered process's IDs in the initial user namespace.
+pub fn process_identity(pid: u32) -> Result<Identity, i32> {
+    let ids = process::process_ids(pid)?;
+    Ok(Identity {
+        uids: [ids[0], ids[1], ids[2]],
+        gids: [ids[4], ids[5], ids[6]],
+    })
+}
 static IDENTITY: OnceLock<fn() -> Identity> = OnceLock::new();
 pub fn register_identity(provider: fn() -> Identity) {
     let _ = IDENTITY.set(provider);
