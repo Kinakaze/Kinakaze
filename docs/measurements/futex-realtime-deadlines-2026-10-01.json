@@ -170,5 +170,14 @@
   ],
   "references": [
     "https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-setwaitabletimer"
-  ]
+  ],
+  "merged_production_check": {
+    "source_commit": "a2f5d0b46d8be75f4829e7c5f12e435caf120e37",
+    "merged_main_commit": "fc4279f42a09128f63a6457c219bde97c67ae6e1",
+    "passed": true,
+    "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-realtime-merged-production-check.log",
+    "sha256": "5742fa2043b532d1090fa20575f1589fc556d4fde73410aa8c1c713cca7fe87b",
+    "command": "cargo check -p kinakaze-v2-libc -p kinakaze-v2-libpthread -p kinakaze-vfs --release --features <46-feature windows-sys union>",
+    "native_boundary": "Native regression uses source_base_commit plus source_sha256 above; later main descriptor-link changes received the merged production check, not another native regression"
+  }
 }
