@@ -166,8 +166,16 @@ impl PreparedParent {
             ..Stat::default()
         };
         let record = super::created_inode_record(&parent, S_IFREG | (mode & 0o7777));
-        self.object
-            .create_regular_child_with_inode(stored, access, &record)
+        let metadata_access = super::FILE_READ_ATTRIBUTES | super::FILE_READ_EA;
+        match self
+            .object
+            .create_regular_child_with_inode(stored, access | metadata_access, &record)
+        {
+            Err(crate::EACCES) => self
+                .object
+                .create_regular_child_with_inode(stored, access, &record),
+            result => result,
+        }
     }
 }
 

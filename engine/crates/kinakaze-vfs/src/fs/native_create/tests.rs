@@ -41,6 +41,59 @@ impl Drop for Fixture {
 }
 
 #[test]
+fn write_only_creation_preserves_restrictive_inherited_acl() {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Foundation::LocalFree;
+    use windows_sys::Win32::Security::Authorization::{
+        ConvertStringSecurityDescriptorToSecurityDescriptorW, SDDL_REVISION_1,
+    };
+    use windows_sys::Win32::Security::{DACL_SECURITY_INFORMATION, SetFileSecurityW};
+    let fixture = Fixture::new();
+    let parent = fixture.parent();
+    let path: Vec<u16> = fixture
+        .0
+        .join("parent")
+        .as_os_str()
+        .encode_wide()
+        .chain(Some(0))
+        .collect();
+    let descriptor: Vec<u16> = "D:P(D;OIIO;0x8;;;WD)(A;OICI;FA;;;WD)"
+        .encode_utf16()
+        .chain(Some(0))
+        .collect();
+    let mut security = std::ptr::null_mut();
+    assert_ne!(
+        unsafe {
+            ConvertStringSecurityDescriptorToSecurityDescriptorW(
+                descriptor.as_ptr(),
+                SDDL_REVISION_1,
+                &mut security,
+                std::ptr::null_mut(),
+            )
+        },
+        0
+    );
+    let changed = unsafe { SetFileSecurityW(path.as_ptr(), DACL_SECURITY_INFORMATION, security) };
+    unsafe { LocalFree(security) };
+    assert_ne!(changed, 0);
+    let created = parent
+        .create(OsStr::new("payload"), GENERIC_WRITE, 0o600)
+        .unwrap();
+    assert!(Object::granted_access(created.raw()).unwrap() & super::super::FILE_WRITE_DATA != 0);
+    let path = fixture.0.join("parent/payload");
+    assert_eq!(
+        Object::open(&path, FILE_READ_EA).unwrap_err(),
+        crate::EACCES
+    );
+    assert_eq!(
+        parent
+            .create(OsStr::new("payload"), GENERIC_WRITE, 0o600)
+            .unwrap_err(),
+        crate::EEXIST
+    );
+}
+
+#[test]
 fn exclusive_create_publishes_live_setgid_metadata_and_retains_parent_identity() {
     let fixture = Fixture::new();
     fixture.set_parent(0o2755, 45678);

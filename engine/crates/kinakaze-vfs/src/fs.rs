@@ -57,6 +57,7 @@ mod install_tests;
 mod native_create;
 mod native_read;
 mod native_write;
+mod ownership;
 mod permissions;
 pub use allocation::fallocate;
 pub(crate) mod cwd;
@@ -1954,6 +1955,9 @@ impl Ownership {
     }
 }
 fn set_ownership_handle(handle: HANDLE, owner: &Ownership) -> Result<(), i32> {
+    if ownership::unchanged(handle, owner)? {
+        return Ok(());
+    }
     let query = {
         object::Object::reopen(
             handle,
@@ -2068,6 +2072,9 @@ pub fn fchown(fd: i32, allow_path: bool, owner: &Ownership) -> Result<(), i32> {
         return Ok(());
     }
     let translated = owner.translated(crate::mount::overlay::descriptor_mapping(fd)?.as_ref())?;
+    if ownership::unchanged_descriptor(fd, allow_path, &translated)? {
+        return Ok(());
+    }
     if let Some(handle) = crate::mount::overlay::ownership_handle(fd, allow_path)? {
         return set_ownership_object(handle.object(), &translated);
     }

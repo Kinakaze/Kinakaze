@@ -82,7 +82,7 @@ fn read_private_decoded<T>(
 /// A named query does not use the file's data offset or EA enumeration cursor.
 /// Its completion and cancellation are isolated by the request status block,
 /// so a pinned data open with FILE_READ_EA needs no second native open.
-pub(super) fn read_shared_decoded<T>(
+pub(crate) fn read_shared_decoded<T>(
     handle: HANDLE,
     name: &[u8],
     decode: impl FnOnce(&[u8]) -> Result<T, i32>,

@@ -1,0 +1,420 @@
+{
+  "selected": false,
+  "decision": "Rejected at FIFO workload screening; no production changes adopted.",
+  "source_base": "ff127829dacd81c46a9de27d3ab53ea5e84c493b",
+  "source_changes": [
+    "engine/crates/kinakaze-vfs/src/fifo/lifecycle.rs"
+  ],
+  "screening": {
+    "passed": true,
+    "rows": [
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3",
+          "-c",
+          "import json,os,sys,time\npath=sys.argv[1]+'.fifo'\nos.mkfifo(path,0o600)\ntry:\n    start=time.monotonic_ns()\n    for index in range(32):\n        descriptor=os.open(path,os.O_RDWR|os.O_NONBLOCK)\n        assert os.write(descriptor,b'fifo-data')==9\n        assert os.read(descriptor,9)==b'fifo-data'\n        os.close(descriptor)\n    elapsed=(time.monotonic_ns()-start)/1e6\n    with open(sys.argv[1],'w') as stream:json.dump(dict(fifo32_ms=elapsed),stream)\nfinally:os.unlink(path)\nprint('FIFO32_OK',flush=True)\n",
+          "/var/tmp/r28-fifo-screen-c8e2893c830d444f988d87aa284ca338"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.341,
+        "request_to_exit_ms": 601.4341,
+        "activation_to_exit_ms": 601.0931,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 78.125,
+          "kernel_ms": 187.5,
+          "total_cpu_ms": 265.625,
+          "cycles": 736546969,
+          "page_faults": 9165
+        },
+        "prepared_working_set_bytes": 11960320,
+        "cpu_metrics": {
+          "user_ms": 93.75,
+          "kernel_ms": 203.125,
+          "total_cpu_ms": 296.875,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 14114,
+          "read_bytes": 7636331,
+          "write_bytes": 60070,
+          "read_ops": 167,
+          "write_ops": 117,
+          "other_ops": 10756,
+          "other_bytes": 375952
+        },
+        "label": "control",
+        "guest": {
+          "fifo32_ms": 104.1007
+        }
+      },
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3",
+          "-c",
+          "import json,os,sys,time\npath=sys.argv[1]+'.fifo'\nos.mkfifo(path,0o600)\ntry:\n    start=time.monotonic_ns()\n    for index in range(32):\n        descriptor=os.open(path,os.O_RDWR|os.O_NONBLOCK)\n        assert os.write(descriptor,b'fifo-data')==9\n        assert os.read(descriptor,9)==b'fifo-data'\n        os.close(descriptor)\n    elapsed=(time.monotonic_ns()-start)/1e6\n    with open(sys.argv[1],'w') as stream:json.dump(dict(fifo32_ms=elapsed),stream)\nfinally:os.unlink(path)\nprint('FIFO32_OK',flush=True)\n",
+          "/var/tmp/r28-fifo-screen-87620eafd4d244c7b944ad72c02fb676"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.3078,
+        "request_to_exit_ms": 406.221,
+        "activation_to_exit_ms": 405.9132,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 140.625,
+          "kernel_ms": 234.375,
+          "total_cpu_ms": 375.0,
+          "cycles": 1068939561,
+          "page_faults": 36678
+        },
+        "prepared_working_set_bytes": 10588160,
+        "cpu_metrics": {
+          "user_ms": 171.875,
+          "kernel_ms": 265.625,
+          "total_cpu_ms": 437.5,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 43478,
+          "read_bytes": 7641239,
+          "write_bytes": 10162,
+          "read_ops": 169,
+          "write_ops": 112,
+          "other_ops": 10849,
+          "other_bytes": 380388
+        },
+        "label": "candidate",
+        "guest": {
+          "fifo32_ms": 272.1533
+        }
+      },
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3",
+          "-c",
+          "import json,os,sys,time\npath=sys.argv[1]+'.fifo'\nos.mkfifo(path,0o600)\ntry:\n    start=time.monotonic_ns()\n    for index in range(32):\n        descriptor=os.open(path,os.O_RDWR|os.O_NONBLOCK)\n        assert os.write(descriptor,b'fifo-data')==9\n        assert os.read(descriptor,9)==b'fifo-data'\n        os.close(descriptor)\n    elapsed=(time.monotonic_ns()-start)/1e6\n    with open(sys.argv[1],'w') as stream:json.dump(dict(fifo32_ms=elapsed),stream)\nfinally:os.unlink(path)\nprint('FIFO32_OK',flush=True)\n",
+          "/var/tmp/r28-fifo-screen-be436e1fa0664d1abf54bdc15f6659f9"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.2797,
+        "request_to_exit_ms": 372.199,
+        "activation_to_exit_ms": 371.9193,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 93.75,
+          "kernel_ms": 250.0,
+          "total_cpu_ms": 343.75,
+          "cycles": 999775948,
+          "page_faults": 36728
+        },
+        "prepared_working_set_bytes": 10600448,
+        "cpu_metrics": {
+          "user_ms": 140.625,
+          "kernel_ms": 265.625,
+          "total_cpu_ms": 406.25,
+          "processes": 1,
+          "active_processes": 0,
+          "page_faults": 44400,
+          "read_bytes": 7641239,
+          "write_bytes": 10162,
+          "read_ops": 169,
+          "write_ops": 112,
+          "other_ops": 11011,
+          "other_bytes": 384630
+        },
+        "label": "candidate",
+        "guest": {
+          "fifo32_ms": 243.8821
+        }
+      },
+      {
+        "pid": 1,
+        "command": [
+          "/usr/bin/python3",
+          "-c",
+          "import json,os,sys,time\npath=sys.argv[1]+'.fifo'\nos.mkfifo(path,0o600)\ntry:\n    start=time.monotonic_ns()\n    for index in range(32):\n        descriptor=os.open(path,os.O_RDWR|os.O_NONBLOCK)\n        assert os.write(descriptor,b'fifo-data')==9\n        assert os.read(descriptor,9)==b'fifo-data'\n        os.close(descriptor)\n    elapsed=(time.monotonic_ns()-start)/1e6\n    with open(sys.argv[1],'w') as stream:json.dump(dict(fifo32_ms=elapsed),stream)\nfinally:os.unlink(path)\nprint('FIFO32_OK',flush=True)\n",
+          "/var/tmp/r28-fifo-screen-bc87d2f993604c51a0359ae1650bfd88"
+        ],
+        "exit_code": 0,
+        "expected_exit": 0,
+        "status": "passed",
+        "missing_markers": [],
+        "reservation_ms": 0.3073,
+        "request_to_exit_ms": 213.0241,
+        "activation_to_exit_ms": 212.7168,
+        "request_to_ready_ms": null,
+        "application_cpu_metrics": {
+          "user_ms": 62.5,
+          "kernel_ms": 156.25,
+          "total_cpu_ms": 218.75,
+          "cycles": 531138167,
+          "page_faults": 8769
+        },
+        "prepared_working_set_bytes": 11968512,
+        "cpu_metrics": {
+          "user_ms": 62.5,
+          "kernel_ms": 171.875,
+          "total_cpu_ms": 234.375,
+          "processes": 0,
+          "active_processes": -1,
+          "page_faults": 12573,
+          "read_bytes": 7640320,
+          "write_bytes": 9241,
+          "read_ops": 159,
+          "write_ops": 103,
+          "other_ops": 9895,
+          "other_bytes": 340374
+        },
+        "label": "control",
+        "guest": {
+          "fifo32_ms": 60.7518
+        }
+      }
+    ],
+    "means": {
+      "control": 82.42625000000001,
+      "candidate": 258.0177
+    },
+    "regression_percent": 213.02855583021181,
+    "scope": "Independent FIFO workload screening, not the predeclared startup/dpkg acceptance comparison.",
+    "hashes": {
+      "control": {
+        "worker.exe": "e57878f600765cf65d7b42acb8bb3ae93d77aa2e235fd646f1198cfde2dbf9bd",
+        "init.exe": "275db1ba5b30c3d5cede27645d421f66c60fa2bea888574a41f0e071046a27e5",
+        "rootfs.manifest.json": "65c4c844188db2bd5da8d011fdc4c7577377a973da26f3e1250193d07a2bf6bc",
+        "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+        "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "rootfs\\lib\\kinakaze_alloc.so": "69231b738dee195415f66bf669fe1cc8cb88d53690370d39b1c74c67af64d901",
+        "rootfs\\lib\\kinakaze_elf.so": "b058d726cb78c9d777cdeabcba2c50b279ba0d2549cf2930f8e313823c16adcc",
+        "rootfs\\lib\\kinakaze_guest_engine.so": "5c86ea2378aaac71e0210e9c79e3495e6292c3f1b62e8cac62432a94f3f9c932",
+        "rootfs\\lib\\kinakaze_kernel.so": "1f852fd60541d8442b4b70679fddfc6fd3133501bfc963ebe461f684e304ee42",
+        "rootfs\\lib\\kinakaze_tls.so": "1598963891636caeb59a8ec456e34f9f6bb8aeecb99e4869e4016ed3e44907d9",
+        "rootfs\\lib\\kinakaze_vfs.so": "57a9133f52b3d45f2b2b8c001f78d1a3c97baf9cb431e38b13eb91705bbee76b",
+        "rootfs\\lib\\ld-linux-x86-64.so.2": "2b41c8c73ee5abc38a98bee5186051c5d67bc3a8c3b8312f6c647cd8da57b6ea",
+        "rootfs\\lib\\libasound.so.2": "cf2bbd09410acfee6e7a1abfcec804a6e36673fb07d78fa377da48ab0d08bf4b",
+        "rootfs\\lib\\libc.so.6": "6856b459e2a20b1e631998f9517509f1a319b4694b0086fa03192218aa075895",
+        "rootfs\\lib\\libcuda.so.1": "6b3813113366573284dca8a6cc236449d1d5d7ff9c8735d5c22e33d0f6a7b739",
+        "rootfs\\lib\\libdisplay.so.1": "a39dee21c75b8a496ba057d91d8a8319882dd981398ac4f0484d2a3795c77d22",
+        "rootfs\\lib\\libdl.so.2": "c30134928df196688ecba9d42c6eed8ae17b1aed9fa912cfcee199a0690cdb65",
+        "rootfs\\lib\\libEGL.so.1": "2a4bc16225bfee58ae50fa74b5f8d4570156c8e957ab66247035673f88268d81",
+        "rootfs\\lib\\libGL.so.1": "078546a0651f656b65a6bf7036a45ac7b520062383312f53591c9ba2a2c7f735",
+        "rootfs\\lib\\libGLESv2.so.2": "294a25ac15c6659c8bfbadd55775a98935b02afd464c60677971316367764b4e",
+        "rootfs\\lib\\libGLX.so.0": "88a436766151b70e0ff97e7ea98f1fcb12e71996ea003c922e2c71e0bcf0dfce",
+        "rootfs\\lib\\libkinakaze-runtime.so.1": "88678a554744da8d1a36cddd9894a87c656040a04d616c932b91249dfdf015ae",
+        "rootfs\\lib\\libm.so.6": "659efc42cf03cca1bc00aea1d953ffb24e6df8854f20a344e60fe2d471a26e9a",
+        "rootfs\\lib\\libOpenGL.so.0": "bfbf7e8eac6f8bef41a194e795cb012bc6d5383adfe4954ee229970b2b07c443",
+        "rootfs\\lib\\libpipewire-0.3.so.0": "581f70a1f57fb7288b63f08f76162c1450b58485d460f0cb9ce2b1dd431252c4",
+        "rootfs\\lib\\libpthread.so.0": "292407b968e30a603bee529b29807d6f39edf8b6c33dbfafa0a44d2f80308da1",
+        "rootfs\\lib\\libpulse.so.0": "e08a00a0a39faffbde9a0cbf4a963613e224b6bfdd3dda84aa2a4048922158e0",
+        "rootfs\\lib\\libresolv.so.2": "0f709946cdb4a8b6c8f211c787d7904ad071c952d675ca0ae500c759d5191f66",
+        "rootfs\\lib\\librt.so.1": "93ea661c15768df1109b1a992526aaca5eb5e25db48582bf9bbfaaccbc02e36d",
+        "rootfs\\lib\\libvulkan.so.1": "c08719f1a1793d792c829181377e497b5e900daed6eab16a381e15f5df478342",
+        "rootfs\\lib\\libX11-xcb.so.1": "c246e80cb4ac6f8995cf6af7062608fbb55d9846fe25335b277f0b66d23b658c",
+        "rootfs\\lib\\libX11.so.6": "2f8910762caf8157f52c0e84666244b047ec1fefe7de49e1b5ede58e7ed403ef",
+        "rootfs\\lib\\libxcb.so.1": "a2dcd623f122a6c99ec59d4f92c474e89220bb85ceef4cc30ed937af71312471",
+        "rootfs\\lib\\libXcursor.so.1": "71ea59808b666a381f7f0258556677ba26255c4f1da9aa6f5f50516964000f9f",
+        "rootfs\\lib\\libXext.so.6": "8d50e957e798949194c363e38f36eaec18c8bbb936900ec907f82eb607fa89f9",
+        "rootfs\\lib\\libXi.so.6": "38549a9037cc32c2fdc0fb6ac37cb6e250f51793151e6516c5c72f9a3ccba7ec",
+        "rootfs\\lib\\libXinerama.so.1": "1b8943821a3c8d4b853b4f6529ee2f8281766ccd82d6609730ae6a0937f554bf",
+        "rootfs\\lib\\libXrandr.so.2": "0d70b18f5ad203aa7bdfbea1d2960c579820a710a06ea02a75c7d3b848b3fd1f",
+        "rootfs\\lib\\libXrender.so.1": "7a13705d7cfbf634522d7cb74eeeb413ac0859ded51c28af3d261c972fcf7e1e",
+        "rootfs\\lib\\libXxf86vm.so.1": "9a8aeba480010937c4dd21cbdafb565e90177a32288bf394ac0660e372b5dad6",
+        "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+      },
+      "candidate": {
+        "worker.exe": "a58af5c50abfcf3b96c446167fab33dc8ffb2007d660b438183a940449b18f3c",
+        "init.exe": "a9148b74d5f2368c072e0b16fb08339055135ebf407b93ea77e8920f0dcf90a1",
+        "rootfs.manifest.json": "65c4c844188db2bd5da8d011fdc4c7577377a973da26f3e1250193d07a2bf6bc",
+        "concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa",
+        "rootfs\\lib\\concrt140.dll": "2405355f0a58067b258f8df33c327e3a3d716eaac5a3a5aebb757842d85bd376",
+        "rootfs\\lib\\kinakaze_alloc.so": "d84b9a73bdcdadcf6e0583e9578d416d500f006db2ba88fb579c28af541f19bc",
+        "rootfs\\lib\\kinakaze_elf.so": "2c92c3f7d2de215e13f6ec2e878ec28cbed58c4e4f2a1c3354a76d9528ddd915",
+        "rootfs\\lib\\kinakaze_guest_engine.so": "3d4806d25710a5beb3ef1a082ca42873e39ec75c1a18368d78b2f12b680e9a7a",
+        "rootfs\\lib\\kinakaze_kernel.so": "4d334628ed820b768c3cf8f97b5186cf102f0a57b672fe4bb9aa6648c0346a71",
+        "rootfs\\lib\\kinakaze_tls.so": "ea0858bc6ab02aa614d6f4c58e614dc82c9dfcf134912342b379f10ebf5b4cb5",
+        "rootfs\\lib\\kinakaze_vfs.so": "354a91cab931008302046317e3b89aab59682b4fdf00897cfb9e06a2872e0a0b",
+        "rootfs\\lib\\ld-linux-x86-64.so.2": "5e3e73df46ccf59d9b0ff9097d46c8cb46133fa070db339b243ae2883abeda08",
+        "rootfs\\lib\\libasound.so.2": "41d6a40a306a25e2b37129d917360a0ef02cbc8a3970e959b6060330cd3f0e72",
+        "rootfs\\lib\\libc.so.6": "e20dda3b6debd01b4ca14ac037a2e268988c65b1b94af78b93c3dfccb7e194d8",
+        "rootfs\\lib\\libcuda.so.1": "51938bd7e0458a6fb1a62a78ac5c6c2770328a46d6817acbae40fe717910cda0",
+        "rootfs\\lib\\libdisplay.so.1": "1b383b8d17777e9029b3d0685329c5fc75a0ca9bd1cc88f3cea200d3d6a321fd",
+        "rootfs\\lib\\libdl.so.2": "e3deaa5ba60c9743723c23bfb28eb6dcbc7233ad91efe795e3580e9094cc093e",
+        "rootfs\\lib\\libEGL.so.1": "4c658abe46483596481e0e5d0856c9752a4c774e54095d64a2bed86f8cd65c2b",
+        "rootfs\\lib\\libGL.so.1": "1e5c1797477bc6431740fcc18d8a15f44a8bb71732593fc6dc5a5e383fe7bb17",
+        "rootfs\\lib\\libGLESv2.so.2": "6f0bc0af759b79d8e7b7687b2c569afb49fd6aadb3a43f6e956cd44d64cb6340",
+        "rootfs\\lib\\libGLX.so.0": "1c3f1adeed70a900872d8506ed8e860dc50cda736517aa6931241df01c145265",
+        "rootfs\\lib\\libkinakaze-runtime.so.1": "d09a6af7bd19cbb67f594fe23eaf94e54214c080c0ce40ed9b1fb3c836a771b6",
+        "rootfs\\lib\\libm.so.6": "398bc1c1a665c854714bd05c62a10d6107d07eaddf4726f53219dfc82cfbf809",
+        "rootfs\\lib\\libOpenGL.so.0": "0fae71f089fca7584cab35aacf59f671bea729cd900834ddb0407c5c2f1b7905",
+        "rootfs\\lib\\libpipewire-0.3.so.0": "cca28b398567d1bc26eb8766cea4cd30cbafaf59e3d5ab6ebbb4488644b60f18",
+        "rootfs\\lib\\libpthread.so.0": "957646f528938e93310d09b8bb1f20a1ef53b20697e2975282d9d310554a1c2f",
+        "rootfs\\lib\\libpulse.so.0": "42d3c801bf8c2582de3363f06a75e420f5cc0ebf9832f420553004d8ab4eea5e",
+        "rootfs\\lib\\libresolv.so.2": "8781722e7f11576c7464243fa843fa86eea92b727b83b0c5daa047301f4625c4",
+        "rootfs\\lib\\librt.so.1": "177d777b7d40912e5e0d01540f76ae751a599f9c5525ade33f01691baef1ad05",
+        "rootfs\\lib\\libvulkan.so.1": "a9947d7aed77847e99bafb86a32587306af325988e67427ac8d5789c3826fbe2",
+        "rootfs\\lib\\libX11-xcb.so.1": "efea18d09545f52b1118d825900a05f7066d9bd7c321296e68955fe54a82849d",
+        "rootfs\\lib\\libX11.so.6": "f995500e82384e15f7a1b962093e040fbb2bacb2605b2ccc8382c65673021b9c",
+        "rootfs\\lib\\libxcb.so.1": "3558e339e307a0aa928d962c1590827074fa92417d607bc0a25674b2c09548f3",
+        "rootfs\\lib\\libXcursor.so.1": "6eb99d94ce32909a677aa1ab6bdae18b5d030e968edd5bf0db4daa5bd3160f47",
+        "rootfs\\lib\\libXext.so.6": "5a63f0beaf7ea8225a0b6213cdaeabf0b4aec85b74edc0403265cfb955d3ed45",
+        "rootfs\\lib\\libXi.so.6": "7982c86279fb6ee3b9633ce43924bbfc43357a06c22e56fb53cbbdbafa891bc3",
+        "rootfs\\lib\\libXinerama.so.1": "3eeb1df214547e1d3a4a7ba7f201f0c35b003b526ee38e1452c668b8656d7a10",
+        "rootfs\\lib\\libXrandr.so.2": "66f2ce6f8a86eb348477064dedcdc66adcdefb019eb1c76da45a219ca8fde213",
+        "rootfs\\lib\\libXrender.so.1": "fd4dd9dc358039184cc7c31643715aa36a584903cbd762cc0df5b1a8d444f52b",
+        "rootfs\\lib\\libXxf86vm.so.1": "94614545ecfaebcfe13737ed4bc3f4e2af4af40e2bbaade87676d9d7aa20a396",
+        "rootfs\\lib\\msvcp140.dll": "0f885b509a685d2bbfa652fed26b5fb31d88fbdab0a978c641d1c7b8aa460aa9",
+        "rootfs\\lib\\msvcp140_1.dll": "bfad5aef4c63a669e3c140655cdfdf395b6c979b400a447bd5dcb65ed8826c3d",
+        "rootfs\\lib\\msvcp140_2.dll": "3ea06f0ee098b4823cb79599df3780e7f23cce52c19aac31d2a0d47efe33a5e9",
+        "rootfs\\lib\\msvcp140_atomic_wait.dll": "640b2aefced484d0368eea5bdd06addd0658a3a70a49256e560d6923b404a479",
+        "rootfs\\lib\\msvcp140_codecvt_ids.dll": "f2069a52880ec885ee7f0511186100eb7fada0411a2b4948fafea7735b878a18",
+        "rootfs\\lib\\std-0cebe7c42cd80226.dll": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc",
+        "rootfs\\lib\\vccorlib140.dll": "19839407c3fdbc824e5bce189bf68ddf8097f12ec28b757797ffa0415c144ddd",
+        "rootfs\\lib\\vcruntime140.dll": "d5e4d9a3e835fa679450145d6a7d94e36573a509317111904d9b3712c30d9066",
+        "rootfs\\lib\\vcruntime140_1.dll": "1f2d41c4aa5db0bc33ebf7b66d72943a817d7ce6cbe880502a9403823633093f",
+        "rootfs\\lib\\vcruntime140_threads.dll": "219915cf20822f34d5e7c1fdd4e21ae7f3396881096c51036225fb8f84b47afa"
+      }
+    }
+  },
+  "folder_equivalence": {
+    "passed": true,
+    "expected_root": "C:\\Users\\nanaeo\\AppData\\Local\\kinakaze\\fifo-v3",
+    "actual_directory": "C:\\Users\\nanaeo\\AppData\\Local\\kinakaze\\fifo-v3\\cc70f34eeed3d55f-1ae893d8e893b10d-91389d00000005000000000000000000",
+    "marker": "F:\\crysoacu2\\artifacts\\node-install-20260930\\goal180-r25-root\\var\\tmp\\r28-folder-cdc3b879004a457796753dcc1fb4aad1",
+    "guest": {
+      "pid": 1,
+      "command": [
+        "/usr/bin/python3",
+        "-c",
+        "import os,sys; path=sys.argv[1]; os.mkfifo(path,0o600); descriptor=os.open(path,os.O_RDWR|os.O_NONBLOCK); assert os.write(descriptor,b'fifo-data')==9; assert os.read(descriptor,9)==b'fifo-data'; os.close(descriptor); print('FIFO_FOLDER_OK',flush=True)",
+        "/var/tmp/r28-folder-cdc3b879004a457796753dcc1fb4aad1"
+      ],
+      "exit_code": 0,
+      "expected_exit": 0,
+      "status": "passed",
+      "missing_markers": [],
+      "reservation_ms": 0.3698,
+      "request_to_exit_ms": 364.1206,
+      "activation_to_exit_ms": 363.7508,
+      "request_to_ready_ms": null,
+      "application_cpu_metrics": {
+        "user_ms": 31.25,
+        "kernel_ms": 62.5,
+        "total_cpu_ms": 93.75,
+        "cycles": 311094694,
+        "page_faults": 8687
+      },
+      "prepared_working_set_bytes": 11149312,
+      "cpu_metrics": {
+        "user_ms": 62.5,
+        "kernel_ms": 62.5,
+        "total_cpu_ms": 125.0,
+        "processes": 1,
+        "active_processes": 0,
+        "page_faults": 13287,
+        "read_bytes": 7169098,
+        "write_bytes": 9523,
+        "read_ops": 126,
+        "write_ops": 105,
+        "other_ops": 5335,
+        "other_bytes": 230682
+      }
+    },
+    "static_imports_absent": true
+  },
+  "native_suite_run": false,
+  "guest84_suite_run": false,
+  "startup_dpkg_comparison_run": false,
+  "full_install_run": false,
+  "target_met": false,
+  "evidence": {
+    "r28-source.json": {
+      "bytes": 213781,
+      "sha256": "824dc4e16da2901d042542ea270c83040ae494564b1f7b18366943b9277bc4e4"
+    },
+    "r28-dist.json": {
+      "bytes": 6079,
+      "sha256": "b3366b938534c0e7149813b331645bfeb878bce3e7fe605788b0847aef69c3d5"
+    },
+    "r25-source.json": {
+      "bytes": 213781,
+      "sha256": "b14866bc3bfd5d5214151aff639b0dd859da0bfff5354969d9c3ce9673d8fa20"
+    },
+    "r25-dist.json": {
+      "bytes": 6079,
+      "sha256": "000b71ec696f5afdfdc928ebc6a440b6ebf1cdf76604f8ba2e6d0ea5f7e7ae70"
+    },
+    "r28-build.log": {
+      "bytes": 11209,
+      "sha256": "1e6e488b9a07014f9b1e723a82ace8097cd97ec2f46909fbe9c954704407096d"
+    },
+    "r28-folder.json": {
+      "bytes": 1658,
+      "sha256": "4ced0ece9142b833a84d79bf3efb9d179808f5046bc4b91c6330df6ce17a0249"
+    },
+    "r28-fifo-screen.json": {
+      "bytes": 19402,
+      "sha256": "e2eb47d1fa1870c59f58e2019cc7bb87e1920acf62d93cd0f0f5f3821952298c"
+    },
+    "r28-selection-plan.json": {
+      "bytes": 791,
+      "sha256": "5ae0a21716736e7fb6004d554b66d59a89539d1dd9e536ebe190d741a1a6625c"
+    },
+    "prepare-r28.py": {
+      "bytes": 1077,
+      "sha256": "cdc095479a50f1e6874a815e1182d59fbca6ea396eef2fdbea68c8896d7f6ff5"
+    },
+    "build-r28.py": {
+      "bytes": 500,
+      "sha256": "5eefd99955c23fc16bf075c05f7b43a32a536a88660945a526d71dde97a7dcaa"
+    },
+    "build-r24.py": {
+      "bytes": 1408,
+      "sha256": "89bb1732f63ff26d493f114f7b2b729e750a1225785992f94b29a8fc47b7ac51"
+    },
+    "verify-r28-folder.py": {
+      "bytes": 3348,
+      "sha256": "beca4cd1ae22baeb6b1df6bd3ffcc35130a230eb3a0e8dc6eddf1e8d94c9acd4"
+    },
+    "screen-r28-fifo.py": {
+      "bytes": 2403,
+      "sha256": "96182eea705720e5d28c685874aa0f4f70c879b2b05738cff9cfdb9b0dae6d13"
+    }
+  }
+}

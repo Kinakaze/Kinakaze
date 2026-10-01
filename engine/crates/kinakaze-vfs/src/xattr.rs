@@ -272,6 +272,14 @@ impl Attributes {
         crate::fs::ea::write_private(self.raw(), EA_NAME, &encode(table)?)
     }
 
+    pub(crate) fn contains_shared_locked(handle: HANDLE, name: &[u8]) -> Result<bool, i32> {
+        validate_name(name)?;
+        crate::fs::ea::read_shared_decoded(handle, EA_NAME, |bytes| {
+            Ok(decode(bytes)?.contains_key(name))
+        })
+        .map(|present| present.unwrap_or(false))
+    }
+
     /// The caller already holds the inode mutex and owns this metadata open.
     /// Keep chown's privilege removal in the same transaction without another
     /// native reopen, recursive mutex acquisition, or maximum-size EA buffer.
