@@ -177,7 +177,7 @@ unsafe extern "sysv64" fn cancelled_cleanup(argument: *mut c_void) {
 
 unsafe extern "sysv64" fn cancellable_condition(argument: *mut c_void) -> *mut c_void {
     let state = unsafe { &*argument.cast::<CancelProbe>() };
-    assert_eq!(unsafe { pthread_setspecific(state.key, argument) }, 0);
+    assert_eq!(pthread_setspecific(state.key, argument), 0);
     assert_eq!(unsafe { pthread_mutex_lock(state.mutex as _) }, 0);
     assert_eq!(
         unsafe { condition(state.cond as _, state.mutex as _, None) },
