@@ -60,7 +60,15 @@ python tools/benchmark-futex-queues.py --binary <frozen-libc-test.exe> --case re
 ## 后续 main 与边界
 
 上述原生/客体/性能数据对应 v4 固定图。main 后续已接入
-[pthread PI mutex 和 v5 协议](pthread-pi-mutex-2026-10-01.md)；v4 数据不自动
-证明后续 v5 图的性能或所有路径。Linux realtime、PRIO_PROTECT、跨 PID
+[pthread PI mutex 和 v5 协议](pthread-pi-mutex-2026-10-01.md)。合并源树
+1603f01 的新冻结原生图在两种优化配置下各通过 libc 645 项、pthread 59 项，
+零失败，分别忽略 22、4 项；生产 release 检查通过，冻结镜像哈希未变。
+
+扩展后的 requeue-pi 客体探针在 v5 完整发行图上也通过两种配置。此处复用
+已验证的 3f23211 发行图：其 38 个原生镜像与生产者记录逐项 SHA-256 相同；
+当前 Rust 运行时代码与该生产者相同，差异只有 cfg(test) 计数助手与两个
+测试模块。发行图没有混用新旧 DLL。探针报告、图哈希和源树比对索引写入
+同一测量 JSON 的 v5_integration 字段。v4 数据不自动证明 v5 的性能或
+所有路径。Linux realtime、PRIO_PROTECT、跨 PID
 namespace、外部 robust 链表互操作、时钟跳变和所有 syscall/VFS/I/O 的
 逐路径验证仍需继续。此阶段没有缩减持续目标。
