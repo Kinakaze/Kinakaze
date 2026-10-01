@@ -60,7 +60,7 @@ def main():
     report = dict(root=str(args.root.resolve()), dist=str(args.dist.resolve()), pi_mutex=args.pi_mutex, robust_cancel=args.robust_cancel, shared_cancel=args.shared_cancel,
                   staging=str(staging), fixture_sha256=inputs,
                   distribution_sha256=distribution_hashes(args.dist), rows=[])
-    switches = ('KINAKAZE_PTHREAD_PARK_OPT', 'KINAKAZE_PTHREAD_SHARED_CACHE_OPT')
+    switches = ('KINAKAZE_PTHREAD_PARK_OPT', 'KINAKAZE_PTHREAD_SHARED_CACHE_OPT', 'KINAKAZE_PTHREAD_PI_OPT')
     previous = {name: os.environ.get(name) for name in switches}
     try:
         for enabled in (False, True):

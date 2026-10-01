@@ -14,6 +14,7 @@ import subprocess
 
 
 CASES = {
+    'pthread-pi': ('KINAKAZE_PTHREAD_PI_OPT', 'futex::pi::pthread::tests::benchmark_pthread_pi_pairs', 'PTHREAD_PI_BENCH'),
     'pthread': ('KINAKAZE_PTHREAD_PARK_OPT', 'parking::tests::benchmark_event_parking', 'PTHREAD_PARK_BENCH'),
     'wait2': ('KINAKAZE_FUTEX_OPT', 'sysadmin::futex_scalar::tests::benchmark_wait2_registration', 'WAIT2_BENCH'),
     'legacy-wait': ('KINAKAZE_FUTEX_OPT', 'sysadmin::futex_deadline::tests::benchmark_legacy_wait_registration', 'LEGACY_WAIT_BENCH'),
