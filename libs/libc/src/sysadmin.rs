@@ -2757,9 +2757,9 @@ fn futex_timeout(
     timeout: *const KernelTimespec,
     absolute: bool,
     realtime: bool,
-) -> Result<Option<std::time::Duration>, i64> {
+) -> Result<crate::futex::Deadline, i64> {
     if timeout.is_null() {
-        return Ok(None);
+        return Ok(crate::futex::Deadline::relative(None, std::time::Instant::now()));
     }
     // Copy into a local before interpreting it. Kernel timespec pointers need
     // not be aligned, and a concurrent unmap must report EFAULT rather than
@@ -2792,7 +2792,11 @@ fn futex_timeout(
     };
     let seconds = (remaining / 1_000_000_000).min(u128::from(u64::MAX)) as u64;
     let nanos = (remaining % 1_000_000_000) as u32;
-    Ok(Some(std::time::Duration::new(seconds, nanos)))
+    Ok(crate::futex::Deadline {
+        duration: Some(std::time::Duration::new(seconds, nanos)),
+        started: std::time::Instant::now(),
+        realtime: (absolute && realtime).then_some(target as i128),
+    })
 }
 
 fn remove_empty_futex_queue(queues: &mut FutexQueue, address: usize) {
@@ -3003,15 +3007,14 @@ fn futex_wait(
     if bitset == 0 {
         return -i64::from(EINVAL);
     }
-    let duration = match futex_timeout(timeout, absolute, realtime) {
-        Ok(duration) => duration,
+    let deadline = match futex_timeout(timeout, absolute, realtime) {
+        Ok(deadline) => deadline,
         Err(error) => return error,
     };
     futex_wait_prepared(
         address,
         expected,
-        duration,
-        std::time::Instant::now(),
+        deadline,
         bitset,
     )
 }
@@ -3021,33 +3024,30 @@ fn futex_wait(
 fn futex_wait_prepared(
     address: FutexAddress,
     expected: i32,
-    duration: Option<std::time::Duration>,
-    started: std::time::Instant,
+    deadline: crate::futex::Deadline,
     bitset: u32,
 ) -> i64 {
-    let restart = if duration.is_some() {
+    let restart = if deadline.duration.is_some() {
         crate::futex::RestartPolicy::Interrupt
     } else {
         crate::futex::RestartPolicy::Keep
     };
-    futex_wait_attempt(address, expected, duration, started, bitset, restart)
+    futex_wait_attempt(address, expected, deadline, bitset, restart)
         .map_or_else(|error| -i64::from(error), |_| 0)
 }
 
 fn futex_wait_attempt(
     address: FutexAddress,
     expected: i32,
-    duration: Option<std::time::Duration>,
-    started: std::time::Instant,
+    deadline: crate::futex::Deadline,
     bitset: u32,
     restart: crate::futex::RestartPolicy,
 ) -> Result<bool, i32> {
     use kinakaze_vfs::{EINTR, EIO, interrupt, signal};
     use windows_sys::Win32::Foundation::{WAIT_OBJECT_0, WAIT_TIMEOUT};
-    use windows_sys::Win32::System::Threading::INFINITE;
 
     if address.shared.is_some() {
-        return crate::futex::wait_attempt(expected, duration, started, bitset, restart, || {
+        return crate::futex::wait_attempt(expected, deadline, bitset, restart, || {
             let key = crate::fdio::futex_key(address.word as usize)?;
             let word = futex_word(address.word).map_err(|error| -error as i32)?;
             Ok((key, word.load(Ordering::SeqCst)))
@@ -3098,15 +3098,8 @@ fn futex_wait_attempt(
             WAIT_OBJECT_0
         } else {
             loop {
-                let remaining = duration.map(|limit| limit.saturating_sub(started.elapsed()));
-                let milliseconds = remaining.map_or(INFINITE, |left| {
-                    left.as_nanos()
-                        .div_ceil(1_000_000)
-                        .min(u128::from(INFINITE - 1)) as u32
-                });
                 // SAFETY: both events belong to the calling thread.
-                let status =
-                    unsafe { kinakaze_vfs::deadline_wait::any(&[event, park], milliseconds) };
+                let status = unsafe { deadline.wait(&[event, park]) };
                 if status == WAIT_OBJECT_0 + 1
                     && matches!(
                         futex_requeue::selected(core::iter::once(&waiter)),
@@ -3121,7 +3114,7 @@ fn futex_wait_attempt(
         let removed = unqueue_futex(&waiter);
 
         signal::unregister_waiter();
-        let expired = duration.is_some_and(|limit| started.elapsed() >= limit);
+        let expired = deadline.expired();
         let delivery = signal::deliver_pending();
         // As in Linux __futex_wait, a selected wake wins over timeout/signal.
         let removed = match removed {
@@ -3230,14 +3223,13 @@ fn futex_syscall_attempt(
         Err(error) => return error,
     };
     match cmd {
-        FUTEX_LOCK_PI | FUTEX_TRYLOCK_PI | FUTEX_LOCK_PI2 => futex_pi::lock(address, cmd == FUTEX_TRYLOCK_PI, deadline.unwrap_or(futex_deadline::Prepared { duration: None, started: std::time::Instant::now() })),
+        FUTEX_LOCK_PI | FUTEX_TRYLOCK_PI | FUTEX_LOCK_PI2 => futex_pi::lock(address, cmd == FUTEX_TRYLOCK_PI, deadline.unwrap_or_else(|| crate::futex::Deadline::relative(None, std::time::Instant::now()))),
         FUTEX_WAIT | FUTEX_WAIT_BITSET => {
             let deadline = deadline.expect("timed command was prepared before key resolution");
             futex_wait_prepared(
                 address,
                 val as i32,
-                deadline.duration,
-                deadline.started,
+                deadline,
                 if cmd == FUTEX_WAIT {
                     FUTEX_BITSET_MATCH_ANY
                 } else {

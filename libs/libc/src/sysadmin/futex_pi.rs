@@ -6,7 +6,6 @@ use super::*;
 use crate::futex::pi::{self, Acquisition};
 use kinakaze_vfs::{EIO, interrupt, signal};
 use windows_sys::Win32::Foundation::{WAIT_OBJECT_0, WAIT_TIMEOUT};
-use windows_sys::Win32::System::Threading::INFINITE;
 
 pub(super) const RESTART: i64 = i64::MIN;
 
@@ -112,9 +111,7 @@ fn attempt(
     signal::register_waiter();
     let outcome = loop {
         let pending = signal::interrupt_pending();
-        let expired = deadline
-            .duration
-            .is_some_and(|duration| deadline.started.elapsed() >= duration);
+        let expired = deadline.expired();
         let (mut transaction, _, queues) = match begin(address) {
             Ok(value) => value,
             Err(error) => break Err(error),
@@ -149,16 +146,7 @@ fn attempt(
         };
         drop(queues);
         drop(transaction);
-        let milliseconds = deadline.duration.map_or(INFINITE, |duration| {
-            duration
-                .saturating_sub(deadline.started.elapsed())
-                .as_nanos()
-                .div_ceil(1_000_000)
-                .min(u128::from(INFINITE - 1)) as u32
-        });
-        let status = unsafe {
-            kinakaze_vfs::deadline_wait::any(&[park, interrupt, owner.raw()], milliseconds)
-        };
+        let status = unsafe { deadline.wait(&[park, interrupt, owner.raw()]) };
         if !matches!(status, WAIT_OBJECT_0 | WAIT_TIMEOUT)
             && status != WAIT_OBJECT_0 + 1
             && status != WAIT_OBJECT_0 + 2

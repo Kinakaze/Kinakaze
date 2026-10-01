@@ -14,6 +14,8 @@ pub(crate) use wait_group::WaitGroup;
 mod hybrid;
 pub(crate) use hybrid::{ParkIdentity, Transaction, park, park_identity};
 mod atomic_word;
+mod deadline;
+pub(crate) use deadline::Deadline;
 pub(crate) mod pi;
 
 #[inline]
@@ -854,7 +856,7 @@ pub(crate) fn wait_started(
     } else {
         RestartPolicy::Keep
     };
-    wait_attempt(expected, duration, started, bitset, restart, load).map(|_| ())
+    wait_attempt(expected, Deadline::relative(duration, started), bitset, restart, load).map(|_| ())
 }
 
 #[derive(Clone, Copy)]
@@ -867,8 +869,7 @@ pub(crate) enum RestartPolicy {
 /// true: committed wake; false: restart a modern syscall after its handler.
 pub(crate) fn wait_attempt(
     expected: i32,
-    duration: Option<Duration>,
-    started: Instant,
+    deadline: Deadline,
     bitset: u32,
     restart: RestartPolicy,
     load: impl Fn() -> Result<(Key, i32), i32>,
@@ -884,7 +885,7 @@ pub(crate) fn wait_attempt(
         signal::register_waiter();
         let outcome = loop {
             let pending = signal::interrupt_pending();
-            let expired = duration.is_some_and(|limit| started.elapsed() >= limit);
+            let expired = deadline.expired();
             if pending || expired {
                 break waiter.finish(true).and_then(|woken| {
                     if woken {
@@ -896,15 +897,8 @@ pub(crate) fn wait_attempt(
                     }
                 });
             }
-            let milliseconds = duration.map_or(INFINITE, |limit| {
-                limit
-                    .saturating_sub(started.elapsed())
-                    .as_nanos()
-                    .div_ceil(1_000_000)
-                    .min(u128::from(INFINITE - 1)) as u32
-            });
             let handles = [waiter.event.0, interrupt];
-            let status = unsafe { kinakaze_vfs::deadline_wait::any(&handles, milliseconds) };
+            let status = unsafe { deadline.wait(&handles) };
             if status == WAIT_OBJECT_0 || status == WAIT_TIMEOUT {
                 match waiter.finish(false) {
                     Ok(true) => break Ok(true),
@@ -934,7 +928,7 @@ pub(crate) fn wait_attempt(
                 RestartPolicy::Keep => continue,
             }
         }
-        if duration.is_some_and(|limit| started.elapsed() >= limit) {
+        if deadline.expired() {
             return Err(ETIMEDOUT);
         }
         if delivery == signal::Delivery::Interrupted {

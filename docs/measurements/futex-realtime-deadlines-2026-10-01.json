@@ -1,0 +1,174 @@
+{
+  "date": "2026-10-01",
+  "scope": "Copied absolute CLOCK_REALTIME deadlines for raw futex waits and pthread PRIO_INHERIT; related native regression only",
+  "source_base_commit": "19bd4434d09533c2bd37b2fc71d94d638cee510b",
+  "source_sha256": {
+    "engine/crates/kinakaze-vfs/src/deadline_wait.rs": "35af8a8326ec75fd2a23519725f28a2c74c195529443ee5036eb29b22115d81a",
+    "engine/crates/kinakaze-vfs/src/deadline_wait/tests.rs": "4a71da28a797d21b131604610641ad47fb40363e8217d80aafc0d7e91c05d6eb",
+    "libs/libc/src/futex.rs": "79c366c90bc84d32344cdd8577e1a4ce6aa159332bd28496a419606791fbb73d",
+    "libs/libc/src/futex/deadline.rs": "812a61635c3b624b13af7009edb77b0abfbe8fcc02ac30796419a4b599d4cdc5",
+    "libs/libc/src/futex/pi/pthread.rs": "879a7b454d32b2fdd9f875d77f4f11cf5fb566a925686864421589b0288adb85",
+    "libs/libc/src/sysadmin.rs": "239052fc6e72b590e81d001e883fe38725a594bab0ee2988ce7bb0023f301022",
+    "libs/libc/src/sysadmin/futex_deadline.rs": "c773df68b70c4a960d7f4c0f55de751b9708c0ad45124dd8b719a50932d5fa57",
+    "libs/libc/src/sysadmin/futex_deadline/clock_tests.rs": "17bb8b0950c2590cf37c7247ae3cb0d9a19d6361335014ff050580086ff6fbdc",
+    "libs/libc/src/sysadmin/futex_deadline/tests.rs": "17dfef19460fc5b367f41922f93b366a2101850f7a6e582afed6a9fe3f74af79",
+    "libs/libc/src/sysadmin/futex_pi.rs": "bf569b3baf41ec9713b06bac7b606cd7ca4479e6690d57ed7997dbfc4c58bfbe",
+    "libs/libc/src/sysadmin/futex_requeue_pi.rs": "e5984758bff7b0c4121deae7f9982b8293c1e861118fe35427f31304535de6db",
+    "libs/libc/src/sysadmin/futex_scalar.rs": "9922e5af90a823582b56c39e7823523c20c4a6b9bf2cbebb78af9feef9ff7ad8",
+    "libs/libc/src/sysadmin/futex_vector.rs": "745f1569f43b2f0e13f1f8da09831813e609775ffca57d187ad189941e3cf371"
+  },
+  "native": {
+    "passed": true,
+    "image_hashes_unchanged": true,
+    "manifest": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-realtime-native-final\\manifest.json",
+    "rows": [
+      {
+        "crate": "kinakaze_vfs",
+        "optimized": null,
+        "test_filter": "deadline_wait",
+        "exit_code": 0,
+        "status": "ok",
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0,
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-realtime-kinakaze_vfs-native.log",
+        "sha256": "9d213c0067c9cc834ad18cf719f0000403897bda2dca259659c6c8be1b2795f3"
+      },
+      {
+        "crate": "kinakaze_libc",
+        "optimized": false,
+        "test_filter": "futex",
+        "exit_code": 0,
+        "status": "ok",
+        "passed": 103,
+        "failed": 0,
+        "ignored": 18,
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-realtime-kinakaze_libc-0.log",
+        "sha256": "eab8b3529b8121131a2a8fef4f71b3b40821e59b72a4461c25a9e66857d75de6"
+      },
+      {
+        "crate": "kinakaze_libpthread",
+        "optimized": false,
+        "test_filter": "",
+        "exit_code": 0,
+        "status": "ok",
+        "passed": 59,
+        "failed": 0,
+        "ignored": 4,
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-realtime-kinakaze_libpthread-0.log",
+        "sha256": "0f666c511272e84fa91c416ad332bb97fea77b5355b3a1012d74f6b3cd4fe8c8"
+      },
+      {
+        "crate": "kinakaze_libc",
+        "optimized": true,
+        "test_filter": "futex",
+        "exit_code": 0,
+        "status": "ok",
+        "passed": 103,
+        "failed": 0,
+        "ignored": 18,
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-realtime-kinakaze_libc-1.log",
+        "sha256": "8d4626b6c1c743dfddf2e2d6e9abac890c01b8a81a599d6edcde2502ca6ea8c2"
+      },
+      {
+        "crate": "kinakaze_libpthread",
+        "optimized": true,
+        "test_filter": "",
+        "exit_code": 0,
+        "status": "ok",
+        "passed": 59,
+        "failed": 0,
+        "ignored": 4,
+        "log": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-realtime-kinakaze_libpthread-1.log",
+        "sha256": "b1cd1cf1c0261acbade98c2fd489fc0dfee646fc7aedbde9b98c2f88388a3a9d"
+      }
+    ]
+  },
+  "native_manifest": {
+    "build": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-realtime-native-build-2.jsonl",
+    "build_sha256": "44bcf9d233635b7051e1f94449b53b152cebf0b6b7271398c7c10279ba44e712",
+    "executables": {
+      "kinakaze_libpthread": "kinakaze_libpthread-4d10b58392baf079.exe",
+      "kinakaze_vfs": "kinakaze_vfs-7074f7d5705021ad.exe",
+      "kinakaze_libc": "kinakaze_libc-9b2ff81f74c64496.exe"
+    },
+    "files": {
+      "kinakaze_alloc.so": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_alloc.dll",
+        "sha256": "2d099db6066f9e87353febd2a66c10f5c0e4ef1ed9eee155dc59666e776da6e8"
+      },
+      "serde_derive-ebb234dc8366345c.dll": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\deps\\serde_derive-ebb234dc8366345c.dll",
+        "sha256": "e0805346528b838488002807261a16733e7efcd6f4843a9bd660e2f8c44ff48a"
+      },
+      "kinakaze_elf.so": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_elf.dll",
+        "sha256": "921e390b5f988eece280f6a94cb0bc77906e5e4112c616f321fd0549d28d7e45"
+      },
+      "kinakaze_kernel.so": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_kernel.dll",
+        "sha256": "83ef53f025b9c7ab433c8bf2ac9ae67dfaf3133e59a8e3c37b235b44d307dd6d"
+      },
+      "kinakaze_tls.so": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_tls.dll",
+        "sha256": "484fc5cf0934a36c085910707ab2589432da47d81f9e91014c9200f5ea8a80be"
+      },
+      "libm.so.6": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libm.dll",
+        "sha256": "68c6c6f12c2da4cdb3022a2069f3d901cebcaf93635074ec3a0a097b7598f550"
+      },
+      "kinakaze_vfs.so": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_vfs.dll",
+        "sha256": "2b8096a01faebf5d15bcd6ecf33dac8693070bb78045b1d1647a106d879a11f6"
+      },
+      "libpthread.so.0": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_libpthread.dll",
+        "sha256": "03914b8a71bed4e67e93c477d07dd2ed2c2a29685608b6689ef4f3f48eb32ec8"
+      },
+      "ld-linux-x86-64.so.2": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\kinakaze_link.dll",
+        "sha256": "1bb0ff34525773f3ca8fd50b83fef1c0b9ee4a788c3287e91135d13b488b27d5"
+      },
+      "kinakaze_libpthread-4d10b58392baf079.exe": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\deps\\kinakaze_libpthread-4d10b58392baf079.exe",
+        "sha256": "c50d1936753910e75f20fc57e294665c429b68d6a33b55182283170824408e6d"
+      },
+      "kinakaze_vfs-7074f7d5705021ad.exe": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\deps\\kinakaze_vfs-7074f7d5705021ad.exe",
+        "sha256": "91c647bae7e7d49e9ccd2297e63ed617b1b828c64d440ea3316842dbde2639d9"
+      },
+      "kinakaze_libc-9b2ff81f74c64496.exe": {
+        "source": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\pi-requeue-target\\release\\deps\\kinakaze_libc-9b2ff81f74c64496.exe",
+        "sha256": "b719db543dd54a5cc13b4eee0e0e4aff6d104d88cab82f3f0257c493e3d0cdf7"
+      },
+      "std-0cebe7c42cd80226.dll": {
+        "source": "C:\\Users\\nanaeo\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\std-0cebe7c42cd80226.dll",
+        "sha256": "64744ba02e99b29137bfc97deff54113e94e39c04ceac4192bd624aa382ccabc"
+      }
+    }
+  },
+  "cases": [
+    "Native absolute timer expiry and source ordering",
+    "FILETIME epoch and rounding boundaries and Win32 failure diagnostics",
+    "Realtime forward/backward remaining-time calculation",
+    "Future absolute raw 202 bitset/requeue, raw 449 waitv and raw 455 wait in both clocks and key modes",
+    "Future raw LOCK_PI/LOCK_PI2 contention timeout preserves live owner",
+    "Requeued timeout removes source binding and target waiter",
+    "Futex and pthread regressions under KINAKAZE_FUTEX_OPT=0/1"
+  ],
+  "excluded_trials": [
+    {
+      "build": "F:\\crysoacu2\\artifacts\\syscall-all-paths-20261001\\futex-realtime-native-build.jsonl",
+      "reason": "Initial test helper syscall-number type mismatch; failed compile, excluded from evidence"
+    }
+  ],
+  "constraints": [
+    "No host wall-clock adjustment was performed; actual clock-step cross-process end-to-end test remains unverified",
+    "No complete guest distribution build or guest regression for this source snapshot",
+    "No performance measurement for the deadline change",
+    "All syscall/path coverage and remaining futex requirements stay incomplete"
+  ],
+  "references": [
+    "https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-setwaitabletimer"
+  ]
+}

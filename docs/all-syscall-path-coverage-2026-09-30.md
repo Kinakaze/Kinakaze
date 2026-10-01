@@ -12,6 +12,9 @@ WAIT_REQUEUE_PI/CMP_REQUEUE_PI 已在后续接入；两配置各通过 libc 625 
 pthread PRIO_INHERIT 已接入上述 PI 后端；v5 固定图在两配置各通过 libc 643 项、
 pthread 59 项，22 行真实 guest 回归通过，见
 [pthread PI mutex 阶段记录](pthread-pi-mutex-2026-10-01.md)。
+后续绝对 CLOCK_REALTIME 时限改为内核绝对计时器等待，接入普通、向量、PI、
+PI 重排队及 pthread PI 路径；验证边界见
+[绝对实时时限记录](futex-realtime-deadlines-2026-10-01.md)。
 旧式超时入口与 raw 202/455 的独立证据仍见
 [超时入口阶段记录](futex-timeout-entry-2026-10-01.md)。
 覆盖工具当前记录 304 项已分发、1 项明确拒绝、70 项缺少分发；375 个 syscall
