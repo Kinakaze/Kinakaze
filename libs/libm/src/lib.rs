@@ -1672,6 +1672,47 @@ pub extern "sysv64" fn fetestexcept(excepts: c_int) -> c_int {
     ((mxcsr | status as u32) & (excepts as u32 & 0x3d)) as c_int
 }
 
+/// Linux x86-64 fexcept_t is a two-byte exception snapshot, not fenv_t.
+///
+/// # Safety
+/// `flags` must point to a writable fexcept_t.
+#[cfg(target_arch = "x86_64")]
+#[unsafe(export_name = "kinakaze_engine_libm_fegetexceptflag")]
+pub unsafe extern "sysv64" fn fegetexceptflag(flags: *mut u16, excepts: c_int) -> c_int {
+    if flags.is_null() {
+        return -1;
+    }
+    unsafe { flags.write(fetestexcept(excepts) as u16) };
+    0
+}
+
+/// Restore only selected exception flags without raising their exceptions.
+///
+/// Clearing affects both x87 and SSE; newly set flags go into MXCSR, where
+/// loading a pending flag never traps, even if its exception is unmasked.
+/// Control words, rounding, and all unselected flags retain their values.
+///
+/// # Safety
+/// `flags` must point to a readable fexcept_t.
+#[cfg(target_arch = "x86_64")]
+#[unsafe(export_name = "kinakaze_engine_libm_fesetexceptflag")]
+pub unsafe extern "sysv64" fn fesetexceptflag(flags: *const u16, excepts: c_int) -> c_int {
+    if flags.is_null() {
+        return -1;
+    }
+    unsafe {
+        let bits = excepts as u16 & 0x3d;
+        let requested = flags.read() & bits;
+        let mut environment = core::mem::MaybeUninit::<fenv_t>::uninit();
+        fegetenv(environment.as_mut_ptr());
+        let mut environment = environment.assume_init();
+        environment.status_word &= !(bits & !requested);
+        core::arch::asm!("fldenv [{}]", in(reg) &environment, options(nostack, preserves_flags));
+        set_mxcsr((environment.mxcsr & !u32::from(bits)) | u32::from(requested));
+    }
+    0
+}
+
 #[cfg(target_arch = "x86_64")]
 #[unsafe(export_name = "kinakaze_engine_libm___isnan")]
 pub extern "sysv64" fn __isnan(x: f64) -> i32 {

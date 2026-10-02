@@ -4617,3 +4617,11 @@
 {"path":"artifacts/perf-services-20260929/app-root/tmp/oracle-mysql-1107e18e63e34ed4b4c0544931b733e8/prefix/usr/sbin/mysqld","sha256":"2bbe2fee3f8f9e7bbf3172488386d06ad1c5deb816b20c0b0d3e685d4678d332"}
 {"path":"artifacts/agent-toolchains-20260929/development-root/usr/bin/cmake","sha256":"bad2e2bae7a1cc2c885d1aa06f19ae91be6684819aaeaf03f89410cf4854ecea"}
 {"path":"artifacts/math-abi-sources/complex-math-glibc","sha256":"f9bfb1b01cefcb897751a6369fa0548a4aa1c7b7fb9e3524c0ffd8e1a6029b5d"}
+{"path":"artifacts/1panel-apps-20261001/root/usr/bin/memcached","sha256":"e977bec994bce78f4b32410c4c744d0a07f3fb6d162902df83aba1010c46a88f"}
+{"path":"artifacts/1panel-apps-20261001/root/opt/1panel-apps/mongodb/bin/mongod","sha256":"21aee1a4092d6e2b1b0eef155aff795c2e8ee84bf0bcb718d3cf8f1cfd9bdd0c"}
+{"path":"artifacts/1panel-apps-20261001/root/opt/1panel-apps/python312/bin/python3.12","sha256":"b2ad5aa9ae1727e4adc6147c4c8dbb02a82fd03c48616c6212f5fde3e09dfdbc"}
+{"path":"artifacts/1panel-apps-20261001/root/opt/1panel-apps/python312/lib/python3.12/lib-dynload/_crypt.cpython-312-x86_64-linux-gnu.so","sha256":"5fabcce8fc9dd079dc356c50a4bbd2facacb9f159e1878f4412a744cb20f5cf9"}
+{"path":"artifacts/1panel-apps-20261001/root/opt/1panel-apps/python312/lib/python3.12/lib-dynload/_ctypes_test.cpython-312-x86_64-linux-gnu.so","sha256":"8b3f673efb9a6ba7eee45e92cec56c307dd27912eca17108a7a518a0eb0dfc64"}
+{"path":"artifacts/1panel-apps-20261001/root/opt/1panel-apps/python312/lib/python3.12/lib-dynload/_tkinter.cpython-312-x86_64-linux-gnu.so","sha256":"396ab66d4ad09e567f5ef364e3b3530eb14d46ce2913f4d84d51fe7600ab0aba"}
+{"path":"artifacts/1panel-apps-20261001/root/usr/lib/erlang/erts-13.1.5/bin/erl_child_setup","sha256":"236d782df59a38bd140a56054eb54082499389296ffa393c97bf3b2d5aec916d"}
+{"path":"artifacts/1panel-apps-20261001/root/usr/lib/x86_64-linux-gnu/librdkafka.so.1","sha256":"29bb643be4f9167668dc6b11ca6b7d7d11c5a0568068bf034fe2dbe7ba8dcf1d"}

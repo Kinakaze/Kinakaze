@@ -199,6 +199,19 @@ pub unsafe extern "sysv64" fn kinakaze_abi_sigaction(
     }
 }
 
+/// glibc's public alias used by Erlang's signal interposer via RTLD_NEXT.
+///
+/// # Safety
+/// The pointers follow the same contract as `sigaction`.
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi___sigaction(
+    signal_number: c_int,
+    action: *const SigAction,
+    old_action: *mut SigAction,
+) -> c_int {
+    unsafe { kinakaze_abi_sigaction(signal_number, action, old_action) }
+}
+
 /// Terminates the process the way a shell reports a fatal signal.
 ///
 /// A process killed by signal N exits with status `128 + N`, which is the

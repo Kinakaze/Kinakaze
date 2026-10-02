@@ -13236,6 +13236,7 @@ libbsd.so.0	vis	LIBBSD_0.0
 libbsd.so.0	warnc	LIBBSD_0.0
 libc.so.6	_Exit	GLIBC_2.2.5
 libc.so.6	_IO_getc	GLIBC_2.2.5
+libc.so.6	_IO_putc	GLIBC_2.2.5
 libc.so.6	__asprintf	GLIBC_2.2.5
 libc.so.6	__asprintf_chk	GLIBC_2.8
 libc.so.6	__assert_fail	GLIBC_2.2.5
@@ -13288,8 +13289,10 @@ libc.so.6	__internal_endnetgrent	GLIBC_PRIVATE
 libc.so.6	__internal_getnetgrent_r	GLIBC_PRIVATE
 libc.so.6	__internal_setnetgrent	GLIBC_PRIVATE
 libc.so.6	__isinf	GLIBC_2.2.5
+libc.so.6	__isinff	GLIBC_2.2.5
 libc.so.6	__isnan	GLIBC_2.2.5
 libc.so.6	__isnanf	GLIBC_2.2.5
+libc.so.6	__isnanl	GLIBC_2.2.5
 libc.so.6	__isoc23_fscanf	GLIBC_2.38
 libc.so.6	__isoc23_sscanf	GLIBC_2.38
 libc.so.6	__isoc23_strtol	GLIBC_2.38
@@ -13426,6 +13429,7 @@ libc.so.6	__wctype_l	GLIBC_2.2.5
 libc.so.6	__wmemcpy_chk	GLIBC_2.4
 libc.so.6	__wprintf_chk	GLIBC_2.4
 libc.so.6	__xmknod	GLIBC_2.2.5
+libc.so.6	__xmknodat	GLIBC_2.4
 libc.so.6	__xpg_basename	GLIBC_2.2.5
 libc.so.6	__xpg_strerror_r	GLIBC_2.3.4
 libc.so.6	__xstat	GLIBC_2.2.5
@@ -13485,6 +13489,7 @@ libc.so.6	bind_textdomain_codeset	GLIBC_2.2.5
 libc.so.6	bindtextdomain	GLIBC_2.2.5
 libc.so.6	bsearch	GLIBC_2.2.5
 libc.so.6	btowc	GLIBC_2.2.5
+libc.so.6	call_once	GLIBC_2.34
 libc.so.6	calloc	GLIBC_2.2.5
 libc.so.6	canonicalize_file_name	GLIBC_2.2.5
 libc.so.6	capget	GLIBC_2.2.5
@@ -13516,6 +13521,7 @@ libc.so.6	clnttcp_create	GLIBC_2.2.5
 libc.so.6	clntudp_create	GLIBC_2.2.5
 libc.so.6	clock	GLIBC_2.2.5
 libc.so.6	clock_adjtime	GLIBC_2.14
+libc.so.6	clock_getcpuclockid	GLIBC_2.17
 libc.so.6	clock_getres	GLIBC_2.17
 libc.so.6	clock_gettime	GLIBC_2.17
 libc.so.6	clock_nanosleep	GLIBC_2.17
@@ -13526,6 +13532,12 @@ libc.so.6	close_range	GLIBC_2.34
 libc.so.6	closedir	GLIBC_2.2.5
 libc.so.6	closefrom	GLIBC_2.34
 libc.so.6	closelog	GLIBC_2.2.5
+libc.so.6	cnd_broadcast	GLIBC_2.34
+libc.so.6	cnd_destroy	GLIBC_2.34
+libc.so.6	cnd_init	GLIBC_2.34
+libc.so.6	cnd_signal	GLIBC_2.34
+libc.so.6	cnd_timedwait	GLIBC_2.34
+libc.so.6	cnd_wait	GLIBC_2.34
 libc.so.6	confstr	GLIBC_2.2.5
 libc.so.6	connect	GLIBC_2.2.5
 libc.so.6	copy_file_range	GLIBC_2.27
@@ -13825,6 +13837,7 @@ libc.so.6	getsockopt	GLIBC_2.2.5
 libc.so.6	getspent	GLIBC_2.2.5
 libc.so.6	getspnam	GLIBC_2.2.5
 libc.so.6	getspnam_r	GLIBC_2.2.5
+libc.so.6	getsubopt	GLIBC_2.2.5
 libc.so.6	gettext	GLIBC_2.2.5
 libc.so.6	gettid	GLIBC_2.30
 libc.so.6	gettimeofday	GLIBC_2.2.5
@@ -13859,6 +13872,7 @@ libc.so.6	hdestroy_r	GLIBC_2.2.5
 libc.so.6	host2netname	GLIBC_2.2.5
 libc.so.6	hsearch_r	GLIBC_2.2.5
 libc.so.6	hstrerror	GLIBC_2.2.5
+libc.so.6	htonl	GLIBC_2.2.5
 libc.so.6	htons	GLIBC_2.2.5
 libc.so.6	iconv	GLIBC_2.2.5
 libc.so.6	iconv_close	GLIBC_2.2.5
@@ -14028,6 +14042,10 @@ libc.so.6	msgrcv	GLIBC_2.2.5
 libc.so.6	msgsnd	GLIBC_2.2.5
 libc.so.6	msync	GLIBC_2.2.5
 libc.so.6	mtrace	GLIBC_2.2.5
+libc.so.6	mtx_destroy	GLIBC_2.34
+libc.so.6	mtx_init	GLIBC_2.34
+libc.so.6	mtx_lock	GLIBC_2.34
+libc.so.6	mtx_unlock	GLIBC_2.34
 libc.so.6	munlock	GLIBC_2.2.5
 libc.so.6	munlockall	GLIBC_2.2.5
 libc.so.6	munmap	GLIBC_2.2.5
@@ -14042,6 +14060,7 @@ libc.so.6	nl_langinfo	GLIBC_2.2.5
 libc.so.6	nl_langinfo_l	GLIBC_2.3
 libc.so.6	nrand48	GLIBC_2.2.5
 libc.so.6	ns_name_uncompress	GLIBC_2.34
+libc.so.6	ntohl	GLIBC_2.2.5
 libc.so.6	ntohs	GLIBC_2.2.5
 libc.so.6	ntp_gettimex	GLIBC_2.12
 libc.so.6	obstack_free	GLIBC_2.2.5
@@ -14472,6 +14491,7 @@ libc.so.6	strtoul	GLIBC_2.2.5
 libc.so.6	strtoull	GLIBC_2.2.5
 libc.so.6	strtoull_l	GLIBC_2.3.3
 libc.so.6	strtoumax	GLIBC_2.2.5
+libc.so.6	strtouq	GLIBC_2.2.5
 libc.so.6	strverscmp	GLIBC_2.2.5
 libc.so.6	strxfrm	GLIBC_2.2.5
 libc.so.6	strxfrm_l	GLIBC_2.3
@@ -14513,7 +14533,10 @@ libc.so.6	telldir	GLIBC_2.2.5
 libc.so.6	tempnam	GLIBC_2.2.5
 libc.so.6	textdomain	GLIBC_2.2.5
 libc.so.6	tfind	GLIBC_2.2.5
+libc.so.6	thrd_create	GLIBC_2.34
+libc.so.6	thrd_current	GLIBC_2.28
 libc.so.6	thrd_exit	GLIBC_2.34
+libc.so.6	thrd_join	GLIBC_2.34
 libc.so.6	time	GLIBC_2.2.5
 libc.so.6	timegm	GLIBC_2.2.5
 libc.so.6	timer_create	GLIBC_2.34
@@ -14684,6 +14707,7 @@ libcrypt.so.1	crypt_gensalt	XCRYPT_2.0
 libcrypt.so.1	crypt_gensalt_ra	XCRYPT_2.0
 libcrypt.so.1	crypt_gensalt_rn	XCRYPT_2.0
 libcrypt.so.1	crypt_preferred_method	XCRYPT_4.4
+libcrypt.so.1	crypt_r	GLIBC_2.2.5
 libcrypt.so.1	crypt_r	XCRYPT_2.0
 libcrypt.so.1	crypt_ra	XCRYPT_2.0
 libcrypto.so.1.1	ASN1_STRING_get0_data	OPENSSL_1_1_0
@@ -14865,6 +14889,7 @@ libcrypto.so.3	ASN1_PCTX_set_nm_flags	OPENSSL_3.0.0
 libcrypto.so.3	ASN1_PCTX_set_str_flags	OPENSSL_3.0.0
 libcrypto.so.3	ASN1_PRINTABLE_type	OPENSSL_3.0.0
 libcrypto.so.3	ASN1_STRING_cmp	OPENSSL_3.0.0
+libcrypto.so.3	ASN1_STRING_data	OPENSSL_3.0.0
 libcrypto.so.3	ASN1_STRING_free	OPENSSL_3.0.0
 libcrypto.so.3	ASN1_STRING_get0_data	OPENSSL_3.0.0
 libcrypto.so.3	ASN1_STRING_length	OPENSSL_3.0.0
@@ -14955,6 +14980,7 @@ libcrypto.so.3	BIO_closesocket	OPENSSL_3.0.0
 libcrypto.so.3	BIO_connect	OPENSSL_3.0.0
 libcrypto.so.3	BIO_copy_next_retry	OPENSSL_3.0.0
 libcrypto.so.3	BIO_ctrl	OPENSSL_3.0.0
+libcrypto.so.3	BIO_ctrl_get_read_request	OPENSSL_3.0.0
 libcrypto.so.3	BIO_ctrl_pending	OPENSSL_3.0.0
 libcrypto.so.3	BIO_debug_callback_ex	OPENSSL_3.0.0
 libcrypto.so.3	BIO_dump	OPENSSL_3.0.0
@@ -15090,6 +15116,7 @@ libcrypto.so.3	BN_is_negative	OPENSSL_3.0.0
 libcrypto.so.3	BN_is_odd	OPENSSL_3.0.0
 libcrypto.so.3	BN_is_one	OPENSSL_3.0.0
 libcrypto.so.3	BN_is_prime_ex	OPENSSL_3.0.0
+libcrypto.so.3	BN_is_word	OPENSSL_3.0.0
 libcrypto.so.3	BN_is_zero	OPENSSL_3.0.0
 libcrypto.so.3	BN_lebin2bn	OPENSSL_3.0.0
 libcrypto.so.3	BN_lshift	OPENSSL_3.0.0
@@ -15367,6 +15394,7 @@ libcrypto.so.3	ERR_new	OPENSSL_3.0.0
 libcrypto.so.3	ERR_peek_error	OPENSSL_3.0.0
 libcrypto.so.3	ERR_peek_error_data	OPENSSL_3.0.0
 libcrypto.so.3	ERR_peek_last_error	OPENSSL_3.0.0
+libcrypto.so.3	ERR_peek_last_error_all	OPENSSL_3.0.0
 libcrypto.so.3	ERR_pop_to_mark	OPENSSL_3.0.0
 libcrypto.so.3	ERR_print_errors	OPENSSL_3.0.0
 libcrypto.so.3	ERR_print_errors_cb	OPENSSL_3.0.0
@@ -15449,6 +15477,7 @@ libcrypto.so.3	EVP_CipherFinal_ex	OPENSSL_3.0.0
 libcrypto.so.3	EVP_CipherInit	OPENSSL_3.0.0
 libcrypto.so.3	EVP_CipherInit_ex	OPENSSL_3.0.0
 libcrypto.so.3	EVP_CipherUpdate	OPENSSL_3.0.0
+libcrypto.so.3	EVP_DecodeBlock	OPENSSL_3.0.0
 libcrypto.so.3	EVP_DecryptFinal	OPENSSL_3.0.0
 libcrypto.so.3	EVP_DecryptFinal_ex	OPENSSL_3.0.0
 libcrypto.so.3	EVP_DecryptInit	OPENSSL_3.0.0
@@ -15471,6 +15500,7 @@ libcrypto.so.3	EVP_DigestVerifyFinal	OPENSSL_3.0.0
 libcrypto.so.3	EVP_DigestVerifyInit	OPENSSL_3.0.0
 libcrypto.so.3	EVP_DigestVerifyInit_ex	OPENSSL_3.0.0
 libcrypto.so.3	EVP_DigestVerifyUpdate	OPENSSL_3.0.0
+libcrypto.so.3	EVP_EncodeBlock	OPENSSL_3.0.0
 libcrypto.so.3	EVP_EncryptFinal	OPENSSL_3.0.0
 libcrypto.so.3	EVP_EncryptFinal_ex	OPENSSL_3.0.0
 libcrypto.so.3	EVP_EncryptInit	OPENSSL_3.0.0
@@ -15850,6 +15880,7 @@ libcrypto.so.3	OBJ_txt2nid	OPENSSL_3.0.0
 libcrypto.so.3	OBJ_txt2obj	OPENSSL_3.0.0
 libcrypto.so.3	OCSP_BASICRESP_free	OPENSSL_3.0.0
 libcrypto.so.3	OCSP_BASICRESP_new	OPENSSL_3.0.0
+libcrypto.so.3	OCSP_CERTID_dup	OPENSSL_3.0.0
 libcrypto.so.3	OCSP_CERTID_free	OPENSSL_3.0.0
 libcrypto.so.3	OCSP_REQUEST_add_ext	OPENSSL_3.0.0
 libcrypto.so.3	OCSP_REQUEST_free	OPENSSL_3.0.0
@@ -15874,6 +15905,7 @@ libcrypto.so.3	OCSP_check_nonce	OPENSSL_3.0.0
 libcrypto.so.3	OCSP_check_validity	OPENSSL_3.0.0
 libcrypto.so.3	OCSP_copy_nonce	OPENSSL_3.0.0
 libcrypto.so.3	OCSP_crl_reason_str	OPENSSL_3.0.0
+libcrypto.so.3	OCSP_id_cmp	OPENSSL_3.0.0
 libcrypto.so.3	OCSP_id_get0_info	OPENSSL_3.0.0
 libcrypto.so.3	OCSP_id_issuer_cmp	OPENSSL_3.0.0
 libcrypto.so.3	OCSP_onereq_get0_id	OPENSSL_3.0.0
@@ -15890,6 +15922,7 @@ libcrypto.so.3	OCSP_response_create	OPENSSL_3.0.0
 libcrypto.so.3	OCSP_response_get1_basic	OPENSSL_3.0.0
 libcrypto.so.3	OCSP_response_status	OPENSSL_3.0.0
 libcrypto.so.3	OCSP_response_status_str	OPENSSL_3.0.0
+libcrypto.so.3	OCSP_single_get0_status	OPENSSL_3.0.0
 libcrypto.so.3	OPENSSL_DIR_end	OPENSSL_3.0.0
 libcrypto.so.3	OPENSSL_DIR_read	OPENSSL_3.0.0
 libcrypto.so.3	OPENSSL_LH_delete	OPENSSL_3.0.0
@@ -16398,6 +16431,7 @@ libcrypto.so.3	SHA256_Update	OPENSSL_3.0.0
 libcrypto.so.3	SHA384_Final	OPENSSL_3.0.0
 libcrypto.so.3	SHA384_Init	OPENSSL_3.0.0
 libcrypto.so.3	SHA384_Update	OPENSSL_3.0.0
+libcrypto.so.3	SHA512	OPENSSL_3.0.0
 libcrypto.so.3	SHA512_Final	OPENSSL_3.0.0
 libcrypto.so.3	SHA512_Init	OPENSSL_3.0.0
 libcrypto.so.3	SHA512_Transform	OPENSSL_3.0.0
@@ -16549,6 +16583,8 @@ libcrypto.so.3	X509_CRL_get0_nextUpdate	OPENSSL_3.0.0
 libcrypto.so.3	X509_CRL_get0_signature	OPENSSL_3.0.0
 libcrypto.so.3	X509_CRL_get_ext_d2i	OPENSSL_3.0.0
 libcrypto.so.3	X509_CRL_get_issuer	OPENSSL_3.0.0
+libcrypto.so.3	X509_CRL_get_lastUpdate	OPENSSL_3.0.0
+libcrypto.so.3	X509_CRL_get_nextUpdate	OPENSSL_3.0.0
 libcrypto.so.3	X509_CRL_load_http	OPENSSL_3.0.0
 libcrypto.so.3	X509_CRL_new_ex	OPENSSL_3.0.0
 libcrypto.so.3	X509_CRL_print	OPENSSL_3.0.0
@@ -16656,7 +16692,10 @@ libcrypto.so.3	X509_STORE_CTX_print_verify_cb	OPENSSL_3.0.0
 libcrypto.so.3	X509_STORE_CTX_set0_crls	OPENSSL_3.0.0
 libcrypto.so.3	X509_STORE_CTX_set0_dane	OPENSSL_3.0.0
 libcrypto.so.3	X509_STORE_CTX_set0_trusted_stack	OPENSSL_3.0.0
+libcrypto.so.3	X509_STORE_CTX_set0_untrusted	OPENSSL_3.0.0
+libcrypto.so.3	X509_STORE_CTX_set_cert	OPENSSL_3.0.0
 libcrypto.so.3	X509_STORE_CTX_set_default	OPENSSL_3.0.0
+libcrypto.so.3	X509_STORE_CTX_set_error	OPENSSL_3.0.0
 libcrypto.so.3	X509_STORE_CTX_set_ex_data	OPENSSL_3.0.0
 libcrypto.so.3	X509_STORE_CTX_set_flags	OPENSSL_3.0.0
 libcrypto.so.3	X509_STORE_CTX_set_ocsp_resp	OPENSSL_3.6.0
@@ -20023,6 +20062,7 @@ libm.so.6	clogl	GLIBC_2.2.5
 libm.so.6	conj	GLIBC_2.2.5
 libm.so.6	conjf	GLIBC_2.2.5
 libm.so.6	conjl	GLIBC_2.2.5
+libm.so.6	copysign	GLIBC_2.2.5
 libm.so.6	cos	GLIBC_2.2.5
 libm.so.6	cosf	GLIBC_2.2.5
 libm.so.6	cosh	GLIBC_2.2.5
@@ -20077,10 +20117,12 @@ libm.so.6	fdim	GLIBC_2.2.5
 libm.so.6	feclearexcept	GLIBC_2.2.5
 libm.so.6	fedisableexcept	GLIBC_2.2.5
 libm.so.6	fegetenv	GLIBC_2.2.5
+libm.so.6	fegetexceptflag	GLIBC_2.2.5
 libm.so.6	fegetround	GLIBC_2.2.5
 libm.so.6	feholdexcept	GLIBC_2.2.5
 libm.so.6	feraiseexcept	GLIBC_2.2.5
 libm.so.6	fesetenv	GLIBC_2.2.5
+libm.so.6	fesetexceptflag	GLIBC_2.2.5
 libm.so.6	fesetround	GLIBC_2.2.5
 libm.so.6	fetestexcept	GLIBC_2.2.5
 libm.so.6	feupdateenv	GLIBC_2.2.5
@@ -22963,12 +23005,15 @@ libpthread.so.0	read	GLIBC_2.2.5
 libpthread.so.0	recv	GLIBC_2.2.5
 libpthread.so.0	recvfrom	GLIBC_2.2.5
 libpthread.so.0	recvmsg	GLIBC_2.2.5
+libpthread.so.0	sem_close	GLIBC_2.2.5
 libpthread.so.0	sem_destroy	GLIBC_2.2.5
 libpthread.so.0	sem_getvalue	GLIBC_2.2.5
 libpthread.so.0	sem_init	GLIBC_2.2.5
+libpthread.so.0	sem_open	GLIBC_2.2.5
 libpthread.so.0	sem_post	GLIBC_2.2.5
 libpthread.so.0	sem_timedwait	GLIBC_2.2.5
 libpthread.so.0	sem_trywait	GLIBC_2.2.5
+libpthread.so.0	sem_unlink	GLIBC_2.2.5
 libpthread.so.0	sem_wait	GLIBC_2.2.5
 libpthread.so.0	send	GLIBC_2.2.5
 libpthread.so.0	sendmsg	GLIBC_2.2.5
@@ -22982,6 +23027,8 @@ libpthread.so.0	tss_create	GLIBC_2.28
 libpthread.so.0	tss_delete	GLIBC_2.28
 libpthread.so.0	tss_get	GLIBC_2.28
 libpthread.so.0	tss_set	GLIBC_2.28
+libpthread.so.0	vfork	GLIBC_2.2.5
+libpthread.so.0	wait	GLIBC_2.2.5
 libpthread.so.0	waitpid	GLIBC_2.2.5
 libpthread.so.0	write	GLIBC_2.2.5
 libpulse-mainloop-glib.so.0	pa_glib_mainloop_free	PULSE_0
@@ -23180,6 +23227,8 @@ libresolv.so.2	ns_initparse	GLIBC_2.9
 libresolv.so.2	ns_parserr	GLIBC_2.9
 librt.so.1	clock_getres	GLIBC_2.2.5
 librt.so.1	clock_gettime	GLIBC_2.2.5
+librt.so.1	clock_nanosleep	GLIBC_2.2.5
+librt.so.1	clock_settime	GLIBC_2.2.5
 librt.so.1	shm_open	GLIBC_2.2.5
 librt.so.1	shm_unlink	GLIBC_2.2.5
 librt.so.1	timer_create	GLIBC_2.3.3
@@ -23203,6 +23252,11 @@ libsasl2.so.2	sasl_errdetail	SASL2
 libsasl2.so.2	sasl_errstring	SASL2
 libsasl2.so.2	sasl_getprop	SASL2
 libsasl2.so.2	sasl_global_listmech	SASL2
+libsasl2.so.2	sasl_listmech	SASL2
+libsasl2.so.2	sasl_server_init	SASL2
+libsasl2.so.2	sasl_server_new	SASL2
+libsasl2.so.2	sasl_server_start	SASL2
+libsasl2.so.2	sasl_server_step	SASL2
 libsasl2.so.2	sasl_set_mutex	SASL2
 libsasl2.so.2	sasl_setprop	SASL2
 libselinux.so.1	avc_audit	LIBSELINUX_1.0
@@ -24243,6 +24297,7 @@ libssl.so.3	SSL_sendfile	OPENSSL_3.0.0
 libssl.so.3	SSL_session_reused	OPENSSL_3.0.0
 libssl.so.3	SSL_set0_rbio	OPENSSL_3.0.0
 libssl.so.3	SSL_set0_wbio	OPENSSL_3.0.0
+libssl.so.3	SSL_set1_host	OPENSSL_3.0.0
 libssl.so.3	SSL_set_SSL_CTX	OPENSSL_3.0.0
 libssl.so.3	SSL_set_accept_state	OPENSSL_3.0.0
 libssl.so.3	SSL_set_alpn_protos	OPENSSL_3.0.0
@@ -24252,6 +24307,7 @@ libssl.so.3	SSL_set_ciphersuites	OPENSSL_3.0.0
 libssl.so.3	SSL_set_connect_state	OPENSSL_3.0.0
 libssl.so.3	SSL_set_ex_data	OPENSSL_3.0.0
 libssl.so.3	SSL_set_fd	OPENSSL_3.0.0
+libssl.so.3	SSL_set_info_callback	OPENSSL_3.0.0
 libssl.so.3	SSL_set_msg_callback	OPENSSL_3.0.0
 libssl.so.3	SSL_set_options	OPENSSL_3.0.0
 libssl.so.3	SSL_set_post_handshake_auth	OPENSSL_3.0.0
@@ -27881,6 +27937,9 @@ liburing.so.2	io_uring_queue_init	LIBURING_2.0
 liburing.so.2	io_uring_register_files_update	LIBURING_2.0
 liburing.so.2	io_uring_ring_dontfork	LIBURING_2.0
 liburing.so.2	io_uring_submit	LIBURING_2.0
+libutil.so.1	forkpty	GLIBC_2.2.5
+libutil.so.1	login_tty	GLIBC_2.2.5
+libutil.so.1	openpty	GLIBC_2.2.5
 libuuid.so.1	__uuid_generate_random	UUIDD_PRIVATE
 libuuid.so.1	__uuid_generate_time_cont	UUIDD_PRIVATE
 libuuid.so.1	uuid_clear	UUID_1.0

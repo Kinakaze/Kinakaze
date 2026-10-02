@@ -8,6 +8,7 @@ EXPORTS
   "_IO_getc@GLIBC_2.2.5"=kinakaze_abi__IO_getc PRIVATE
   kinakaze_abi__IO_putc
   "_IO_putc"=kinakaze_abi__IO_putc PRIVATE
+  "_IO_putc@GLIBC_2.2.5"=kinakaze_abi__IO_putc PRIVATE
   kinakaze_abi_asprintf
   "__asprintf"=kinakaze_abi_asprintf PRIVATE
   "__asprintf@GLIBC_2.2.5"=kinakaze_abi_asprintf PRIVATE
@@ -182,10 +183,14 @@ EXPORTS
   "__internal_setnetgrent@GLIBC_PRIVATE"=kinakaze_abi___internal_setnetgrent PRIVATE
   "__isinf"=libm.so.6.kinakaze_engine_libm___isinf PRIVATE
   "__isinf@GLIBC_2.2.5"=libm.so.6.kinakaze_engine_libm___isinf PRIVATE
+  "__isinff"=libm.so.6.kinakaze_engine_libm___isinff PRIVATE
+  "__isinff@GLIBC_2.2.5"=libm.so.6.kinakaze_engine_libm___isinff PRIVATE
   "__isnan"=libm.so.6.kinakaze_engine_libm___isnan PRIVATE
   "__isnan@GLIBC_2.2.5"=libm.so.6.kinakaze_engine_libm___isnan PRIVATE
   "__isnanf"=libm.so.6.kinakaze_engine_libm___isnanf PRIVATE
   "__isnanf@GLIBC_2.2.5"=libm.so.6.kinakaze_engine_libm___isnanf PRIVATE
+  "__isnanl"=libm.so.6.kinakaze_engine_libm___isnanl PRIVATE
+  "__isnanl@GLIBC_2.2.5"=libm.so.6.kinakaze_engine_libm___isnanl PRIVATE
   kinakaze_abi___isoc23_fscanf
   "__isoc23_fscanf"=kinakaze_abi___isoc23_fscanf PRIVATE
   "__isoc23_fscanf@GLIBC_2.38"=kinakaze_abi___isoc23_fscanf PRIVATE
@@ -474,6 +479,8 @@ EXPORTS
   "__sched_cpufree@GLIBC_2.7"=kinakaze_abi___sched_cpufree PRIVATE
   kinakaze_abi___secure_getenv
   "__secure_getenv"=kinakaze_abi___secure_getenv PRIVATE
+  kinakaze_abi___sigaction
+  "__sigaction"=kinakaze_abi___sigaction PRIVATE
   kinakaze_abi___sigsetjmp
   "__sigsetjmp"=kinakaze_abi___sigsetjmp PRIVATE
   "__sigsetjmp@GLIBC_2.2.5"=kinakaze_abi___sigsetjmp PRIVATE
@@ -632,6 +639,7 @@ EXPORTS
   "__xmknod@GLIBC_2.2.5"=kinakaze_abi___xmknod PRIVATE
   kinakaze_abi___xmknodat
   "__xmknodat"=kinakaze_abi___xmknodat PRIVATE
+  "__xmknodat@GLIBC_2.4"=kinakaze_abi___xmknodat PRIVATE
   kinakaze_abi___xpg_basename
   "__xpg_basename"=kinakaze_abi___xpg_basename PRIVATE
   "__xpg_basename@GLIBC_2.2.5"=kinakaze_abi___xpg_basename PRIVATE
@@ -836,6 +844,9 @@ EXPORTS
   "c16rtomb"=kinakaze_abi_c16rtomb PRIVATE
   kinakaze_abi_c32rtomb
   "c32rtomb"=kinakaze_abi_c32rtomb PRIVATE
+  kinakaze_abi_call_once
+  "call_once"=kinakaze_abi_call_once PRIVATE
+  "call_once@GLIBC_2.34"=kinakaze_abi_call_once PRIVATE
   kinakaze_abi_calloc
   "calloc"=kinakaze_abi_calloc PRIVATE
   "calloc@GLIBC_2.2.5"=kinakaze_abi_calloc PRIVATE
@@ -920,6 +931,9 @@ EXPORTS
   kinakaze_abi_clock_adjtime
   "clock_adjtime"=kinakaze_abi_clock_adjtime PRIVATE
   "clock_adjtime@GLIBC_2.14"=kinakaze_abi_clock_adjtime PRIVATE
+  kinakaze_abi_clock_getcpuclockid
+  "clock_getcpuclockid"=kinakaze_abi_clock_getcpuclockid PRIVATE
+  "clock_getcpuclockid@GLIBC_2.17"=kinakaze_abi_clock_getcpuclockid PRIVATE
   kinakaze_abi_clock_getres
   "clock_getres"=kinakaze_abi_clock_getres PRIVATE
   "clock_getres@GLIBC_2.17"=kinakaze_abi_clock_getres PRIVATE
@@ -944,9 +958,30 @@ EXPORTS
   kinakaze_abi_closedir
   "closedir"=kinakaze_abi_closedir PRIVATE
   "closedir@GLIBC_2.2.5"=kinakaze_abi_closedir PRIVATE
+  kinakaze_abi_closefrom
+  "closefrom"=kinakaze_abi_closefrom PRIVATE
+  "closefrom@GLIBC_2.34"=kinakaze_abi_closefrom PRIVATE
   kinakaze_abi_closelog
   "closelog"=kinakaze_abi_closelog PRIVATE
   "closelog@GLIBC_2.2.5"=kinakaze_abi_closelog PRIVATE
+  kinakaze_abi_cnd_broadcast
+  "cnd_broadcast"=kinakaze_abi_cnd_broadcast PRIVATE
+  "cnd_broadcast@GLIBC_2.34"=kinakaze_abi_cnd_broadcast PRIVATE
+  kinakaze_abi_cnd_destroy
+  "cnd_destroy"=kinakaze_abi_cnd_destroy PRIVATE
+  "cnd_destroy@GLIBC_2.34"=kinakaze_abi_cnd_destroy PRIVATE
+  kinakaze_abi_cnd_init
+  "cnd_init"=kinakaze_abi_cnd_init PRIVATE
+  "cnd_init@GLIBC_2.34"=kinakaze_abi_cnd_init PRIVATE
+  kinakaze_abi_cnd_signal
+  "cnd_signal"=kinakaze_abi_cnd_signal PRIVATE
+  "cnd_signal@GLIBC_2.34"=kinakaze_abi_cnd_signal PRIVATE
+  kinakaze_abi_cnd_timedwait
+  "cnd_timedwait"=kinakaze_abi_cnd_timedwait PRIVATE
+  "cnd_timedwait@GLIBC_2.34"=kinakaze_abi_cnd_timedwait PRIVATE
+  kinakaze_abi_cnd_wait
+  "cnd_wait"=kinakaze_abi_cnd_wait PRIVATE
+  "cnd_wait@GLIBC_2.34"=kinakaze_abi_cnd_wait PRIVATE
   kinakaze_abi_confstr
   "confstr"=kinakaze_abi_confstr PRIVATE
   "confstr@GLIBC_2.2.5"=kinakaze_abi_confstr PRIVATE
@@ -1880,6 +1915,9 @@ EXPORTS
   kinakaze_abi_getspnam_r
   "getspnam_r"=kinakaze_abi_getspnam_r PRIVATE
   "getspnam_r@GLIBC_2.2.5"=kinakaze_abi_getspnam_r PRIVATE
+  kinakaze_abi_getsubopt
+  "getsubopt"=kinakaze_abi_getsubopt PRIVATE
+  "getsubopt@GLIBC_2.2.5"=kinakaze_abi_getsubopt PRIVATE
   kinakaze_abi_gettext
   "gettext"=kinakaze_abi_gettext PRIVATE
   "gettext@GLIBC_2.2.5"=kinakaze_abi_gettext PRIVATE
@@ -1988,6 +2026,7 @@ EXPORTS
   "hstrerror@GLIBC_2.2.5"=kinakaze_abi_hstrerror PRIVATE
   kinakaze_abi_htonl
   "htonl"=kinakaze_abi_htonl PRIVATE
+  "htonl@GLIBC_2.2.5"=kinakaze_abi_htonl PRIVATE
   kinakaze_abi_htons
   "htons"=kinakaze_abi_htons PRIVATE
   "htons@GLIBC_2.2.5"=kinakaze_abi_htons PRIVATE
@@ -2554,6 +2593,22 @@ EXPORTS
   kinakaze_abi_mtrace
   "mtrace"=kinakaze_abi_mtrace PRIVATE
   "mtrace@GLIBC_2.2.5"=kinakaze_abi_mtrace PRIVATE
+  kinakaze_abi_mtx_destroy
+  "mtx_destroy"=kinakaze_abi_mtx_destroy PRIVATE
+  "mtx_destroy@GLIBC_2.34"=kinakaze_abi_mtx_destroy PRIVATE
+  kinakaze_abi_mtx_init
+  "mtx_init"=kinakaze_abi_mtx_init PRIVATE
+  "mtx_init@GLIBC_2.34"=kinakaze_abi_mtx_init PRIVATE
+  kinakaze_abi_mtx_lock
+  "mtx_lock"=kinakaze_abi_mtx_lock PRIVATE
+  "mtx_lock@GLIBC_2.34"=kinakaze_abi_mtx_lock PRIVATE
+  kinakaze_abi_mtx_timedlock
+  "mtx_timedlock"=kinakaze_abi_mtx_timedlock PRIVATE
+  kinakaze_abi_mtx_trylock
+  "mtx_trylock"=kinakaze_abi_mtx_trylock PRIVATE
+  kinakaze_abi_mtx_unlock
+  "mtx_unlock"=kinakaze_abi_mtx_unlock PRIVATE
+  "mtx_unlock@GLIBC_2.34"=kinakaze_abi_mtx_unlock PRIVATE
   kinakaze_abi_munlock
   "munlock"=kinakaze_abi_munlock PRIVATE
   "munlock@GLIBC_2.2.5"=kinakaze_abi_munlock PRIVATE
@@ -2603,6 +2658,7 @@ EXPORTS
   "ns_name_uncompress@GLIBC_2.34"=kinakaze_abi_ns_name_uncompress PRIVATE
   kinakaze_abi_ntohl
   "ntohl"=kinakaze_abi_ntohl PRIVATE
+  "ntohl@GLIBC_2.2.5"=kinakaze_abi_ntohl PRIVATE
   kinakaze_abi_ntohs
   "ntohs"=kinakaze_abi_ntohs PRIVATE
   "ntohs@GLIBC_2.2.5"=kinakaze_abi_ntohs PRIVATE
@@ -3937,6 +3993,9 @@ EXPORTS
   kinakaze_abi_strtoumax
   "strtoumax"=kinakaze_abi_strtoumax PRIVATE
   "strtoumax@GLIBC_2.2.5"=kinakaze_abi_strtoumax PRIVATE
+  kinakaze_abi_strtouq
+  "strtouq"=kinakaze_abi_strtouq PRIVATE
+  "strtouq@GLIBC_2.2.5"=kinakaze_abi_strtouq PRIVATE
   kinakaze_abi_strverscmp
   "strverscmp"=kinakaze_abi_strverscmp PRIVATE
   "strverscmp@GLIBC_2.2.5"=kinakaze_abi_strverscmp PRIVATE
@@ -4061,9 +4120,22 @@ EXPORTS
   kinakaze_abi_tfind
   "tfind"=kinakaze_abi_tfind PRIVATE
   "tfind@GLIBC_2.2.5"=kinakaze_abi_tfind PRIVATE
+  kinakaze_abi_thrd_create
+  "thrd_create"=kinakaze_abi_thrd_create PRIVATE
+  "thrd_create@GLIBC_2.34"=kinakaze_abi_thrd_create PRIVATE
+  kinakaze_abi_thrd_current
+  "thrd_current"=kinakaze_abi_thrd_current PRIVATE
+  "thrd_current@GLIBC_2.28"=kinakaze_abi_thrd_current PRIVATE
+  kinakaze_abi_thrd_detach
+  "thrd_detach"=kinakaze_abi_thrd_detach PRIVATE
+  kinakaze_abi_thrd_equal
+  "thrd_equal"=kinakaze_abi_thrd_equal PRIVATE
   kinakaze_abi_thrd_exit
   "thrd_exit"=kinakaze_abi_thrd_exit PRIVATE
   "thrd_exit@GLIBC_2.34"=kinakaze_abi_thrd_exit PRIVATE
+  kinakaze_abi_thrd_join
+  "thrd_join"=kinakaze_abi_thrd_join PRIVATE
+  "thrd_join@GLIBC_2.34"=kinakaze_abi_thrd_join PRIVATE
   kinakaze_abi_time
   "time"=kinakaze_abi_time PRIVATE
   "time@GLIBC_2.2.5"=kinakaze_abi_time PRIVATE

@@ -1433,10 +1433,69 @@ pub(crate) fn read_clock(clock: c_int) -> Result<(i64, i64), i32> {
         CLOCK_PROCESS_CPUTIME_ID => read_cpu_time(false).ok_or(EINVAL),
         CLOCK_THREAD_CPUTIME_ID => read_cpu_time(true).ok_or(EINVAL),
         clock if clock < 0 && clock & 7 == 6 => thread_clock(clock),
+        clock if clock < 0 && clock & 7 == 2 => process_clock(clock),
         // An unknown clock id is EINVAL on Linux, including for the dynamic
         // per-process clocks this layer does not implement.
         _ => Err(EINVAL),
     }
+}
+
+fn process_clock(clock: c_int) -> Result<(i64, i64), i32> {
+    let pid = !(clock >> 3) as u32;
+    if pid == 0 || pid == kinakaze_vfs::job::process_id() {
+        return read_cpu_time(false).ok_or(EINVAL);
+    }
+    let host_pid = kinakaze_vfs::job::host_pid(pid).ok_or(EINVAL)?;
+    use windows_sys::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION};
+    let handle = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, host_pid) };
+    if handle.is_null() {
+        return Err(EINVAL);
+    }
+    let mut creation = FileTime::default();
+    let mut exit = FileTime::default();
+    let mut kernel = FileTime::default();
+    let mut user = FileTime::default();
+    let ok = unsafe {
+        GetProcessTimes(
+            handle,
+            &raw mut creation,
+            &raw mut exit,
+            &raw mut kernel,
+            &raw mut user,
+        )
+    };
+    unsafe { windows_sys::Win32::Foundation::CloseHandle(handle) };
+    if ok == 0 {
+        return Err(EINVAL);
+    }
+    let total = kernel.ticks() + user.ticks();
+    Ok((
+        total as i64 / TICKS_PER_SECOND,
+        (total % TICKS_PER_SECOND as u64) as i64 * NANOSECONDS_PER_TICK,
+    ))
+}
+
+/// Return a usable Linux process CPU clock ID or an error number directly.
+///
+/// # Safety
+/// `clock_id` must point to a writable clockid_t.
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_clock_getcpuclockid(
+    pid: c_int,
+    clock_id: *mut c_int,
+) -> c_int {
+    if clock_id.is_null() {
+        return EFAULT;
+    }
+    if !(0..=0x1fff_ffff).contains(&pid) {
+        return kinakaze_vfs::ESRCH;
+    }
+    let clock = (!pid << 3) | 2;
+    if process_clock(clock).is_err() {
+        return kinakaze_vfs::ESRCH;
+    }
+    unsafe { clock_id.write(clock) };
+    0
 }
 
 /// `clock_gettime`.
@@ -1529,6 +1588,7 @@ pub unsafe extern "sysv64" fn kinakaze_abi_clock_getres(
         | CLOCK_PROCESS_CPUTIME_ID
         | CLOCK_THREAD_CPUTIME_ID => system_clock_granularity(),
         id if id < 0 && id & 7 == 6 && thread_clock(id).is_ok() => system_clock_granularity(),
+        id if id < 0 && id & 7 == 2 && process_clock(id).is_ok() => system_clock_granularity(),
         _ => {
             crate::set_errno(EINVAL);
             return -1;

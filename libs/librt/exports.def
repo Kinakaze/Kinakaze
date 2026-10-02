@@ -8,8 +8,10 @@ EXPORTS
   "clock_gettime@GLIBC_2.2.5"=kinakaze_engine_librt_clock_gettime PRIVATE
   kinakaze_engine_librt_clock_nanosleep
   "clock_nanosleep"=kinakaze_engine_librt_clock_nanosleep PRIVATE
+  "clock_nanosleep@GLIBC_2.2.5"=kinakaze_engine_librt_clock_nanosleep PRIVATE
   kinakaze_engine_librt_clock_settime
   "clock_settime"=kinakaze_engine_librt_clock_settime PRIVATE
+  "clock_settime@GLIBC_2.2.5"=kinakaze_engine_librt_clock_settime PRIVATE
   kinakaze_engine_librt_mq_close
   "mq_close"=kinakaze_engine_librt_mq_close PRIVATE
   kinakaze_engine_librt_mq_getattr

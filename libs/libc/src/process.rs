@@ -240,6 +240,19 @@ pub unsafe extern "sysv64" fn kinakaze_abi_strtoull(
     unsafe { integer::parse(text, end, base, false) }
 }
 
+/// BSD's unsigned quad parser is the LP64 `strtoull` ABI (used by MongoDB).
+///
+/// # Safety
+/// `text` must be null-terminated; `end` must be null or writable.
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_strtouq(
+    text: *const c_char,
+    end: *mut *const c_char,
+    base: c_int,
+) -> u64 {
+    unsafe { kinakaze_abi_strtoull(text, end, base) }
+}
+
 /// `strtoimax` — parse a signed intmax_t (same as strtoll on LP64).
 ///
 /// # Safety

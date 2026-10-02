@@ -3648,6 +3648,13 @@ pub unsafe extern "sysv64" fn kinakaze_abi_pipe2(fds: *mut c_int, flags: c_int) 
 }
 
 #[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_closefrom(lowfd: c_int) {
+    let saved_errno = kinakaze_tls::errno();
+    unsafe { kinakaze_abi_close_range(lowfd.max(0) as u32, u32::MAX, 0) };
+    crate::set_errno(saved_errno);
+}
+
+#[unsafe(no_mangle)]
 pub unsafe extern "sysv64" fn kinakaze_abi_close_range(
     first: u32,
     last: u32,
@@ -5011,8 +5018,10 @@ fn replace_placeholder_view(
     shared: bool,
     backing: Option<&BackingRef>,
 ) -> Result<Option<*mut c_void>, i32> {
+    let mapping_length = page_rounded_length(length)?;
     let mut registry = mappings().lock().map_err(|_| EIO)?;
-    let Some(prepared) = prepare_placeholder_locked(&mut registry, address as usize, length)?
+    let Some(prepared) =
+        prepare_placeholder_locked(&mut registry, address as usize, mapping_length)?
     else {
         return Ok(None);
     };
@@ -5032,6 +5041,11 @@ fn replace_placeholder_view(
     };
     if view.Value.is_null() {
         let map_error = last_errno();
+        if mmap_trace_enabled() {
+            eprintln!(
+                "kinakaze: placeholder view failed address={address:p} length={length:#x} offset={offset:#x} protection={protection:#x} errno={map_error}"
+            );
+        }
         if let Some(previous) = prepared.previous {
             restore_previous_locked(&mut registry, previous)?;
         }
@@ -5052,7 +5066,7 @@ fn replace_placeholder_view(
         address as usize,
         Mapping {
             base: address,
-            length,
+            length: mapping_length,
             kind: MappingKind::PlaceholderView,
             shared,
             backing: backing.cloned(),
@@ -5535,7 +5549,7 @@ fn map_native_file(
     if shared {
         shared_section_protection(handle, protection)?;
     }
-    if shared && protection == PROT_NONE && fixed && offset < size {
+    if protection == PROT_NONE && offset < size {
         // Keep the file identity but do not create a PAGE_NOACCESS section
         // view: Windows can reject later permission restoration on that view.
         // File growth/mprotect materializes this exact inode when accessible.
@@ -5647,7 +5661,7 @@ fn map_native_file(
         let result = replace_placeholder_view(
             section,
             reserved,
-            backed_length,
+            backed_bytes,
             offset,
             view_page_protection,
             shared,
@@ -5743,7 +5757,7 @@ fn map_native_file(
             match replace_placeholder_view(
                 section,
                 address,
-                placeholder_length,
+                placeholder_length.min((size - offset) as usize),
                 offset,
                 view_protection,
                 shared,
@@ -5866,6 +5880,14 @@ fn shared_section_protection(handle: *mut c_void, protection: c_int) -> Result<u
 /// placeholder. This function replaces exactly the newly backed placeholder
 /// pages with views from a section created at the file's new size.
 pub(crate) fn refresh_file_mappings(fd: i32, _new_length: u64) -> Result<(), i32> {
+    // Most writes do not involve a mapped EOF tail. Avoid opening an inode or
+    // entering the fork mapping transaction when no such view exists.
+    if !mappings().lock().map_err(|_| EIO)?.values().any(|mapping| {
+        mapping.kind == MappingKind::Placeholder
+            && (mapping.file_origin.is_some() || mapping.file.is_some())
+    }) {
+        return Ok(());
+    }
     let _fork_mapping_transaction =
         kinakaze_runtime::begin_fork_mapping_transaction().ok_or(ENOMEM)?;
     let opened = match fs::verity::Opened::from_fd(fd) {
@@ -5978,6 +6000,12 @@ pub(crate) fn refresh_file_mappings(fd: i32, _new_length: u64) -> Result<(), i32
             )
         };
         if section.is_null() {
+            if mmap_trace_enabled() {
+                eprintln!(
+                    "kinakaze: growth section failed protection={section_protection:#x} length={new_length:#x} errno={}",
+                    last_errno()
+                );
+            }
             return Err(last_errno());
         }
         let retained = if shared {
@@ -5998,7 +6026,7 @@ pub(crate) fn refresh_file_mappings(fd: i32, _new_length: u64) -> Result<(), i32
         let replaced = replace_placeholder_view(
             section,
             address,
-            length,
+            length.min(new_length.saturating_sub(offset) as usize),
             offset,
             protection,
             shared,

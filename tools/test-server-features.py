@@ -7,6 +7,13 @@ from init_pool import InitPool, distribution_hashes
 CASES = {
     'null-string-format': ('NullStringFormatProbe', 'NULL_STRING_PRECISION_WIDTH_CHECKPOINT_FORMAT_OK'),
     'empty-gnu-hash': ('EmptyGnuHashProbe', 'EMPTY_GNU_HASH_IMPORTS_OK'),
+    'readonly-create': ('ReadonlyCreateProbe', 'READONLY_CREATE_DOT_PARENT_FD_ACCESS_OK'),
+    'c11-threads': ('C11ThreadProbe', 'C11_THREADS_ONCE_MUTEX_CONDITION_TIMEOUT_JOIN_OK'),
+    'runtime-limits': ('RuntimeLimitProbe', 'RUNTIME_IOV_MAX_CLOSEFROM_BOUNDARY_ERRNO_OK'),
+    'async-writeback': ('AsyncWritebackProbe', 'ASYNC_WRITEBACK_EXIT_RENAME_UNLINK_OFFSET_ERRORS_OK'),
+    'getsubopt': ('GetSuboptProbe', 'GETSUBOPT_MATCH_UNKNOWN_EMPTY_CURSOR_OK'),
+    'database-abi': ('DatabaseAbiProbe', 'DATABASE_ABI_QUAD_CPU_CLOCK_EXCEPTION_FLAGS_OK'),
+    'mapped-file-growth': ('MappedFileGrowthProbe', 'MAPPED_FILE_PWRITE_GROWTH_RETAINED_INODE_OK'),
     'ioctl-request-width': ('IoctlRequestWidthProbe', 'IOCTL_REQUEST_WIDTH_PTY_OK'),
     'raw-termios-layout': ('RawTermiosLayoutProbe', 'RAW_TERMIOS_LAYOUT_GUARD_SPEEDS_OK'),
     'proc-fd-cwd-exec': ('ProcFdCwdExecProbe', 'PROC_FD_CWD_CLOSE_RENAME_EXEC_OK'),

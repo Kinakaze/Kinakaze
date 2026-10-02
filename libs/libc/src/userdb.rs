@@ -2410,6 +2410,7 @@ pub const SC_CLK_TCK: c_int = 2;
 pub const SC_NGROUPS_MAX: c_int = 3;
 pub const SC_OPEN_MAX: c_int = 4;
 pub const SC_PAGESIZE: c_int = 30;
+pub const SC_IOV_MAX: c_int = 60;
 pub const SC_GETPW_R_SIZE_MAX: c_int = 70;
 pub const SC_GETGR_R_SIZE_MAX: c_int = 69;
 pub const SC_LOGIN_NAME_MAX: c_int = 71;
@@ -2419,6 +2420,8 @@ pub const SC_NPROCESSORS_ONLN: c_int = 84;
 pub const SC_PHYS_PAGES: c_int = 85;
 pub const SC_MONOTONIC_CLOCK: c_int = 149;
 pub const SC_HOST_NAME_MAX: c_int = 180;
+pub const SC_MINSIGSTKSZ: c_int = 249;
+pub const SC_SIGSTKSZ: c_int = 250;
 
 /// The page size, which is 4096 on every Windows platform this targets.
 ///
@@ -2460,6 +2463,7 @@ pub extern "sysv64" fn kinakaze_abi_sysconf(name: c_int) -> i64 {
 pub extern "sysv64" fn sysconf(name: c_int) -> i64 {
     match name {
         SC_PAGESIZE => page_size(),
+        SC_IOV_MAX => 1024,
         SC_NPROCESSORS_ONLN => online_processors(),
         SC_NPROCESSORS_CONF => {
             let mut info = SystemInfo::default();
@@ -2484,6 +2488,8 @@ pub extern "sysv64" fn sysconf(name: c_int) -> i64 {
         SC_CLK_TCK => 100,
         SC_MONOTONIC_CLOCK => 200809,
         SC_THREAD_STACK_MIN => libpthread::PTHREAD_STACK_MIN as i64,
+        SC_MINSIGSTKSZ => kinakaze_vfs::signal::MINSIGSTKSZ as i64,
+        SC_SIGSTKSZ => kinakaze_vfs::signal::SIGSTKSZ as i64,
         // Large enough for the entry this module produces several times over.
         // glibc reports 1024 here and BusyBox uses it as its first allocation
         // before growing on ERANGE.
@@ -3627,6 +3633,7 @@ mod tests {
 
     #[test]
     fn sysconf_answers_the_names_busybox_asks_for() {
+        assert_eq!(kinakaze_abi_sysconf(SC_IOV_MAX), 1024);
         assert_eq!(kinakaze_abi_sysconf(SC_PAGESIZE), 4096);
         assert_eq!(
             kinakaze_abi_getpagesize() as i64,

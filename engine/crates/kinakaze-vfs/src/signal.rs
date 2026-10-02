@@ -132,7 +132,9 @@ pub struct SignalStack {
 
 pub const SS_ONSTACK: i32 = 1;
 pub const SS_DISABLE: i32 = 2;
-const MINSIGSTKSZ: usize = 2048;
+pub const MINSIGSTKSZ: usize = 2048;
+/// Recommended space for the runtime's fixed Linux signal context and handler.
+pub const SIGSTKSZ: usize = 8192;
 
 impl Default for SignalStack {
     fn default() -> Self {

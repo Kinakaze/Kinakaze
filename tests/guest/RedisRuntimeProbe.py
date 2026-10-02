@@ -72,7 +72,7 @@ def main():
         def start():
             nonlocal server
             server = subprocess.Popen([
-                '/usr/bin/redis-server', '--port', '0', '--unixsocket', address,
+                os.environ.get('PANEL_REDIS_SERVER', '/usr/bin/redis-server'), '--port', '0', '--unixsocket', address,
                 '--dir', directory, '--save', '', '--appendonly', 'yes', '--appendfsync', 'always',
             ], stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
             deadline = time.monotonic() + 20

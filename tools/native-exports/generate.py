@@ -60,6 +60,7 @@ OBJECT_LAYOUTS = {
 # exported by libpthread. Retain that observed compatibility surface while
 # forwarding into the same runtime implementation and storage as libc.
 PTHREAD_LIBC_FORWARDERS = {
+    "sem_close", "sem_getvalue", "sem_open", "sem_unlink", "system", "vfork", "wait",
     "__res_state", "fork", "pause", "sigwait", "tcdrain",
     "pthread_rwlockattr_init", "pthread_rwlockattr_destroy", "pthread_attr_setscope",
     "__h_errno_location", "__libc_current_sigrtmax", "__libc_current_sigrtmin",
@@ -89,7 +90,7 @@ LIBC_PTHREAD_FORWARDERS = {"pthread_attr_getschedpolicy", "pthread_attr_getsched
                           "pthread_spin_init", "pthread_spin_destroy", "pthread_spin_lock",
                           "pthread_spin_trylock", "pthread_spin_unlock"}
 LIBC_RT_FORWARDERS = {"timer_create", "timer_delete", "timer_settime", "timer_gettime", "timer_getoverrun"}
-LIBC_LIBM_FORWARDERS = {"copysign", "__isinf", "__isnan", "__isnanf", "isinf", "isnan", "isinff", "isnanf"}
+LIBC_LIBM_FORWARDERS = {"copysign", "__isinf", "__isinff", "__isnan", "__isnanf", "__isnanl", "isinf", "isnan", "isinff", "isnanf"}
 
 PTHREAD_ROBUST_ALIASES = {
     "pthread_mutex_consistent_np": "pthread_mutex_consistent",

@@ -5,6 +5,8 @@
 use core::ffi::c_void;
 use libpthread::{PthreadAttr, PthreadCondAttr, PthreadMutexAttr, StartRoutine, Timespec};
 
+mod c11;
+
 #[unsafe(no_mangle)]
 pub extern "sysv64" fn kinakaze_abi_pthread_self() -> usize {
     libpthread::pthread_self()

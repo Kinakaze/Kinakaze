@@ -26,6 +26,64 @@ pub const REQUIRED_ARGUMENT: c_int = 1;
 /// `has_arg`: the option takes an optional argument.
 pub const OPTIONAL_ARGUMENT: c_int = 2;
 
+/// Consume one comma-separated suboption without using getopt's global state.
+///
+/// A recognized token yields its exact table index and optional value. An
+/// unknown token yields the entire token (including any `=`) through `valuep`.
+/// Only the separating comma is overwritten; an exhausted string changes
+/// neither output pointer. This is also used by Memcached's `-o` parser.
+///
+/// # Safety
+/// `optionp` points to a writable NUL-terminated string pointer, `tokens` is a
+/// NUL-terminated array of readable strings, and `valuep` is writable.
+#[unsafe(no_mangle)]
+pub unsafe extern "sysv64" fn kinakaze_abi_getsubopt(
+    optionp: *mut *mut c_char,
+    tokens: *const *const c_char,
+    valuep: *mut *mut c_char,
+) -> c_int {
+    // SAFETY: all pointer validity and terminators are the caller's contract.
+    unsafe {
+        let start = *optionp;
+        if *start == 0 {
+            return -1;
+        }
+        let mut end = start;
+        let mut equal: *mut c_char = ptr::null_mut();
+        while *end != 0 && *end != b',' as c_char {
+            if equal.is_null() && *end == b'=' as c_char {
+                equal = end;
+            }
+            end = end.add(1);
+        }
+        let name_end = if equal.is_null() { end } else { equal };
+        let name_length = name_end.offset_from(start) as usize;
+        let name = core::slice::from_raw_parts(start.cast::<u8>(), name_length);
+        let mut index = 0usize;
+        let mut result = -1;
+        while !(*tokens.add(index)).is_null() {
+            if bytes(*tokens.add(index)) == name {
+                result = index as c_int;
+                break;
+            }
+            index += 1;
+        }
+        *valuep = if result < 0 {
+            start
+        } else if equal.is_null() {
+            ptr::null_mut()
+        } else {
+            equal.add(1)
+        };
+        if *end != 0 {
+            *end = 0;
+            end = end.add(1);
+        }
+        *optionp = end;
+        result
+    }
+}
+
 /// `struct option`, the long-option table entry.
 ///
 /// A null `name` terminates the table. When `flag` is non-null `getopt_long`

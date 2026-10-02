@@ -239,6 +239,12 @@ unsafe fn attempt(
             Err(error) => return Err(error),
         }
     }
+    if writing && total != 0 && native.is_some() {
+        // LMDB extends a file with pwrite while retaining a larger read-only
+        // VMA. Newly backed pages must become readable without a remap.
+        // Refresh after the positional operation's inode locks are released.
+        super::refresh_file_mappings(fd, 0)?;
+    }
     Ok(total)
 }
 

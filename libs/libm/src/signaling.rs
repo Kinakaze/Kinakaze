@@ -27,6 +27,20 @@ extern "sysv64" fn extended_bits(significand: u64, exponent: u16) -> i32 {
     )
 }
 
+#[unsafe(export_name = "kinakaze_engine_libm___isnanl")]
+#[unsafe(naked)]
+pub unsafe extern "sysv64" fn extended_nan() -> i32 {
+    core::arch::naked_asm!(
+        "mov rdi, qword ptr [rsp + 8]",
+        "movzx esi, word ptr [rsp + 16]",
+        "jmp {classify}", classify = sym extended_nan_bits,
+    );
+}
+
+extern "sysv64" fn extended_nan_bits(significand: u64, exponent: u16) -> i32 {
+    i32::from(exponent & 0x7fff == 0x7fff && significand & 0x7fff_ffff_ffff_ffff != 0)
+}
+
 #[unsafe(export_name = "kinakaze_engine_libm___issignalingf128")]
 #[unsafe(naked)]
 pub unsafe extern "sysv64" fn quad() {
@@ -46,6 +60,35 @@ extern "sysv64" fn quad_bits(low: u64, high: u64) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn extended_nan_uses_stack_argument_without_rounding_or_exceptions() {
+        for (significand, exponent, expected) in [
+            (0x8000_0000_0000_0001u64, 0x7fffu16, 1),
+            (0xc000_0000_0000_0000, 0xffff, 1),
+            (0x8000_0000_0000_0000, 0x7fff, 0),
+            (0x8000_0000_0000_0000, 0xffff, 0),
+            (u64::MAX, 0x7ffe, 0),
+            (1, 0, 0),
+            (0, 0x8000, 0),
+        ] {
+            let result: i32;
+            let before = crate::fetestexcept(0x3f);
+            unsafe {
+                core::arch::asm!(
+                    "sub rsp, 32",
+                    "mov qword ptr [rsp], rdi",
+                    "mov word ptr [rsp + 8], si",
+                    "call {entry}",
+                    "add rsp, 32",
+                    entry = sym extended_nan,
+                    in("rdi") significand, in("rsi") u64::from(exponent),
+                    lateout("eax") result, clobber_abi("sysv64"),
+                );
+            }
+            assert_eq!(result, expected);
+            assert_eq!(crate::fetestexcept(0x3f), before);
+        }
+    }
     #[test]
     fn quiet_nan_infinity_and_signaling_payloads() {
         assert_eq!(double(f64::from_bits(0x7ff0_0000_0000_0001)), 1);

@@ -20,6 +20,8 @@ EXPORTS
   "__isnan"=kinakaze_engine_libm___isnan PRIVATE
   kinakaze_engine_libm___isnanf
   "__isnanf"=kinakaze_engine_libm___isnanf PRIVATE
+  kinakaze_engine_libm___isnanl
+  "__isnanl"=kinakaze_engine_libm___isnanl PRIVATE
   kinakaze_engine_libm___issignaling
   "__issignaling"=kinakaze_engine_libm___issignaling PRIVATE
   "__issignaling@GLIBC_2.18"=kinakaze_engine_libm___issignaling PRIVATE
@@ -243,6 +245,7 @@ EXPORTS
   "conjl@GLIBC_2.2.5"=kinakaze_engine_libm_conjl PRIVATE
   kinakaze_engine_libm_copysign
   "copysign"=kinakaze_engine_libm_copysign PRIVATE
+  "copysign@GLIBC_2.2.5"=kinakaze_engine_libm_copysign PRIVATE
   kinakaze_engine_libm_copysignf
   "copysignf"=kinakaze_engine_libm_copysignf PRIVATE
   kinakaze_engine_libm_cos
@@ -406,6 +409,9 @@ EXPORTS
   "fegetenv@GLIBC_2.2.5"=kinakaze_engine_libm_fegetenv PRIVATE
   kinakaze_engine_libm_fegetexcept
   "fegetexcept"=kinakaze_engine_libm_fegetexcept PRIVATE
+  kinakaze_engine_libm_fegetexceptflag
+  "fegetexceptflag"=kinakaze_engine_libm_fegetexceptflag PRIVATE
+  "fegetexceptflag@GLIBC_2.2.5"=kinakaze_engine_libm_fegetexceptflag PRIVATE
   kinakaze_engine_libm_fegetround
   "fegetround"=kinakaze_engine_libm_fegetround PRIVATE
   "fegetround@GLIBC_2.2.5"=kinakaze_engine_libm_fegetround PRIVATE
@@ -418,6 +424,9 @@ EXPORTS
   kinakaze_engine_libm_fesetenv
   "fesetenv"=kinakaze_engine_libm_fesetenv PRIVATE
   "fesetenv@GLIBC_2.2.5"=kinakaze_engine_libm_fesetenv PRIVATE
+  kinakaze_engine_libm_fesetexceptflag
+  "fesetexceptflag"=kinakaze_engine_libm_fesetexceptflag PRIVATE
+  "fesetexceptflag@GLIBC_2.2.5"=kinakaze_engine_libm_fesetexceptflag PRIVATE
   kinakaze_engine_libm_fesetround
   "fesetround"=kinakaze_engine_libm_fesetround PRIVATE
   "fesetround@GLIBC_2.2.5"=kinakaze_engine_libm_fesetround PRIVATE

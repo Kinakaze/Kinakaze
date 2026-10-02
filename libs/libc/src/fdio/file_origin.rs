@@ -396,7 +396,7 @@ fn materialize_placeholder(
     let _inode = fs::verity::lock(owner.handle())?;
     let offset = owner.offset(start)?;
     let eof = fs::verity::authoritative_size(owner.handle())?;
-    let length = page_rounded_length(eof.saturating_sub(offset).min(length as u64) as usize)?;
+    let length = eof.saturating_sub(offset).min(length as u64) as usize;
     if length == 0 {
         return Ok(());
     }
