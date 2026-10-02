@@ -763,17 +763,24 @@ pub enum ForkMappingStorage {
     CopyOnWriteSection = 4,
     /// Freeze a private pagefile section into COW at its first fork.
     AnonymousSnapshot = 5,
+    RefreshableImage = 6,
 }
 
 impl ForkMappingStorage {
     fn is_cow(self) -> bool {
-        matches!(self, Self::CopyOnWriteSection | Self::AnonymousSnapshot)
+        matches!(
+            self,
+            Self::CopyOnWriteSection | Self::AnonymousSnapshot | Self::RefreshableImage
+        )
     }
 
     fn retains_section(self) -> bool {
         matches!(
             self,
-            Self::RetainedSection | Self::CopyOnWriteSection | Self::AnonymousSnapshot
+            Self::RetainedSection
+                | Self::CopyOnWriteSection
+                | Self::AnonymousSnapshot
+                | Self::RefreshableImage
         )
     }
 }
@@ -1836,6 +1843,7 @@ fn decode_mapping_registry(payload: &[u8]) -> Result<MappingRegistry, ForkError>
             3 => ForkMappingStorage::RetainedSection,
             4 => ForkMappingStorage::CopyOnWriteSection,
             5 => ForkMappingStorage::AnonymousSnapshot,
+            6 => ForkMappingStorage::RefreshableImage,
             _ => {
                 return Err(ForkError {
                     stage: ForkStage::HandoffRestore,
@@ -1974,6 +1982,7 @@ mod mapping_domain_tests {
         for storage in [
             ForkMappingStorage::CopyOnWriteSection,
             ForkMappingStorage::AnonymousSnapshot,
+            ForkMappingStorage::RefreshableImage,
         ] {
             entry.storage = storage;
             entry.backing_slot =
@@ -7143,6 +7152,7 @@ mod windows {
                         3 => ForkMappingStorage::RetainedSection,
                         4 => ForkMappingStorage::CopyOnWriteSection,
                         5 => ForkMappingStorage::AnonymousSnapshot,
+                        6 => ForkMappingStorage::RefreshableImage,
                         0 => ForkMappingStorage::Ordinary,
                         _ => {
                             return Err(ForkError {
@@ -7176,6 +7186,9 @@ mod windows {
             context.Rsp as usize,
             ptr::addr_of!(stack_marker) as usize,
         );
+        let snapshot_refresh_started = std::time::Instant::now();
+        let refreshed = unsafe { super::guest_heap::refresh_fork_snapshots(&guest_mappings) };
+        let snapshot_refresh_us = snapshot_refresh_started.elapsed().as_micros();
         let retained_handles = unsafe {
             super::handle_slots::duplicate_into_excluding(
                 prepared_child.process.hProcess,
@@ -7345,7 +7358,7 @@ mod windows {
                     unsafe { CloseHandle(child.thread) };
                     if fork_trace_enabled() || profile_fork {
                         super::fork_timing_line(format_args!(
-                            "kinakaze: fork timings prepare={}us freeze={}us create={}us ready={}us suspend={}us image={}us arena={}us mappings={}us stack={}us resume={}us thaw={}us total={}us arena_used={} arena_mapped={} guest_mappings={} guest_reserved={} copied_bytes={} section_bytes={} copy_calls={} committed_regions={} guest_mm_copied_bytes={} host_private_copied_bytes={} cow_shared_bytes={} write_watch_skipped_bytes={}",
+                            "kinakaze: fork timings prepare={}us freeze={}us create={}us ready={}us suspend={}us image={}us arena={}us mappings={}us stack={}us resume={}us thaw={}us total={}us arena_used={} arena_mapped={} guest_mappings={} guest_reserved={} copied_bytes={} section_bytes={} copy_calls={} committed_regions={} guest_mm_copied_bytes={} host_private_copied_bytes={} cow_shared_bytes={} write_watch_skipped_bytes={} snapshot_refresh={}us heap_refreshed_bytes={} image_refreshed_bytes={}",
                             prepare_us,
                             freeze_us,
                             child.timings.create_process_us,
@@ -7370,6 +7383,9 @@ mod windows {
                             child.timings.mapping_stats.host_private_copied_bytes,
                             child.timings.mapping_stats.cow_shared_bytes,
                             child.timings.mapping_stats.write_watch_skipped_bytes,
+                            snapshot_refresh_us,
+                            refreshed.heap_bytes,
+                            refreshed.image_bytes,
                         ));
                     }
                     if let Some((stats, elapsed_us)) = free_statistics {
@@ -7892,6 +7908,7 @@ mod windows {
                             | ForkMappingStorage::RetainedSection
                             | ForkMappingStorage::CopyOnWriteSection
                             | ForkMappingStorage::AnonymousSnapshot
+                            | ForkMappingStorage::RefreshableImage
                     ) || (!group.ordinary_only
                         && mapping.storage == ForkMappingStorage::Ordinary))
                     && mapping
@@ -8621,7 +8638,8 @@ mod windows {
                 ForkMappingStorage::Section
                 | ForkMappingStorage::RetainedSection
                 | ForkMappingStorage::CopyOnWriteSection
-                | ForkMappingStorage::AnonymousSnapshot => {
+                | ForkMappingStorage::AnonymousSnapshot
+                | ForkMappingStorage::RefreshableImage => {
                     let (section_handle, view_protection) = if mapping.storage.retains_section() {
                         // The topology transaction pins this parent slot. Its
                         // non-inheritable child duplicate was patched into the
@@ -8812,7 +8830,11 @@ mod windows {
                                 )
                                 .map(|_| ())
                             };
-                            let cow = if mapping.storage == ForkMappingStorage::AnonymousSnapshot {
+                            let cow = if matches!(
+                                mapping.storage,
+                                ForkMappingStorage::AnonymousSnapshot
+                                    | ForkMappingStorage::RefreshableImage
+                            ) {
                                 unsafe {
                                     super::anonymous_cow::copy_private_pages(
                                         cursor,

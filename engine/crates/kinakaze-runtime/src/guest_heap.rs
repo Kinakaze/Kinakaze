@@ -15,6 +15,9 @@ use windows_sys::Win32::{
 };
 const MEM_COALESCE_PLACEHOLDERS: u32 = 0x1;
 
+mod refresh;
+pub(super) use refresh::refresh_fork_snapshots;
+
 /// Called by the allocator under its topology transaction, before publishing
 /// the new committed boundary. Successful chunks, slots and section handles
 /// live until process exit, exactly as the allocator's committed high water.

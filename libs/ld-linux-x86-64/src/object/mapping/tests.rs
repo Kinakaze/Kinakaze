@@ -245,3 +245,77 @@ fn shared_snapshot_supports_the_fixed_executable_address() {
         );
     }
 }
+
+#[test]
+fn image_view_can_be_replaced_without_touching_an_older_view() {
+    let _transaction = kinakaze_runtime::begin_fork_mapping_transaction().unwrap();
+    let len = 256 * 1024 + 4096;
+    let bytes = crate::ImmutableBytes::from_slice(&vec![37; len]).unwrap();
+    let header = ProgramHeader {
+        kind: kinakaze_elf::PT_LOAD,
+        flags: 7,
+        offset: 0,
+        virtual_address: 0,
+        file_size: len as u64,
+        memory_size: len as u64,
+        align: 4096,
+    };
+    let mapping = ImageMapping::new(false, 0, len, "replaceable", &bytes, &[header]).unwrap();
+    unsafe {
+        let section = (*mapping.slot).load(Ordering::Acquire) as _;
+        let older = MapViewOfFile(section, FILE_MAP_COPY, 0, 0, len);
+        assert!(!older.Value.is_null());
+        mapping.base.write_volatile(51);
+        assert_eq!(older.Value.cast::<u8>().read_volatile(), 37);
+        let process = windows_sys::Win32::System::Threading::GetCurrentProcess();
+        assert_ne!(
+            UnmapViewOfFile2(
+                process,
+                MEMORY_MAPPED_VIEW_ADDRESS {
+                    Value: mapping.base.cast()
+                },
+                MEM_PRESERVE_PLACEHOLDER
+            ),
+            0
+        );
+        let replaced = MapViewOfFile3(
+            section,
+            process,
+            mapping.base.cast(),
+            0,
+            len,
+            MEM_REPLACE_PLACEHOLDER,
+            PAGE_EXECUTE_WRITECOPY,
+            core::ptr::null_mut(),
+            0,
+        );
+        assert_eq!(replaced.Value, mapping.base.cast());
+        assert_eq!(mapping.base.read_volatile(), 37);
+        mapping.base.write_volatile(63);
+        assert_eq!(older.Value.cast::<u8>().read_volatile(), 37);
+        UnmapViewOfFile(older);
+    }
+}
+
+#[test]
+fn failed_image_view_releases_its_placeholder_and_keeps_an_existing_reservation() {
+    unsafe {
+        let len = 256 * 1024 + 4096;
+        let address = VirtualAlloc(core::ptr::null(), len, MEM_RESERVE, PAGE_NOACCESS);
+        assert!(!address.is_null());
+        assert!(map_private(core::ptr::null_mut(), address, len).is_null());
+        let mut info: MEMORY_BASIC_INFORMATION = core::mem::zeroed();
+        assert_ne!(
+            VirtualQuery(address, &mut info, core::mem::size_of_val(&info)),
+            0
+        );
+        assert_eq!(info.State, MEM_RESERVE);
+        assert_ne!(VirtualFree(address, 0, MEM_RELEASE), 0);
+        assert!(map_private(core::ptr::null_mut(), address, len).is_null());
+        assert_ne!(
+            VirtualQuery(address, &mut info, core::mem::size_of_val(&info)),
+            0
+        );
+        assert_eq!(info.State, MEM_FREE);
+    }
+}

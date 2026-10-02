@@ -25,8 +25,7 @@ impl ImageMapping {
             mapping.base == base
                 && mapping.len == len
                 && mapping.backing_slot == slot
-                && mapping.storage
-                    == kinakaze_runtime::ForkMappingStorage::CopyOnWriteSection as u32
+                && mapping.storage == kinakaze_runtime::ForkMappingStorage::RefreshableImage as u32
         });
         if !valid {
             return Err(LinkError::InvalidProvider(
@@ -56,8 +55,8 @@ impl ImageMapping {
         use windows_sys::Win32::{
             Foundation::{CloseHandle, INVALID_HANDLE_VALUE},
             System::Memory::{
-                CreateFileMappingW, FILE_MAP_COPY, FILE_MAP_EXECUTE, FILE_MAP_WRITE, MapViewOfFile,
-                MapViewOfFileEx, PAGE_EXECUTE_READWRITE, PAGE_EXECUTE_WRITECOPY, UnmapViewOfFile,
+                CreateFileMappingW, FILE_MAP_WRITE, MapViewOfFile, PAGE_EXECUTE_READWRITE,
+                PAGE_EXECUTE_WRITECOPY, UnmapViewOfFile,
             },
         };
         let failure = || LinkError::MappingFailed {
@@ -125,20 +124,11 @@ impl ImageMapping {
         } else {
             core::ptr::null()
         };
-        let view = unsafe {
-            MapViewOfFileEx(
-                handle,
-                FILE_MAP_COPY | FILE_MAP_EXECUTE,
-                0,
-                0,
-                len,
-                preferred,
-            )
-        };
-        if view.Value.is_null() {
+        let view = map_private(handle, preferred, len);
+        if view.is_null() {
             return Err(failure());
         }
-        owned.base = view.Value.cast();
+        owned.base = view;
         if fixed && owned.base as u64 != start {
             return Err(failure());
         }
@@ -146,7 +136,7 @@ impl ImageMapping {
             base: owned.base as usize,
             len,
             behavior: kinakaze_runtime::ForkMappingBehavior::Copy,
-            storage: kinakaze_runtime::ForkMappingStorage::CopyOnWriteSection,
+            storage: kinakaze_runtime::ForkMappingStorage::RefreshableImage,
             backing_slot: slot as usize,
             backing_offset: 0,
             view_protection: PAGE_EXECUTE_WRITECOPY,
@@ -168,9 +158,7 @@ impl ImageMapping {
         use core::alloc::{GlobalAlloc, Layout};
         use std::os::windows::io::{AsRawHandle, IntoRawHandle};
         use std::sync::atomic::AtomicUsize;
-        use windows_sys::Win32::System::Memory::{
-            FILE_MAP_COPY, FILE_MAP_EXECUTE, MapViewOfFileEx, PAGE_EXECUTE_WRITECOPY,
-        };
+        use windows_sys::Win32::System::Memory::PAGE_EXECUTE_WRITECOPY;
         let Some(layout) = snapshot_layout(bytes.len(), headers, start, len) else {
             return Ok(None);
         };
@@ -207,22 +195,13 @@ impl ImageMapping {
         } else {
             core::ptr::null()
         };
-        let view = unsafe {
-            MapViewOfFileEx(
-                section,
-                FILE_MAP_COPY | FILE_MAP_EXECUTE,
-                0,
-                0,
-                len,
-                preferred,
-            )
-        };
-        if view.Value.is_null() {
+        let view = map_private(section, preferred, len);
+        if view.is_null() {
             // A data-only snapshot or a platform restriction can reject the
             // executable view. The original independent backing remains valid.
             return Ok(None);
         }
-        owned.base = view.Value.cast();
+        owned.base = view;
         if fixed && owned.base as u64 != start {
             return Ok(None);
         }
@@ -250,7 +229,7 @@ impl ImageMapping {
             base: owned.base as usize,
             len,
             behavior: kinakaze_runtime::ForkMappingBehavior::Copy,
-            storage: kinakaze_runtime::ForkMappingStorage::CopyOnWriteSection,
+            storage: kinakaze_runtime::ForkMappingStorage::RefreshableImage,
             backing_slot: slot as usize,
             backing_offset: 0,
             view_protection: PAGE_EXECUTE_WRITECOPY,
@@ -259,6 +238,45 @@ impl ImageMapping {
             return Err(registration());
         }
         Ok(Some(owned))
+    }
+}
+
+#[cfg(windows)]
+fn map_private(
+    section: windows_sys::Win32::Foundation::HANDLE,
+    preferred: *const core::ffi::c_void,
+    len: usize,
+) -> *mut u8 {
+    use windows_sys::Win32::System::{Memory::*, Threading::GetCurrentProcess};
+    unsafe {
+        let process = GetCurrentProcess();
+        let reserved = VirtualAlloc2(
+            process,
+            preferred,
+            len,
+            MEM_RESERVE | MEM_RESERVE_PLACEHOLDER,
+            PAGE_NOACCESS,
+            core::ptr::null_mut(),
+            0,
+        );
+        if reserved.is_null() {
+            return core::ptr::null_mut();
+        }
+        let view = MapViewOfFile3(
+            section,
+            process,
+            reserved,
+            0,
+            len,
+            MEM_REPLACE_PLACEHOLDER,
+            PAGE_EXECUTE_WRITECOPY,
+            core::ptr::null_mut(),
+            0,
+        );
+        if view.Value.is_null() && VirtualFree(reserved, 0, MEM_RELEASE) == 0 {
+            std::process::abort();
+        }
+        view.Value.cast()
     }
 }
 
