@@ -110,6 +110,7 @@ impl Opened {
         if self.is_directory() {
             return Err(EISDIR);
         }
+        crate::fs::writeback::wait_background(self.borrowed_handle())?;
         let query = Object::reopen(self.borrowed_handle(), QUERY_ACCESS)?;
         let before = read_record(&query)?;
         if before

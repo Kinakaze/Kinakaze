@@ -370,11 +370,14 @@ mod tests {
         };
         assert_ne!(
             unsafe {
-                SetFileInformationByHandle(
-                    object.raw(),
-                    FileDispositionInfoEx,
-                    (&deletion as *const FILE_DISPOSITION_INFO_EX).cast(),
-                    std::mem::size_of_val(&deletion) as u32,
+                trace_native!(
+                    "native.SetFileInformationByHandle",
+                    SetFileInformationByHandle(
+                        object.raw(),
+                        FileDispositionInfoEx,
+                        (&deletion as *const FILE_DISPOSITION_INFO_EX).cast(),
+                        std::mem::size_of_val(&deletion) as u32,
+                    )
                 )
             },
             0

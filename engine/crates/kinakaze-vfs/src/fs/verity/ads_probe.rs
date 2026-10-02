@@ -53,11 +53,14 @@ fn identity(object: &Object) -> FILE_ID_INFO {
     let mut id = unsafe { zeroed::<FILE_ID_INFO>() };
     assert_ne!(
         unsafe {
-            GetFileInformationByHandleEx(
-                object.raw(),
-                FileIdInfo,
-                (&mut id as *mut FILE_ID_INFO).cast(),
-                size_of::<FILE_ID_INFO>() as u32,
+            trace_native!(
+                "native.GetFileInformationByHandleEx",
+                GetFileInformationByHandleEx(
+                    object.raw(),
+                    FileIdInfo,
+                    (&mut id as *mut FILE_ID_INFO).cast(),
+                    size_of::<FILE_ID_INFO>() as u32,
+                )
             )
         },
         0,
@@ -74,11 +77,14 @@ fn delete_name(path: &Path) {
     };
     assert_ne!(
         unsafe {
-            SetFileInformationByHandle(
-                deletion.raw(),
-                FileDispositionInfoEx,
-                (&disposition as *const FILE_DISPOSITION_INFO_EX).cast(),
-                size_of::<FILE_DISPOSITION_INFO_EX>() as u32,
+            trace_native!(
+                "native.SetFileInformationByHandle",
+                SetFileInformationByHandle(
+                    deletion.raw(),
+                    FileDispositionInfoEx,
+                    (&disposition as *const FILE_DISPOSITION_INFO_EX).cast(),
+                    size_of::<FILE_DISPOSITION_INFO_EX>() as u32,
+                )
             )
         },
         0,
@@ -258,14 +264,17 @@ fn native_ads_transferred_handle_survives_unlink_and_sender_close() {
     let mut remote = std::ptr::null_mut();
     assert_ne!(
         unsafe {
-            DuplicateHandle(
-                GetCurrentProcess(),
-                stream.raw(),
-                child.as_raw_handle(),
-                &mut remote,
-                0,
-                0,
-                DUPLICATE_SAME_ACCESS,
+            trace_native!(
+                "native.DuplicateHandle",
+                DuplicateHandle(
+                    GetCurrentProcess(),
+                    stream.raw(),
+                    child.as_raw_handle(),
+                    &mut remote,
+                    0,
+                    0,
+                    DUPLICATE_SAME_ACCESS,
+                )
             )
         },
         0,

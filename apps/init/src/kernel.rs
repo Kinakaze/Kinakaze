@@ -240,6 +240,12 @@ impl Kernel {
             eprintln!("kernel peer={} {command:?}", peer.host_pid);
         }
         match command {
+            KernelCommand::FileWriteback { .. } => {
+                return Err(error(
+                    ErrorCode::InvalidRequest,
+                    "writeback requires the session I/O queue",
+                ));
+            }
             KernelCommand::ResourceOwner => return resources::owner(),
             KernelCommand::RetainResources { owner, id, input } => {
                 if self.objects.contains_key(&ObjectKey::Shared(*owner)) {

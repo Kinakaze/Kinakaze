@@ -17,6 +17,8 @@ pub(crate) use kinakaze_v2_abi::inode::Record;
 /// Query an independently opened metadata handle; no shared data I/O can be
 /// cancelled by this query. Callers with a borrowed descriptor use `read`.
 pub(crate) fn read_object(object: &Object) -> Result<Record, i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("fs.inode.read_object", "", [0, 0, 0]);
     ea::read_decoded(object, EA_NAME, Record::decode).map(Option::unwrap_or_default)
 }
 
@@ -45,6 +47,8 @@ pub(crate) fn update(
     handle: HANDLE,
     change: impl FnOnce(&mut Record) -> Result<(), i32>,
 ) -> Result<(), i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("fs.inode.update", "", [0, 0, 0]);
     let object = Object::reopen(handle, FILE_READ_ATTRIBUTES | FILE_READ_EA | FILE_WRITE_EA)?;
     let _lock = crate::xattr::InodeLock::acquire(object.raw())?;
     update_locked(&object, change)
@@ -69,6 +73,8 @@ pub(super) fn update_locked(
 
 /// Whole-record copy for an unpublished inode; does not copy guest xattrs.
 pub(crate) fn replace(handle: HANDLE, record: &Record) -> Result<(), i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("fs.inode.replace", "", [0, 0, 0]);
     let object = Object::reopen(handle, FILE_READ_ATTRIBUTES | FILE_WRITE_EA)?;
     ea::write(&object, EA_NAME, &record.encode()?)
 }

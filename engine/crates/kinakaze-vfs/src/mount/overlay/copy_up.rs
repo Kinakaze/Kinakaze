@@ -84,14 +84,17 @@ impl Handle {
     fn open(path: &Path, access: u32, disposition: u32) -> Result<Self, i32> {
         let name = crate::path::wide_path(path)?;
         let handle = unsafe {
-            CreateFileW(
-                name.as_ptr(),
-                access,
-                SHARE,
-                ptr::null(),
-                disposition,
-                OPEN_FLAGS,
-                ptr::null_mut(),
+            trace_native!(
+                "native.CreateFileW",
+                CreateFileW(
+                    name.as_ptr(),
+                    access,
+                    SHARE,
+                    ptr::null(),
+                    disposition,
+                    OPEN_FLAGS,
+                    ptr::null_mut(),
+                )
             )
         };
         if handle.is_null() || handle == INVALID_HANDLE_VALUE {
@@ -134,11 +137,14 @@ impl Drop for Staged {
                     | FILE_DISPOSITION_FLAG_IGNORE_READONLY_ATTRIBUTE,
             };
             if unsafe {
-                SetFileInformationByHandle(
-                    self.handle.0,
-                    FileDispositionInfoEx,
-                    (&info as *const FILE_DISPOSITION_INFO_EX).cast(),
-                    std::mem::size_of_val(&info) as u32,
+                trace_native!(
+                    "native.SetFileInformationByHandle",
+                    SetFileInformationByHandle(
+                        self.handle.0,
+                        FileDispositionInfoEx,
+                        (&info as *const FILE_DISPOSITION_INFO_EX).cast(),
+                        std::mem::size_of_val(&info) as u32,
+                    )
                 )
             } == 0
             {
@@ -231,18 +237,21 @@ impl Staged {
         // handle atomically, relative to the opened work directory. No path
         // create/reopen race and no timed retries on sharing/name collisions.
         let result = unsafe {
-            NtCreateFile(
-                &mut handle,
-                GENERIC_READ | GENERIC_WRITE | DELETE | SYNCHRONIZE,
-                &attrs,
-                &mut io,
-                ptr::null(),
-                FILE_ATTRIBUTE_NORMAL,
-                SHARE,
-                2,
-                0x0020_0000 | if directory { 1 } else { 0x40 },
-                ptr::null(),
-                0,
+            trace_native!(
+                "native.NtCreateFile",
+                NtCreateFile(
+                    &mut handle,
+                    GENERIC_READ | GENERIC_WRITE | DELETE | SYNCHRONIZE,
+                    &attrs,
+                    &mut io,
+                    ptr::null(),
+                    FILE_ATTRIBUTE_NORMAL,
+                    SHARE,
+                    2,
+                    0x0020_0000 | if directory { 1 } else { 0x40 },
+                    ptr::null(),
+                    0,
+                )
             )
         };
         if result < 0 {
@@ -595,7 +604,12 @@ impl DirectoryLock {
             "Local\\kinakaze.overlay.dir.v1.{:016x}.{:016x}",
             stat.st_dev, stat.st_ino
         )));
-        let raw = unsafe { CreateMutexW(ptr::null(), 0, name.as_ptr()) };
+        let raw = unsafe {
+            trace_native!(
+                "native.CreateMutexW",
+                CreateMutexW(ptr::null(), 0, name.as_ptr())
+            )
+        };
         if raw.is_null() {
             return Err(errno_from_win32(unsafe { GetLastError() }));
         }
@@ -607,7 +621,12 @@ impl DirectoryLock {
                 return Err(error);
             }
             let handles = [raw, interrupt];
-            let waited = unsafe { WaitForMultipleObjects(2, handles.as_ptr(), 0, INFINITE) };
+            let waited = unsafe {
+                trace_native!(
+                    "native.WaitForMultipleObjects",
+                    WaitForMultipleObjects(2, handles.as_ptr(), 0, INFINITE)
+                )
+            };
             crate::signal::unregister_waiter();
             match waited {
                 WAIT_OBJECT_0 | WAIT_ABANDONED => return Ok(Self(handle)),
@@ -1211,7 +1230,12 @@ mod tests {
         let ready = event(&path, &format!("ready-{index}"), false);
         assert_ne!(unsafe { SetEvent(ready.0) }, 0);
         assert_eq!(
-            unsafe { WaitForSingleObject(gate.0, 10_000) },
+            unsafe {
+                trace_native!(
+                    "native.WaitForSingleObject",
+                    WaitForSingleObject(gate.0, 10_000)
+                )
+            },
             WAIT_OBJECT_0
         );
         let result = ensure_upper(
@@ -1252,14 +1276,24 @@ mod tests {
         for (ready, child) in ready.iter().zip(&children) {
             let handles = [ready.0, child.0.as_raw_handle()];
             assert_eq!(
-                unsafe { WaitForMultipleObjects(2, handles.as_ptr(), 0, 10_000) },
+                unsafe {
+                    trace_native!(
+                        "native.WaitForMultipleObjects",
+                        WaitForMultipleObjects(2, handles.as_ptr(), 0, 10_000)
+                    )
+                },
                 WAIT_OBJECT_0
             );
         }
         assert_ne!(unsafe { SetEvent(gate.0) }, 0);
         for child in &mut children {
             assert_eq!(
-                unsafe { WaitForSingleObject(child.0.as_raw_handle(), 10_000) },
+                unsafe {
+                    trace_native!(
+                        "native.WaitForSingleObject",
+                        WaitForSingleObject(child.0.as_raw_handle(), 10_000)
+                    )
+                },
                 WAIT_OBJECT_0
             );
             assert!(child.0.wait().unwrap().success());
@@ -1426,7 +1460,12 @@ mod tests {
         .unwrap();
         assert_ne!(unsafe { SetEvent(ready.0) }, 0);
         assert_eq!(
-            unsafe { WaitForSingleObject(gate.0, 10_000) },
+            unsafe {
+                trace_native!(
+                    "native.WaitForSingleObject",
+                    WaitForSingleObject(gate.0, 10_000)
+                )
+            },
             WAIT_OBJECT_0
         );
         match staged.publish(&directory(&path.join("upper")), "file") {
@@ -1453,7 +1492,12 @@ mod tests {
             // ready timeout. The same wait checks both concrete kernel objects.
             let handles = [ready.0, child.0.as_raw_handle()];
             assert_eq!(
-                unsafe { WaitForMultipleObjects(2, handles.as_ptr(), 0, 10_000) },
+                unsafe {
+                    trace_native!(
+                        "native.WaitForMultipleObjects",
+                        WaitForMultipleObjects(2, handles.as_ptr(), 0, 10_000)
+                    )
+                },
                 WAIT_OBJECT_0
             );
         }
@@ -1463,7 +1507,12 @@ mod tests {
         let mut winners = 0;
         for child in &mut children {
             assert_eq!(
-                unsafe { WaitForSingleObject(child.0.as_raw_handle(), 10_000) },
+                unsafe {
+                    trace_native!(
+                        "native.WaitForSingleObject",
+                        WaitForSingleObject(child.0.as_raw_handle(), 10_000)
+                    )
+                },
                 WAIT_OBJECT_0
             );
             match child.0.wait().unwrap().code() {
@@ -1610,18 +1659,21 @@ mod tests {
             let mut io = NativeIoStatus::default();
             let mut stream = ptr::null_mut();
             let status = unsafe {
-                NtCreateFile(
-                    &mut stream,
-                    GENERIC_READ | SYNCHRONIZE,
-                    &attrs,
-                    &mut io,
-                    ptr::null(),
-                    FILE_ATTRIBUTE_NORMAL,
-                    SHARE,
-                    1,
-                    0x0020_0040,
-                    ptr::null(),
-                    0,
+                trace_native!(
+                    "native.NtCreateFile",
+                    NtCreateFile(
+                        &mut stream,
+                        GENERIC_READ | SYNCHRONIZE,
+                        &attrs,
+                        &mut io,
+                        ptr::null(),
+                        FILE_ATTRIBUTE_NORMAL,
+                        SHARE,
+                        1,
+                        0x0020_0040,
+                        ptr::null(),
+                        0,
+                    )
                 )
             };
             assert!(
@@ -1719,7 +1771,12 @@ mod tests {
             }
             let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
             assert_ne!(
-                unsafe { GetFileInformationByHandle(object.raw(), &mut info) },
+                unsafe {
+                    trace_native!(
+                        "native.GetFileInformationByHandle",
+                        GetFileInformationByHandle(object.raw(), &mut info)
+                    )
+                },
                 0
             );
             let ticks = (info.ftLastAccessTime.dwHighDateTime as u64) << 32
@@ -1776,7 +1833,12 @@ mod tests {
         std::fs::write(f.path("lower/file"), b"lower remains intact").unwrap();
         let mut child = child("interrupted_copy_helper", &f.0, 0);
         assert_eq!(
-            unsafe { WaitForSingleObject(child.0.as_raw_handle(), 10_000) },
+            unsafe {
+                trace_native!(
+                    "native.WaitForSingleObject",
+                    WaitForSingleObject(child.0.as_raw_handle(), 10_000)
+                )
+            },
             WAIT_OBJECT_0
         );
         assert!(child.0.wait().unwrap().success());

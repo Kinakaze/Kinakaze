@@ -52,7 +52,7 @@ struct Guard(usize);
 impl Drop for Guard {
     fn drop(&mut self) {
         unsafe {
-            ReleaseMutex(self.0 as _);
+            trace_native!("native.ReleaseMutex", ReleaseMutex(self.0 as _));
         }
     }
 }
@@ -117,7 +117,12 @@ impl Directory {
             }
             return Err(ENOMEM);
         }
-        let mutex = unsafe { CreateMutexW(ptr::null(), 0, mutex_name.as_ptr()) };
+        let mutex = unsafe {
+            trace_native!(
+                "native.CreateMutexW",
+                CreateMutexW(ptr::null(), 0, mutex_name.as_ptr())
+            )
+        };
         if mutex.is_null() {
             unsafe {
                 UnmapViewOfFile(view);
@@ -157,7 +162,12 @@ impl Directory {
                 return Err(EINTR);
             }
             let handles = [self.mutex as _, interrupt];
-            let result = unsafe { WaitForMultipleObjects(2, handles.as_ptr(), 0, INFINITE) };
+            let result = unsafe {
+                trace_native!(
+                    "native.WaitForMultipleObjects",
+                    WaitForMultipleObjects(2, handles.as_ptr(), 0, INFINITE)
+                )
+            };
             crate::signal::unregister_waiter();
             match result {
                 WAIT_OBJECT_0 => return Ok(Guard(self.mutex)),

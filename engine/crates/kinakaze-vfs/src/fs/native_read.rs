@@ -44,6 +44,12 @@ pub(super) fn try_open_at(
     absolute: &str,
     flags: i32,
 ) -> Result<Option<i32>, i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter(
+        "fs.native_read.try_open_at",
+        original,
+        [dirfd as u64, flags as u64, 0],
+    );
     let Some(path) = candidate_path(dirfd, original, absolute, flags) else {
         return Ok(None);
     };
@@ -131,11 +137,14 @@ pub(super) fn open_regular(
     };
     let mut attributes: FILE_ATTRIBUTE_TAG_INFO = unsafe { std::mem::zeroed() };
     if unsafe {
-        GetFileInformationByHandleEx(
-            object.raw(),
-            FileAttributeTagInfo,
-            (&mut attributes as *mut FILE_ATTRIBUTE_TAG_INFO).cast(),
-            std::mem::size_of_val(&attributes) as u32,
+        trace_native!(
+            "native.GetFileInformationByHandleEx",
+            GetFileInformationByHandleEx(
+                object.raw(),
+                FileAttributeTagInfo,
+                (&mut attributes as *mut FILE_ATTRIBUTE_TAG_INFO).cast(),
+                std::mem::size_of_val(&attributes) as u32,
+            )
         )
     } == 0
         || attributes.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT != 0

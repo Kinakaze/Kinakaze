@@ -36,6 +36,9 @@ fn validate(entry: FdEntry) -> Result<(), i32> {
 /// Hold the open inode and its mount policy through the durability barrier.
 /// Descriptor reuse after lookup must not redirect the flush to another file.
 pub fn sync_descriptor(fd: i32) -> Result<(), i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace =
+        crate::io_trace::Span::enter("fs.writeback.sync_descriptor", "", [fd as u64, 0, 0]);
     let entry = crate::get(fd)?;
     if entry.flags.contains(FdFlags::PATH_ONLY) {
         return Err(EBADF);
@@ -69,9 +72,16 @@ pub fn sync_descriptor(fd: i32) -> Result<(), i32> {
     if entry.kind == FdKind::Directory {
         return Ok(());
     }
+    wait_background(pin.as_raw_handle())?;
     use windows_sys::Win32::Foundation::{ERROR_ACCESS_DENIED, GetLastError};
     use windows_sys::Win32::Storage::FileSystem::FlushFileBuffers;
-    if unsafe { FlushFileBuffers(pin.as_raw_handle()) } != 0 {
+    if unsafe {
+        trace_native!(
+            "native.FlushFileBuffers",
+            FlushFileBuffers(pin.as_raw_handle())
+        )
+    } != 0
+    {
         return Ok(());
     }
     let error = unsafe { GetLastError() };
@@ -84,6 +94,12 @@ pub fn sync_descriptor(fd: i32) -> Result<(), i32> {
 }
 
 pub fn sync_file_range(fd: i32, offset: i64, nbytes: i64, flags: u32) -> Result<(), i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter(
+        "fs.writeback.sync_file_range",
+        "",
+        [fd as u64, flags as u64, 0],
+    );
     let entry = crate::get(fd)?;
     if flags & !7 != 0 || offset < 0 || nbytes < 0 || offset.checked_add(nbytes).is_none() {
         return Err(EINVAL);
@@ -97,6 +113,18 @@ pub fn sync_file_range(fd: i32, offset: i64, nbytes: i64, flags: u32) -> Result<
     // Preserve overlay copy-up and volatile-mount error handling using the
     // exact open description captured by the pin, even during close/dup2.
     if pin.sync_overlay()?.is_some() || entry.kind == FdKind::Directory {
+        return Ok(());
+    }
+    if flags == 2
+        && entry.flags.contains(FdFlags::WRITE_ACCESS)
+        && background(pin.as_raw_handle(), false).unwrap_or(false)
+    {
+        return Ok(());
+    }
+    if flags & 5 != 0 {
+        wait_background(pin.as_raw_handle())?;
+    }
+    if flags & 2 == 0 {
         return Ok(());
     }
     // The original open retains write access after chmod sets the
@@ -117,23 +145,74 @@ pub fn sync_file_range(fd: i32, offset: i64, nbytes: i64, flags: u32) -> Result<
     }
 }
 
+fn asynchronous_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| std::env::var_os("KINAKAZE_ASYNC_WRITEBACK").is_none_or(|v| v != "0"))
+}
+
+fn background(handle: HANDLE, wait: bool) -> Result<bool, i32> {
+    if !asynchronous_enabled() {
+        return Ok(false);
+    }
+    let Some(authority) = kinakaze_runtime::authority::get() else {
+        return Ok(false);
+    };
+    #[cfg(feature = "io-trace")]
+    let mut trace = crate::io_trace::Span::enter(
+        if wait {
+            "writeback.wait-rpc"
+        } else {
+            "writeback.submit-rpc"
+        },
+        "",
+        [handle as u64, 0, 0],
+    );
+    let result = (authority.kernel)(kinakaze_v2_protocol::kernel::KernelCommand::FileWriteback {
+        source: handle as u64,
+        wait,
+    });
+    let result = result.and_then(|result| match result.as_slice() {
+        [0, 0] => Ok(false),
+        [1, 0] => Ok(true),
+        [1, error] if *error <= u32::MAX as u64 => Err(errno_from_win32(*error as u32)),
+        _ => Err(crate::EIO),
+    });
+    #[cfg(feature = "io-trace")]
+    trace.result(match result {
+        Ok(accepted) => i64::from(accepted),
+        Err(error) => -i64::from(error),
+    });
+    result
+}
+
+/// Also used before verity takes its deny-write reservation. Queued native
+/// writers must retire even when their submitting fd/process is already gone.
+pub(super) fn wait_background(handle: HANDLE) -> Result<(), i32> {
+    background(handle, true).map(|_| ())
+}
+
 /// A request on a pinned, potentially shared file object. NtFlushBuffersFileEx
 /// normally completes synchronously. A filesystem/filter can return PENDING;
 /// retain our status block until *our* request completes, without cancelling
 /// unrelated reads/writes on dup/fork aliases or trusting their shared event.
 fn flush_data(handle: HANDLE) -> Result<(), i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("fs.writeback.flush_data", "", [0, 0, 0]);
     let mut io = NativeIoStatus {
         status: 0x103,
         information: 0,
     };
     const FLUSH_FLAGS_FILE_DATA_ONLY: u32 = 1;
     let mut status = unsafe {
-        NtFlushBuffersFileEx(
-            handle,
-            FLUSH_FLAGS_FILE_DATA_ONLY,
-            std::ptr::null(),
-            0,
-            &mut io,
+        trace_native!(
+            "native.NtFlushBuffersFileEx",
+            NtFlushBuffersFileEx(
+                handle,
+                FLUSH_FLAGS_FILE_DATA_ONLY,
+                std::ptr::null(),
+                0,
+                &mut io,
+            )
         )
     };
     if status == 0x103 {
@@ -153,7 +232,7 @@ fn flush_data(handle: HANDLE) -> Result<(), i32> {
         // support. I/O errors and dismounts must reach the Linux caller.
         0xc000_0002 | 0xc000_000d | 0xc000_0010 | 0xc000_00bb => {
             use windows_sys::Win32::Storage::FileSystem::FlushFileBuffers;
-            if unsafe { FlushFileBuffers(handle) } != 0 {
+            if unsafe { trace_native!("native.FlushFileBuffers", FlushFileBuffers(handle)) } != 0 {
                 Ok(())
             } else {
                 Err(errno_from_win32(unsafe {

@@ -109,18 +109,21 @@ fn open_with_options(path: &Path, access: u32, options: u32) -> Result<Object, i
     };
     let mut handle = ptr::null_mut();
     let status = unsafe {
-        NtCreateFile(
-            &mut handle,
-            access | SYNCHRONIZE,
-            &attributes,
-            &mut io,
-            ptr::null(),
-            0,
-            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-            1, // FILE_OPEN: this speculative lookup never creates an inode.
-            options,
-            ptr::null(),
-            0,
+        trace_native!(
+            "native.NtCreateFile",
+            NtCreateFile(
+                &mut handle,
+                access | SYNCHRONIZE,
+                &attributes,
+                &mut io,
+                ptr::null(),
+                0,
+                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                1, // FILE_OPEN: this speculative lookup never creates an inode.
+                options,
+                ptr::null(),
+                0,
+            )
         )
     };
     if status < 0 {

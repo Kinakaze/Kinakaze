@@ -70,10 +70,15 @@ pub(super) unsafe fn complete(
         // Waiting solely for the interrupt with a 1-ms timeout adds that delay
         // even when this metadata request completes a few microseconds later.
         let waited = if cancelling {
-            unsafe { WaitForSingleObject(file, 1) }
+            unsafe { trace_native!("native.WaitForSingleObject", WaitForSingleObject(file, 1)) }
         } else {
             let handles = [file, interrupt];
-            unsafe { WaitForMultipleObjects(2, handles.as_ptr(), 0, 1) }
+            unsafe {
+                trace_native!(
+                    "native.WaitForMultipleObjects",
+                    WaitForMultipleObjects(2, handles.as_ptr(), 0, 1)
+                )
+            }
         };
         if unsafe { core::ptr::read_volatile(&io.status) } as i32 == 0x103
             && matches!(waited, WAIT_OBJECT_0 | WAIT_FAILED)
@@ -85,7 +90,12 @@ pub(super) unsafe fn complete(
             if cancelling {
                 unsafe { Sleep(1) };
             } else {
-                unsafe { WaitForSingleObject(interrupt, 1) };
+                unsafe {
+                    trace_native!(
+                        "native.WaitForSingleObject",
+                        WaitForSingleObject(interrupt, 1)
+                    )
+                };
             }
         }
         crate::signal::unregister_waiter();

@@ -36,7 +36,12 @@ with tempfile.TemporaryDirectory(prefix='ownership-writeback-', dir='/var/tmp') 
         assert os.write(descriptor, payload) == len(payload)
         os.fchmod(descriptor, 0o6750)
         capability = struct.pack('<5I', 0x02000001, 1 << 10, 0, 0, 0)
-        os.setxattr(descriptor, 'security.capability', capability)
+        try:
+            os.setxattr(descriptor, 'security.capability', capability)
+        except OSError as error:
+            assert error.errno == errno.EOPNOTSUPP
+        else:
+            raise AssertionError('unsupported execution capabilities were accepted')
         os.setxattr(descriptor, 'user.retained', b'retained')
         assert sync_range(descriptor, 0, 0, 2) == 0, ctypes.get_errno()
         os.fchown(descriptor, os.getuid(), os.getgid())

@@ -14,11 +14,14 @@ fn last_errno() -> i32 {
 fn query<T: Default>(handle: HANDLE, class: i32) -> Result<T, i32> {
     let mut value = T::default();
     if unsafe {
-        GetFileInformationByHandleEx(
-            handle,
-            class,
-            (&raw mut value).cast(),
-            size_of::<T>() as u32,
+        trace_native!(
+            "native.GetFileInformationByHandleEx",
+            GetFileInformationByHandleEx(
+                handle,
+                class,
+                (&raw mut value).cast(),
+                size_of::<T>() as u32,
+            )
         )
     } == 0
     {
@@ -28,11 +31,14 @@ fn query<T: Default>(handle: HANDLE, class: i32) -> Result<T, i32> {
 }
 fn set<T>(handle: HANDLE, class: i32, value: &T) -> Result<(), i32> {
     if unsafe {
-        SetFileInformationByHandle(
-            handle,
-            class,
-            ptr::from_ref(value).cast(),
-            size_of::<T>() as u32,
+        trace_native!(
+            "native.SetFileInformationByHandle",
+            SetFileInformationByHandle(
+                handle,
+                class,
+                ptr::from_ref(value).cast(),
+                size_of::<T>() as u32,
+            )
         )
     } == 0
     {

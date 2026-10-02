@@ -7,12 +7,15 @@ param(
     [switch]$NativeOnly,
     [switch]$Offline,
     [switch]$SkipFormat,
-    [switch]$SkipTests
+    [switch]$SkipTests,
+    [switch]$DiagnosticIoTrace
 )
 $ErrorActionPreference = 'Stop'
 $workspacePath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $profileName = if ($Release) { 'release' } else { 'debug' }
 $profileArgs = if ($Release) { @('--release') } else { @() }
+$featureNames = 'kinakaze-v2-runtime/guest-engine'
+if ($DiagnosticIoTrace) { $featureNames += ',kinakaze-vfs/io-trace' }
 
 function Invoke-Checked {
     param([string]$Program, [string[]]$Arguments)
@@ -28,7 +31,7 @@ try {
     $targetArgs = @('--target-dir', $buildRoot)
     # Export checks inspect compiled DLLs. Keep the feature graph identical to
     # the final build so un-hashed DLL names cannot mix incompatible Rust ABIs.
-    Invoke-Checked 'cargo' (@('build', '--workspace', '--lib', '--locked', '--features', 'kinakaze-v2-runtime/guest-engine') + $profileArgs + $targetArgs)
+    Invoke-Checked 'cargo' (@('build', '--workspace', '--lib', '--locked', '--features', $featureNames) + $profileArgs + $targetArgs)
     $exportArgs = @('tools/native-exports/generate.py', '--image-dir', (Join-Path $buildRoot $profileName))
     if ($RefreshExports) {
         Invoke-Checked 'python' $exportArgs
@@ -37,7 +40,7 @@ try {
     if (-not $SkipFormat) {
         Invoke-Checked 'cargo' @('fmt', '--all', '--', '--check')
     }
-    Invoke-Checked 'cargo' (@('build', '--workspace', '--locked', '--features', 'kinakaze-v2-runtime/guest-engine') + $profileArgs + $targetArgs)
+    Invoke-Checked 'cargo' (@('build', '--workspace', '--locked', '--features', $featureNames) + $profileArgs + $targetArgs)
     # Entry executables have only rlib dependencies. Link their own standard
     # library so Windows can start them before rootfs/lib has been opened.
     $entryRustflags = $env:RUSTFLAGS
@@ -80,7 +83,7 @@ try {
         Invoke-Checked 'python' @('-m', 'unittest', 'discover', '-s', 'tools/guest-deps')
         # Tests have their own Cargo feature graph and Rust dylib ABI. Package
         # the DLLs linked by that graph, not the normal worker build above.
-        $testArgs = @('test', '--workspace', '--locked', '--features', 'kinakaze-v2-runtime/guest-engine') + $profileArgs + $targetArgs
+        $testArgs = @('test', '--workspace', '--locked', '--features', $featureNames) + $profileArgs + $targetArgs
         Invoke-Checked 'cargo' ($testArgs + @('--no-run'))
         $testBinaryDir = Join-Path $binaryDir 'deps'
         $testDistDir = Join-Path $binaryDir 'test-dist'

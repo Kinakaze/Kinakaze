@@ -16,6 +16,12 @@ pub(super) fn try_open_at(
     absolute: &str,
     flags: i32,
 ) -> Result<Option<i32>, i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter(
+        "fs.native_write.try_open_at",
+        original,
+        [dirfd as u64, flags as u64, 0],
+    );
     if !eligible_flags(flags) {
         return Ok(None);
     }

@@ -497,6 +497,8 @@ impl Location {
         Ok(true)
     }
     fn lookup(&self) -> Result<Node, i32> {
+        #[cfg(all(windows, feature = "io-trace"))]
+        let _io_trace = crate::io_trace::Span::enter("mount.overlay.mounted.lookup", "", [0, 0, 0]);
         let mut node = self.instance.root.clone();
         for part in &self.components {
             node = node.child(part)?;
@@ -1500,6 +1502,9 @@ pub(crate) enum StatResolution {
 /// Preserve a completed native walk for the caller's metadata query. Returning
 /// only "not overlay" made stat repeat every ancestor's inode/EA lookup.
 pub(crate) fn stat_resolution(path: &str, follow: bool) -> Result<Option<StatResolution>, i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace =
+        crate::io_trace::Span::enter("mount.overlay.mounted.stat_resolution", path, [0, 0, 0]);
     let mut crossing = false;
     let resolved = resolve_inner(path, follow, false, false, Some(&mut crossing), true)?;
     if crossing {
@@ -2716,6 +2721,8 @@ pub(crate) fn seek_directory(fd: i32, offset: i64, whence: i32) -> Result<Option
 }
 
 pub(crate) fn remove(path: &str, directory: bool) -> Result<Option<()>, i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("mount.overlay.mounted.remove", path, [0, 0, 0]);
     let Some(resolved) = resolve(path, false, false)? else {
         return Ok(None);
     };
@@ -2810,6 +2817,12 @@ pub(crate) fn remove(path: &str, directory: bool) -> Result<Option<()>, i32> {
 }
 
 pub fn rename_with_flags(from: &str, to: &str, flags: u32) -> Result<Option<()>, i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter(
+        "mount.overlay.mounted.rename_with_flags",
+        "",
+        [flags as u64, 0, 0],
+    );
     if flags & !7 != 0 || flags & 2 != 0 && flags & 5 != 0 {
         return Err(EINVAL);
     }

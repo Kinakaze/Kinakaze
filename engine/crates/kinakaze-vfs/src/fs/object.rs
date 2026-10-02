@@ -149,18 +149,23 @@ impl Object {
 
     /// Duplicate the same native open, preserving sharing locks and leases.
     pub(crate) fn duplicate(handle: HANDLE) -> Result<Self, i32> {
+        #[cfg(all(windows, feature = "io-trace"))]
+        let _io_trace = crate::io_trace::Span::enter("fs.object.duplicate", "", [0, 0, 0]);
         use windows_sys::Win32::Foundation::{DUPLICATE_SAME_ACCESS, DuplicateHandle};
         use windows_sys::Win32::System::Threading::GetCurrentProcess;
         let mut duplicate = ptr::null_mut();
         if unsafe {
-            DuplicateHandle(
-                GetCurrentProcess(),
-                handle,
-                GetCurrentProcess(),
-                &mut duplicate,
-                0,
-                0,
-                DUPLICATE_SAME_ACCESS,
+            trace_native!(
+                "native.DuplicateHandle",
+                DuplicateHandle(
+                    GetCurrentProcess(),
+                    handle,
+                    GetCurrentProcess(),
+                    &mut duplicate,
+                    0,
+                    0,
+                    DUPLICATE_SAME_ACCESS,
+                )
             )
         } == 0
         {
@@ -187,12 +192,15 @@ impl Object {
         // PUBLIC_OBJECT_BASIC_INFORMATION: granted access is the second ULONG.
         let mut storage = [0u64; 7];
         let status = unsafe {
-            NtQueryObject(
-                handle,
-                0,
-                storage.as_mut_ptr().cast(),
-                std::mem::size_of_val(&storage) as u32,
-                ptr::null_mut(),
+            trace_native!(
+                "native.NtQueryObject",
+                NtQueryObject(
+                    handle,
+                    0,
+                    storage.as_mut_ptr().cast(),
+                    std::mem::size_of_val(&storage) as u32,
+                    ptr::null_mut(),
+                )
             )
         };
         if status < 0 {
@@ -214,12 +222,15 @@ impl Object {
         }
         let mut information = [0u32; 14];
         let status = unsafe {
-            NtQueryObject(
-                self.raw(),
-                0,
-                information.as_mut_ptr().cast(),
-                size_of_val(&information) as u32,
-                ptr::null_mut(),
+            trace_native!(
+                "native.NtQueryObject",
+                NtQueryObject(
+                    self.raw(),
+                    0,
+                    information.as_mut_ptr().cast(),
+                    size_of_val(&information) as u32,
+                    ptr::null_mut(),
+                )
             )
         };
         if status < 0 {
@@ -267,14 +278,17 @@ impl Object {
         let mut duplicate = ptr::null_mut();
         let process = unsafe { GetCurrentProcess() };
         if unsafe {
-            DuplicateHandle(
-                process,
-                entry.raw as HANDLE,
-                process,
-                &mut duplicate,
-                0,
-                0,
-                DUPLICATE_SAME_ACCESS,
+            trace_native!(
+                "native.DuplicateHandle",
+                DuplicateHandle(
+                    process,
+                    entry.raw as HANDLE,
+                    process,
+                    &mut duplicate,
+                    0,
+                    0,
+                    DUPLICATE_SAME_ACCESS,
+                )
             )
         } == 0
         {
@@ -284,6 +298,8 @@ impl Object {
     }
 
     pub(crate) fn open(path: &Path, access: u32) -> Result<Self, i32> {
+        #[cfg(all(windows, feature = "io-trace"))]
+        let _io_trace = crate::io_trace::Span::enter("fs.object.open", "", [access as u64, 0, 0]);
         Self::open_with_flags(path, access, FLAGS)
     }
 
@@ -296,14 +312,17 @@ impl Object {
     fn open_with_flags(path: &Path, access: u32, flags: u32) -> Result<Self, i32> {
         let name = crate::path::wide_path(path)?;
         Self::owned(unsafe {
-            CreateFileW(
-                name.as_ptr(),
-                access | SYNCHRONIZE,
-                SHARE,
-                ptr::null(),
-                OPEN_EXISTING,
-                flags,
-                ptr::null_mut(),
+            trace_native!(
+                "native.CreateFileW",
+                CreateFileW(
+                    name.as_ptr(),
+                    access | SYNCHRONIZE,
+                    SHARE,
+                    ptr::null(),
+                    OPEN_EXISTING,
+                    flags,
+                    ptr::null_mut(),
+                )
             )
         })
     }
@@ -311,6 +330,8 @@ impl Object {
     /// Reopen an opaque kernel handle; the kernel validates invalid handles.
     /// Callers retain the handle to preserve inode identity across this call.
     pub(crate) fn reopen(file: HANDLE, access: u32) -> Result<Self, i32> {
+        #[cfg(all(windows, feature = "io-trace"))]
+        let _io_trace = crate::io_trace::Span::enter("fs.object.reopen", "", [access as u64, 0, 0]);
         // SAFETY: The name and output storage are owned here. The native handle
         // is an opaque kernel key and is never dereferenced in host memory.
         unsafe { Self::relative(file, vec![0], access, 1) }
@@ -527,6 +548,12 @@ impl Object {
         file_attributes: u32,
         ea: &[u8],
     ) -> Result<Self, i32> {
+        #[cfg(all(windows, feature = "io-trace"))]
+        let _io_trace = crate::io_trace::Span::enter(
+            "fs.object.relative_options_with_ea",
+            "",
+            [access as u64, disposition as u64, options as u64],
+        );
         let length = u16::try_from((name.len() - 1) * 2).map_err(|_| ENAMETOOLONG)?;
         let maximum_length = u16::try_from(name.len() * 2).map_err(|_| ENAMETOOLONG)?;
         let mut string = UnicodeString {
@@ -545,22 +572,25 @@ impl Object {
         let mut io = NativeIoStatus::default();
         let mut handle = ptr::null_mut();
         let status = unsafe {
-            NtCreateFile(
-                &mut handle,
-                access | SYNCHRONIZE,
-                &attrs,
-                &mut io,
-                ptr::null(),
-                file_attributes,
-                share,
-                disposition,
-                options,
-                if ea.is_empty() {
-                    ptr::null()
-                } else {
-                    ea.as_ptr()
-                },
-                ea.len() as u32,
+            trace_native!(
+                "native.NtCreateFile",
+                NtCreateFile(
+                    &mut handle,
+                    access | SYNCHRONIZE,
+                    &attrs,
+                    &mut io,
+                    ptr::null(),
+                    file_attributes,
+                    share,
+                    disposition,
+                    options,
+                    if ea.is_empty() {
+                        ptr::null()
+                    } else {
+                        ea.as_ptr()
+                    },
+                    ea.len() as u32,
+                )
             )
         };
         if status < 0 {
@@ -729,12 +759,15 @@ impl Object {
             let length = u32::try_from(storage.len() * 8).map_err(|_| crate::EOVERFLOW)?;
             let mut io = NativeIoStatus::default();
             let status = unsafe {
-                NtQueryInformationFile(
-                    query.raw(),
-                    &mut io,
-                    storage.as_mut_ptr().cast(),
-                    length,
-                    22,
+                trace_native!(
+                    "native.NtQueryInformationFile",
+                    NtQueryInformationFile(
+                        query.raw(),
+                        &mut io,
+                        storage.as_mut_ptr().cast(),
+                        length,
+                        22,
+                    )
                 )
             };
             let status = unsafe { super::complete_native_status(query.raw(), &mut io, status)? };
@@ -863,12 +896,15 @@ impl Object {
         let length = i64::try_from(length).map_err(|_| crate::EOVERFLOW)?;
         let mut io = NativeIoStatus::default();
         let status = unsafe {
-            NtSetInformationFile(
-                self.raw(),
-                &mut io,
-                (&length as *const i64).cast(),
-                std::mem::size_of_val(&length) as u32,
-                20, // FileEndOfFileInformation
+            trace_native!(
+                "native.NtSetInformationFile",
+                NtSetInformationFile(
+                    self.raw(),
+                    &mut io,
+                    (&length as *const i64).cast(),
+                    std::mem::size_of_val(&length) as u32,
+                    20, // FileEndOfFileInformation
+                )
             )
         };
         unsafe { complete_native_io(self.raw(), &mut io, status) }
@@ -882,7 +918,12 @@ impl Object {
             fn NtFlushBuffersFile(file: HANDLE, io: *mut NativeIoStatus) -> i32;
         }
         let mut io = NativeIoStatus::default();
-        let status = unsafe { NtFlushBuffersFile(self.raw(), &mut io) };
+        let status = unsafe {
+            trace_native!(
+                "native.NtFlushBuffersFile",
+                NtFlushBuffersFile(self.raw(), &mut io)
+            )
+        };
         let result = unsafe { complete_native_io(self.raw(), &mut io, status) };
         if let Err(error) = result {
             crate::mount::overlay::record_io_error(self.raw(), error);
@@ -1345,7 +1386,12 @@ mod tests {
             let observer = Object::open(&f.path("dir"), FILE_READ_ATTRIBUTES).unwrap();
             let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
             assert_ne!(
-                unsafe { GetFileInformationByHandle(observer.raw(), &mut info) },
+                unsafe {
+                    trace_native!(
+                        "native.GetFileInformationByHandle",
+                        GetFileInformationByHandle(observer.raw(), &mut info)
+                    )
+                },
                 0
             );
             let actual = ((info.ftLastAccessTime.dwHighDateTime as u64) << 32)

@@ -97,11 +97,14 @@ fn convert(object: &Object, apply: bool, report: &mut Report) -> Result<(), i32>
 fn basic(object: &Object) -> Result<FILE_BASIC_INFO, i32> {
     let mut basic = unsafe { std::mem::zeroed() };
     if unsafe {
-        GetFileInformationByHandleEx(
-            object.raw(),
-            FileBasicInfo,
-            (&mut basic as *mut FILE_BASIC_INFO).cast(),
-            std::mem::size_of_val(&basic) as u32,
+        trace_native!(
+            "native.GetFileInformationByHandleEx",
+            GetFileInformationByHandleEx(
+                object.raw(),
+                FileBasicInfo,
+                (&mut basic as *mut FILE_BASIC_INFO).cast(),
+                std::mem::size_of_val(&basic) as u32,
+            )
         )
     } == 0
     {
@@ -121,11 +124,14 @@ impl Entry {
             // Preserve timestamps on successful migration and on partial-failure
             // unwind. This is maintenance, not a guest chmod/write operation.
             if unsafe {
-                SetFileInformationByHandle(
-                    self.object.raw(),
-                    FileBasicInfo,
-                    (&self.basic as *const FILE_BASIC_INFO).cast(),
-                    std::mem::size_of_val(&self.basic) as u32,
+                trace_native!(
+                    "native.SetFileInformationByHandle",
+                    SetFileInformationByHandle(
+                        self.object.raw(),
+                        FileBasicInfo,
+                        (&self.basic as *const FILE_BASIC_INFO).cast(),
+                        std::mem::size_of_val(&self.basic) as u32,
+                    )
                 )
             } == 0
             {

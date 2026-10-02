@@ -793,6 +793,7 @@ mod tests {
         Arc::new(Service {
             kernel: std::sync::Mutex::new(crate::kernel::Kernel::new(1)),
             images: std::sync::Mutex::new(crate::image_cache::Cache::default()),
+            writeback: crate::writeback::Queue::default(),
             prewarm_process: None,
             pool: None,
             manager: std::sync::Mutex::new(kinakaze_v2_manager::StateManager::new(

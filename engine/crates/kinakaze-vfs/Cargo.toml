@@ -7,6 +7,9 @@ authors.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 
+[features]
+io-trace = []
+
 [dependencies]
 kinakaze-v2-host-win.workspace = true
 kinakaze-v2-protocol.workspace = true

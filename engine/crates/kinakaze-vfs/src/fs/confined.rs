@@ -134,7 +134,13 @@ fn install_native_object(
     // device markers are native files; querying their ownership, ACL and verity
     // size here duplicates the caller's later fstat without affecting O_PATH.
     let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
-    if unsafe { GetFileInformationByHandle(object.raw(), &mut info) } == 0 {
+    if unsafe {
+        trace_native!(
+            "native.GetFileInformationByHandle",
+            GetFileInformationByHandle(object.raw(), &mut info)
+        )
+    } == 0
+    {
         return Err(errno_from_win32(unsafe { GetLastError() }));
     }
     let directory = info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY != 0
@@ -234,32 +240,37 @@ fn create(parent: i32, name: &str, flags: i32, mode: u32) -> Result<i32, i32> {
         .transpose()?;
     let parent = object::Object::from_fd(parent)?;
     let stored = crate::path::escape_component(name);
-    let object = parent.create_regular_child(
-        OsStr::new(stored.as_ref()),
-        GENERIC_READ | GENERIC_WRITE | DELETE | FILE_READ_ATTRIBUTES | FILE_READ_EA,
-    )?;
-    if let Err(e) =
-        initialize_created_handle(object.raw(), &object.path()?, S_IFREG | mode & 0o7777)
-    {
-        let _ = unlink_inode(object.raw());
-        return Err(e);
+    let access = match flags & O_ACCMODE {
+        O_RDONLY => GENERIC_READ,
+        O_WRONLY => GENERIC_WRITE,
+        O_RDWR => GENERIC_READ | GENERIC_WRITE,
+        _ => return Err(EINVAL),
+    };
+    let metadata = stat_metadata_with_query(parent.raw(), &parent, false)?;
+    let leaf = OsStr::new(stored.as_ref());
+    permissions::create_in(&parent, &metadata, leaf)?;
+    let record = created_inode_record(&metadata, S_IFREG | (mode & 0o7777));
+    let object = parent.create_regular_child_with_inode(leaf, access, &record)?;
+    let mut fd_flags = special_fd_flags(flags)
+        .union(FdFlags::OVERLAPPED)
+        .union(FdFlags::SEEKABLE);
+    if flags & O_ACCMODE != O_RDONLY {
+        fd_flags = fd_flags.union(FdFlags::VERITY_WRITABLE);
     }
-    let fd = crate::install_with(
-        object.raw() as usize,
-        FdKind::File,
-        FdFlags::PATH_ONLY
-            .union(FdFlags::OVERLAPPED)
-            .union(FdFlags::CLOSE_ON_EXEC),
-        |_, entry| {
-            if let Some(d) = description {
-                crate::mount::native::register(entry, d)?;
-            }
-            Ok(())
-        },
-    )?;
+    if flags & O_APPEND != 0 {
+        fd_flags = fd_flags.union(FdFlags::APPEND);
+    }
+    if flags & O_NOATIME != 0 {
+        fd_flags = fd_flags.union(FdFlags::NOATIME);
+    }
+    let fd = crate::install_with(object.raw() as usize, FdKind::File, fd_flags, |_, entry| {
+        if let Some(d) = description {
+            crate::mount::native::register(entry, d)?;
+        }
+        Ok(())
+    })?;
     object.into_raw();
-    let target = Descriptor(fd);
-    reopen_local_fd(target.0, flags & !(O_CREAT | O_EXCL | O_NOFOLLOW))
+    Ok(fd)
 }
 
 pub(super) fn stat(path: &str, follow: bool) -> Result<Stat, i32> {

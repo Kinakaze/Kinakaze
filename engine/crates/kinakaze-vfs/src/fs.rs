@@ -333,6 +333,8 @@ fn wide(path: &Path) -> Result<Vec<u16>, i32> {
 
 /// Opens a guest path, returning a Linux descriptor.
 pub fn open(path: &str, flags: i32, mode: u32) -> Result<i32, i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("vfs.open", path, [flags as u64, mode as u64, 0]);
     let _observation = crate::tmpfs::Observation::enter();
     openat(AT_FDCWD, path, flags, mode)
 }
@@ -780,14 +782,17 @@ impl ProcFdReference {
             )
         {
             if unsafe {
-                DuplicateHandle(
-                    GetCurrentProcess(),
-                    entry.raw as HANDLE,
-                    GetCurrentProcess(),
-                    &mut handle,
-                    0,
-                    0,
-                    DUPLICATE_SAME_ACCESS,
+                trace_native!(
+                    "native.DuplicateHandle",
+                    DuplicateHandle(
+                        GetCurrentProcess(),
+                        entry.raw as HANDLE,
+                        GetCurrentProcess(),
+                        &mut handle,
+                        0,
+                        0,
+                        DUPLICATE_SAME_ACCESS,
+                    )
                 )
             } == 0
             {
@@ -937,6 +942,12 @@ pub(crate) fn open_device_value(device: u64, mode: u32, flags: i32) -> Result<i3
 
 /// The `openat` form. See [`resolve_at`] for the supported `dirfd` values.
 pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter(
+        "vfs.openat",
+        path,
+        [dirfd as u64, flags as u64, mode as u64],
+    );
     let _observation = crate::tmpfs::Observation::enter();
     // O_PATH acquires an inode reference; create/truncate/access and status
     // flags must not turn that reference into a data open on any backend.
@@ -1299,15 +1310,18 @@ pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32>
     // This avoids opening and locking the just-created inode repeatedly, and
     // other openers cannot observe a file with partially initialized metadata.
     let native_open = |disposition| unsafe {
-        CreateFileW(
-            wide_path.as_ptr(),
-            access,
-            // FILE_SHARE_DELETE permits unlinking an open file, as POSIX requires.
-            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-            ptr::null(),
-            disposition,
-            attributes,
-            ptr::null_mut(),
+        trace_native!(
+            "native.CreateFileW",
+            CreateFileW(
+                wide_path.as_ptr(),
+                access,
+                // FILE_SHARE_DELETE permits unlinking an open file, as POSIX requires.
+                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                ptr::null(),
+                disposition,
+                attributes,
+                ptr::null_mut(),
+            )
         )
     };
     let mut handle = if atomic_creation {
@@ -1387,7 +1401,13 @@ pub fn openat(dirfd: i32, path: &str, flags: i32, mode: u32) -> Result<i32, i32>
             query.raw()
         };
         let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
-        if unsafe { GetFileInformationByHandle(metadata_handle, &mut info) } == 0 {
+        if unsafe {
+            trace_native!(
+                "native.GetFileInformationByHandle",
+                GetFileInformationByHandle(metadata_handle, &mut info)
+            )
+        } == 0
+        {
             return Err(errno_from_win32(unsafe { GetLastError() }));
         }
         Ok(info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY != 0)
@@ -1554,6 +1574,8 @@ fn file_size(handle: HANDLE) -> Result<u64, i32> {
 /// Because overlapped handles carry the offset per request, this only has to
 /// update the table's own position rather than call `SetFilePointerEx`.
 pub fn lseek(fd: i32, offset: i64, whence: i32) -> Result<u64, i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("vfs.lseek", "", [fd as u64, 0, 0]);
     crate::ofd::with(fd, || lseek_inner(fd, offset, whence))
 }
 fn lseek_inner(fd: i32, offset: i64, whence: i32) -> Result<u64, i32> {
@@ -2002,6 +2024,8 @@ fn set_ownership_object(query: &object::Object, owner: &Ownership) -> Result<(),
     Ok(())
 }
 pub fn chown(path: &str, follow: bool, owner: &Ownership) -> Result<(), i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("vfs.chown", path, [0, 0, 0]);
     if crate::tmpfs::chown(path, follow, owner)? {
         return Ok(());
     }
@@ -2049,6 +2073,8 @@ pub fn chown(path: &str, follow: bool, owner: &Ownership) -> Result<(), i32> {
     set_ownership_object(&object, owner)
 }
 pub fn fchown(fd: i32, allow_path: bool, owner: &Ownership) -> Result<(), i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("vfs.fchown", "", [fd as u64, 0, 0]);
     if crate::devpts::fchown(fd, owner)? {
         return Ok(());
     }
@@ -2123,11 +2149,14 @@ fn set_mode_object_checked(
     let _lock = crate::xattr::InodeLock::acquire(object.raw())?;
     let mut basic: FILE_BASIC_INFO = unsafe { std::mem::zeroed() };
     if unsafe {
-        GetFileInformationByHandleEx(
-            object.raw(),
-            FileBasicInfo,
-            (&mut basic as *mut FILE_BASIC_INFO).cast(),
-            std::mem::size_of_val(&basic) as u32,
+        trace_native!(
+            "native.GetFileInformationByHandleEx",
+            GetFileInformationByHandleEx(
+                object.raw(),
+                FileBasicInfo,
+                (&mut basic as *mut FILE_BASIC_INFO).cast(),
+                std::mem::size_of_val(&basic) as u32,
+            )
         )
     } == 0
     {
@@ -2142,11 +2171,14 @@ fn set_mode_object_checked(
     }
     let set = |value: &FILE_BASIC_INFO| -> Result<(), i32> {
         if unsafe {
-            SetFileInformationByHandle(
-                object.raw(),
-                FileBasicInfo,
-                (value as *const FILE_BASIC_INFO).cast(),
-                std::mem::size_of_val(value) as u32,
+            trace_native!(
+                "native.SetFileInformationByHandle",
+                SetFileInformationByHandle(
+                    object.raw(),
+                    FileBasicInfo,
+                    (value as *const FILE_BASIC_INFO).cast(),
+                    std::mem::size_of_val(value) as u32,
+                )
             )
         } == 0
         {
@@ -2177,6 +2209,8 @@ fn set_mode_object_checked(
 }
 
 pub fn set_mode(path: &str, mode: u32) -> Result<(), i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("vfs.set_mode", path, [mode as u64, 0, 0]);
     if path.ends_with('/') && stat(path)?.st_mode & S_IFMT != S_IFDIR {
         return Err(crate::ENOTDIR);
     }
@@ -2228,6 +2262,9 @@ pub fn chmod_fd_link(path: &str, mode: u32) -> Result<bool, i32> {
 /// Metadata-only descriptor operation, also used by fchmodat2(AT_EMPTY_PATH).
 /// `allow_path` is false for fchmod, which must reject O_PATH descriptors.
 pub fn chmod_descriptor(fd: i32, mode: u32, allow_path: bool) -> Result<(), i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace =
+        crate::io_trace::Span::enter("vfs.chmod_descriptor", "", [fd as u64, mode as u64, 0]);
     let entry = get(fd)?;
     if !allow_path && entry.flags.contains(FdFlags::PATH_ONLY) {
         return Err(crate::EBADF);
@@ -2314,14 +2351,17 @@ pub fn create_fifo(path: &str, mode: u32) -> Result<(), i32> {
     let mut resolved = crate::mount::overlay::prepare_create(path)?;
     let wide_path = wide(&resolved)?;
     let handle = unsafe {
-        CreateFileW(
-            wide_path.as_ptr(),
-            GENERIC_WRITE | FILE_READ_ATTRIBUTES,
-            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-            ptr::null(),
-            CREATE_NEW,
-            0,
-            ptr::null_mut(),
+        trace_native!(
+            "native.CreateFileW",
+            CreateFileW(
+                wide_path.as_ptr(),
+                GENERIC_WRITE | FILE_READ_ATTRIBUTES,
+                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                ptr::null(),
+                CREATE_NEW,
+                0,
+                ptr::null_mut(),
+            )
         )
     };
     if handle.is_null() || handle as isize == -1 {
@@ -2350,14 +2390,17 @@ pub fn create_device(path: &str, mode: u32, device: u64) -> Result<(), i32> {
     let mut resolved = crate::mount::overlay::prepare_create(path)?;
     let wide_path = wide(&resolved)?;
     let handle = unsafe {
-        CreateFileW(
-            wide_path.as_ptr(),
-            GENERIC_WRITE | FILE_READ_ATTRIBUTES,
-            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-            ptr::null(),
-            CREATE_NEW,
-            0,
-            ptr::null_mut(),
+        trace_native!(
+            "native.CreateFileW",
+            CreateFileW(
+                wide_path.as_ptr(),
+                GENERIC_WRITE | FILE_READ_ATTRIBUTES,
+                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                ptr::null(),
+                CREATE_NEW,
+                0,
+                ptr::null_mut(),
+            )
         )
     };
     if handle.is_null() || handle as isize == -1 {
@@ -2420,7 +2463,13 @@ fn stat_with_query(handle: HANDLE, query: &object::Object, symlink: bool) -> Res
     // from this information query is authoritative only when verity is absent;
     // re-querying it in a second helper added an I/O request to every stat.
     let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
-    if unsafe { GetFileInformationByHandle(query.raw(), &mut info) } == 0 {
+    if unsafe {
+        trace_native!(
+            "native.GetFileInformationByHandle",
+            GetFileInformationByHandle(query.raw(), &mut info)
+        )
+    } == 0
+    {
         return Err(errno_from_win32(unsafe { GetLastError() }));
     }
     if info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY != 0 {
@@ -2433,7 +2482,13 @@ fn stat_with_query(handle: HANDLE, query: &object::Object, symlink: bool) -> Res
     // The identity above is stable under the retained handle. EOF must be
     // refreshed after taking the transaction lock so a hidden-tail append
     // cannot make the absence query expose a stale native length.
-    if unsafe { GetFileInformationByHandle(query.raw(), &mut info) } == 0 {
+    if unsafe {
+        trace_native!(
+            "native.GetFileInformationByHandle",
+            GetFileInformationByHandle(query.raw(), &mut info)
+        )
+    } == 0
+    {
         return Err(errno_from_win32(unsafe { GetLastError() }));
     }
     ea::read_pair_decoded(query, inode::EA_NAME, verity::EA_NAME, |inode, verity| {
@@ -2470,7 +2525,13 @@ fn stat_metadata_and_record(
     // SAFETY: `info` is a writable local and the handle is live.
     let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
     // SAFETY: the handle carries FILE_READ_ATTRIBUTES access.
-    if unsafe { GetFileInformationByHandle(query.raw(), &mut info) } == 0 {
+    if unsafe {
+        trace_native!(
+            "native.GetFileInformationByHandle",
+            GetFileInformationByHandle(query.raw(), &mut info)
+        )
+    } == 0
+    {
         // SAFETY: GetLastError has no preconditions.
         return Err(errno_from_win32(unsafe { GetLastError() }));
     }
@@ -2865,28 +2926,34 @@ fn open_stat_query(path: &Path, follow_symlinks: bool) -> Result<object::Object,
     // with metadata-only access when the host denies that extra right.
     // SAFETY: `wide_path` is null-terminated and outlives both calls.
     let mut handle = unsafe {
-        CreateFileW(
-            wide_path.as_ptr(),
-            FILE_READ_ATTRIBUTES | FILE_READ_EA | SYNCHRONIZE | READ_CONTROL,
-            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-            ptr::null(),
-            OPEN_EXISTING,
-            attributes,
-            ptr::null_mut(),
+        trace_native!(
+            "native.CreateFileW",
+            CreateFileW(
+                wide_path.as_ptr(),
+                FILE_READ_ATTRIBUTES | FILE_READ_EA | SYNCHRONIZE | READ_CONTROL,
+                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                ptr::null(),
+                OPEN_EXISTING,
+                attributes,
+                ptr::null_mut(),
+            )
         )
     };
     if (handle.is_null() || handle as isize == -1)
         && unsafe { GetLastError() } == ERROR_ACCESS_DENIED
     {
         handle = unsafe {
-            CreateFileW(
-                wide_path.as_ptr(),
-                FILE_READ_ATTRIBUTES | FILE_READ_EA | SYNCHRONIZE,
-                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                ptr::null(),
-                OPEN_EXISTING,
-                attributes,
-                ptr::null_mut(),
+            trace_native!(
+                "native.CreateFileW",
+                CreateFileW(
+                    wide_path.as_ptr(),
+                    FILE_READ_ATTRIBUTES | FILE_READ_EA | SYNCHRONIZE,
+                    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                    ptr::null(),
+                    OPEN_EXISTING,
+                    attributes,
+                    ptr::null_mut(),
+                )
             )
         };
     }
@@ -2902,6 +2969,8 @@ fn open_stat_query(path: &Path, follow_symlinks: bool) -> Result<object::Object,
 
 /// `stat`: follows symlinks.
 pub fn stat(path: &str) -> Result<Stat, i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("vfs.stat", path, [0, 0, 0]);
     if path.is_empty() {
         return Err(ENOENT);
     }
@@ -2942,6 +3011,8 @@ pub(crate) fn canonical_guest(path: &str, follow: bool) -> Result<String, i32> {
 
 /// `lstat`: reports the symlink itself.
 pub fn lstat(path: &str) -> Result<Stat, i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("vfs.lstat", path, [0, 0, 0]);
     if path.is_empty() {
         return Err(ENOENT);
     }
@@ -2973,6 +3044,8 @@ pub fn lstat(path: &str) -> Result<Stat, i32> {
 
 /// `fstat`: metadata for an open descriptor.
 pub fn fstat(fd: i32) -> Result<Stat, i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("vfs.fstat", "", [fd as u64, 0, 0]);
     let _observation = crate::tmpfs::Observation::enter();
     let entry = get(fd)?;
     if let Some(stat) = crate::devpts::fstat(fd)? {
@@ -3179,6 +3252,8 @@ pub fn fstat(fd: i32) -> Result<Stat, i32> {
 /// descriptor closes. Native support for these semantics is required; a failed
 /// operation never changes to delayed deletion or changes the file attributes.
 pub fn unlink(path: &str) -> Result<(), i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("vfs.unlink", path, [0, 0, 0]);
     if crate::tmpfs::unlink(path, false)? {
         return Ok(());
     }
@@ -3217,14 +3292,17 @@ pub(crate) fn create_socket_inode(path: &str) -> Result<std::os::windows::io::Ow
     // another process unlink the path while this socket is still bound.
     // SAFETY: `wide_path` is null-terminated and outlives the call.
     let handle = unsafe {
-        CreateFileW(
-            wide_path.as_ptr(),
-            GENERIC_READ | GENERIC_WRITE | DELETE,
-            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-            ptr::null(),
-            CREATE_NEW,
-            0,
-            ptr::null_mut(),
+        trace_native!(
+            "native.CreateFileW",
+            CreateFileW(
+                wide_path.as_ptr(),
+                GENERIC_READ | GENERIC_WRITE | DELETE,
+                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                ptr::null(),
+                CREATE_NEW,
+                0,
+                ptr::null_mut(),
+            )
         )
     };
     if handle == windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE {
@@ -3260,11 +3338,14 @@ pub(crate) fn unlink_inode(handle: HANDLE) -> Result<(), i32> {
             | FILE_DISPOSITION_FLAG_IGNORE_READONLY_ATTRIBUTE,
     };
     if unsafe {
-        SetFileInformationByHandle(
-            handle,
-            FileDispositionInfoEx,
-            (&disposition as *const FILE_DISPOSITION_INFO_EX).cast(),
-            size_of_val(&disposition) as u32,
+        trace_native!(
+            "native.SetFileInformationByHandle",
+            SetFileInformationByHandle(
+                handle,
+                FileDispositionInfoEx,
+                (&disposition as *const FILE_DISPOSITION_INFO_EX).cast(),
+                size_of_val(&disposition) as u32,
+            )
         )
     } == 0
     {
@@ -3275,6 +3356,8 @@ pub(crate) fn unlink_inode(handle: HANDLE) -> Result<(), i32> {
 
 /// Creates a directory. The Linux `mode` has no Windows equivalent.
 pub fn mkdir(path: &str, mode: u32) -> Result<(), i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("vfs.mkdir", path, [mode as u64, 0, 0]);
     if crate::procfs::owns(path) {
         return confined::mkdir_proc(path, mode);
     }
@@ -3306,6 +3389,8 @@ pub fn mkdir(path: &str, mode: u32) -> Result<(), i32> {
 
 /// Removes an empty directory.
 pub fn rmdir(path: &str) -> Result<(), i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("vfs.rmdir", path, [0, 0, 0]);
     if crate::tmpfs::unlink(path, true)? {
         return Ok(());
     }
@@ -3328,7 +3413,13 @@ pub fn rmdir(path: &str) -> Result<(), i32> {
 pub(crate) fn remove_host_path(path: &Path, directory: bool) -> Result<(), i32> {
     let object = object::Object::open(path, DELETE | FILE_READ_ATTRIBUTES)?;
     let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
-    if unsafe { GetFileInformationByHandle(object.raw(), &mut info) } == 0 {
+    if unsafe {
+        trace_native!(
+            "native.GetFileInformationByHandle",
+            GetFileInformationByHandle(object.raw(), &mut info)
+        )
+    } == 0
+    {
         return Err(errno_from_win32(unsafe { GetLastError() }));
     }
     let is_directory = info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY != 0
@@ -3346,6 +3437,8 @@ pub fn rename(from: &str, to: &str) -> Result<(), i32> {
 }
 
 pub fn rename_with_flags(from: &str, to: &str, flags: u32) -> Result<(), i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("vfs.rename_with_flags", "", [flags as u64, 0, 0]);
     if proc_descendant(from).is_some() || proc_descendant(to).is_some() {
         let source = if proc_descendant(from).is_some() {
             confined::mutation_path(from)?
@@ -3386,14 +3479,17 @@ pub(crate) fn rename_host_paths(source: &Path, target: &Path, replace: bool) -> 
     // publishing its replacement. FILE_RENAME_INFO_EX with POSIX semantics
     // permits that Linux pattern; MoveFileExW alone rejects it with EACCES.
     let source_handle = unsafe {
-        CreateFileW(
-            source.as_ptr(),
-            DELETE,
-            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-            ptr::null(),
-            OPEN_EXISTING,
-            FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
-            ptr::null_mut(),
+        trace_native!(
+            "native.CreateFileW",
+            CreateFileW(
+                source.as_ptr(),
+                DELETE,
+                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                ptr::null(),
+                OPEN_EXISTING,
+                FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+                ptr::null_mut(),
+            )
         )
     };
     if source_handle.is_null() || source_handle as isize == -1 {
@@ -3418,11 +3514,14 @@ pub(crate) unsafe fn rename_host_handle(
     let (mut storage, bytes) = rename_information(&wide(target)?, replace)?;
     // SAFETY: the aligned buffer includes the target's terminating WCHAR.
     let renamed = unsafe {
-        SetFileInformationByHandle(
-            source_handle,
-            FileRenameInfoEx,
-            storage.as_mut_ptr().cast(),
-            bytes,
+        trace_native!(
+            "native.SetFileInformationByHandle",
+            SetFileInformationByHandle(
+                source_handle,
+                FileRenameInfoEx,
+                storage.as_mut_ptr().cast(),
+                bytes,
+            )
         )
     };
     // CloseHandle must not overwrite the rename's actual failure. An
@@ -3477,8 +3576,12 @@ pub(crate) unsafe fn rename_host_handle_relative(
     let (mut buffer, length) = rename_information(&name, replace)?;
     unsafe { (*buffer.as_mut_ptr().cast::<FILE_RENAME_INFO>()).RootDirectory = parent };
     let mut io = NativeIoStatus::default();
-    let result =
-        unsafe { NtSetInformationFile(source, &mut io, buffer.as_ptr().cast(), length, 65) };
+    let result = unsafe {
+        trace_native!(
+            "native.NtSetInformationFile",
+            NtSetInformationFile(source, &mut io, buffer.as_ptr().cast(), length, 65)
+        )
+    };
     unsafe { complete_native_io(source, &mut io, result) }
 }
 
@@ -3620,11 +3723,14 @@ pub(crate) unsafe fn complete_native_status(
                 unsafe { CancelIoEx(file, ptr::null()) };
             }
             let waited = unsafe {
-                WaitForMultipleObjects(
-                    if cancelling { 1 } else { 2 },
-                    handles.as_ptr(),
-                    0,
-                    INFINITE,
+                trace_native!(
+                    "native.WaitForMultipleObjects",
+                    WaitForMultipleObjects(
+                        if cancelling { 1 } else { 2 },
+                        handles.as_ptr(),
+                        0,
+                        INFINITE,
+                    )
                 )
             };
             crate::signal::unregister_waiter();
@@ -3640,7 +3746,12 @@ pub(crate) unsafe fn complete_native_status(
                 continue;
             }
             unsafe { CancelIoEx(file, ptr::null()) };
-            let retired = unsafe { WaitForSingleObject(file, INFINITE) };
+            let retired = unsafe {
+                trace_native!(
+                    "native.WaitForSingleObject",
+                    WaitForSingleObject(file, INFINITE)
+                )
+            };
             if retired != WAIT_OBJECT_0 {
                 // Both handles are privately owned and cannot legally become
                 // invalid. Never unwind a buffer still owned by the kernel.
@@ -3704,16 +3815,19 @@ mod native_io_tests {
     }
     unsafe fn read(pipe: &Pipe, io: &mut NativeIoStatus, byte: &mut u8) -> i32 {
         unsafe {
-            NtReadFile(
-                pipe.0 as HANDLE,
-                ptr::null_mut(),
-                ptr::null(),
-                ptr::null(),
-                io,
-                byte,
-                1,
-                ptr::null(),
-                ptr::null(),
+            trace_native!(
+                "native.NtReadFile",
+                NtReadFile(
+                    pipe.0 as HANDLE,
+                    ptr::null_mut(),
+                    ptr::null(),
+                    ptr::null(),
+                    io,
+                    byte,
+                    1,
+                    ptr::null(),
+                    ptr::null(),
+                )
             )
         }
     }
@@ -3902,14 +4016,17 @@ pub fn access(path: &str, mode: i32) -> Result<(), i32> {
                 0
             };
             let handle = unsafe {
-                CreateFileW(
-                    wide_path.as_ptr(),
-                    desired,
-                    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                    ptr::null(),
-                    OPEN_EXISTING,
-                    attributes,
-                    ptr::null_mut(),
+                trace_native!(
+                    "native.CreateFileW",
+                    CreateFileW(
+                        wide_path.as_ptr(),
+                        desired,
+                        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                        ptr::null(),
+                        OPEN_EXISTING,
+                        attributes,
+                        ptr::null_mut(),
+                    )
                 )
             };
             if handle.is_null() || handle as isize == -1 {
@@ -4058,7 +4175,13 @@ pub fn read_directory_fd(fd: i32) -> Result<Vec<DirectoryEntry>, i32> {
                 // an inode mutex and reopening every icon just to discard them.
                 // `child` already owns an independent metadata query handle.
                 let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
-                if unsafe { GetFileInformationByHandle(child.raw(), &mut info) } == 0 {
+                if unsafe {
+                    trace_native!(
+                        "native.GetFileInformationByHandle",
+                        GetFileInformationByHandle(child.raw(), &mut info)
+                    )
+                } == 0
+                {
                     return Err(errno_from_win32(unsafe { GetLastError() }));
                 }
                 let record = inode::read_object(&child)?;
@@ -4215,6 +4338,8 @@ pub fn read_directory(path: &str) -> Result<Vec<DirectoryEntry>, i32> {
 
 /// Truncates or extends a file to an exact length.
 pub fn ftruncate(fd: i32, length: i64) -> Result<(), i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("vfs.ftruncate", "", [fd as u64, 0, 0]);
     if length < 0 {
         return Err(EINVAL);
     }

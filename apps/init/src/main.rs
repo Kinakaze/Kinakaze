@@ -11,6 +11,7 @@ mod native_fork;
 mod pool;
 mod tray;
 mod web;
+mod writeback;
 use kinakaze_v2_host_win::{Job, PipeConnection, PipeListener, ProcessHandle, random_token};
 use kinakaze_v2_manager::{PeerIdentity, StateManager};
 use kinakaze_v2_protocol::{
@@ -27,6 +28,7 @@ const MAX_CONNECTIONS: usize = 128;
 struct Service {
     manager: Mutex<StateManager>,
     images: Mutex<image_cache::Cache>,
+    writeback: writeback::Queue,
     kernel: Mutex<kernel::Kernel>,
     changed: Condvar,
     stopping: AtomicBool,
@@ -56,6 +58,10 @@ impl Service {
                 .pool
                 .as_ref()
                 .map(|pool| pool.native_execs.lock_creation());
+            let writeback_error = self.writeback.shutdown();
+            if writeback_error != 0 {
+                eprintln!("session writeback failed: Win32 error {writeback_error}");
+            }
             let first = !self.stopping.swap(true, Ordering::AcqRel);
             self.changed.notify_all();
             first
@@ -356,6 +362,15 @@ fn serve(mut pipe: PipeConnection, service: Arc<Service>, _slot: ConnectionSlot)
                         Err(_) => Ok(kinakaze_v2_protocol::Reply::NativeFork { worker: None }),
                     }
                 }
+                (
+                    Request::Kernel(kinakaze_v2_protocol::kernel::KernelCommand::FileWriteback {
+                        source,
+                        wait,
+                    }),
+                    Ok(_),
+                ) => Ok(kinakaze_v2_protocol::Reply::KernelObjects(
+                    service.writeback.request(peer, *source, *wait),
+                )),
                 (Request::Kernel(command), Ok(_)) => service
                     .kernel
                     .lock()
@@ -586,6 +601,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let service = Arc::new(Service {
         manager: Mutex::new(StateManager::new(epoch, token.clone())),
         images: Mutex::new(image_cache::Cache::default()),
+        writeback: writeback::Queue::default(),
         kernel: Mutex::new(kernel::Kernel::new(epoch)),
         changed: Condvar::new(),
         stopping: AtomicBool::new(false),

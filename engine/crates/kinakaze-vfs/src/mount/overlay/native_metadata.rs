@@ -114,11 +114,14 @@ fn open(
     };
     let mut attributes: FILE_ATTRIBUTE_TAG_INFO = unsafe { std::mem::zeroed() };
     if unsafe {
-        GetFileInformationByHandleEx(
-            object.raw(),
-            FileAttributeTagInfo,
-            (&mut attributes as *mut FILE_ATTRIBUTE_TAG_INFO).cast(),
-            std::mem::size_of_val(&attributes) as u32,
+        trace_native!(
+            "native.GetFileInformationByHandleEx",
+            GetFileInformationByHandleEx(
+                object.raw(),
+                FileAttributeTagInfo,
+                (&mut attributes as *mut FILE_ATTRIBUTE_TAG_INFO).cast(),
+                std::mem::size_of_val(&attributes) as u32,
+            )
         )
     } == 0
         || attributes.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT != 0

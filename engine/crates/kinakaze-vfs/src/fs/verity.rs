@@ -156,6 +156,8 @@ fn native_size_handle(handle: HANDLE) -> Result<u64, i32> {
 }
 
 fn read_record_handle(handle: HANDLE) -> Result<Option<Record>, i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("fs.verity.read_record_handle", "", [0, 0, 0]);
     match ea::read_shared_decoded(handle, EA_NAME, Record::decode) {
         Err(crate::EACCES) => read_record(&Object::reopen(handle, QUERY_ACCESS)?),
         Err(EOPNOTSUPP) => Ok(None),
@@ -275,6 +277,8 @@ pub(crate) fn authoritative_size_object(object: &Object) -> Result<u64, i32> {
 /// share reservation. An orphan PREPARING transaction is recovered under the
 /// same cross-process inode mutex used by enable; no process liveness guesses.
 pub fn ensure_writable(handle: HANDLE) -> Result<(), i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("fs.verity.ensure_writable", "", [0, 0, 0]);
     let query = Object::reopen(handle, QUERY_ACCESS)?;
     ensure_writable_object(&query)
 }
@@ -284,6 +288,8 @@ pub fn ensure_writable(handle: HANDLE) -> Result<(), i32> {
 /// alive, excluding a new verity enable throughout validation. Borrowed/shared
 /// descriptors still use ensure_writable and its independent metadata open.
 pub(crate) fn ensure_writable_object(query: &Object) -> Result<(), i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("fs.verity.ensure_writable_object", "", [0, 0, 0]);
     let Some(record) = read_record(query)? else {
         return Ok(());
     };
@@ -537,6 +543,8 @@ pub(crate) fn read_object(
     offset: u64,
     bytes: &mut [u8],
 ) -> Result<Option<usize>, i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("fs.verity.read_object", "", [0, 0, 0]);
     let _lock = crate::xattr::InodeLock::acquire(object.raw())?;
     read_locked_object(object, offset, bytes)
 }

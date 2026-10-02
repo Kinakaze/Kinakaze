@@ -105,7 +105,13 @@ pub fn read_native_directory_fd(fd: i32) -> Result<Option<Vec<NativeDirectoryEnt
         return Err(ENOTDIR);
     }
     let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
-    if unsafe { GetFileInformationByHandle(directory.raw(), &mut info) } == 0 {
+    if unsafe {
+        trace_native!(
+            "native.GetFileInformationByHandle",
+            GetFileInformationByHandle(directory.raw(), &mut info)
+        )
+    } == 0
+    {
         return Err(errno_from_win32(unsafe { GetLastError() }));
     }
     let volume = info.dwVolumeSerialNumber;
@@ -166,7 +172,13 @@ pub fn read_native_directory_fd(fd: i32) -> Result<Option<Vec<NativeDirectoryEnt
             }
             Err(error) => return Err(error),
         };
-        if unsafe { GetFileInformationByHandle(child.raw(), &mut info) } == 0 {
+        if unsafe {
+            trace_native!(
+                "native.GetFileInformationByHandle",
+                GetFileInformationByHandle(child.raw(), &mut info)
+            )
+        } == 0
+        {
             return Err(errno_from_win32(unsafe { GetLastError() }));
         }
         let inode = (u64::from(info.nFileIndexHigh) << 32) | u64::from(info.nFileIndexLow);
@@ -193,11 +205,14 @@ pub fn read_native_directory_fd(fd: i32) -> Result<Option<Vec<NativeDirectoryEnt
             // handles or mutable filesystem state. Validate a miss against the
             // pinned object so replacement/EA changes cannot poison an old key.
             if unsafe {
-                GetFileInformationByHandleEx(
-                    child.raw(),
-                    FileBasicInfo,
-                    (&mut basic as *mut FILE_BASIC_INFO).cast(),
-                    size_of_val(&basic) as u32,
+                trace_native!(
+                    "native.GetFileInformationByHandleEx",
+                    GetFileInformationByHandleEx(
+                        child.raw(),
+                        FileBasicInfo,
+                        (&mut basic as *mut FILE_BASIC_INFO).cast(),
+                        size_of_val(&basic) as u32,
+                    )
                 )
             } != 0
                 && basic.CreationTime as u64 == id.created

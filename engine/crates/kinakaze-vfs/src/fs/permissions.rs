@@ -80,11 +80,14 @@ pub(super) fn reopen_readonly(
     check(object.raw(), flags)?;
     let mut basic: FILE_BASIC_INFO = unsafe { std::mem::zeroed() };
     if unsafe {
-        GetFileInformationByHandleEx(
-            object.raw(),
-            FileBasicInfo,
-            (&mut basic as *mut FILE_BASIC_INFO).cast(),
-            size_of_val(&basic) as u32,
+        trace_native!(
+            "native.GetFileInformationByHandleEx",
+            GetFileInformationByHandleEx(
+                object.raw(),
+                FileBasicInfo,
+                (&mut basic as *mut FILE_BASIC_INFO).cast(),
+                size_of_val(&basic) as u32,
+            )
         )
     } == 0
     {
@@ -101,11 +104,14 @@ pub(super) fn reopen_readonly(
             ..unsafe { std::mem::zeroed() }
         };
         if unsafe {
-            SetFileInformationByHandle(
-                object.raw(),
-                FileBasicInfo,
-                (&info as *const FILE_BASIC_INFO).cast(),
-                size_of_val(&info) as u32,
+            trace_native!(
+                "native.SetFileInformationByHandle",
+                SetFileInformationByHandle(
+                    object.raw(),
+                    FileBasicInfo,
+                    (&info as *const FILE_BASIC_INFO).cast(),
+                    size_of_val(&info) as u32,
+                )
             )
         } == 0
         {

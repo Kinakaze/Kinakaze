@@ -42,6 +42,12 @@ pub(super) fn try_open_at(
     flags: i32,
     mode: u32,
 ) -> Result<Option<i32>, i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter(
+        "fs.native_create.try_open_at",
+        original,
+        [dirfd as u64, flags as u64, mode as u64],
+    );
     if !eligible_flags(flags) || flags & O_EXCL == 0 && !nonexclusive_enabled() {
         return Ok(None);
     }

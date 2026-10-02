@@ -112,6 +112,8 @@ fn read_values<T>(
     shared: bool,
     decode: impl FnOnce([Option<&[u8]>; 2]) -> Result<T, i32>,
 ) -> Result<T, i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("fs.ea.read_values", "", [0, 0, 0]);
     debug_assert!(!requested.is_empty() && requested.len() <= 2);
     // The NT EA name is at most 255 bytes. Keep the common absent/small-record
     // query off the managed heap, including path probes during ELF loading.
@@ -146,16 +148,19 @@ fn read_values<T>(
             information: 0,
         };
         let status = unsafe {
-            NtQueryEaFile(
-                handle,
-                &mut io,
-                storage.as_mut_ptr().cast(),
-                (storage.len() * 8) as u32,
-                u8::from(requested.len() == 1),
-                names.as_ptr().cast(),
-                names.len() as u32,
-                ptr::null(),
-                1,
+            trace_native!(
+                "native.NtQueryEaFile",
+                NtQueryEaFile(
+                    handle,
+                    &mut io,
+                    storage.as_mut_ptr().cast(),
+                    (storage.len() * 8) as u32,
+                    u8::from(requested.len() == 1),
+                    names.as_ptr().cast(),
+                    names.len() as u32,
+                    ptr::null(),
+                    1,
+                )
             )
         };
         let status = if shared {
@@ -220,6 +225,8 @@ pub(super) fn write(object: &Object, name: &[u8], value: &[u8]) -> Result<(), i3
 
 /// Same private-open contract as `read_private`.
 pub(crate) fn write_private(handle: HANDLE, name: &[u8], value: &[u8]) -> Result<(), i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("fs.ea.write_private", "", [0, 0, 0]);
     validate_name(name)?;
     let size = 9 + name.len() + value.len();
     if size > 65_535 {
@@ -239,7 +246,12 @@ pub(crate) fn write_private(handle: HANDLE, name: &[u8], value: &[u8]) -> Result
     bytes[8..8 + name.len()].copy_from_slice(name);
     bytes[9 + name.len()..].copy_from_slice(value);
     let mut io = NativeIoStatus::default();
-    let status = unsafe { NtSetEaFile(handle, &mut io, bytes.as_ptr().cast(), size as u32) };
+    let status = unsafe {
+        trace_native!(
+            "native.NtSetEaFile",
+            NtSetEaFile(handle, &mut io, bytes.as_ptr().cast(), size as u32)
+        )
+    };
     let status = unsafe { complete_native_status(handle, &mut io, status)? };
     if status == 0 {
         Ok(())

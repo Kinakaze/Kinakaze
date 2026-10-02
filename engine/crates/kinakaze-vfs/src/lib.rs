@@ -2,6 +2,21 @@
 
 use std::sync::{OnceLock, RwLock};
 
+#[cfg(all(windows, feature = "io-trace"))]
+mod io_trace;
+
+/// Preserve the original expression entirely in ordinary builds.
+macro_rules! trace_native {
+    ($name:literal, $call:expr) => {{
+        #[cfg(feature = "io-trace")]
+        let mut trace = crate::io_trace::Span::enter($name, "", [0; 3]);
+        let result = $call;
+        #[cfg(feature = "io-trace")]
+        trace.result(result as i64);
+        result
+    }};
+}
+
 #[cfg(windows)]
 mod io_event;
 #[cfg(windows)]
@@ -2381,8 +2396,10 @@ impl ExecHandoff {
             child.as_raw_handle().cast(),
         ];
         unsafe {
-            WaitForMultipleObjects(handles.len() as u32, handles.as_ptr(), 0, 30_000)
-                == WAIT_OBJECT_0
+            trace_native!(
+                "native.WaitForMultipleObjects",
+                WaitForMultipleObjects(handles.len() as u32, handles.as_ptr(), 0, 30_000)
+            ) == WAIT_OBJECT_0
         }
     }
 }
@@ -3331,6 +3348,8 @@ pub unsafe fn platform_write(entry: FdEntry, buffer: *mut u8, len: usize) -> Res
 }
 
 pub fn read(fd: i32, buffer: &mut [u8]) -> Result<usize, i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("vfs.read", "", [fd as u64, 0, 0]);
     #[cfg(windows)]
     if get(fd)?.flags.contains(FdFlags::SEEKABLE) {
         return ofd::with(fd, || read_inner(fd, buffer));
@@ -3588,6 +3607,8 @@ fn read_inner(fd: i32, buffer: &mut [u8]) -> Result<usize, i32> {
 }
 
 pub fn write(fd: i32, buffer: &[u8]) -> Result<usize, i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("vfs.write", "", [fd as u64, 0, 0]);
     #[cfg(windows)]
     if get(fd)?.flags.contains(FdFlags::SEEKABLE) {
         return ofd::with(fd, || write_inner(fd, buffer));
@@ -3775,6 +3796,8 @@ fn set_offset(fd: i32, generation: u32, offset: u64) {
 }
 
 pub fn close(fd: i32) -> Result<(), i32> {
+    #[cfg(all(windows, feature = "io-trace"))]
+    let _io_trace = crate::io_trace::Span::enter("vfs.close", "", [fd as u64, 0, 0]);
     if fork_trace_enabled() {
         eprintln!(
             "kinakaze vfs: pid {} close(fd={}) called",
@@ -4066,12 +4089,15 @@ mod platform {
         let mut information = FileAccessInformation::default();
         let mut status = IoStatusBlock::default();
         let result = unsafe {
-            NtQueryInformationFile(
-                handle,
-                &raw mut status,
-                (&raw mut information).cast(),
-                core::mem::size_of::<FileAccessInformation>() as u32,
-                FILE_ACCESS_INFORMATION_CLASS,
+            trace_native!(
+                "native.NtQueryInformationFile",
+                NtQueryInformationFile(
+                    handle,
+                    &raw mut status,
+                    (&raw mut information).cast(),
+                    core::mem::size_of::<FileAccessInformation>() as u32,
+                    FILE_ACCESS_INFORMATION_CLASS,
+                )
             )
         };
         if result < 0 {
@@ -4266,14 +4292,17 @@ mod platform {
         // The client is the write endpoint and is opened only after the server
         // has an outstanding connect request, so no polling or retry is needed.
         let client = unsafe {
-            CreateFileW(
-                wide_name.as_ptr(),
-                GENERIC_WRITE,
-                0,
-                ptr::null(),
-                OPEN_EXISTING,
-                FILE_FLAG_OVERLAPPED,
-                ptr::null_mut(),
+            trace_native!(
+                "native.CreateFileW",
+                CreateFileW(
+                    wide_name.as_ptr(),
+                    GENERIC_WRITE,
+                    0,
+                    ptr::null(),
+                    OPEN_EXISTING,
+                    FILE_FLAG_OVERLAPPED,
+                    ptr::null_mut(),
+                )
             )
         };
         if client.is_null() || client as isize == -1 {
@@ -4286,7 +4315,12 @@ mod platform {
         }
 
         if connect_pending {
-            let waited = unsafe { WaitForMultipleObjects(1, &connect_event.0, 0, INFINITE) };
+            let waited = unsafe {
+                trace_native!(
+                    "native.WaitForMultipleObjects",
+                    WaitForMultipleObjects(1, &connect_event.0, 0, INFINITE)
+                )
+            };
             let mut transferred = 0u32;
             let completed = waited == WAIT_OBJECT_0
                 && unsafe { GetOverlappedResult(server, &raw const connect, &mut transferred, 0) }
@@ -4442,10 +4476,16 @@ mod platform {
         let started = unsafe {
             match direction {
                 Direction::Read => {
-                    ReadFile(handle, buffer, amount, ptr::null_mut(), &raw mut overlapped)
+                    trace_native!(
+                        "native.ReadFile",
+                        ReadFile(handle, buffer, amount, ptr::null_mut(), &raw mut overlapped)
+                    )
                 }
                 Direction::Write => {
-                    WriteFile(handle, buffer, amount, ptr::null_mut(), &raw mut overlapped)
+                    trace_native!(
+                        "native.WriteFile",
+                        WriteFile(handle, buffer, amount, ptr::null_mut(), &raw mut overlapped)
+                    )
                 }
             }
         };
@@ -4466,7 +4506,12 @@ mod platform {
                 // reap it before returning EAGAIN so the caller's buffer is no
                 // longer owned by the kernel when this function returns.
                 unsafe { CancelIoEx(handle, &raw mut overlapped) };
-                unsafe { WaitForMultipleObjects(1, &io_event.0, 0, INFINITE) };
+                unsafe {
+                    trace_native!(
+                        "native.WaitForMultipleObjects",
+                        WaitForMultipleObjects(1, &io_event.0, 0, INFINITE)
+                    )
+                };
                 let completed = unsafe {
                     GetOverlappedResult(handle, &raw const overlapped, &mut transferred, 0)
                 };
@@ -4521,14 +4566,24 @@ mod platform {
         if interrupt.is_null() {
             // Without an interrupt event the operation is simply uninterruptible.
             // SAFETY: the request is pending and the event is live.
-            let waited = unsafe { WaitForMultipleObjects(1, &io_event, 0, INFINITE) };
+            let waited = unsafe {
+                trace_native!(
+                    "native.WaitForMultipleObjects",
+                    WaitForMultipleObjects(1, &io_event, 0, INFINITE)
+                )
+            };
             return if waited == WAIT_OBJECT_0 {
                 Ok(())
             } else {
                 // A failed multi-wait must not leave the request referencing
                 // this stack or an event that another operation can reuse.
                 unsafe { CancelIoEx(handle, overlapped) };
-                unsafe { WaitForMultipleObjects(1, &io_event, 0, INFINITE) };
+                unsafe {
+                    trace_native!(
+                        "native.WaitForMultipleObjects",
+                        WaitForMultipleObjects(1, &io_event, 0, INFINITE)
+                    )
+                };
                 Err(EIO)
             };
         }
@@ -4539,7 +4594,12 @@ mod platform {
         let waited = loop {
             // The interrupt event auto-resets. A stale wake, or default-ignored
             // SIGCHLD from a reaped child, must not cancel a live I/O request.
-            let waited = unsafe { WaitForMultipleObjects(2, handles.as_ptr(), 0, INFINITE) };
+            let waited = unsafe {
+                trace_native!(
+                    "native.WaitForMultipleObjects",
+                    WaitForMultipleObjects(2, handles.as_ptr(), 0, INFINITE)
+                )
+            };
             if waited == WAIT_OBJECT_0 + 1 && !super::signal::interrupt_pending() {
                 continue;
             }
@@ -4552,7 +4612,12 @@ mod platform {
         }
         if waited != WAIT_OBJECT_0 + 1 {
             unsafe { CancelIoEx(handle, overlapped) };
-            unsafe { WaitForMultipleObjects(1, &io_event, 0, INFINITE) };
+            unsafe {
+                trace_native!(
+                    "native.WaitForMultipleObjects",
+                    WaitForMultipleObjects(1, &io_event, 0, INFINITE)
+                )
+            };
             return Err(EIO);
         }
 
@@ -4562,7 +4627,12 @@ mod platform {
         // SAFETY: `overlapped` names a request pending on this handle.
         unsafe { CancelIoEx(handle, overlapped) };
         // SAFETY: the completion event remains live until the request retires.
-        unsafe { WaitForMultipleObjects(1, &io_event, 0, INFINITE) };
+        unsafe {
+            trace_native!(
+                "native.WaitForMultipleObjects",
+                WaitForMultipleObjects(1, &io_event, 0, INFINITE)
+            )
+        };
         Ok(())
     }
 
@@ -4691,12 +4761,15 @@ mod platform {
         let amount = buffer.len().min(u32::MAX as usize) as u32;
         // SAFETY: the buffer is writable for `amount` bytes and the handle is live.
         let ok = unsafe {
-            ReadFile(
-                entry.raw as HANDLE,
-                buffer.as_mut_ptr(),
-                amount,
-                &mut read,
-                ptr::null_mut(),
+            trace_native!(
+                "native.ReadFile",
+                ReadFile(
+                    entry.raw as HANDLE,
+                    buffer.as_mut_ptr(),
+                    amount,
+                    &mut read,
+                    ptr::null_mut(),
+                )
             )
         };
         if ok == 0 {
@@ -4754,12 +4827,15 @@ mod platform {
         let amount = buffer.len().min(u32::MAX as usize) as u32;
         // SAFETY: the buffer is readable for `amount` bytes and the handle is live.
         let ok = unsafe {
-            WriteFile(
-                entry.raw as HANDLE,
-                buffer.as_ptr(),
-                amount,
-                &mut written,
-                ptr::null_mut(),
+            trace_native!(
+                "native.WriteFile",
+                WriteFile(
+                    entry.raw as HANDLE,
+                    buffer.as_ptr(),
+                    amount,
+                    &mut written,
+                    ptr::null_mut(),
+                )
             )
         };
         if ok == 0 {
@@ -5122,7 +5198,12 @@ mod tests {
         let handoff = stage_exec_handoff(std::process::id(), &frame).unwrap();
         let state = peek_exec_launch_state().unwrap().unwrap();
         assert_eq!(
-            unsafe { WaitForSingleObject(handoff.ready.as_raw_handle(), 0) },
+            unsafe {
+                trace_native!(
+                    "native.WaitForSingleObject",
+                    WaitForSingleObject(handoff.ready.as_raw_handle(), 0)
+                )
+            },
             WAIT_OBJECT_0
         );
         assert_eq!(state.environment, environment);
@@ -5994,14 +6075,17 @@ mod tests {
             let mut raw_copy = std::ptr::null_mut();
             assert_ne!(
                 unsafe {
-                    DuplicateHandle(
-                        GetCurrentProcess(),
-                        source.raw as _,
-                        GetCurrentProcess(),
-                        &mut raw_copy,
-                        0,
-                        0,
-                        DUPLICATE_SAME_ACCESS,
+                    trace_native!(
+                        "native.DuplicateHandle",
+                        DuplicateHandle(
+                            GetCurrentProcess(),
+                            source.raw as _,
+                            GetCurrentProcess(),
+                            &mut raw_copy,
+                            0,
+                            0,
+                            DUPLICATE_SAME_ACCESS,
+                        )
                     )
                 },
                 0
@@ -6615,14 +6699,17 @@ mod tests {
             // process, and `raw_copy` is a writable out-parameter.
             assert_ne!(
                 unsafe {
-                    DuplicateHandle(
-                        GetCurrentProcess(),
-                        source.raw as *mut c_void,
-                        GetCurrentProcess(),
-                        &raw mut raw_copy,
-                        0,
-                        0,
-                        DUPLICATE_SAME_ACCESS,
+                    trace_native!(
+                        "native.DuplicateHandle",
+                        DuplicateHandle(
+                            GetCurrentProcess(),
+                            source.raw as *mut c_void,
+                            GetCurrentProcess(),
+                            &raw mut raw_copy,
+                            0,
+                            0,
+                            DUPLICATE_SAME_ACCESS,
+                        )
                     )
                 },
                 0
@@ -7634,14 +7721,17 @@ mod tests {
             let wide_path = wide(&path.to_string_lossy());
             // SAFETY: the path is a valid null-terminated wide string.
             let handle = unsafe {
-                CreateFileW(
-                    wide_path.as_ptr(),
-                    GENERIC_READ | GENERIC_WRITE,
-                    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                    ptr::null(),
-                    CREATE_ALWAYS,
-                    FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_OVERLAPPED | FILE_FLAG_DELETE_ON_CLOSE,
-                    ptr::null_mut(),
+                trace_native!(
+                    "native.CreateFileW",
+                    CreateFileW(
+                        wide_path.as_ptr(),
+                        GENERIC_READ | GENERIC_WRITE,
+                        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                        ptr::null(),
+                        CREATE_ALWAYS,
+                        FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_OVERLAPPED | FILE_FLAG_DELETE_ON_CLOSE,
+                        ptr::null_mut(),
+                    )
                 )
             };
             assert!(
@@ -7736,14 +7826,17 @@ mod tests {
             );
             // SAFETY: the server exists, so the client open resolves the name.
             let client = unsafe {
-                CreateFileW(
-                    wide_name.as_ptr(),
-                    GENERIC_READ | GENERIC_WRITE,
-                    0,
-                    ptr::null(),
-                    OPEN_EXISTING,
-                    0,
-                    ptr::null_mut(),
+                trace_native!(
+                    "native.CreateFileW",
+                    CreateFileW(
+                        wide_name.as_ptr(),
+                        GENERIC_READ | GENERIC_WRITE,
+                        0,
+                        ptr::null(),
+                        OPEN_EXISTING,
+                        0,
+                        ptr::null_mut(),
+                    )
                 )
             };
             assert!(
@@ -7853,12 +7946,15 @@ mod tests {
                         let mut written = 0u32;
                         // SAFETY: the handle is live for the test's duration.
                         unsafe {
-                            WriteFile(
-                                writer_client as HANDLE,
-                                b"go".as_ptr(),
-                                2,
-                                &mut written,
-                                ptr::null_mut(),
+                            trace_native!(
+                                "native.WriteFile",
+                                WriteFile(
+                                    writer_client as HANDLE,
+                                    b"go".as_ptr(),
+                                    2,
+                                    &mut written,
+                                    ptr::null_mut(),
+                                )
                             )
                         };
                     });
@@ -7920,7 +8016,12 @@ mod tests {
             // write the same descriptor reads normally.
             let mut written = 0u32;
             // SAFETY: the client handle is live and the buffer is readable.
-            let ok = unsafe { WriteFile(client, b"ok".as_ptr(), 2, &mut written, ptr::null_mut()) };
+            let ok = unsafe {
+                trace_native!(
+                    "native.WriteFile",
+                    WriteFile(client, b"ok".as_ptr(), 2, &mut written, ptr::null_mut())
+                )
+            };
             assert_ne!(ok, 0, "priming write failed");
             let mut buffer = [0u8; 8];
             assert_eq!(read(fd, &mut buffer).unwrap(), 2);
@@ -7953,12 +8054,15 @@ mod tests {
                 let mut written = 0;
                 assert_ne!(
                     unsafe {
-                        WriteFile(
-                            writer as HANDLE,
-                            b"ok".as_ptr(),
-                            2,
-                            &mut written,
-                            ptr::null_mut(),
+                        trace_native!(
+                            "native.WriteFile",
+                            WriteFile(
+                                writer as HANDLE,
+                                b"ok".as_ptr(),
+                                2,
+                                &mut written,
+                                ptr::null_mut(),
+                            )
                         )
                     },
                     0

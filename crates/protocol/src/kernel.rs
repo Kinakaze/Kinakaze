@@ -115,6 +115,12 @@ pub struct MountPublication {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub enum KernelCommand {
+    /// Data writeback belongs to init so it survives submitter exit. A wait
+    /// retires earlier hints for the inode and reports their native I/O error.
+    FileWriteback {
+        source: u64,
+        wait: bool,
+    },
     /// The native owner identity, used only for PID-bound Winsock recipes.
     ResourceOwner,
     /// A bounded binary transfer section contains native handles and socket

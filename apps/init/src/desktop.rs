@@ -505,6 +505,7 @@ pub(super) fn run(arguments: Vec<String>) -> wire::Result<i32> {
     let service = Arc::new(Service {
         manager: Mutex::new(StateManager::for_process_tree(epoch, token.clone())),
         images: Mutex::new(crate::image_cache::Cache::default()),
+        writeback: crate::writeback::Queue::default(),
         kernel: Mutex::new(crate::kernel::Kernel::new(epoch)),
         changed: Condvar::new(),
         stopping: AtomicBool::new(false),
