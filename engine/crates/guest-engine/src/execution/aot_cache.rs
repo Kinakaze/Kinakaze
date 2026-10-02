@@ -13,9 +13,9 @@ use std::path::Path;
 use super::ExecutionError;
 use super::Image;
 
-// Version 36 follows conditional callback copies and register-indirect calls
-// across local branches, reaching musl thread exits and directory iteration.
-const CACHE_MAGIC: &[u8; 8] = b"CRYAOT36";
+// Version 37 also uses unindexed .eh_frame records in stripped static glibc
+// programs. Older caches can omit address-taken allocator syscall routines.
+const CACHE_MAGIC: &[u8; 8] = b"CRYAOT37";
 const ARCH_X86_64: u32 = 1;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

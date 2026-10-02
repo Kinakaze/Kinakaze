@@ -741,6 +741,15 @@ pub(crate) fn install_fault_reporter(
         } = fault
         {
             let ctx = unsafe { (*info).ContextRecord };
+            // Default Linux signal termination does not return to the detailed
+            // reporter below. Preserve the fault site for explicitly requested
+            // diagnostics before entering that terminating signal dispatcher.
+            if !ctx.is_null() && std::env::var_os("KINAKAZE_FAULT_ADDRS").is_some() {
+                fault_report!(
+                    "kinakaze: synchronous signal {signal} code={signal_code} rip={:#x} address={fault_target:#x}",
+                    unsafe { (*ctx).Rip }
+                );
+            }
             if !ctx.is_null() && kinakaze_tls::install_current_thread_static_tls().is_ok() {
                 let windows_context = unsafe { &mut *ctx };
                 let original_rip = windows_context.Rip;

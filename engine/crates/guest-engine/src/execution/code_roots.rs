@@ -1,6 +1,6 @@
-//! Proven indirect function roots from the ELF exception-frame index.
+//! Proven indirect function roots from ELF unwind records and relocations.
 use super::{ExecutionError, Image};
-use gimli::{BaseAddresses, EhFrameHdr, LittleEndian, Pointer};
+use gimli::{BaseAddresses, CieOrFde, EhFrame, EhFrameHdr, LittleEndian, Pointer, UnwindSection};
 use iced_x86::{Instruction, InstructionInfoFactory, Mnemonic, OpAccess, OpKind, Register};
 use std::collections::VecDeque;
 
@@ -54,7 +54,9 @@ pub(super) fn got_entries(object: &Image<'_>) -> Result<Vec<usize>, ExecutionErr
 
 pub(super) fn unwind_entries(object: &Image<'_>) -> Result<Vec<usize>, ExecutionError> {
     let mut entries = Vec::new();
-    for header in object.elf()?.program_headers()? {
+    let elf = object.elf()?;
+    let segments = elf.program_headers()?;
+    for header in &segments {
         if header.kind != 0x6474_e550 {
             continue;
         } // PT_GNU_EH_FRAME
@@ -71,7 +73,58 @@ pub(super) fn unwind_entries(object: &Image<'_>) -> Result<Vec<usize>, Execution
         let base = object.resolve_address(header.virtual_address)?;
         entries.extend(header_entries(bytes, base));
     }
+    // Static glibc programs can retain .eh_frame while omitting its optional
+    // search index. Their stripped, address-taken allocator/IFUNC routines
+    // still need syscall rewriting before any guest instruction executes.
+    if entries.is_empty() {
+        let sections = elf.section_headers()?;
+        if let Some(strings) = sections.get(elf.header().section_name_index as usize) {
+            let names = elf.slice(strings.offset as usize, strings.size as usize)?;
+            for section in &sections {
+                let name = names
+                    .get(section.name_offset as usize..)
+                    .and_then(|rest| rest.split(|byte| *byte == 0).next());
+                if name != Some(b".eh_frame") || section.flags & 2 == 0 {
+                    continue;
+                }
+                let bytes = elf.slice(section.offset as usize, section.size as usize)?;
+                // Decode in ELF coordinates, then apply the image load bias
+                // once. This handles both absolute and PC-relative pointers.
+                let mut bases = BaseAddresses::default().set_eh_frame(section.virtual_address);
+                if let Some(text) = segments.iter().find(|segment| {
+                    segment.kind == kinakaze_elf::PT_LOAD && segment.flags & kinakaze_elf::PF_X != 0
+                }) {
+                    bases = bases.set_text(text.virtual_address);
+                }
+                for address in frame_entries(bytes, &bases) {
+                    if segments.iter().any(|segment| {
+                        segment.kind == kinakaze_elf::PT_LOAD
+                            && segment.flags & kinakaze_elf::PF_X != 0
+                            && address >= segment.virtual_address
+                            && address - segment.virtual_address < segment.file_size
+                    }) {
+                        entries.push(object.resolve_address(address)?);
+                    }
+                }
+            }
+        }
+    }
     Ok(entries)
+}
+
+fn frame_entries(bytes: &[u8], bases: &BaseAddresses) -> Vec<u64> {
+    let mut frame = EhFrame::new(bytes, LittleEndian);
+    frame.set_address_size(8);
+    let mut rows = frame.entries(bases);
+    let mut entries = Vec::new();
+    while let Ok(Some(row)) = rows.next() {
+        if let CieOrFde::Fde(partial) = row
+            && let Ok(fde) = partial.parse(EhFrame::cie_from_offset)
+        {
+            entries.push(fde.initial_address());
+        }
+    }
+    entries
 }
 
 fn header_entries(bytes: &[u8], base: usize) -> Vec<usize> {
@@ -840,6 +893,30 @@ mod tests {
         }
         assert_eq!(header_entries(&bytes, 0x1000), vec![0xdff, 0x1300]);
         assert!(header_entries(&bytes[..3], 0x1000).is_empty());
+    }
+
+    #[test]
+    fn unindexed_frames_decode_signed_pc_relative_entries_and_reject_truncation() {
+        // zR CIE, DW_EH_PE_pcrel | DW_EH_PE_sdata4, without .eh_frame_hdr.
+        let mut bytes = vec![
+            16, 0, 0, 0, 0, 0, 0, 0, 1, b'z', b'R', 0, 1, 0x78, 16, 1, 0x1b, 0, 0, 0,
+        ];
+        for target in [0xdffu64, 0x1300] {
+            let offset = bytes.len();
+            bytes.extend_from_slice(&16u32.to_le_bytes());
+            bytes.extend_from_slice(&((offset + 4) as u32).to_le_bytes());
+            let delta = target as i64 - (0x1000 + offset + 8) as i64;
+            bytes.extend_from_slice(&(delta as i32).to_le_bytes());
+            bytes.extend_from_slice(&32u32.to_le_bytes());
+            bytes.extend_from_slice(&[0; 4]);
+        }
+        bytes.extend_from_slice(&0u32.to_le_bytes());
+        let bases = BaseAddresses::default().set_eh_frame(0x1000);
+        assert_eq!(frame_entries(&bytes, &bases), [0xdff, 0x1300]);
+        assert!(frame_entries(&bytes[..39], &bases).is_empty());
+        // Moving the frame section moves PC-relative targets exactly once.
+        let bases = BaseAddresses::default().set_eh_frame(0x11000);
+        assert_eq!(frame_entries(&bytes, &bases), [0x10dff, 0x11300]);
     }
 
     #[test]
