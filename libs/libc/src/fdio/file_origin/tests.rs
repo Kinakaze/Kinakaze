@@ -451,8 +451,11 @@ fn shared_origin_initial_noaccess_restores_access_without_copying() {
         unsafe { VirtualQuery(mapped, &mut state, size_of::<MemoryBasicInformation>()) },
         0
     );
-    assert_eq!(state.protect, PAGE_NOACCESS);
-    assert_eq!(state.type_, MEM_MAPPED_TYPE);
+    // An inaccessible shared file view is only a reserved placeholder: Windows
+    // can reject later permission restoration on a PAGE_NOACCESS section view.
+    assert_eq!(state.state, MEM_RESERVE_STATE);
+    assert_eq!(state.protect, 0);
+    // The first accessible mprotect must still bind the exact file identity.
     assert_eq!(unsafe { kinakaze_abi_mprotect(mapped, page, PROT_READ) }, 0);
     assert_eq!(unsafe { *mapped.cast::<u8>() }, 0x40);
     assert!(
