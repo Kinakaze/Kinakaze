@@ -246,7 +246,13 @@ fn create(parent: i32, name: &str, flags: i32, mode: u32) -> Result<i32, i32> {
         O_RDWR => GENERIC_READ | GENERIC_WRITE,
         _ => return Err(EINVAL),
     };
-    let metadata = stat_metadata_with_query(parent.raw(), &parent, false)?;
+    // An O_PATH directory descriptor carries no metadata rights. Query the same
+    // inode through a reopened handle, as the path-based create does.
+    let query = object::Object::reopen(
+        parent.raw(),
+        FILE_READ_ATTRIBUTES | FILE_READ_EA | windows_sys::Win32::Storage::FileSystem::READ_CONTROL,
+    )?;
+    let metadata = stat_metadata_with_query(query.raw(), &query, false)?;
     let leaf = OsStr::new(stored.as_ref());
     permissions::create_in(&parent, &metadata, leaf)?;
     let record = created_inode_record(&metadata, S_IFREG | (mode & 0o7777));
