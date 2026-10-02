@@ -482,6 +482,13 @@ struct IndexedExport {
 }
 
 impl NativeImage {
+    fn load_library(&self) -> Result<Library> {
+        Ok(match &self.file {
+            NativeBytes::File(file) => file.load_library()?,
+            NativeBytes::Snapshot { view, pin } => view.load_library(*pin)?,
+        })
+    }
+
     fn exports(&self) -> impl Iterator<Item = BorrowedExport<'_>> {
         self.exports.iter().map(|entry| {
             let start = entry.start as usize;
@@ -624,9 +631,24 @@ impl ModuleCatalog {
     pub fn retain_images(&self) -> impl Send + Sync + 'static {
         self.images.clone()
     }
+
+    pub fn load_shared_library(&self, name: &str) -> Result<Library> {
+        if !self.shared_libraries.iter().any(|shared| shared == name) {
+            return Err(invalid("unknown shared native library"));
+        }
+        self.images
+            .iter()
+            .find(|image| image.path.file_name() == Some(std::ffi::OsStr::new(name)))
+            .ok_or_else(|| invalid("shared native library has no validation pin"))?
+            .load_library()
+    }
 }
 
 impl DiscoveredModule {
+    pub fn load_library(&self) -> Result<Library> {
+        self.image.load_library()
+    }
+
     /// Canonical identity of the inspected source, still protected by the
     /// catalog's file pin. Reuse that capability instead of reopening the path.
     pub fn canonical_path(&self) -> Result<PathBuf> {
@@ -676,7 +698,7 @@ impl DiscoveredModule {
                 let query = match query {
                     Some(query) => query,
                     None => {
-                        let library = Arc::new(Library::open(&self.image.path)?);
+                        let library = Arc::new(self.load_library()?);
                         // SAFETY: project module implements this fixed C ABI;
                         // the returned owner retains it for these declarations.
                         let function = unsafe {

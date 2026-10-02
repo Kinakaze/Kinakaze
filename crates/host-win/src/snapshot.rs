@@ -2,7 +2,7 @@
 use crate::{ProcessHandle, owned};
 use std::{
     io,
-    os::windows::io::{AsRawHandle, OwnedHandle},
+    os::windows::io::{AsHandle, AsRawHandle, OwnedHandle},
     ptr,
 };
 use windows_sys::Win32::{
@@ -99,13 +99,18 @@ impl ReadOnlySectionView {
     /// Identity of one transferred source file, queried through its retained
     /// handle. No pathname is reopened and the deny-write/delete pin stays live.
     pub fn pin_path(&self, index: usize) -> io::Result<std::path::PathBuf> {
-        let owner = index
+        crate::file_map::canonical_path(self.pin(index)?.as_raw_handle())
+    }
+
+    pub fn load_library(&self, index: usize) -> io::Result<crate::Library> {
+        crate::Library::open_pinned(self.pin(index)?.as_handle())
+    }
+
+    fn pin(&self, index: usize) -> io::Result<&OwnedHandle> {
+        index
             .checked_add(1)
             .and_then(|index| self._owners.get(index))
-            .ok_or_else(|| {
-                io::Error::new(io::ErrorKind::InvalidInput, "invalid source pin index")
-            })?;
-        crate::file_map::canonical_path(owner.as_raw_handle())
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "invalid source pin index"))
     }
 }
 impl Drop for ReadOnlySectionView {

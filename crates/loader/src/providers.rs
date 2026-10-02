@@ -19,16 +19,15 @@ struct SharedModules {
 }
 
 impl SharedModules {
-    fn load(dist: &Path, modules: &ModuleCatalog) -> Result<Self, Box<dyn std::error::Error>> {
+    fn load(modules: &ModuleCatalog) -> Result<Self, Box<dyn std::error::Error>> {
         let _transaction =
             guest_process::begin_fork_mapping_transaction().ok_or("fork registry unavailable")?;
         let mut owner = Self {
             _images: Box::new(modules.retain_images()),
             libraries: Vec::with_capacity(modules.shared_libraries.len()),
         };
-        let directory = kinakaze_v2_bridge::native::directory(dist);
         for name in &modules.shared_libraries {
-            let library = kinakaze_v2_host_win::Library::open(&directory.join(name))?;
+            let library = modules.load_shared_library(name)?;
             if !guest_process::register_fork_module(library.base_address()) {
                 return Err("shared native module registration failed".into());
             }
@@ -226,18 +225,16 @@ pub fn load(
         return Err("ordinary workers require the self-developed libc provider".into());
     }
     let sharing = kinakaze_v2_host_win::StartupSpan::begin("providers-shared-load");
-    let shared = Arc::new(SharedModules::load(dist, &modules)?);
+    let shared = Arc::new(SharedModules::load(&modules)?);
     drop(sharing);
     let _binding = kinakaze_v2_host_win::StartupSpan::begin("providers-bind");
     let mut registry = ProviderRegistry::new();
     registry.set_restore_source(std::fs::canonicalize(dist)?);
-    let directory = kinakaze_v2_bridge::native::directory(dist);
     for module in modules.modules {
-        let path = directory.join(&module.soname);
         if module.lifecycle == ModuleLifecycle::RuntimeApiV1 {
             // Preserve mandatory initialization order; guest exports are still
             // unresolved until a relocation or explicit lookup requests them.
-            registry.register(bind_module(path, module, Arc::clone(&shared), Some(api))?)?;
+            registry.register(bind_module(module, Arc::clone(&shared), Some(api))?)?;
         } else {
             let shared = Arc::clone(&shared);
             let identity = module.canonical_path()?;
@@ -245,7 +242,7 @@ pub fn load(
                 module.soname.clone(),
                 identity,
                 move || {
-                    bind_module(path, module, shared, None)
+                    bind_module(module, shared, None)
                         .map_err(|error| guest_link::LinkError::InvalidProvider(error.to_string()))
                 },
             )?;
@@ -313,7 +310,6 @@ fn shared_catalog(
 }
 
 fn bind_module(
-    path: PathBuf,
     discovered: DiscoveredModule,
     shared: Arc<SharedModules>,
     api: Option<&RuntimeApiV1>,
@@ -327,7 +323,7 @@ fn bind_module(
     let lifecycle = module.lifecycle;
     let library = match library {
         Some(library) => library,
-        None => Arc::new(kinakaze_v2_host_win::Library::open(&path)?),
+        None => Arc::new(discovered.load_library()?),
     };
     trace(&soname, None);
     let exports = module.exports;

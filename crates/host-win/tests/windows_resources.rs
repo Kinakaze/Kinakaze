@@ -212,6 +212,69 @@ fn dll_uses_absolute_path_and_typed_export() {
 }
 
 #[test]
+fn dll_reuse_preserves_full_path_and_owning_references() {
+    let directory = std::env::temp_dir().join(format!("kinakaze-dll-{}", random_token().unwrap()));
+    let first_directory = directory.join("first");
+    let second_directory = directory.join("second");
+    std::fs::create_dir_all(&first_directory).unwrap();
+    std::fs::create_dir_all(&second_directory).unwrap();
+    let source = PathBuf::from(std::env::var_os("SystemRoot").unwrap())
+        .join("System32")
+        .join("version.dll");
+    let first_path = first_directory.join("version.dll");
+    let second_path = second_directory.join("version.dll");
+    std::fs::copy(&source, &first_path).unwrap();
+    std::fs::copy(&source, &second_path).unwrap();
+    let first = Library::open(&first_path).unwrap();
+    let second = Library::open(&second_path).unwrap();
+    assert_ne!(first.base_address(), second.base_address());
+    let retained = Library::open(&first_path).unwrap();
+    assert_eq!(first.base_address(), retained.base_address());
+    assert_eq!(retained.path(), first_path.canonicalize().unwrap());
+    let file = kinakaze_v2_host_win::ReadOnlyFile::open(&first_path, 16 * 1024 * 1024).unwrap();
+    let pinned = file.load_library().unwrap();
+    assert_eq!(first.base_address(), pinned.base_address());
+    let section = kinakaze_v2_host_win::ReadOnlySection::new(b"catalog").unwrap();
+    let mut transfer =
+        kinakaze_v2_host_win::RemoteTransfer::new(ProcessHandle::open(std::process::id()).unwrap());
+    section.transfer(&mut transfer).unwrap();
+    file.transfer_pin(&mut transfer).unwrap();
+    let handles = transfer.handles().to_vec();
+    transfer.commit();
+    let view = unsafe {
+        kinakaze_v2_host_win::ReadOnlySectionView::adopt(&handles, section.length(), 1024)
+    }
+    .unwrap();
+    assert!(view.load_library(1).is_err());
+    assert!(view.load_library(usize::MAX).is_err());
+    let transferred = view.load_library(0).unwrap();
+    assert_eq!(first.base_address(), transferred.base_address());
+    drop(first);
+    drop(second);
+    drop(pinned);
+    drop(file);
+    drop(view);
+    drop(transferred);
+    assert!(unsafe { retained.symbol(c"GetFileVersionInfoSizeW") }.is_ok());
+    assert!(
+        std::fs::OpenOptions::new()
+            .write(true)
+            .open(&first_path)
+            .is_err()
+    );
+    drop(retained);
+    std::fs::OpenOptions::new()
+        .write(true)
+        .open(&first_path)
+        .unwrap();
+    std::fs::remove_file(first_path).unwrap();
+    std::fs::remove_file(second_path).unwrap();
+    std::fs::remove_dir(first_directory).unwrap();
+    std::fs::remove_dir(second_directory).unwrap();
+    std::fs::remove_dir(directory).unwrap();
+}
+
+#[test]
 fn memory_checks_whole_pages_and_executes_after_rx_transition() {
     let page = page_size();
     let region = ExecutableMemory::allocate(page + 1).unwrap();

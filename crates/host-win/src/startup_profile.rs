@@ -97,9 +97,8 @@ impl Drop for StartupSpan {
             self.directory
                 .join(format!("startup-{}.log", std::process::id())),
         ) {
-            let _ = writeln!(
-                file,
-                "phase={} start_us={} wall_us={} thread_cpu_us={} process_cpu_us={} thread_cycles={} tid={}",
+            let record = format!(
+                "phase={} start_us={} wall_us={} thread_cpu_us={} process_cpu_us={} thread_cycles={} tid={}\n",
                 self.phase,
                 self.timestamp_us,
                 elapsed,
@@ -108,6 +107,7 @@ impl Drop for StartupSpan {
                 cpu.cycles.saturating_sub(self.cpu.cycles),
                 unsafe { GetCurrentThreadId() }
             );
+            let _ = file.write_all(record.as_bytes());
         }
     }
 }

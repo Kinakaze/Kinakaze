@@ -1,7 +1,9 @@
 use std::ffi::{CStr, c_void};
 use std::io;
+use std::os::windows::io::{AsRawHandle, BorrowedHandle};
 use std::path::{Path, PathBuf};
 use std::ptr::null_mut;
+use std::sync::OnceLock;
 use windows_sys::Win32::Foundation::{FreeLibrary, HMODULE};
 use windows_sys::Win32::System::LibraryLoader::{
     GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, GetModuleHandleExW, GetProcAddress,
@@ -12,6 +14,13 @@ use windows_sys::Win32::System::LibraryLoader::{
 pub struct Library {
     module: LoadedModule,
     path: PathBuf,
+}
+
+fn reuse_enabled() -> bool {
+    static REUSE: OnceLock<bool> = OnceLock::new();
+    *REUSE.get_or_init(|| {
+        std::env::var_os("KINAKAZE_NATIVE_LIBRARY_REUSE").is_none_or(|value| value != "0")
+    })
 }
 
 impl Library {
@@ -26,14 +35,30 @@ impl Library {
         }
         let filename = crate::wide(path.as_os_str())?;
         let path = path.canonicalize()?;
-        // SAFETY: Filename is NUL terminated; no file handle is supplied.
-        let module = unsafe {
-            LoadLibraryExW(
-                filename.as_ptr(),
-                null_mut(),
-                LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32,
-            )
-        };
+        Self::load(path, &filename)
+    }
+
+    pub fn open_pinned(file: BorrowedHandle<'_>) -> io::Result<Self> {
+        let path = crate::file_map::canonical_path(file.as_raw_handle())?;
+        if !reuse_enabled() {
+            return Self::open(&path);
+        }
+        let filename = crate::wide(path.as_os_str())?;
+        Self::load(path, &filename)
+    }
+
+    fn load(path: PathBuf, filename: &[u16]) -> io::Result<Self> {
+        let mut module = null_mut();
+        if !reuse_enabled() || unsafe { GetModuleHandleExW(0, filename.as_ptr(), &mut module) } == 0
+        {
+            module = unsafe {
+                LoadLibraryExW(
+                    filename.as_ptr(),
+                    null_mut(),
+                    LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32,
+                )
+            };
+        }
         if module.is_null() {
             let error = io::Error::last_os_error();
             Err(io::Error::new(

@@ -3,7 +3,10 @@ use std::{
     fs::{File, OpenOptions},
     io,
     ops::Deref,
-    os::windows::{fs::OpenOptionsExt, io::AsRawHandle},
+    os::windows::{
+        fs::OpenOptionsExt,
+        io::{AsHandle, AsRawHandle},
+    },
     path::{Path, PathBuf},
 };
 use windows_sys::Win32::{
@@ -26,6 +29,10 @@ unsafe impl Send for ReadOnlyFile {}
 unsafe impl Sync for ReadOnlyFile {}
 
 impl ReadOnlyFile {
+    pub fn load_library(&self) -> io::Result<crate::Library> {
+        crate::Library::open_pinned(self._file.as_handle())
+    }
+
     /// Query the pinned file's identity without opening its pathname again.
     pub fn canonical_path(&self) -> io::Result<PathBuf> {
         canonical_path(self._file.as_raw_handle())

@@ -216,6 +216,12 @@ impl Pool {
         }
         let mut state = self.state.lock().unwrap();
         if state.failures >= 3 {
+            if trace() {
+                eprintln!(
+                    "init native fork: miss disabled-after-failures={}",
+                    state.failures
+                );
+            }
             return Ok(None);
         }
         if !state.template.as_ref().is_some_and(|t| t.spec == *spec) {
@@ -240,6 +246,9 @@ impl Pool {
             return Ok(None);
         }
         let Some(index) = state.slots.iter().position(|s| !s.exited() && s.prepared()) else {
+            if trace() {
+                eprintln!("init native fork: miss ready=0 stock={}", state.slots.len());
+            }
             return Ok(None);
         };
         let parent = ProcessHandle::open(peer.host_pid)?;
@@ -251,6 +260,9 @@ impl Pool {
             return Err(io::Error::other("fork recipient identity changed"));
         }
         let slot = state.slots.swap_remove(index);
+        if trace() {
+            eprintln!("init native fork: hit pid={}", slot.peer.host_pid);
+        }
         let mut transfer = RemoteTransfer::new(target);
         for handle in [&slot.process, &slot.thread, &slot.ready, &slot.activate] {
             transfer.add(handle.as_raw_handle(), 0, true)?;
@@ -342,6 +354,8 @@ pub(super) fn start(service: Arc<Service>) -> io::Result<()> {
 
 fn trace() -> bool {
     std::env::var_os("KINAKAZE_FORK_TRACE").as_deref() == Some(std::ffi::OsStr::new("1"))
+        || std::env::var_os("KINAKAZE_NATIVE_FORK_TRACE").as_deref()
+            == Some(std::ffi::OsStr::new("1"))
 }
 
 pub(super) fn own(handle: windows_sys::Win32::Foundation::HANDLE) -> io::Result<OwnedHandle> {
